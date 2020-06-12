@@ -1,0 +1,283 @@
+from numpy import ndarray, zeros, dot, mean, asarray, all, abs
+from numpy.linalg import eig, eigvals
+import csvx
+
+
+# ---------------------------------------------------------------------------
+# IO
+# ---------------------------------------------------------------------------
+
+def load_data(fname, ycol=-1, dtype=None, skiprows=0, na=None):
+
+    if fname.endswith(".arff"):
+        data, _, dtype = csvx.load_arff(fname, na=na)
+    else:
+        data, _ = csvx.load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
+
+    data = asarray(data)
+    nr, nc = data.shape
+
+    if ycol == 0:
+        X = data[:, 1:]
+        y = data[:, 0]
+    elif ycol == -1 or ycol == (nc - 1):
+        X = data[:, 0:-1]
+        y = data[:, -1]
+    else:
+        X = data[:, list(range(0, ycol)) + list(range(ycol + 1, nc))]
+        y = data[:, ycol]
+
+    if ycol == 0:
+        dtypes = list(set(dtype[1:]))
+    elif ycol == -1:
+        dtypes = list(set(dtype[0:-1]))
+    else:
+        dtypes = list(set(dtype[0:ycol] + dtype[ycol+1:]))
+    if len(dtypes) == 1 and dtypes[0] in ["enum", "ienum", enumerate]:
+        X = X.astype(int)
+
+    if dtype[ycol] in ["enum", "ienum", str, int, enumerate]:
+        y = y.astype(int)
+
+    return X, y
+# end
+
+
+# ---------------------------------------------------------------------------
+# Support
+# ---------------------------------------------------------------------------
+
+def fzeros(n) -> ndarray: return zeros(n, dtype=float)
+
+
+def fones(n) -> ndarray: return ones(n,  dtype=float)
+
+
+# ---------------------------------------------------------------------------
+# Matrix operations
+# ---------------------------------------------------------------------------
+
+def is_pos_def(m) -> bool:
+    """Check if the matrix is positive definite"""
+    ev = eigvals(m)
+    return all(ev > 0)
+
+
+def is_symmetric(a, tol=1e-8):
+    return all(abs(a-a.T) < tol)
+
+
+# ---------------------------------------------------------------------------
+# Shape handling
+# ---------------------------------------------------------------------------
+
+def as_shape(s) -> tuple:
+    if isinstance(s, int):
+        return (s,)
+    elif isinstance(s, list):
+        return tuple(s)
+    else:
+        return s
+
+
+def shape_dim(s):
+    if isinstance(s, int):
+        return 1
+    else:
+        return len(s)
+
+
+def shape_concat(s1, s2) -> tuple:
+    s1 = as_shape(s1)
+    s2 = as_shape(s2)
+    return s1 + s2
+
+
+def shape_size(s):
+    if isinstance(s, int):
+        return s
+
+    size = 1
+    for sz in s:
+        size *= sz
+    return size
+
+
+# ---------------------------------------------------------------------------
+# Mean
+# ---------------------------------------------------------------------------
+
+def mean(X: ndarray) -> ndarray:
+    """
+    Compute the column mean of the matrix X
+
+    :param X: matrix (n rows x d columns)
+    :return: column mean
+    """
+    assert isinstance(X, ndarray)
+    assert len(X.shape) == 2
+    return X.mean(0)
+
+
+# ---------------------------------------------------------------------------
+# Extras
+# ---------------------------------------------------------------------------
+
+def cross_product(x: ndarray, y: ndarray) -> ndarray:
+    """
+    Compute the cross product of the two vectors
+    Note: the cross product is a MATRIX where the dot product is a scalar
+
+    :param x: the column vector
+    :param y: the row vector
+    :return: a matrix
+    """
+    n = len(x)
+    m = len(y)
+    p = zeros((n, m))
+
+    for i in range(n):
+        for j in range(m):
+            p[i, j] = x[i]*y[j]
+    return p
+
+
+def compose_eigenvectors(v: ndarray, w: ndarray, inverse=False) -> ndarray:
+    """
+    Compute
+
+            v_i*cross(w_i, w_i)
+
+    note that 'cross(w_i, w_i)' is a MATRIX, not a vector
+
+    :param v: eugenvalues
+    :param w: eigenvectors as columns of the matrix
+    :param inverse: if to compute the inverse of the matrix
+    :return:
+    """
+    n = len(v)
+    p = zeros((n, n))
+
+    for i in range(n):
+        li = 1 / v[i] if inverse else v[i]
+        ui = w[:, i]
+        p += li*cross_product(ui, ui)
+    return p
+
+
+def correlation_matrix(X: ndarray, m: ndarray=None) -> ndarray:
+    """
+    Compute the correlation matrix between the columns in the matrix X
+
+        cij = E[Xi - E[Xi]]*E[Xj - E[Xj]]
+
+        E[X] = 1/n * SUM ( x_i : i=1..n )
+
+    :param X: matrix (n rows x d columns)
+    :param m: mean, if already computed
+    :return: correlation matrix
+    """
+    assert isinstance(X, ndarray)
+    assert len(X.shape) == 2
+
+    if m is None:
+        m = X.mean(0)
+
+    n, d = X.shape
+
+    y = X - m
+    cm = zeros((d, d))
+    for i in range(d):
+        yi = y[:, i]
+        for j in range(d):
+            yj = y[:, j]
+            cij = dot(yi, yj)
+            cm[i, j] += cij
+    cm /= n
+    return cm
+
+
+def gaussian(X: ndarray):
+    """
+    'x' is the dataset, a matrix 'n x m', where n is the number of
+    records, and m the number of features
+
+    :param X:
+    :return:
+    """
+
+    m = mean(X)
+    S = correlation_matrix(X, m)
+    v, w = eig(S)
+    U = compose_eigenvectors(v, w, inverse=True)
+
+    y = dot(X-m, w)
+    return y
+
+
+# ---------------------------------------------------------------------------
+# Other
+# ---------------------------------------------------------------------------
+
+def m2vec(m):
+    """
+    Convert the matrix m in 3 vectors useful to be used in
+    3D scatter plots
+
+    :param np.ndarray x: x vector
+    :param np.ndarray y: y vector
+    :param np.ndarray m: xy matrix
+    :return tuple: xs, ys, zs
+    """
+
+    assert len(m.shape) == 2
+
+    ny, nx = m.shape
+    n = nx*ny
+    xs = zeros(shape=n)
+    ys = zeros(shape=n)
+    zs = zeros(shape=n)
+
+    k = 0
+    for i in range(ny):
+        for j in range(nx):
+            xs[k] = j
+            ys[k] = i
+            zs[k] = m[i, j]
+            k += 1
+    return xs, ys, zs
+
+
+def xym2vec(x, y, m):
+    """
+    Convert the vectors x, y, and the matrix m , in 3 vectors
+    useful to be used in 3D scatter plots
+
+    :param np.ndarray x: x vector
+    :param np.ndarray y: y vector
+    :param np.ndarray m: xy matrix
+    :return tuple: xs, ys, zs
+    """
+    assert len(x.shape) == 1 and len(y.shape) == 1 and len(m.shape) == 2
+    assert (y.shape[0], x.shape[0]) == m.shape
+
+    nx = len(x)
+    ny = len(y)
+    n = nx*ny
+
+    xs = zeros(shape=n)
+    ys = zeros(shape=n)
+    zs = zeros(shape=n)
+
+    k = 0
+    for i in range(ny):
+        for j in range(nx):
+            xs[k] = x[j]
+            ys[k] = y[i]
+            zs[k] = m[i, j]
+            k += 1
+    return xs, ys, zs
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
