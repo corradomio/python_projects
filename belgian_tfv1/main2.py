@@ -1,22 +1,21 @@
 import os
 import warnings
 import silence_tensorflow as stf
-warnings.simplefilter(action='ignore', category=FutureWarning)
-stf.silence_tensorflow()
-
 import numpy as np
 import random
 import skimage
 import skimage.io
 import matplotlib.pyplot as plt
+
 from skimage import transform
 from skimage.color import rgb2gray
 from sklearn.metrics import accuracy_score
-import tensorflow as tf
 from keras.models import Sequential
-from keras.layers import Conv2D, MaxPooling2D
-from keras.layers import Activation, Dropout, Flatten, Dense
+from keras.layers import Dense, Flatten
+from keras.optimizers import SGD
 
+warnings.simplefilter(action='ignore', category=FutureWarning)
+stf.silence_tensorflow()
 
 ROOT_PATH = "D:/Projects/python/belgian_tfv1/BelgiumTSC"
 train_data_directory = os.path.join(ROOT_PATH, "Training")
@@ -159,11 +158,6 @@ def show_bw_images(images28, labels):
     # Show the plot
     plt.show()
 # end
-
-
-from keras.models import Sequential
-from keras.layers import Dense, Flatten
-from keras.optimizers import SGD
 
 
 def create_and_fit_keras_nn(train_x, train_y, epochs=N_OF_EPOCHS):
