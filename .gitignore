@@ -1,0 +1,12 @@
+.idea
+.gradle
+.mvn
+*.iml
+out
+target
+build
+*.removed
+*.suspended
+removed
+*.jfr
+
