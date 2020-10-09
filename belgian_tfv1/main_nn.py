@@ -1,6 +1,10 @@
-import os
 import warnings
 import silence_tensorflow as stf
+
+warnings.simplefilter(action='ignore', category=FutureWarning)
+stf.silence_tensorflow()
+
+import os
 import numpy as np
 import random
 import skimage
@@ -11,18 +15,17 @@ from skimage import transform
 from skimage.color import rgb2gray
 from sklearn.metrics import accuracy_score
 from keras.models import Sequential
-from keras.layers import Dense, Flatten
+from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 from keras.optimizers import SGD
+from keras.callbacks import EarlyStopping
 
-warnings.simplefilter(action='ignore', category=FutureWarning)
-stf.silence_tensorflow()
-
-ROOT_PATH = "D:/Projects/python/belgian_tfv1/BelgiumTSC"
+ROOT_PATH = "./Damiani"
 train_data_directory = os.path.join(ROOT_PATH, "Training")
 test_data_directory = os.path.join(ROOT_PATH, "Testing")
 N_TRAINING_IMAGES = 4575  # max value: 4575
 N_TESTING_IMAGES  = 2520  # max value 2520
-N_OF_EPOCHS = 4001
+N_OF_EPOCHS = 4000
+N_OF_CLASSES = 62
 
 
 def read_filenames(data_directory):
@@ -117,7 +120,7 @@ def show_color_images(images, labels):
 # end
 
 
-def convert_images(images):
+def convert_images(images, channels=False):
     # Rescale the images in the `images` array
     images28 = [transform.resize(image, (28, 28)) for image in images]
 
@@ -126,6 +129,11 @@ def convert_images(images):
 
     # Convert `images28` to grayscale
     images28 = rgb2gray(images28)
+    """:type: np.ndarray"""
+
+    if channels:
+        shape = images28.shape
+        images28 = images28.reshape(shape + (1,))
 
     return images28
 # end
@@ -160,51 +168,102 @@ def show_bw_images(images28, labels):
 # end
 
 
-def create_and_fit_keras_nn(train_x, train_y, epochs=N_OF_EPOCHS):
+def create_dnn():
 
-    model_name = "model1"
     model = Sequential([
         Flatten(input_shape=(28, 28)),
         # Dense(units=128, activation="relu"),
         # Dense(units=128, activation="relu"),
         Dense(units=128, activation="relu"),
-        Dense(units=62, activation="softmax")
+        Dense(units=N_OF_CLASSES, activation="softmax")
     ])
+    model.name = 'dnn'
 
     model.compile(optimizer=SGD(.001), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
     model.summary()
+    return model
+# end
 
-    print("fit with", len(train_x), "samples ..")
-    model.fit(train_x, train_y, batch_size=32, epochs=epochs, verbose=2)
+
+def create_cnn():
+
+    model = Sequential([
+        Conv2D(32, kernel_size=(3, 3), activation='relu', input_shape=(28, 28, 1)),
+        MaxPooling2D(pool_size=(2, 2)),
+        Dropout(0.25),
+        Conv2D(64, kernel_size=(3, 3), activation='relu'),
+        MaxPooling2D(pool_size=(2, 2)),
+        Dropout(0.25),
+        Flatten(),
+        Dense(256, activation='relu'),
+        Dense(units=N_OF_CLASSES, activation="softmax")
+    ])
+    model.name = 'cnn'
+
+    model.compile(optimizer=SGD(.001), loss="sparse_categorical_crossentropy", metrics=["accuracy"])
+    model.summary()
+    return model
+# end
+
+
+def fit_nn(model, train_x, train_y, epochs=N_OF_EPOCHS):
+    model_name = model.name
+
+    # uses the value of extra metrics 'accuracy' to decide when to stop the train
+    es = EarlyStopping(monitor='val_accuracy', min_delta=0.01, mode='min', verbose=1, patience=10)
+
+    print("fit", model_name, "with", len(train_x), "samples ..")
+    model.fit(train_x, train_y, batch_size=32, epochs=epochs, verbose=2, callbacks=[es])
 
     fname = "models/{}_{}.hdf5".format(model_name, epochs)
     model.save(fname)
 
     print("done")
     return model
+# end
 
 
 def main():
+
+    n_images = 0
+
     #
-    # Train
+    # Create the nn
+    #
+    # channels = False
+    # model = create_dnn()
+    channels = True
+    model = create_cnn()
+
+    #
+    # Read train images
     #
     fnames, labels = read_filenames(train_data_directory)
     # max: 4575
-    train_images, train_labels = load_images(fnames, labels, n_images=0)
-    train_images28 = convert_images(train_images)
-
-    model = create_and_fit_keras_nn(train_images28, train_labels, epochs=N_OF_EPOCHS)
+    train_images, train_labels = load_images(fnames, labels, n_images=n_images)
+    train_images28 = convert_images(train_images, channels=channels)
 
     #
-    # Test
+    # Train the nn
+    #
+    fit_nn(model, train_images28, train_labels, epochs=N_OF_EPOCHS)
+
+    #
+    # Read test images
     #
     fnames, labels = read_filenames(test_data_directory)
-    test_images, test_labels = load_images(fnames, labels, n_images=0)
-    test_images28 = convert_images(test_images)
+    test_images, test_labels = load_images(fnames, labels, n_images=n_images)
+    test_images28 = convert_images(test_images, channels=channels)
 
+    #
+    # Predict
+    #
     prediction = model.predict(test_images28)
     predicted_labels = np.argmax(prediction, axis=1)
 
+    #
+    # Accuracy
+    #
     print("accuracy:", accuracy_score(test_labels, predicted_labels))
     pass
 # end
