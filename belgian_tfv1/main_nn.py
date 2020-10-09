@@ -206,11 +206,11 @@ def create_cnn():
 # end
 
 
-def fit_nn(model, train_x, train_y, epochs=N_OF_EPOCHS):
+def fit_nn(model, train_x, train_y, epochs=N_OF_EPOCHS, PATIENCE=50):
     model_name = model.name
 
     # uses the value of extra metrics 'accuracy' to decide when to stop the train
-    es = EarlyStopping(monitor='val_accuracy', min_delta=0.01, mode='min', verbose=1, patience=10)
+    es = EarlyStopping(monitor='acc', min_delta=0.001, verbose=1, patience=PATIENCE)
 
     print("fit", model_name, "with", len(train_x), "samples ..")
     model.fit(train_x, train_y, batch_size=32, epochs=epochs, verbose=2, callbacks=[es])
@@ -223,7 +223,16 @@ def fit_nn(model, train_x, train_y, epochs=N_OF_EPOCHS):
 # end
 
 
+def mkdir(path):
+    try:
+        os.mkdir(path)
+    except:
+        pass
+
+
 def main():
+    mkdir("Damiani/HeldOut")
+    mkdir("models")
 
     n_images = 0
 
