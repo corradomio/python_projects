@@ -239,10 +239,10 @@ def main():
     #
     # Create the nn
     #
-    # channels = False
-    # model = create_dnn()
-    channels = True
-    model = create_cnn()
+    channels = False
+    model = create_dnn()
+    # channels = True
+    # model = create_cnn()
 
     #
     # Read train images
