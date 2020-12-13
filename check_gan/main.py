@@ -2,15 +2,19 @@ from tensorflow.keras.layers import Conv2D, BatchNormalization, Input, GlobalAve
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import LeakyReLU
 
-FACES_DIR =  'D:/Google Drive/Colab Notebooks/faces.zip (Unzipped Files)/faces/'
+SPATIAL_DIM = 32    # orig: 64
+N_CHANNELS = 1
+
+FACES_DIR = 'E:/Datasets/CelebA/'
 LIST_ATTR_CELEBA = FACES_DIR + 'list_attr_celeba.csv'
-IMG_ALIGN_CELEBA = FACES_DIR + 'img_align_celeba'
+# IMG_ALIGN_CELEBA = FACES_DIR + 'img_align_celeba'
+IMG_ALIGN_CELEBA = FACES_DIR + "gray_" + str(SPATIAL_DIM)
 
 print("done")
 
 
 # function for building the discriminator layers
-def build_discriminator(start_filters, spatial_dim, filter_size):
+def build_discriminator(start_filters, spatial_dim, filter_size, img_size=SPATIAL_DIM):
     # function for building a CNN block for downsampling the image
     def add_discriminator_block(x, filters, filter_size):
         x = Conv2D(filters, filter_size, padding='same')(x)
@@ -21,7 +25,7 @@ def build_discriminator(start_filters, spatial_dim, filter_size):
         return x
 
     # input is an image with shape spatial_dim x spatial_dim and 3 channels
-    inp = Input(shape=(spatial_dim, spatial_dim, 3))
+    inp = Input(shape=(spatial_dim, spatial_dim, N_CHANNELS))
 
     # design the discrimitor to downsample the image 4x
     x = add_discriminator_block(inp, start_filters, filter_size)
@@ -38,11 +42,12 @@ def build_discriminator(start_filters, spatial_dim, filter_size):
 
 print("done")
 
+
 from tensorflow.keras.layers import Conv2DTranspose as Deconvolution2D
 from tensorflow.keras.layers import Reshape
 
 
-def build_generator(start_filters, filter_size, latent_dim):
+def build_generator(start_filters, filter_size, latent_dim, spatial_dim=SPATIAL_DIM):
     # function for building a CNN block for upsampling the image
     def add_generator_block(x, filters, filter_size):
         x = Deconvolution2D(filters, filter_size, strides=2, padding='same')(x)
@@ -63,15 +68,17 @@ def build_generator(start_filters, filter_size, latent_dim):
     x = add_generator_block(x, start_filters * 4, filter_size)
     x = add_generator_block(x, start_filters * 2, filter_size)
     x = add_generator_block(x, start_filters, filter_size)
-    x = add_generator_block(x, start_filters, filter_size)
+    if spatial_dim == 64:
+        x = add_generator_block(x, start_filters, filter_size)
 
     # turn the output into a 3D tensor, an image with 3 channels
-    x = Conv2D(3, kernel_size=5, padding='same', activation='tanh')(x)
+    x = Conv2D(N_CHANNELS, kernel_size=5, padding='same', activation='tanh')(x)
 
     return Model(inputs=inp, outputs=x)
 
 
 print("done")
+
 
 import pandas as pd
 import os
@@ -86,7 +93,7 @@ TOTAL_SAMPLES = df_celeb.shape[0]
 df_celeb.head()
 
 # we will downscale the images
-SPATIAL_DIM = 64
+# SPATIAL_DIM = 64    # orig: 64
 # size of noise vector
 LATENT_DIM_GAN = 100
 # filter size in conv layer
@@ -94,9 +101,9 @@ FILTER_SIZE = 5
 # number of filters in conv layer
 NET_CAPACITY = 16
 # batch size
-BATCH_SIZE_GAN = 32
+BATCH_SIZE_GAN = 64     # 32
 # interval for displaying generated images
-PROGRESS_INTERVAL = 200
+PROGRESS_INTERVAL = 250
 # directory for storing generated images
 ROOT_DIR = 'visualization'
 if not os.path.isdir(ROOT_DIR):
@@ -119,7 +126,7 @@ def construct_models(verbose=False):
 
     ### generator
     # do not compile generator
-    generator = build_generator(NET_CAPACITY, FILTER_SIZE, LATENT_DIM_GAN)
+    generator = build_generator(NET_CAPACITY, FILTER_SIZE, LATENT_DIM_GAN, SPATIAL_DIM)
 
     ### DCGAN
     gan = Sequential()
@@ -142,6 +149,7 @@ def construct_models(verbose=False):
 
 generator_celeb, discriminator_celeb, gan_celeb = construct_models(verbose=True)
 
+
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
@@ -152,21 +160,22 @@ DISC_UPDATES = 1
 # number of generator updates per alternating training iteration
 GEN_UPDATES = 1
 
+SHOW_IMAGES = 2
+
 
 # function for training a GAN
-def run_training(generator, discriminator, gan, df=df_celeb, start_it=0, num_epochs=1000,
-                 get_real_images=None):
+def run_training(generator, discriminator, gan, df=df_celeb, start_it=0, num_epochs=1000, get_real_images=None):
     # helper function for selecting 'size' real images
     # and downscaling them to lower dimension SPATIAL_DIM
     def get_real_celebrity(df, size, total):
         cur_files = df.sample(frac=1).iloc[0:size]
-        X = np.empty(shape=(size, SPATIAL_DIM, SPATIAL_DIM, 3))
+        X = np.empty(shape=(size, SPATIAL_DIM, SPATIAL_DIM, N_CHANNELS))
         for i in range(0, size):
             file = cur_files.iloc[i]
             img_uri = IMG_ALIGN_CELEBA + '/' + file.image_id
             try:
                 img = cv2.imread(img_uri)
-                img = cv2.resize(img, (SPATIAL_DIM, SPATIAL_DIM))
+                # img = cv2.resize(img, (SPATIAL_DIM, SPATIAL_DIM))
                 img = np.flip(img, axis=2)
                 img = img.astype(np.float32) / 127.5 - 1.0
                 X[i] = img
@@ -205,8 +214,8 @@ def run_training(generator, discriminator, gan, df=df_celeb, start_it=0, num_epo
 
             # display some fake images for visual control of convergence
             if total_it % PROGRESS_INTERVAL == 0:
-                plt.figure(figsize=(5, 2))
-                num_vis = min(BATCH_SIZE_GAN, 5)
+                plt.figure(figsize=(SHOW_IMAGES, 2))
+                num_vis = min(BATCH_SIZE_GAN, SHOW_IMAGES)
                 imgs_real = get_real_images(df, num_vis, TOTAL_SAMPLES)
                 noise = np.random.randn(num_vis, LATENT_DIM_GAN)
                 imgs_fake = generator.predict(noise)
@@ -222,7 +231,7 @@ def run_training(generator, discriminator, gan, df=df_celeb, start_it=0, num_epo
                                     bbox_inches='tight')
                     plt.show()
 
-                    #### Generator training loop ####
+            #### Generator training loop ####
             loss = 0
             y = np.ones([BATCH_SIZE_GAN, 1])
             for j in range(GEN_UPDATES):
