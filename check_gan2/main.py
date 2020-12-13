@@ -38,7 +38,7 @@ class ElapsedTimer(object):
 
 
 def discriminator(img_rows, img_cols, channel):
-    D = Sequential()
+    D = Sequential(name="discriminator")
     depth = 64
     dropout = 0.4
     # In: 28 x 28 x 1, depth = 1
@@ -66,13 +66,14 @@ def discriminator(img_rows, img_cols, channel):
     D.add(Activation('sigmoid'))
     D.summary()
     return D
+# end
 
 
-def generator():
-    G = Sequential()
+def generator(img_dim):
+    G = Sequential(name="generator")
     dropout = 0.4
     depth = 64 + 64 + 64 + 64
-    dim = 7
+    dim = img_dim//4     # 7
     # In: 100
     # Out: dim x dim x depth
     G.add(Dense(dim * dim * depth, input_dim=100))
@@ -102,10 +103,11 @@ def generator():
     G.add(Activation('sigmoid'))
     G.summary()
     return G
+# end
 
 
 class DCGAN(object):
-    def __init__(self, img_rows=28, img_cols=28, channel=1):
+    def __init__(self, img_rows, img_cols, channel):
 
         self.img_rows = img_rows
         self.img_cols = img_cols
@@ -127,7 +129,7 @@ class DCGAN(object):
         if self.G:
             return self.G
         else:
-            self.G = generator()
+            self.G = generator(self.img_rows)
             return self.G
 
     def discriminator_model(self):
@@ -148,23 +150,73 @@ class DCGAN(object):
         self.AM.add(self.discriminator())
         self.AM.compile(loss='binary_crossentropy', optimizer=optimizer, metrics=['accuracy'])
         return self.AM
+# end
 
 
 class MNIST_DCGAN(object):
     def __init__(self):
-        self.img_rows = 28
-        self.img_cols = 28
-        self.channel = 1
+        # self.img_rows = 28
+        # self.img_cols = 28
+        # self.channel = 1
+        #
+        # self.x_train = input_data.read_data_sets("mnist", one_hot=True).train.images
+        # self.x_train = self.x_train.reshape(-1, self.img_rows, self.img_cols, 1).astype(np.float32)
 
-        self.x_train = input_data.read_data_sets("mnist", one_hot=True).train.images
-        self.x_train = self.x_train.reshape(-1, self.img_rows, self.img_cols, 1).astype(np.float32)
+        # self.load_data_mnist()
+        self.load_data_gray()
+        # self.load_data_color()
 
-        self.DCGAN = DCGAN()
+        self.DCGAN = DCGAN(self.img_rows, self.img_cols, self.channel)
         self.discriminator = self.DCGAN.discriminator_model()
         self.adversarial = self.DCGAN.adversarial_model()
         self.generator = self.DCGAN.generator()
+    # end
 
-    def train(self, train_steps=2000, batch_size=256, save_interval=0):
+    def load_data_mnist(self):
+        self.x_train = input_data.read_data_sets("mnist", one_hot=True).train.images
+        self.img_rows = 28
+        self.img_cols = 28
+        self.channel = 1
+        self.x_train = self.x_train.reshape(-1, self.img_rows, self.img_cols, self.channel).astype(np.float32)
+        self.img_name = "mnist_{}.png"
+
+    def load_data_gray(self):
+        from PIL import Image
+        from path import Path as path
+        from numpy import asarray
+        imgs = []
+        for img_file in path("E:/Datasets/CelebA/gray_32").files("*.jpg"):
+            img = Image.open(img_file)
+            imgs.append(asarray(img))
+            # if len(imgs) >= 60000: break
+
+        self.x_train = np.array(imgs)
+        self.img_rows = 32
+        self.img_cols = 32
+        self.channel = 1
+        self.x_train = (self.x_train.astype(np.float32) / 255)
+        self.x_train = self.x_train.reshape(-1, self.img_rows, self.img_cols, self.channel)
+        self.img_name = "gray_{}.png"
+
+    def load_data_color(self):
+        from PIL import Image
+        from path import Path as path
+        from numpy import asarray
+        imgs = []
+        for img_file in path("E:/Datasets/CelebA/color_32").files("*.jpg"):
+            img = Image.open(img_file)
+            imgs.append(asarray(img))
+            # if len(imgs) >= 60000: break
+
+        self.x_train = np.array(imgs)
+        self.img_rows = 32
+        self.img_cols = 32
+        self.channel = 3
+        self.x_train = (self.x_train.astype(np.float32) / 255)
+        self.x_train = self.x_train.reshape(-1, self.img_rows, self.img_cols, self.channel)
+        self.img_name = "color_{}.png"
+
+    def train(self, train_steps=2000, batch_size=256, save_interval=0, verbose=False):
         noise_input = None
         if save_interval>0:
             noise_input = np.random.uniform(-1.0, 1.0, size=[16, 100])
@@ -181,21 +233,24 @@ class MNIST_DCGAN(object):
             y = np.ones([batch_size, 1])
             noise = np.random.uniform(-1.0, 1.0, size=[batch_size, 100])
             a_loss = self.adversarial.train_on_batch(noise, y)
-            log_mesg = "%d: [D loss: %f, acc: %f]" % (i, d_loss[0], d_loss[1])
-            log_mesg = "%s  [A loss: %f, acc: %f]" % (log_mesg, a_loss[0], a_loss[1])
-            print(log_mesg)
-            if save_interval>0:
+
+            if verbose or save_interval > 0 and (i == 0 or (i+1)%save_interval == 0):
+                log_mesg = "%d: [D loss: %f, acc: %f]" % (i, d_loss[0], d_loss[1])
+                log_mesg = "%s  [A loss: %f, acc: %f]" % (log_mesg, a_loss[0], a_loss[1])
+                print(log_mesg)
+
+            if save_interval > 0:
                 if i == 0 or (i+1)%save_interval == 0:
-                    self.plot_images(save2file=True, samples=noise_input.shape[0],\
-                        noise=noise_input, step=(i+1))
+                    self.plot_images(save2file=True, samples=noise_input.shape[0], noise=noise_input, step=(i+1))
+    # end
 
     def plot_images(self, save2file=False, fake=True, samples=16, noise=None, step=0):
-        filename = 'mnist.png'
+        filename = self.img_name.format(0)
         if fake:
             if noise is None:
                 noise = np.random.uniform(-1.0, 1.0, size=[samples, 100])
             else:
-                filename = "mnist_%d.png" % step
+                filename = self.img_name.format(step)
             images = self.generator.predict(noise)
         else:
             i = np.random.randint(0, self.x_train.shape[0], samples)
@@ -214,6 +269,8 @@ class MNIST_DCGAN(object):
             plt.close('all')
         else:
             plt.show()
+    # end
+# end
 
 
 if __name__ == '__main__':
