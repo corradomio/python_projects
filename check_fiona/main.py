@@ -1,16 +1,38 @@
-# This is a sample Python script.
+import fiona
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+# Open a file for reading. We'll call this the "source."
 
+with fiona.open('tests/data/coutwildrnp.shp') as src:
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+    # The file we'll write to, the "destination", must be initialized
+    # with a coordinate system, a format driver name, and
+    # a record schema.  We can get initial values from the open
+    # collection's ``meta`` property and then modify them as
+    # desired.
 
+    meta = src.meta
+    meta['schema']['geometry'] = 'Point'
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    # Open an output file, using the same format driver and
+    # coordinate reference system as the source. The ``meta``
+    # mapping fills in the keyword parameters of fiona.open().
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    with fiona.open('test_write.shp', 'w', **meta) as dst:
+
+        # Process only the records intersecting a box.
+        for f in src.filter(bbox=(-107.0, 37.0, -105.0, 39.0)):
+
+            # Get a point on the boundary of the record's
+            # geometry.
+
+            f['geometry'] = {
+                'type': 'Point',
+                'coordinates': f['geometry']['coordinates'][0][0]}
+
+            # Write the record out.
+
+            dst.write(f)
+
+# The destination's contents are flushed to disk and the file is
+# closed when its ``with`` block ends. This effectively
+# executes ``dst.flush(); dst.close()``.

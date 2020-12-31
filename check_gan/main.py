@@ -257,7 +257,7 @@ def run_training(generator, discriminator, gan, df=df_celeb, start_it=0, num_epo
 
     return generator, discriminator, gan
 
-
+print("Run training")
 generator_celeb, discriminator_celeb, gan_celeb = run_training(generator_celeb,
                                                                discriminator_celeb,
                                                                gan_celeb,
