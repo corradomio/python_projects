@@ -1,3 +1,5 @@
 examples
 tutorials
 *.zip
+*.html
+.ipynb*
