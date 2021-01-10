@@ -3,3 +3,4 @@ tutorials
 *.zip
 *.html
 .ipynb*
+data
