@@ -9,4 +9,6 @@ build
 *.suspended
 removed
 *.jfr
+__pycache__
+
 
