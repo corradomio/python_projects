@@ -1,2 +1,8 @@
 results
 *.onnx
+model_save
+cola_public
+atis
+aclImdb
+*.zip
+*.gz
