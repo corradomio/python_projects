@@ -49,6 +49,7 @@ class UserStatus:
     @property
     def status(self) -> Dict[str, float]:
         return {"s": self._s, "r": self._r, "e": self._e, "i": self._i}
+    # end
 
 # end
 
