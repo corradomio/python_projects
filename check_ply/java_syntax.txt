@@ -1,0 +1,336 @@
+
+Type:
+    PrimitiveType
+    ReferenceType
+
+PrimitiveType:
+    {Annotation} (one of) boolean byte short int long char float double
+
+ReferenceType:
+    ClassOrInterfaceType
+    TypeVariable
+    ArrayType
+
+ClassOrInterfaceType:
+    ClassType
+    InterfaceType
+
+ClassType:
+    {Annotation} TypeIdentifier [TypeArguments]
+    PackageName . {Annotation} TypeIdentifier [TypeArguments]
+    ClassOrInterfaceType . {Annotation} TypeIdentifier [TypeArguments]
+
+InterfaceType:
+    ClassType
+
+TypeVariable:
+    {Annotation} TypeIdentifier
+
+ArrayType:
+    PrimitiveType Dims
+    ClassOrInterfaceType Dims
+    TypeVariable Dims
+
+Dims:
+    {Annotation} [ ] {{Annotation} [ ]}
+
+
+TypeParameter:
+    {TypeParameterModifier} TypeIdentifier [TypeBound]
+
+TypeParameterModifier:
+    Annotation
+
+TypeBound:
+    extends TypeVariable
+    extends ClassOrInterfaceType {AdditionalBound}
+
+AdditionalBound:
+    & InterfaceType
+
+
+TypeArguments:
+    < TypeArgumentList >
+
+TypeArgumentList:
+    TypeArgument {, TypeArgument}
+
+TypeArgument:
+    ReferenceType
+    Wildcard
+
+Wildcard:
+    {Annotation} ? [WildcardBounds]
+
+WildcardBounds:
+    extends ReferenceType
+    super ReferenceType
+
+
+---------------------------------------------------
+
+Identifier:
+    IdentifierChars but not a Keyword or BooleanLiteral or NullLiteral
+
+TypeIdentifier:
+    Identifier but not permits, record, sealed, var, or yield
+
+---------------------------------------------------
+
+MethodDeclaration:
+    {MethodModifier} MethodHeader MethodBody
+
+MethodHeader:
+    Result MethodDeclarator [Throws]
+    TypeParameters {Annotation} Result MethodDeclarator [Throws]
+
+MethodDeclarator:
+    Identifier ( [ReceiverParameter ,] [FormalParameterList] ) [Dims]
+
+ReceiverParameter:
+    {Annotation} UnannType [Identifier .] this
+
+FormalParameterList:
+    FormalParameter {, FormalParameter}
+
+FormalParameter:
+    {VariableModifier} UnannType VariableDeclaratorId
+    VariableArityParameter
+
+VariableArityParameter:
+    {VariableModifier} UnannType {Annotation} ... Identifier
+
+VariableModifier:
+    Annotation
+    final
+
+MethodModifier:
+    (one of) Annotation public protected private abstract static final synchronized native strictfp
+
+Result:
+    UnannType
+    void
+
+Throws:
+    throws ExceptionTypeList
+
+ExceptionTypeList:
+    ExceptionType {, ExceptionType}
+
+ExceptionType:
+    ClassType
+    TypeVariable
+
+
+---------------------------------------------------
+
+ConstructorDeclaration:
+    {ConstructorModifier} ConstructorDeclarator [Throws] ConstructorBody
+
+ConstructorDeclarator:
+    [TypeParameters] SimpleTypeName
+    ( [ReceiverParameter ,] [FormalParameterList] )
+
+SimpleTypeName:
+    TypeIdentifier
+
+ConstructorModifier:
+    (one of) Annotation public protected private
+
+
+---------------------------------------------------
+
+EnumDeclaration:
+    {ClassModifier} enum TypeIdentifier [ClassImplements] EnumBody
+
+EnumBody:
+    { [EnumConstantList] [,] [EnumBodyDeclarations] }
+
+EnumConstantList:
+    EnumConstant {, EnumConstant}
+
+EnumConstant:
+    {EnumConstantModifier} Identifier [( [ArgumentList] )] [ClassBody]
+
+EnumConstantModifier:
+    Annotation
+
+
+---------------------------------------------------
+
+ClassDeclaration:
+    NormalClassDeclaration
+    EnumDeclaration
+    RecordDeclaration
+
+NormalClassDeclaration:
+    {ClassModifier} class TypeIdentifier [TypeParameters]
+    [ClassExtends] [ClassImplements] [ClassPermits] ClassBody
+
+ClassModifier:
+    (one of) Annotation public protected private abstract static final sealed non-sealed strictfp
+
+TypeParameters:
+    < TypeParameterList >
+
+TypeParameterList:
+    TypeParameter {, TypeParameter}
+
+ClassExtends:
+    extends ClassType
+
+ClassImplements:
+    implements InterfaceTypeList
+
+InterfaceTypeList:
+    InterfaceType {, InterfaceType}
+
+ClassPermits:
+    permits TypeName {, TypeName}
+
+
+---------------------------------------------------
+
+RecordDeclaration:
+    {ClassModifier} record TypeIdentifier [TypeParameters] RecordHeader [ClassImplements] RecordBody
+
+RecordHeader:
+    ( [RecordComponentList] )
+
+RecordComponentList:
+    RecordComponent {, RecordComponent}
+
+RecordComponent:
+    {RecordComponentModifier} UnannType Identifier
+    VariableArityRecordComponent
+
+VariableArityRecordComponent:
+    {RecordComponentModifier} UnannType {Annotation} ... Identifier
+
+RecordComponentModifier:
+    Annotation
+
+---------------------------------------------------
+
+InterfaceDeclaration:
+    NormalInterfaceDeclaration
+    AnnotationInterfaceDeclaration
+
+NormalInterfaceDeclaration:
+    {InterfaceModifier} interface TypeIdentifier [TypeParameters] [InterfaceExtends] [InterfacePermits] InterfaceBody
+
+InterfaceModifier:
+    (one of) Annotation public protected private abstract static sealed non-sealed strictfp
+
+InterfaceExtends:
+    extends InterfaceTypeList
+
+InterfacePermits:
+    permits TypeName {, TypeName}
+
+ConstantDeclaration:
+    {ConstantModifier} UnannType VariableDeclaratorList ;
+
+ConstantModifier:
+    (one of) Annotation public static final
+
+InterfaceMethodDeclaration:
+    {InterfaceMethodModifier} MethodHeader MethodBody
+
+InterfaceMethodModifier:
+    (one of) Annotation public private abstract default static strictfp
+
+
+---------------------------------------------------
+
+AnnotationInterfaceDeclaration:
+    {InterfaceModifier} @ interface TypeIdentifier AnnotationInterfaceBody
+
+
+---------------------------------------------------
+FieldDeclaration:
+    {FieldModifier} UnannType VariableDeclaratorList ;
+
+VariableDeclaratorList:
+    VariableDeclarator {, VariableDeclarator}
+
+VariableDeclarator:
+    VariableDeclaratorId [= VariableInitializer]
+
+VariableDeclaratorId:
+    Identifier [Dims]
+
+VariableInitializer:
+    Expression
+    ArrayInitializer
+
+UnannType:
+    UnannPrimitiveType
+    UnannReferenceType
+    UnannPrimitiveType:
+    NumericType
+    boolean
+
+UnannReferenceType:
+    UnannClassOrInterfaceType
+    UnannTypeVariable
+    UnannArrayType
+
+UnannClassOrInterfaceType:
+    UnannClassType
+    UnannInterfaceType
+
+UnannClassType:
+    TypeIdentifier [TypeArguments]
+    PackageName . {Annotation} TypeIdentifier [TypeArguments]
+    UnannClassOrInterfaceType . {Annotation} TypeIdentifier
+    [TypeArguments]
+
+UnannInterfaceType:
+    UnannClassType
+
+UnannTypeVariable:
+    TypeIdentifier
+
+UnannArrayType:
+    UnannPrimitiveType Dims
+    UnannClassOrInterfaceType Dims
+    UnannTypeVariable Dims
+
+FieldModifier:
+    (one of) Annotation public protected private static final transient volatile
+
+
+---------------------------------------------------
+
+Annotation:
+    NormalAnnotation
+    MarkerAnnotation
+    SingleElementAnnotation
+
+NormalAnnotation:
+    @ TypeName ( [ElementValuePairList] )
+
+ElementValuePairList:
+    ElementValuePair {, ElementValuePair}
+
+ElementValuePair:
+    Identifier = ElementValue
+
+ElementValue:
+    ConditionalExpression
+    ElementValueArrayInitializer
+    Annotation
+
+ElementValueArrayInitializer:
+    { [ElementValueList] [,] }
+
+ElementValueList:
+    ElementValue {, ElementValue}
+
+MarkerAnnotation:
+    @ TypeName
+
+SingleElementAnnotation:
+    @ TypeName ( ElementValue )
+

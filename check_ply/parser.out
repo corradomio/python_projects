@@ -1,0 +1,586 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> classinterface
+Rule 1     type -> NAME tparams arrays
+Rule 2     typelist -> type , typelist
+Rule 3     typelist -> type
+Rule 4     typelist -> <empty>
+Rule 5     tparams -> < tparamlist >
+Rule 6     tparams -> <empty>
+Rule 7     tparamlist -> type , tparamlist
+Rule 8     tparamlist -> type
+Rule 9     arrays -> [ ] arrays
+Rule 10    arrays -> <empty>
+Rule 11    method -> type NAME ( paramlist )
+Rule 12    paramlist -> param , paramlist
+Rule 13    paramlist -> param
+Rule 14    paramlist -> <empty>
+Rule 15    param -> type NAME
+Rule 16    modifier -> PUBLIC
+Rule 17    modifier -> PROTECTED
+Rule 18    modifier -> PRIVATE
+Rule 19    modifier -> STATIC
+Rule 20    modifier -> FINAL
+Rule 21    modifier -> ABSTRACT
+Rule 22    classinterface -> modifier classinterface
+Rule 23    classinterface -> CLASS type extimpl
+Rule 24    classinterface -> INTERFACE type extimpl
+Rule 25    classinterface -> ENUM type extimpl
+Rule 26    extimpl -> EXTENDS typelist IMPLEMENTS typelist
+Rule 27    extimpl -> IMPLEMENTS typelist EXTENDS typelist
+Rule 28    extimpl -> EXTENDS typelist
+Rule 29    extimpl -> IMPLEMENTS typelist
+Rule 30    extimpl -> <empty>
+
+Terminals, with rules where they appear
+
+(                    : 11
+)                    : 11
+,                    : 2 7 12
+<                    : 5
+>                    : 5
+ABSTRACT             : 21
+CLASS                : 23
+ENUM                 : 25
+EXTENDS              : 26 27 28
+FINAL                : 20
+IMPLEMENTS           : 26 27 29
+INTERFACE            : 24
+NAME                 : 1 11 15
+PRIVATE              : 18
+PROTECTED            : 17
+PUBLIC               : 16
+STATIC               : 19
+[                    : 9
+]                    : 9
+error                : 
+
+Nonterminals, with rules where they appear
+
+arrays               : 1 9
+classinterface       : 22 0
+extimpl              : 23 24 25
+method               : 
+modifier             : 22
+param                : 12 13
+paramlist            : 11 12
+tparamlist           : 5 7
+tparams              : 1
+type                 : 2 3 7 8 11 15 23 24 25
+typelist             : 2 26 26 27 27 28 29
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . classinterface
+    (22) classinterface -> . modifier classinterface
+    (23) classinterface -> . CLASS type extimpl
+    (24) classinterface -> . INTERFACE type extimpl
+    (25) classinterface -> . ENUM type extimpl
+    (16) modifier -> . PUBLIC
+    (17) modifier -> . PROTECTED
+    (18) modifier -> . PRIVATE
+    (19) modifier -> . STATIC
+    (20) modifier -> . FINAL
+    (21) modifier -> . ABSTRACT
+
+    CLASS           shift and go to state 3
+    INTERFACE       shift and go to state 4
+    ENUM            shift and go to state 5
+    PUBLIC          shift and go to state 6
+    PROTECTED       shift and go to state 7
+    PRIVATE         shift and go to state 8
+    STATIC          shift and go to state 9
+    FINAL           shift and go to state 10
+    ABSTRACT        shift and go to state 11
+
+    classinterface                 shift and go to state 1
+    modifier                       shift and go to state 2
+
+state 1
+
+    (0) S' -> classinterface .
+
+
+
+state 2
+
+    (22) classinterface -> modifier . classinterface
+    (22) classinterface -> . modifier classinterface
+    (23) classinterface -> . CLASS type extimpl
+    (24) classinterface -> . INTERFACE type extimpl
+    (25) classinterface -> . ENUM type extimpl
+    (16) modifier -> . PUBLIC
+    (17) modifier -> . PROTECTED
+    (18) modifier -> . PRIVATE
+    (19) modifier -> . STATIC
+    (20) modifier -> . FINAL
+    (21) modifier -> . ABSTRACT
+
+    CLASS           shift and go to state 3
+    INTERFACE       shift and go to state 4
+    ENUM            shift and go to state 5
+    PUBLIC          shift and go to state 6
+    PROTECTED       shift and go to state 7
+    PRIVATE         shift and go to state 8
+    STATIC          shift and go to state 9
+    FINAL           shift and go to state 10
+    ABSTRACT        shift and go to state 11
+
+    modifier                       shift and go to state 2
+    classinterface                 shift and go to state 12
+
+state 3
+
+    (23) classinterface -> CLASS . type extimpl
+    (1) type -> . NAME tparams arrays
+
+    NAME            shift and go to state 14
+
+    type                           shift and go to state 13
+
+state 4
+
+    (24) classinterface -> INTERFACE . type extimpl
+    (1) type -> . NAME tparams arrays
+
+    NAME            shift and go to state 14
+
+    type                           shift and go to state 15
+
+state 5
+
+    (25) classinterface -> ENUM . type extimpl
+    (1) type -> . NAME tparams arrays
+
+    NAME            shift and go to state 14
+
+    type                           shift and go to state 16
+
+state 6
+
+    (16) modifier -> PUBLIC .
+
+    CLASS           reduce using rule 16 (modifier -> PUBLIC .)
+    INTERFACE       reduce using rule 16 (modifier -> PUBLIC .)
+    ENUM            reduce using rule 16 (modifier -> PUBLIC .)
+    PUBLIC          reduce using rule 16 (modifier -> PUBLIC .)
+    PROTECTED       reduce using rule 16 (modifier -> PUBLIC .)
+    PRIVATE         reduce using rule 16 (modifier -> PUBLIC .)
+    STATIC          reduce using rule 16 (modifier -> PUBLIC .)
+    FINAL           reduce using rule 16 (modifier -> PUBLIC .)
+    ABSTRACT        reduce using rule 16 (modifier -> PUBLIC .)
+
+
+state 7
+
+    (17) modifier -> PROTECTED .
+
+    CLASS           reduce using rule 17 (modifier -> PROTECTED .)
+    INTERFACE       reduce using rule 17 (modifier -> PROTECTED .)
+    ENUM            reduce using rule 17 (modifier -> PROTECTED .)
+    PUBLIC          reduce using rule 17 (modifier -> PROTECTED .)
+    PROTECTED       reduce using rule 17 (modifier -> PROTECTED .)
+    PRIVATE         reduce using rule 17 (modifier -> PROTECTED .)
+    STATIC          reduce using rule 17 (modifier -> PROTECTED .)
+    FINAL           reduce using rule 17 (modifier -> PROTECTED .)
+    ABSTRACT        reduce using rule 17 (modifier -> PROTECTED .)
+
+
+state 8
+
+    (18) modifier -> PRIVATE .
+
+    CLASS           reduce using rule 18 (modifier -> PRIVATE .)
+    INTERFACE       reduce using rule 18 (modifier -> PRIVATE .)
+    ENUM            reduce using rule 18 (modifier -> PRIVATE .)
+    PUBLIC          reduce using rule 18 (modifier -> PRIVATE .)
+    PROTECTED       reduce using rule 18 (modifier -> PRIVATE .)
+    PRIVATE         reduce using rule 18 (modifier -> PRIVATE .)
+    STATIC          reduce using rule 18 (modifier -> PRIVATE .)
+    FINAL           reduce using rule 18 (modifier -> PRIVATE .)
+    ABSTRACT        reduce using rule 18 (modifier -> PRIVATE .)
+
+
+state 9
+
+    (19) modifier -> STATIC .
+
+    CLASS           reduce using rule 19 (modifier -> STATIC .)
+    INTERFACE       reduce using rule 19 (modifier -> STATIC .)
+    ENUM            reduce using rule 19 (modifier -> STATIC .)
+    PUBLIC          reduce using rule 19 (modifier -> STATIC .)
+    PROTECTED       reduce using rule 19 (modifier -> STATIC .)
+    PRIVATE         reduce using rule 19 (modifier -> STATIC .)
+    STATIC          reduce using rule 19 (modifier -> STATIC .)
+    FINAL           reduce using rule 19 (modifier -> STATIC .)
+    ABSTRACT        reduce using rule 19 (modifier -> STATIC .)
+
+
+state 10
+
+    (20) modifier -> FINAL .
+
+    CLASS           reduce using rule 20 (modifier -> FINAL .)
+    INTERFACE       reduce using rule 20 (modifier -> FINAL .)
+    ENUM            reduce using rule 20 (modifier -> FINAL .)
+    PUBLIC          reduce using rule 20 (modifier -> FINAL .)
+    PROTECTED       reduce using rule 20 (modifier -> FINAL .)
+    PRIVATE         reduce using rule 20 (modifier -> FINAL .)
+    STATIC          reduce using rule 20 (modifier -> FINAL .)
+    FINAL           reduce using rule 20 (modifier -> FINAL .)
+    ABSTRACT        reduce using rule 20 (modifier -> FINAL .)
+
+
+state 11
+
+    (21) modifier -> ABSTRACT .
+
+    CLASS           reduce using rule 21 (modifier -> ABSTRACT .)
+    INTERFACE       reduce using rule 21 (modifier -> ABSTRACT .)
+    ENUM            reduce using rule 21 (modifier -> ABSTRACT .)
+    PUBLIC          reduce using rule 21 (modifier -> ABSTRACT .)
+    PROTECTED       reduce using rule 21 (modifier -> ABSTRACT .)
+    PRIVATE         reduce using rule 21 (modifier -> ABSTRACT .)
+    STATIC          reduce using rule 21 (modifier -> ABSTRACT .)
+    FINAL           reduce using rule 21 (modifier -> ABSTRACT .)
+    ABSTRACT        reduce using rule 21 (modifier -> ABSTRACT .)
+
+
+state 12
+
+    (22) classinterface -> modifier classinterface .
+
+    $end            reduce using rule 22 (classinterface -> modifier classinterface .)
+
+
+state 13
+
+    (23) classinterface -> CLASS type . extimpl
+    (26) extimpl -> . EXTENDS typelist IMPLEMENTS typelist
+    (27) extimpl -> . IMPLEMENTS typelist EXTENDS typelist
+    (28) extimpl -> . EXTENDS typelist
+    (29) extimpl -> . IMPLEMENTS typelist
+    (30) extimpl -> .
+
+    EXTENDS         shift and go to state 18
+    IMPLEMENTS      shift and go to state 19
+    $end            reduce using rule 30 (extimpl -> .)
+
+    extimpl                        shift and go to state 17
+
+state 14
+
+    (1) type -> NAME . tparams arrays
+    (5) tparams -> . < tparamlist >
+    (6) tparams -> .
+
+    <               shift and go to state 21
+    [               reduce using rule 6 (tparams -> .)
+    EXTENDS         reduce using rule 6 (tparams -> .)
+    IMPLEMENTS      reduce using rule 6 (tparams -> .)
+    $end            reduce using rule 6 (tparams -> .)
+    ,               reduce using rule 6 (tparams -> .)
+    >               reduce using rule 6 (tparams -> .)
+
+    tparams                        shift and go to state 20
+
+state 15
+
+    (24) classinterface -> INTERFACE type . extimpl
+    (26) extimpl -> . EXTENDS typelist IMPLEMENTS typelist
+    (27) extimpl -> . IMPLEMENTS typelist EXTENDS typelist
+    (28) extimpl -> . EXTENDS typelist
+    (29) extimpl -> . IMPLEMENTS typelist
+    (30) extimpl -> .
+
+    EXTENDS         shift and go to state 18
+    IMPLEMENTS      shift and go to state 19
+    $end            reduce using rule 30 (extimpl -> .)
+
+    extimpl                        shift and go to state 22
+
+state 16
+
+    (25) classinterface -> ENUM type . extimpl
+    (26) extimpl -> . EXTENDS typelist IMPLEMENTS typelist
+    (27) extimpl -> . IMPLEMENTS typelist EXTENDS typelist
+    (28) extimpl -> . EXTENDS typelist
+    (29) extimpl -> . IMPLEMENTS typelist
+    (30) extimpl -> .
+
+    EXTENDS         shift and go to state 18
+    IMPLEMENTS      shift and go to state 19
+    $end            reduce using rule 30 (extimpl -> .)
+
+    extimpl                        shift and go to state 23
+
+state 17
+
+    (23) classinterface -> CLASS type extimpl .
+
+    $end            reduce using rule 23 (classinterface -> CLASS type extimpl .)
+
+
+state 18
+
+    (26) extimpl -> EXTENDS . typelist IMPLEMENTS typelist
+    (28) extimpl -> EXTENDS . typelist
+    (2) typelist -> . type , typelist
+    (3) typelist -> . type
+    (4) typelist -> .
+    (1) type -> . NAME tparams arrays
+
+    IMPLEMENTS      reduce using rule 4 (typelist -> .)
+    $end            reduce using rule 4 (typelist -> .)
+    NAME            shift and go to state 14
+
+    typelist                       shift and go to state 24
+    type                           shift and go to state 25
+
+state 19
+
+    (27) extimpl -> IMPLEMENTS . typelist EXTENDS typelist
+    (29) extimpl -> IMPLEMENTS . typelist
+    (2) typelist -> . type , typelist
+    (3) typelist -> . type
+    (4) typelist -> .
+    (1) type -> . NAME tparams arrays
+
+    EXTENDS         reduce using rule 4 (typelist -> .)
+    $end            reduce using rule 4 (typelist -> .)
+    NAME            shift and go to state 14
+
+    typelist                       shift and go to state 26
+    type                           shift and go to state 25
+
+state 20
+
+    (1) type -> NAME tparams . arrays
+    (9) arrays -> . [ ] arrays
+    (10) arrays -> .
+
+    [               shift and go to state 28
+    EXTENDS         reduce using rule 10 (arrays -> .)
+    IMPLEMENTS      reduce using rule 10 (arrays -> .)
+    $end            reduce using rule 10 (arrays -> .)
+    ,               reduce using rule 10 (arrays -> .)
+    >               reduce using rule 10 (arrays -> .)
+
+    arrays                         shift and go to state 27
+
+state 21
+
+    (5) tparams -> < . tparamlist >
+    (7) tparamlist -> . type , tparamlist
+    (8) tparamlist -> . type
+    (1) type -> . NAME tparams arrays
+
+    NAME            shift and go to state 14
+
+    tparamlist                     shift and go to state 29
+    type                           shift and go to state 30
+
+state 22
+
+    (24) classinterface -> INTERFACE type extimpl .
+
+    $end            reduce using rule 24 (classinterface -> INTERFACE type extimpl .)
+
+
+state 23
+
+    (25) classinterface -> ENUM type extimpl .
+
+    $end            reduce using rule 25 (classinterface -> ENUM type extimpl .)
+
+
+state 24
+
+    (26) extimpl -> EXTENDS typelist . IMPLEMENTS typelist
+    (28) extimpl -> EXTENDS typelist .
+
+    IMPLEMENTS      shift and go to state 31
+    $end            reduce using rule 28 (extimpl -> EXTENDS typelist .)
+
+
+state 25
+
+    (2) typelist -> type . , typelist
+    (3) typelist -> type .
+
+    ,               shift and go to state 32
+    IMPLEMENTS      reduce using rule 3 (typelist -> type .)
+    $end            reduce using rule 3 (typelist -> type .)
+    EXTENDS         reduce using rule 3 (typelist -> type .)
+
+
+state 26
+
+    (27) extimpl -> IMPLEMENTS typelist . EXTENDS typelist
+    (29) extimpl -> IMPLEMENTS typelist .
+
+    EXTENDS         shift and go to state 33
+    $end            reduce using rule 29 (extimpl -> IMPLEMENTS typelist .)
+
+
+state 27
+
+    (1) type -> NAME tparams arrays .
+
+    EXTENDS         reduce using rule 1 (type -> NAME tparams arrays .)
+    IMPLEMENTS      reduce using rule 1 (type -> NAME tparams arrays .)
+    $end            reduce using rule 1 (type -> NAME tparams arrays .)
+    ,               reduce using rule 1 (type -> NAME tparams arrays .)
+    >               reduce using rule 1 (type -> NAME tparams arrays .)
+
+
+state 28
+
+    (9) arrays -> [ . ] arrays
+
+    ]               shift and go to state 34
+
+
+state 29
+
+    (5) tparams -> < tparamlist . >
+
+    >               shift and go to state 35
+
+
+state 30
+
+    (7) tparamlist -> type . , tparamlist
+    (8) tparamlist -> type .
+
+    ,               shift and go to state 36
+    >               reduce using rule 8 (tparamlist -> type .)
+
+
+state 31
+
+    (26) extimpl -> EXTENDS typelist IMPLEMENTS . typelist
+    (2) typelist -> . type , typelist
+    (3) typelist -> . type
+    (4) typelist -> .
+    (1) type -> . NAME tparams arrays
+
+    $end            reduce using rule 4 (typelist -> .)
+    NAME            shift and go to state 14
+
+    typelist                       shift and go to state 37
+    type                           shift and go to state 25
+
+state 32
+
+    (2) typelist -> type , . typelist
+    (2) typelist -> . type , typelist
+    (3) typelist -> . type
+    (4) typelist -> .
+    (1) type -> . NAME tparams arrays
+
+    IMPLEMENTS      reduce using rule 4 (typelist -> .)
+    $end            reduce using rule 4 (typelist -> .)
+    EXTENDS         reduce using rule 4 (typelist -> .)
+    NAME            shift and go to state 14
+
+    type                           shift and go to state 25
+    typelist                       shift and go to state 38
+
+state 33
+
+    (27) extimpl -> IMPLEMENTS typelist EXTENDS . typelist
+    (2) typelist -> . type , typelist
+    (3) typelist -> . type
+    (4) typelist -> .
+    (1) type -> . NAME tparams arrays
+
+    $end            reduce using rule 4 (typelist -> .)
+    NAME            shift and go to state 14
+
+    typelist                       shift and go to state 39
+    type                           shift and go to state 25
+
+state 34
+
+    (9) arrays -> [ ] . arrays
+    (9) arrays -> . [ ] arrays
+    (10) arrays -> .
+
+    [               shift and go to state 28
+    EXTENDS         reduce using rule 10 (arrays -> .)
+    IMPLEMENTS      reduce using rule 10 (arrays -> .)
+    $end            reduce using rule 10 (arrays -> .)
+    ,               reduce using rule 10 (arrays -> .)
+    >               reduce using rule 10 (arrays -> .)
+
+    arrays                         shift and go to state 40
+
+state 35
+
+    (5) tparams -> < tparamlist > .
+
+    [               reduce using rule 5 (tparams -> < tparamlist > .)
+    EXTENDS         reduce using rule 5 (tparams -> < tparamlist > .)
+    IMPLEMENTS      reduce using rule 5 (tparams -> < tparamlist > .)
+    $end            reduce using rule 5 (tparams -> < tparamlist > .)
+    ,               reduce using rule 5 (tparams -> < tparamlist > .)
+    >               reduce using rule 5 (tparams -> < tparamlist > .)
+
+
+state 36
+
+    (7) tparamlist -> type , . tparamlist
+    (7) tparamlist -> . type , tparamlist
+    (8) tparamlist -> . type
+    (1) type -> . NAME tparams arrays
+
+    NAME            shift and go to state 14
+
+    type                           shift and go to state 30
+    tparamlist                     shift and go to state 41
+
+state 37
+
+    (26) extimpl -> EXTENDS typelist IMPLEMENTS typelist .
+
+    $end            reduce using rule 26 (extimpl -> EXTENDS typelist IMPLEMENTS typelist .)
+
+
+state 38
+
+    (2) typelist -> type , typelist .
+
+    IMPLEMENTS      reduce using rule 2 (typelist -> type , typelist .)
+    $end            reduce using rule 2 (typelist -> type , typelist .)
+    EXTENDS         reduce using rule 2 (typelist -> type , typelist .)
+
+
+state 39
+
+    (27) extimpl -> IMPLEMENTS typelist EXTENDS typelist .
+
+    $end            reduce using rule 27 (extimpl -> IMPLEMENTS typelist EXTENDS typelist .)
+
+
+state 40
+
+    (9) arrays -> [ ] arrays .
+
+    EXTENDS         reduce using rule 9 (arrays -> [ ] arrays .)
+    IMPLEMENTS      reduce using rule 9 (arrays -> [ ] arrays .)
+    $end            reduce using rule 9 (arrays -> [ ] arrays .)
+    ,               reduce using rule 9 (arrays -> [ ] arrays .)
+    >               reduce using rule 9 (arrays -> [ ] arrays .)
+
+
+state 41
+
+    (7) tparamlist -> type , tparamlist .
+
+    >               reduce using rule 7 (tparamlist -> type , tparamlist .)
+
