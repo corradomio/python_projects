@@ -1,0 +1,6 @@
+downloads.grpc
+downloads.nng
+downloads.zmq
+pyzmq.libs
+*.pyd
+
