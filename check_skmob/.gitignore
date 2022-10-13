@@ -1,6 +1,6 @@
+data
 examples
 tutorials
 *.zip
 *.html
 .ipynb*
-data
