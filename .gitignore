@@ -10,5 +10,5 @@ build
 removed
 *.jfr
 __pycache__
-
+*.whl
 
