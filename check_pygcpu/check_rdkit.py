@@ -1,0 +1,3 @@
+import rdkit
+
+print("ok")

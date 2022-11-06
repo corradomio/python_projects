@@ -147,99 +147,107 @@ TUNames = [
 
 ]
 
-ds.KarateClub()
-for name in TUNames:
-    try:
-        ds.TUDataset(root='/tmp/TUDataset/', name=name)
-    except Exception as e:
-        print(f"TUDataset ... missing {name}", e)
-        pass
+# ds.KarateClub()
+# for name in TUNames:
+#     try:
+#         ds.TUDataset(root='/tmp/TUDataset/', name=name)
+#     except Exception as e:
+#         print(f"TUDataset ... missing {name}", e)
+#         pass
+#
+# for name in ["PATTERN", "CLUSTER", "MNIST", "CIFAR10", "TSP", "CSL"]:
+#     ds.GNNBenchmarkDataset(root='/tmp/GNNBenchmarkDataset/', name=name)
+#
+# for name in ["Cora", "CiteSeer", "PubMed"]:
+#     ds.Planetoid(root='/tmp/Planetoid/', name=name)
+#
+# ds.FakeDataset()
+# ds.FakeHeteroDataset()
+# ds.NELL(root='/tmp/NELL/')
+#
+# for name in ["Cora", "Cora_ML" "CiteSeer", "DBLP", "PubMed"]:
+#     try:
+#         ds.CitationFull(root='/tmp/CitationFull/', name=name)
+#     except Exception as e:
+#         print(f"CitationFull ... missing {name}", e)
+#     pass
+#
+# ds.CoraFull(root='/tmp/CoraFull/')
+#
+# for name in["CS", "Physics"]:
+#     try:
+#         ds.Coauthor(root='/tmp/Coauthor/', name=name)
+#     except Exception as e:
+#         print(f"Coauthor ... missing {name}", e)
+#     pass
+#
+# for name in ["Computers", "Photo"]:
+#     try:
+#         ds.Amazon(root='/tmp/Amazon/', name=name)
+#     except Exception as e:
+#         print(f"Amazon ... missing {name}", e)
+#     pass
+#
+# ds.PPI(root='/tmp/PPI/')
+# ds.Reddit(root='/tmp/Reddit/')
+# ds.Reddit2(root='/tmp/Reddit2/')
+# ds.Flickr(root='/tmp/Flickr/')
+# ds.Yelp(root='/tmp/Yelp/')
+# ds.AmazonProducts(root='/tmp/AmazonProducts/')
+# ds.QM7b(root='/tmp/QM7b/')
+# ds.QM9(root='/tmp/QM9/')
+#
+# for name in ['benzene', 'uracil', 'napthalene', 'aspirin', 'malonaldehyde', 'ethanol', 'toluene', 'paracetamol', 'azobenzene']:
+#     try:
+#         ds.MD17(root='/tmp/MD17/', name=name)
+#     except Exception as e:
+#         print(f"MD17 ... missing {name}", e)
+#     pass
+#
+# ds.ZINC(root='/tmp/ZINC/')
+#
+# for name in ["ESOL", "FreeSolv", "Lipo", "PCBA", "MUV", "HIV", "BACE", "BBPB", "Tox21", "ToxCast", "SIDER", "ClinTox"]:
+#     try:
+#         ds.MoleculeNet(root='/tmp/MoleculeNet/', name=name)
+#     except Exception as e:
+#         print(f"MoleculeNet ... missing {name}", e)
+#     pass
+#
+# for name in ["AIFB", "MUTAG", "BGS", "AM"]:
+#     try:
+#         ds.Entities(root='/tmp/Entities/', name=name)
+#     except Exception as e:
+#         print(f"Entities ... missing {name}", e)
+#     pass
+#
+# for name in ["FB15k-237"]:
+#     ds.RelLinkPredDataset(root='/tmp/RelLinkPredDataset/', name=name)
+#
+# for name in ["AIDS700nef", "LINUX", "ALKANE", "IMDBMulti"]:
+#     try:
+#         ds.GEDDataset(root='/tmp/GEDDataset/', name=name)
+#     except Exception as e:
+#         print(f"GEDDataset ... missing {name}", e)
+#     pass
+#
+# for name in ["Wiki", "Cora" "CiteSeer", "PubMed", "BlogCatalog", "PPI", "Flickr", "Facebook", "Twitter", "TWeibo", "MAG"]:
+#     try:
+#         ds.AttributedGraphDataset(root='/tmp/AttributedGraphDataset/', name=name)
+#     except Exception as e:
+#         print(f"AttributedGraphDataset ... missing {name}", e)
+#     pass
+#
+# ds.MNISTSuperpixels(root='/tmp/MNISTSuperpixels/')
+# catyaa@hotmail.com/ 9NtXgackschV-a:
+try:
+    ds.FAUST(root='/tmp/FAUST/')
+except Exception as e:
+    print(f"FAUST ... missing", e)
+try:
+    ds.DynamicFAUST(root='/tmp/DynamicFAUST/')
+except Exception as e:
+    print(f"DynamicFAUST ... missing", e)
 
-for name in ["PATTERN", "CLUSTER", "MNIST", "CIFAR10", "TSP", "CSL"]:
-    ds.GNNBenchmarkDataset(root='/tmp/GNNBenchmarkDataset/', name=name)
-
-for name in ["Cora", "CiteSeer", "PubMed"]:
-    ds.Planetoid(root='/tmp/Planetoid/', name=name)
-
-ds.FakeDataset()
-ds.FakeHeteroDataset()
-ds.NELL(root='/tmp/NELL/')
-
-for name in ["Cora", "Cora_ML" "CiteSeer", "DBLP", "PubMed"]:
-    try:
-        ds.CitationFull(root='/tmp/CitationFull/', name=name)
-    except Exception as e:
-        print(f"CitationFull ... missing {name}", e)
-    pass
-
-ds.CoraFull(root='/tmp/CoraFull/')
-
-for name in["CS", "Physics"]:
-    try:
-        ds.Coauthor(root='/tmp/Coauthor/', name=name)
-    except Exception as e:
-        print(f"Coauthor ... missing {name}", e)
-    pass
-
-for name in ["Computers", "Photo"]:
-    try:
-        ds.Amazon(root='/tmp/Amazon/', name=name)
-    except Exception as e:
-        print(f"Amazon ... missing {name}", e)
-    pass
-
-ds.PPI(root='/tmp/PPI/')
-ds.Reddit(root='/tmp/Reddit/')
-ds.Reddit2(root='/tmp/Reddit2/')
-ds.Flickr(root='/tmp/Flickr/')
-ds.Yelp(root='/tmp/Yelp/')
-ds.AmazonProducts(root='/tmp/AmazonProducts/')
-ds.QM7b(root='/tmp/QM7b/')
-ds.QM9(root='/tmp/QM9/')
-
-for name in ['benzene', 'uracil', 'napthalene', 'aspirin', 'malonaldehyde', 'ethanol', 'toluene', 'paracetamol', 'azobenzene']:
-    try:
-        ds.MD17(root='/tmp/MD17/', name=name)
-    except Exception as e:
-        print(f"MD17 ... missing {name}", e)
-    pass
-
-ds.ZINC(root='/tmp/ZINC/')
-
-for name in ["ESOL", "FreeSolv", "Lipo", "PCBA", "MUV", "HIV", "BACE", "BBPB", "Tox21", "ToxCast", "SIDER", "ClinTox"]:
-    try:
-        ds.MoleculeNet(root='/tmp/MoleculeNet/', name=name)
-    except Exception as e:
-        print(f"MoleculeNet ... missing {name}", e)
-    pass
-
-for name in ["AIFB", "MUTAG", "BGS", "AM"]:
-    try:
-        ds.Entities(root='/tmp/Entities/', name=name)
-    except Exception as e:
-        print(f"Entities ... missing {name}", e)
-    pass
-
-for name in ["FB15k-237"]:
-    ds.RelLinkPredDataset(root='/tmp/RelLinkPredDataset/', name=name)
-
-for name in ["AIDS700nef", "LINUX", "ALKANE", "IMDBMulti"]:
-    try:
-        ds.GEDDataset(root='/tmp/GEDDataset/', name=name)
-    except Exception as e:
-        print(f"GEDDataset ... missing {name}", e)
-    pass
-
-for name in ["Wiki", "Cora" "CiteSeer", "PubMed", "BlogCatalog", "PPI", "Flickr", "Facebook", "Twitter", "TWeibo", "MAG"]:
-    try:
-        ds.AttributedGraphDataset(root='/tmp/AttributedGraphDataset/', name=name)
-    except Exception as e:
-        print(f"AttributedGraphDataset ... missing {name}", e)
-    pass
-
-ds.MNISTSuperpixels(root='/tmp/MNISTSuperpixels/')
-ds.FAUST(root='/tmp/FAUST/')
-ds.DynamicFAUST(root='/tmp/DynamicFAUST/')
 ds.ShapeNet(root='/tmp/ShapeNet/')
 
 for name in ['10', '40']:

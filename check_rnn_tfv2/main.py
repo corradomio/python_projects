@@ -4,6 +4,8 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from pprint import pprint
 
+print(tf.__version__)
+
 # --------------------------------
 
 model1 = keras.Sequential()
