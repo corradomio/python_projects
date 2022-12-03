@@ -1,5 +1,6 @@
 from pprint import pprint
 import numpy as np
+import silence_tensorflow.auto
 
 import tensorflow_datasets as tfds
 import tensorflow as tf
