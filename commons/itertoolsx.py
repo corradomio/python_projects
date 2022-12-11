@@ -4,8 +4,8 @@
 # product
 # permutations
 # combinations.
-from itertools import combinations
-from typing import Collection, Iterator
+from itertools import combinations, accumulate
+from typing import Collection, Iterator, Iterable
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,8 @@ def argsort(l: list, reverse: bool = False) -> list:
 # ---------------------------------------------------------------------------
 # Mapping
 # ---------------------------------------------------------------------------
-def list_map(f, l: list) -> list:
+
+def list_map(f, l: Iterable) -> list:
     """
     Apply the function to all list's elements
 
@@ -65,6 +66,7 @@ def dict_map(f, d: dict, kf=None) -> dict:
 # ---------------------------------------------------------------------------
 # Conversion
 # ---------------------------------------------------------------------------
+
 def dict_to_list(d: dict) -> list:
     """
     Convert a dictionary in a list of pairs/tuples
@@ -72,25 +74,61 @@ def dict_to_list(d: dict) -> list:
     :param d: dictionary
     :return: list of tuples
     """
-    l = []
-    for k in d:
-        l.append( (k, d[k]) )
-    return l
+    return [(k, d[k]) for k in d]
 # end
 
 
 # ---------------------------------------------------------------------------
 # List handling
 # ---------------------------------------------------------------------------
-def list_len(l):
+
+def list_len(l: list) -> int:
+    """Safe len for lists"""
     return 0 if l is None else len(l)
 # end
 
 
-def sublists(l):
-    return (l[0:i] for i in range(len(l)+1))
+def sublists(l: list) -> Iterator:
+    """
+    Generate the sequence [], [e1], [e1, e2], ...
+    :param l: the list to scan
+    :return: iterato an all sublists
+    """
+    for i in range(len(l)+1):
+        yield l[0:i]
+    # return (l[0:i] for i in range(len(l)+1))
 # end
 
+
+def list_split(l, k):
+    n = len(l)
+    if n % k == 0:
+        d = n//k
+        for i in range(0, len(l), d):
+            yield l[i:i + d]
+    else:
+        d = n//k+1
+        for i in range(0, n, d):
+            yield l[i:min(i + d, n)]
+# end
+
+
+def flatten(l) -> list:
+    """
+    Flatten a list:
+
+        [[1,2],[3,[4,5]]] -> [1,2,3,4,5]
+
+    :param l:
+    :return:
+    """
+    if len(l) == 0:
+        return l
+    elif type(l[0]) in [list, tuple]:
+        return accumulate(list_map(flatten, l), lambda a,b: a+b)
+    else:
+        return l
+# end
 
 # ---------------------------------------------------------------------------
 # Subsets

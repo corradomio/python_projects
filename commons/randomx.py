@@ -3,7 +3,6 @@ from sys import maxsize
 from random import Random, random
 from mathx import comb, failing_fact, EPS
 
-
 MAXINT = maxsize
 
 
@@ -23,6 +22,7 @@ def _normalize_k(k, n):
     else:
         return k
 # end
+
 
 def _normalize_plevels(n, k, plevels):
     """
@@ -46,7 +46,7 @@ def _normalize_plevels(n, k, plevels):
     elif len(plevels) < n + 1:
         plevels = list(plevels) + [0] * (n + 1 - len(plevels))
     else:
-        plevels = plevels[0:n+1]
+        plevels = plevels[0:n + 1]
 
     assert len(plevels) == n + 1
 
@@ -62,14 +62,15 @@ def _normalize_plevels(n, k, plevels):
     return plevels
 # end
 
+
 def _normalize_pitems(n, pitems):
     """
     normalize pitems to be a list of n elements
     """
     if pitems is None:
-        pitems = [.5]*n
+        pitems = [.5] * n
     elif type(pitems) in [int, float]:
-        pitems = [pitems]*n
+        pitems = [pitems] * n
     elif len(pitems) < n:
         pitems = list(pitems) + [0] * (n - len(pitems))
     else:
@@ -80,6 +81,7 @@ def _normalize_pitems(n, pitems):
     return pitems
 # end
 
+
 def _normalize_numerosity(n, k):
     """
     normalize the numerosity of the levels based on the selected levels k
@@ -87,7 +89,7 @@ def _normalize_numerosity(n, k):
     kmin, kmax = k
     numerosity = [comb(n, i) for i in range(n + 1)]
     for k in range(kmin): numerosity[k] = 0
-    for k in range(kmax+1, n+1): numerosity[k] = 0
+    for k in range(kmax + 1, n + 1): numerosity[k] = 0
     return numerosity
 # end
 
@@ -105,8 +107,9 @@ def random_list(n, normalized=False, grounded=False):
         r[0] = 0.
     if normalized:
         s = sum(r)
-        r = [r[i]/s for i in range(n)]
+        r = [r[i] / s for i in range(n)]
     return r
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +133,7 @@ def random_list(n, normalized=False, grounded=False):
 #
 class WeightedRandomSets:
 
-    def __init__(self, n: int, m: int=None, k=None, plevels=None, pitems=None, random_state=None):
+    def __init__(self, n: int, m: int = None, k=None, plevels=None, pitems=None, random_state=None):
         """
         Generate a random subset from a set with n elements.
         If plevels is None and pitems is None
@@ -150,7 +153,7 @@ class WeightedRandomSets:
             m = MAXINT
 
         k = _normalize_k(k, n)
-        
+
         # n of elements
         self.n = n
         """:type: int"""
@@ -158,7 +161,7 @@ class WeightedRandomSets:
         # (min,max) set cardinality
         self.k = k
         """:type: (int,int)"""
-        
+
         # n of sets to generate
         self.m = m
         """:type: int"""
@@ -191,7 +194,7 @@ class WeightedRandomSets:
 
         # current element. Used to improve the random set generator
         self._elm = 0
-        
+
         # n of generated sets in this session
         self._nsets = 0
     # end
@@ -251,7 +254,7 @@ class WeightedRandomSets:
         n = self.n
         r = self.rnd.random()
         cdf = 0.
-        for k in range(n+1):
+        for k in range(n + 1):
             cdf += self.p_levels[k]
             if r <= cdf:
                 return k
@@ -275,7 +278,7 @@ class WeightedRandomSets:
 
 class RandomSets:
 
-    def __init__(self, n: int, m:int=None, k:int=None, unique=True, random_state=None, generated=None):
+    def __init__(self, n: int, m: int = None, k: int = None, unique=True, random_state=None, generated=None):
         """
         Generate a random subset from a set with n elements
 
@@ -330,7 +333,7 @@ class RandomSets:
         self.generated = set() if generated is None else generated
 
         # last member generated
-        self._elm = n-1
+        self._elm = n - 1
 
         # n of sets generated in this session
         self._nsets = 0
@@ -413,9 +416,9 @@ class RandomSets:
         kmin, kmax = self.k
         c = 0
         n = self.n_sets
-        for k in range(kmin, kmax+1):
+        for k in range(kmin, kmax + 1):
             c += self.numerosity[k]
-            if r <= c/n:
+            if r <= c / n:
                 return k
         return kmax
     # end
@@ -437,7 +440,7 @@ class RandomSets:
 
 
 class RandomPermutations:
-    
+
     def __init__(self, n, m=None, k=None, unique=True, random_state=None, generated=None):
         """
         :param n: number of elements in the permutation
@@ -558,7 +561,6 @@ class RandomPermutations:
 # end
 
 
-
 # ---------------------------------------------------------------------------
 # SetsStatistics
 # ---------------------------------------------------------------------------
@@ -580,15 +582,15 @@ class SetsStatistics:
         self.n = n
         self.k = (0, n)
         self.N = set(range(n))
-        self.c_levels = [0]*(n+1)   # levels used
-        self.c_in_set = [0]*n       # e is IN set
-        self.c_outset = [0]*n       # e is NOT in set
-        self.k = [n, 0]             # selected levels
+        self.c_levels = [0] * (n + 1)  # levels used
+        self.c_in_set = [0] * n  # e is IN set
+        self.c_outset = [0] * n  # e is NOT in set
+        self.k = [n, 0]  # selected levels
         self.p = prec
 
         nsets = 1 << n
-        self.numerosity = [comb(n, k) for k in range(n+1)]
-        self.p_levels = [self.numerosity[k]/nsets for k in range(n+1)]
+        self.numerosity = [comb(n, k) for k in range(n + 1)]
+        self.p_levels = [self.numerosity[k] / nsets for k in range(n + 1)]
         self.p_items = [.5 for i in range(n)]
     # end
 
@@ -597,8 +599,8 @@ class SetsStatistics:
         self.n = wrs.n
         self.k = list(wrs.k)
         self.N = set(range(n))
-        self.c_levels = [0]*(n+1)   # levels used
-        self.c_in_set = [0]*n         # e is IN set
+        self.c_levels = [0] * (n + 1)  # levels used
+        self.c_in_set = [0] * n  # e is IN set
 
         self.numerosity = wrs.numerosity
         self.p_levels = wrs.p_levels
@@ -634,12 +636,12 @@ class SetsStatistics:
         print("Set of %d elements" % self.n)
         print("Levels:")
         print("  used", self.c_levels)
-        print("     %", [round(self.c_levels[i]/n_sets, p) for i in range(n+1)])
-        print("   def", [round(self.p_levels[k], p) for k in range(n+1)])
+        print("     %", [round(self.c_levels[i] / n_sets, p) for i in range(n + 1)])
+        print("   def", [round(self.p_levels[k], p) for k in range(n + 1)])
 
         print("Elements:")
         print("  used", self.c_in_set)
-        print("     %", [round(self.c_in_set[i]/n_sets, p) for i in range(n)])
+        print("     %", [round(self.c_in_set[i] / n_sets, p) for i in range(n)])
         print("   def", [self.p_items[k] for k in range(n)])
         print("End")
     # end

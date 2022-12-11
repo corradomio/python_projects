@@ -1,9 +1,10 @@
-import joblib as jl
+from typing import List, Tuple, Union, Optional, Set, Dict
+import joblib
 import random as rnd
 from typing import Iterable
 
-delayed = jl.delayed
-Memory = jl.Memory
+delayed = joblib.delayed
+Memory = joblib.Memory
 
 #
 # The original joblib library creates a process for each element in the list.
@@ -30,30 +31,39 @@ Memory = jl.Memory
 
 class Parallel:
     
-    def __init__(self, n_jobs=None):
+    def __init__(self, n_jobs: Union[None, int, Tuple[int, int]]=None, **kwargs):
         """
-        :param int n_jobs: n of parallel processes to use. Can be None,0 and 1
-        :param int n_splits: the list of calls will be divided in 'n_jobs*n_splits' parts
+        :param int n_jobs: n of parallel processes to use.
+                Can be None, 0, 1, or a integer greater than 1
+                For None, 0, 1, it is used a "sequential" approach.
+                It can be a tuple of 2 values:
+
+                    (n_jobs, n_splits)
+
+                in this case, the list is subdivided in n_jobs*n_plits parts
+                and submitted to 'n_job' jobs
         """
+        n_splits = 1
         if isinstance(n_jobs, (tuple, list)):
-            self.n_jobs = n_jobs[0]
-            self.n_splits = n_jobs[1]
-        elif isinstance(n_jobs, int):
-            self.n_jobs = n_jobs
-            self.n_splits = 2
-        elif n_jobs is None:
-            self.n_jobs = None
-            self.n_splits = None
-        else:
-            raise ValueError("Invalid parameter n_job: " + n_jobs)
+            if len(n_jobs) >= 2:
+                n_splits = n_jobs[1]
+                n_jobs = n_jobs[0]
+            elif len(n_jobs) == 1:
+                n_jobs = n_jobs[0]
+            else:
+                self.n_jobs = 1
+        self.n_jobs = 1 if n_jobs is None or n_jobs == 0 else n_jobs
+        self.n_splits = 1 if n_splits is None else n_splits
+        pass
+    # end
 
     def __call__(self, iterable: Iterable) -> Iterable:
-        if self.n_splits in [None, 0, 1]:
-            # call the original implementation
-            return _call_joblib(self.n_jobs, iterable)
-        if self.n_jobs in [None, 0, 1]:
+        if self.n_jobs < 2:
             # call the sequential implementation
             return _call_sequential(iterable)
+        elif self.n_splits == 0:
+            # call the original implementation
+            return _call_joblib(self.n_jobs, iterable)
         else:
             # call the parallel implementation
             return _call_parallel(self.n_jobs, self.n_splits, iterable)
@@ -61,14 +71,17 @@ class Parallel:
 # end
 
 
-def _call_joblib(n_jobs: int, iterable: Iterable) -> Iterable:
-    dummy = Memory
-    def _call(f, args, kwargs): return f(*args, **kwargs)
-    return jl.Parallel(n_jobs=n_jobs)(delayed(_call)(f, args, kwargs) for f, args, kwargs in iterable)
-
-
 def _call_sequential(iterable: Iterable) -> Iterable:
     return [f(*args, **kwargs) for f, args, kwargs in iterable]
+
+
+def _call(f, args, kwargs):
+    return f(*args, **kwargs)
+
+
+def _call_joblib(n_jobs: int, iterable: Iterable) -> Iterable:
+    dummy = Memory
+    return joblib.Parallel(n_jobs=n_jobs)(delayed(_call)(f, args, kwargs) for f, args, kwargs in iterable)
 
 
 def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
@@ -76,22 +89,20 @@ def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
     #                                 each element of the list is the tuple (function, *args, **kwargs)
     nc = len(calls)                 # n of calls
     ns = n_jobs*n_splits            # n of splits
-    sz = nc//ns                     # split size
+    sz = (nc + ns - 1)//ns                     # split size
 
     indices = list(range(nc))       # indices
     rnd.shuffle(indices)            # shuffle the indices
 
     # select the indices for each split
-    isplits = [indices[i*sz:i*sz+sz] for i in range(ns)]
-    if ns*sz < nc:
-        isplits.append(indices[ns*sz:])
-        ns += 1
+    isplits = [indices[i:min(i+sz, nc)] for i in range(0, nc, sz)]
 
     # select the calls for each split
     csplits = [[calls[i] for i in isplit] for isplit in isplits]
 
     # execute each split in parallel
-    collected = jl.Parallel(n_jobs=n_jobs)(delayed(_call_sequential)(csplit) for csplit in csplits)
+    print("... parallel")
+    collected = joblib.Parallel(n_jobs=n_jobs)(delayed(_call_sequential)(csplit) for csplit in csplits)
 
     # collect the results in the correct order
     results = [None]*nc
@@ -101,5 +112,7 @@ def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
         for j in range(len(collect)):
             k = isplit[j]
             results[k] = collect[j]
+        # end
+    # end
     return results
-
+# end

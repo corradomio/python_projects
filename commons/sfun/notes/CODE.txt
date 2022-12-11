@@ -1,0 +1,934 @@
+
+class SetFunctionBoundsOld:
+
+    def __init__(self, **kwargs):
+        """
+        Parameters
+        ----------
+
+        - 'bounds': lower/upper bound values
+            can be defined as:
+
+                [[l1,u1]...]
+                [[l1...],[u1...]]
+                [[x1,l1,u1]...]    <== default (minimum 4 elements)
+                [[x1...],[l1...],[u1...]]
+                ndarray[m,2]
+                ndarray[m,3]
+
+        - 'lower'/'upper': lower/upper bound values
+            can be defined as:
+
+                [y1...]
+                [[y1...]]
+                [[x1,y1]...]
+                [[x1...],[y1...]
+                ndarray[n]
+                ndarray[n,2]
+
+            x in the range [0,1], but if the values are greater than 1, they are normalized in the range [0,1]
+            f(x) must be a number in the range [0,1]
+
+        - 'interp': interpolation function
+            the function(s) is used to interpolate the bound values
+
+            - 'linear': numpy linear interpolation (default)
+            - 'interp1d': scipy linear interpolation (default)
+            - 'spline': scipy spline interpolation
+
+        - 'generator': random generator
+            used to generate the value of the function inside the bounds
+
+            - 'uniform', 'random': uniform distribution
+            - 'normal', 'gauss': normal (gaussian) distribution
+
+        - 'monotone': if the function must be monotone
+            a number in the range [0, 1] to specify the probability to have a monotone function
+
+        - 'random_state':
+
+        """
+        # lower bound function
+        self.lb = None
+        """:type: lambda x"""
+
+        # upper bound function
+        self.ub = None
+        """:type: lambda x"""
+
+        # random number generator
+        self.rng = None
+        """:type: lambda l, u"""
+
+        # monotone probability
+        self.monotone = 1.
+        """:type: float"""
+
+        if 'random_state' in kwargs:
+            rg = self._random_generator(kwargs['random_state'])
+        else:
+            rg = self._random_generator(None)
+
+        lower = kwargs['lower'] if 'lower' in kwargs else {.0: 0., .999: 0., 1.: 1.}
+        upper = kwargs['upper'] if 'upper' in kwargs else {.0: 0., .001: 1., 1.: 1.}
+        interp = kwargs['interp'] if 'interp' in kwargs else 'linear'
+        rtype = kwargs['rtype'] if 'rtype' in kwargs else 'uniform'
+        monotone = kwargs['monotone'] if 'monotone' in kwargs else 0.
+
+        def _splitbounds(b):
+            # split the bound into the x and y components
+            # [y0,y1,...]
+            if type(b) in [list, tuple] and type(b[0]) in [int, float]:
+                n = len(b)
+                xv, yv = list(range(n)), b
+            # {x:y,...}
+            elif isinstance(b, dict):
+                xv, yv = [x for x in b], [b[x] for x in b]
+            # [[x,...],[y...]]
+            elif type(b) in [list, tuple] and type(b[0]) in [list, tuple] and len(b) == 2:
+                xv, yv = b[0], b[1]
+            # [[x,y],...]
+            elif type(b) in [list, tuple] and type(b[0]) in [list, tuple]:
+                n = len(b)
+                xv, yv = [b[i][0] for i in range(n)], [b[i][1] for i in range(n)]
+            # ndarray[(n,2)]
+            elif isinstance(b, np.ndarray) and len(b.shape) == 2:
+                xv, yv = b[:, 0], b[:, 1]
+            else:
+                raise ValueError("Unsupported upper/lower specification ({})".format(type(b)))
+
+            mx = max(xv)
+            if mx != 1: xv = [x / mx for x in xv]
+            return xv, yv
+        # end
+
+        def _definterp(xvals, yvals, interp):
+            # define the function used for the interpolation
+            return lambda x: np.interp(x, xvals, yvals)
+        # end
+
+        def _defrandomgen(rtype):
+            # define the random number rtype that generate a random number in the range
+            # (fmin,fmax)
+            if rtype in ['uniform', 'random']:
+                gen = lambda fmin, fmax: fmin + rg.random() * (fmax - fmin)
+            elif rtype in ['normal', 'gauss']:
+                gen = lambda fmin, fmax: rg.gauss((fmax + fmin) / 2, (fmax - fmin) / 4)
+            else:
+                raise ValueError("Unsupported rtype specification ({})".format(rtype))
+
+            def _max(xi, l, S):
+                # searh the maximum value of the S's subsets with the specified cardinality
+                m = -float('inf')
+                for T in isubsets_lex(S, k=l):
+                    if xi[T] > m:
+                        m = xi[T]
+                return m
+
+            def _monotone(ly, uy, xi, S):
+                # generate a new random value.
+                ismonotone = rg.random() < monotone
+                if ismonotone:
+                    s = icard(S)
+                    my = _max(xi, s - 1, S)
+                    ly = max(ly, my)
+                return gen(ly, uy)
+
+            return _monotone
+        # end
+
+        lx, ly = _splitbounds(lower)
+        ux, uy = _splitbounds(upper)
+
+        self.lb = _definterp(lx, ly, interp)
+        self.ub = _definterp(ux, uy, interp)
+        self.rng = _defrandomgen(rtype)
+        self.random = rg
+    # end
+
+    def _random_generator(self, seed):
+        if seed is None:
+            return rnd.Random()
+        elif isinstance(seed, rnd.Random):
+            return seed
+        elif type(seed) in [int, float]:
+            return rnd.Random(seed)
+        else:
+            raise ValueError("Unsupported random generator")
+    # end
+
+    def generate(self, n: int) -> SetFunction:
+        pass
+    # end
+
+    def bounds(self, xmax=1):
+        x = np.linspace(0, 1)
+        ly = self.lb(x)
+        uy = self.ub(x)
+        return x*xmax, ly, uy
+    # end
+
+    def plot_bounds(self, xmin=0, xmax=1, **kwargs):
+        x, ly, uy = self.bounds(xmax)
+        plt.plot(x, ly, **kwargs)
+        plt.plot(x, uy, **kwargs)
+    # end
+# end
+
+
+
+    # def weights_eval_k(S, wd, k, o):
+    #     s = len(S)
+    #     if k == 0:
+    #         return wd
+    #     elif k == s-1:
+    #         i = S[k]
+    #         return wd[i-o]
+    #     else:
+    #         i = S[k]
+    #         return weights_eval_k(S, wd, k+1, i+1)
+
+    # def weights_eval_k(S, wd, o):
+    #     z = len(S)
+    #     if z == 0:
+    #         return wd[z]
+    #     if z == 1:
+    #         i, = S
+    #         return wd[z][i]
+    #     if z == 2:
+    #         i, j = S
+    #         return wd[z][i][j-i-1]
+    #     if z == 3:
+    #         i, j, k = S
+    #         return wd[z][i][j-i-1][k-j-1]
+    #     if z == 4:
+    #         i, j, k, l = S
+    #         return wd[z][i][j-i-1][k-j-1][l-k-1]
+    #
+    #     pass
+
+
+# # ---------------------------------------------------------------------------
+# # Shapley Value
+# # ---------------------------------------------------------------------------
+#
+# class ShapleyValue(SFun):
+#
+#     @staticmethod
+#     def from_file(fname):
+#         data = load_data(fname)
+#         return ShapleyValue(data)
+#     # end
+#
+#     @staticmethod
+#     def from_setfun(self: SetFunction):
+#         xi = self.xi
+#         sv = shapley_value(xi)
+#         return ShapleyValue(sv)
+#     # end
+#
+#     @staticmethod
+#     def from_sv(sv: ndarray):
+#         return ShapleyValue(sv)
+#     # end
+#
+#     """
+#     Shapley Value
+#     """
+#
+#     def __init__(self, sv):
+#         super().__init__()
+#         if type(sv) in [list, tuple]:
+#             sv = array(sv)
+#         assert isinstance(sv, ndarray)
+#         self.sv = sv
+#     # end
+#
+#     @property
+#     def data(self): return self.sv
+#
+#     def _eval(self, S) -> float:
+#         sv = self.sv
+#         return 0. + sum(sv[e] for e in imembers(S))
+#     # end
+#
+#     def set_function(self):
+#         sv = self.sv
+#
+#         xi = compose_additive(sv)
+#         return SetFunction(xi)
+#     # end
+# # end
+
+
+# ---------------------------------------------------------------------------
+# BanzhafValue
+# ---------------------------------------------------------------------------
+
+# class BanzhafValue(SFun):
+#
+#     @staticmethod
+#     def from_file(fname):
+#         data = load_data(fname)
+#         return BanzhafValue(data)
+#     # end
+#
+#     @staticmethod
+#     def from_setfun(self: SetFunction):
+#         xi = self.xi
+#         bv = banzhaf_value(xi)
+#         return BanzhafValue(bv)
+#     # end
+#
+#     """
+#     Shapley Value
+#     """
+#
+#     def __init__(self, bv):
+#         super().__init__()
+#         if type(bv) in [list, tuple]:
+#             bv = array(bv)
+#         assert isinstance(bv, ndarray)
+#         self.bv = bv
+#     # end
+#
+#     @property
+#     def data(self): return self.bv
+#
+#     def _eval(self, S) -> float:
+#         bv = self.bv
+#         return 0. + sum(bv[e] for e in imembers(S))
+#     # end
+#
+#     def set_function(self):
+#         bv = self.bv
+#
+#         xi = compose_additive(bv)
+#         return SetFunction(xi)
+#     # end
+# # end
+
+            if k is None:
+                # values = [banzhaf_value(xi, i) for i in range(n)]
+                values = Parallel(n_jobs=self.n_jobs)(delayed(banzhaf_value)(xi, i) for i in range(n))
+            else:
+                # values = [k_banzhaf_value(xi, i, k) for i in range(n)]
+                values = Parallel(n_jobs=self.n_jobs)(delayed(k_banzhaf_value)(xi, i, k) for i in range(n))
+            # ordered = argsort(values, reverse=True)
+            # return tuple(ordered)
+
+
+        if m is None:
+            if k is None:
+                # values = [shapley_value(xi, i) for i in range(n)]
+                values = Parallel(n_jobs=self.n_jobs)(delayed(shapley_value)(xi, i) for i in range(n))
+            else:
+                # values = [k_shapley_value(xi, i, k) for i in range(n)]
+                values = Parallel(n_jobs=self.n_jobs)(delayed(k_shapley_value)(xi, i, k) for i in range(n))
+            values = array(values)
+            # ordered = argsort(values, reverse=True)
+            # return tuple(ordered)
+
+
+    # def k_banzhaf_values(self, all=False):
+    #     n = self.cardinality
+    #     selected = []
+    #     for k in range(n + 1):
+    #         ordered = self.banzhaf_values(k)
+    #         if not all:
+    #             ordered = sorted(ordered[0:k])
+    #         selected.append(tuple(ordered))
+    #     return selected
+    # # end
+
+    # def k_shapley_values(self, all=False):
+    #     n = self.cardinality
+    #     selected = []
+    #     for k in range(n+1):
+    #         ordered = self.shapley_values(k)
+    #         if not all:
+    #             ordered = sorted(ordered[0:k])
+    #         selected.append(tuple(ordered))
+    #     return selected
+    # # end
+
+    # def chaining_values(self, k=None):
+    #     n = self.cardinality
+    #     xi = self.xi
+    #     if k is None:
+    #         # values = [chaining_value(xi, iset([i])) for i in range(n)]
+    #         values = Parallel(n_jobs=self.n_jobs)(delayed(chaining_value)(xi, i) for i in range(n))
+    #     else:
+    #         # values = [k_chaining_value(xi, iset([i]), k) for i in range(n)]
+    #         values = Parallel(n_jobs=self.n_jobs)(delayed(k_chaining_value)(xi, i, k) for i in range(n))
+    #     ordered = argsort(values, reverse=True)
+    #     return ordered
+    # # end
+
+    # def k_chaining_values(self, all=False):
+    #     n = self.cardinality
+    #     selected = []
+    #     for k in range(n + 1):
+    #         ordered = self.chaining_values(k)
+    #         if not all:
+    #             ordered = sorted(ordered[0:k])
+    #         selected.append(tuple(ordered))
+    #     return selected
+    # # end
+
+    # def best_set(self, k: int) -> tuple:
+    #     """
+    #     Search the set, at level k, with the maximum value of the function
+    #     :param k: level (n of elements in the set)
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     return ilist(best_set(xi, k))
+    # # end
+
+    # def worst_set(self, k: int) -> tuple:
+    #     """
+    #     Search the set, at level k, with the minimum value of the function
+    #     :param k: level (n of elements in the set)
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     return ilist(worst_set(xi, k))
+    # # end
+
+    # def eval_perm(self, P: list) -> ndarray:
+    #     """
+    #
+    #     :param P:
+    #     :return:
+    #     """
+    #     n = len(P)
+    #     v = fzeros(n+1)
+    #     xi = self.xi
+    #     for i in range(n+1):
+    #         S = iset(P[0:i])
+    #         v[i] = xi[S]
+    #     return v
+    # # end
+
+    # def eval_subsets(self, L: list) -> ndarray:
+    #     n = len(L)
+    #     v = fzeros(n)
+    #     xi = self.xi
+    #     for i in range(n):
+    #         S = iset(L[i])
+    #         v[i] = xi[S]
+    #     return v
+    # # end
+-----------------------------------------------------------------------------
+
+    #
+    # Probabilistic Values
+    #
+
+    # def shapley_values(self, i=-1):
+    #     xi = self.xi
+    #     if i < 0:
+    #         sv = shapley_value(xi)
+    #         return sv
+    #     else:
+    #         sv = shapley_value_of(xi, i)
+    #         return sv
+    # # end
+
+    # def banzhaf_value(self, i=-1):
+    #     xi = self.xi
+    #     if i < 0:
+    #         bv = banzhaf_value(xi)
+    #         return bv
+    #     else:
+    #         bv = banzhaf_value_of(xi, i)
+    #         return bv
+    # # end
+
+    # def reduced_banzhaf_value(self, P):
+    #     if type(P) in [list, tuple]:
+    #         P = iset(P)
+    #     xi = self.xi
+    #     rbv = reduced_banzhaf_value_of(xi, P)
+    #     return rbv
+    # # end
+
+    # def shapley_value(self, correct=False):
+    #     """
+    #     Compute the Shapley Value for each element in the set
+    #     :return: the array of SV for each element (n values)
+    #     """
+    #     xi = self.xi
+    #     sv = shapley_value(xi)
+    #     if correct:
+    #         sv_correction = pvalue_correction(xi, sv)
+    #         return sv, sv_correction
+    #     else:
+    #         return sv
+    # # end
+
+    # def shapley_interaction_index(self, correct=False):
+    #     """
+    #     Compute the Shapley Interaction Value/Index between each pair of
+    #     elements in the set
+    #     :return: the matrix of the SIV between each pair of elements (n*n elements)
+    #     """
+    #     xi = self.xi
+    #     return shapley_interaction_index(xi)
+    # # end
+
+    # def banzhaf_value(self, correct=False):
+    #     """
+    #     Compute the Banzhaf Value for each element in the set
+    #
+    #     :param bool correct: if to correct the value with the constant value to obtain
+    #         a better function approximation
+    #     :return: the array of BV for each element (n values)
+    #     """
+    #     xi = self.xi
+    #     bv = banzhaf_value(xi)
+    #     if correct:
+    #         bv_correction = pvalue_correction(xi, bv)
+    #         return bv, bv_correction
+    #     else:
+    #         return bv
+    # # end
+
+    # def kbanzhaf_value(self, k, correct=False):
+    #     """
+    #     Compute the k-Banzhaf Value for each element in the set using ONLY the sets
+    #     at level k AND k+1
+    #
+    #     Note: this
+    #
+    #     :return: the array of k-BV for each element (n values)
+    #
+    #     :param kmin:
+    #     :param kmax:
+    #     :return:
+    #     """
+    #     assert 0 <= k < self.cardinality
+    #     xi = self.xi
+    #     kbv = kbanzhaf_value(xi, k, k)
+    #     if correct:
+    #         kbv_correction = kbanzhaf_value_correction(xi, kbv, k, k)
+    #         return kbv, kbv_correction
+    #     else:
+    #         return kbv
+    # # end
+
+    # def kbanzhaf_value_by_level(self, correct=False):
+    #     """
+    #     Compute the k-Banzhaf Value for each level (0..n-1)
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     kbvl = kbanzhaf_value_by_level(xi)
+    #     if correct:
+    #         kbvl_correction = kbanzhaf_value_by_level_correction(xi, kbvl)
+    #         return kbvl, kbvl_correction
+    #     else:
+    #         return kbvl
+    # # end
+
+    #
+    # Best/Worst sets
+    #
+
+    # def banzhaf_set(self):
+    #     """
+    #     Compute the (ordered) best set of features based on the Banzhaf value
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     bv = banzhaf_value(xi)
+    #     bs = argsort(bv, reverse=True)
+    #     return bs
+    # # end
+
+    # def kbanzhaf_set(self, k):
+    #     """
+    #     Compute the best set at level k using the k-Banzhaf Value
+    #     to order the features
+    #
+    #     :param k: level
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     kv = kbanzhaf_value(xi, k, k)
+    #     bs = argsort(kv, reverse=True)
+    #     return bs[0:k]
+    # # end
+
+    # def kbanzhaf_best_sets_value(self):
+    #     """
+    #     Compute the function value applied to the best sets
+    #     :return:
+    #     """
+    #     sets = self.kbanzhaf_best_sets()
+    #     return [self.eval(S) for S in sets]
+    # # end
+
+    # def kbanzhaf_best_sets(self):
+    #     """
+    #     Compute the best sets for each level based on the
+    #     k-Banzhaf
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = self.size
+    #
+    #     kbs = []
+    #     for k in range(n-1):
+    #         kv = kbanzhaf_value(xi, k, k)
+    #         ka = argsort(kv, reverse=True)
+    #         kbs.append(ka[0:k+1])
+    #     return kbs
+    # # end
+
+-----------------------------------------------------------------------------
+
+    #
+    # Other functions
+    #
+
+    # def best_set_transform(self) -> 'SetFunction':
+    #     xi = self.xi
+    #     bst = best_set_transform(xi)
+    #     return SetFunction(bst)
+    # # end
+
+    # def marginal_data(self, kmin=None, kmax=None) -> ndarray:
+    #     n = self.cardinality
+    #     xi = self.xi
+    #
+    #     if kmin is None and kmax is None:
+    #         kmin, kmax = 0, ilog2(len(xi)) - 1
+    #     if kmax is None:
+    #         kmax = kmin
+    #     if kmax < 0:
+    #         kmax = n + kmax + 1
+    #
+    #     return marginal_data(xi, kmin, kmax)
+    # # end
+
+    # def are_levels_valid(self) -> bool:
+    #     """
+    #     Check if each level contains at minimum a value
+    #     grater than zero
+    #     """
+    #     xi = self.xi
+    #     return are_levels_valid(xi)
+    # # end
+
+-----------------------------------------------------------------------------
+
+    # def is_valid(self) -> bool:
+    #     """Check if all elements of the function are in the range [0,1]"""
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for S in ipowerset(N):
+    #         if not (0 <= xi[S] <= 1):
+    #             print("ERROR (valid): 0 <= xi[S] <= 1 -> ",
+    #                   ilist(S), ":", xi[S])
+    #             return False
+    #     return True
+    # end
+
+    #
+    # Special properties
+    #
+    # def is_monotone(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is monotone
+    #
+    #         xi[A] <= xi[B]  if A subsetof B
+    #
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A in ipowerset(N):
+    #         for B in isubsets(A, N):
+    #             if iissubset(A, B) and isgt(xi[A], xi[B], eps=eps):
+    #                 # print("ERROR (monotone): A < B, xi[A] <= xi[B] -> ",
+    #                 #       ilist(A), ":", xi[A], ", ",
+    #                 #       ilist(B), ":", xi[B])
+    #                 return False
+    #     return True
+
+    # def is_additive(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is additive
+    #
+    #         xi[A+B] = xi[A] + xi[B]
+    #
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A, B in isubsetpairs(N):
+    #         U = iunion(A, B)
+    #         if not iseq(xi[U], xi[A] + xi[B], eps=eps):
+    #             # print("ERROR (additive): xi[A + B] = xi[A] + xi[B] -> ",
+    #             #       ilist(A), ":", xi[A], ", ",
+    #             #       ilist(B), ":", xi[B], " | ",
+    #             #       ilist(U), ":", xi[U])
+    #             return False
+    #     return True
+
+    # def is_superadditive(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is superadditive
+    #
+    #         xi[A+B] >= xi[A} + xi[B]
+    #
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A, B in isubsetpairs(N):
+    #         U = iunion(A, B)
+    #         if not isge(xi[U], xi[A] + xi[B], eps=eps):
+    #             # print("ERROR (superadditive): xi[A + B] >= xi[A] + xi[B] -> ",
+    #             #       ilist(A), ":", xi[A], ", ",
+    #             #       ilist(B), ":", xi[B], " | ",
+    #             #       ilist(U), ":", xi[U])
+    #             return False
+    #     return True
+
+    # def is_subadditive(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is subadditive
+    #
+    #         xi[A+B] <= xi[A} + xi[B]
+    #
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A, B in isubsetpairs(N):
+    #         U = iunion(A, B)
+    #         if not isle(xi[U], xi[A] + xi[B], eps=eps):
+    #             # print("ERROR (subadditive): xi[A + B] <= xi[A] + xi[B] -> ",
+    #             #       ilist(A), ":", xi[A], ", ",
+    #             #       ilist(B), ":", xi[B], " | ",
+    #             #       ilist(U), ":", xi[U])
+    #             return False
+    #     return True
+
+    # def is_modular(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is modular
+    #
+    #         xi[A+B] + xi[A*B] = xi[A} + xi[B]
+    #
+    #     :return:
+    #     """
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #
+    #     for A in ipowerset(N):
+    #         for B in ipowerset(N):
+    #             U = iunion(A, B)
+    #             I = iinterset(A, B)
+    #             if not iseq(xi[U] + xi[I], xi[A] + xi[B], eps=eps):
+    #                 # print("ERROR (modular): xi[A + B] + xi[A * B] = xi[A] + xi[B] -> ",
+    #                 #       ilist(A), ":", xi[A], ", ",
+    #                 #       ilist(B), ":", xi[B], " | ",
+    #                 #       ilist(U), ":", xi[U], ", ",
+    #                 #       ilist(I), ":", xi[I])
+    #                 return False
+    #     return True
+
+    # def is_supermodular(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is super modular
+    #
+    #         xi[A+B] + xi[A*B] >= xi[A} + xi[B]
+    #
+    #     :return:
+    #     """
+    #     # xi(A + B) + xi(A*B) >= xi(A) + xi(B)
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A in ipowerset(N):
+    #         for B in ipowerset(N):
+    #             U = iunion(A, B)
+    #             I = iinterset(A, B)
+    #             if not isge(xi[U] + xi[I], xi[A] + xi[B], eps=eps):
+    #                 # print("ERROR (supermodular): xi[A + B] + xi[A * B] >= xi[A] + xi[B] -> ",
+    #                 #       ilist(A), ":", xi[A], ", ",
+    #                 #       ilist(B), ":", xi[B], " | ",
+    #                 #       ilist(U), ":", xi[U], ", ",
+    #                 #       ilist(I), ":", xi[I])
+    #                 return False
+    #     return True
+
+    # def is_submodular(self, eps=EPS) -> bool:
+    #     """
+    #     Check if the function is sub modular
+    #
+    #         xi[A+B] + xi[A*B] <= xi[A} + xi[B]
+    #
+    #     :return:
+    #     """
+    #     # xi(A + B) + xi(A*B) <= xi(A) + xi(B)
+    #     xi = self.xi
+    #     n = len(xi)
+    #     N = n - 1
+    #     for A in ipowerset(N):
+    #         for B in ipowerset(N):
+    #             U = iunion(A, B)
+    #             I = iinterset(A, B)
+    #             if not isle(xi[U] + xi[I], xi[A] + xi[B], eps=eps):
+    #                 # print("ERROR (submodular): xi[A + B] + xi[A * B] <= xi[A] + xi[B] -> ",
+    #                 #       ilist(A), ":", xi[A], ", ",
+    #                 #       ilist(B), ":", xi[B], " | ",
+    #                 #       ilist(U), ":", xi[U], ", ",
+    #                 #       ilist(I), ":", xi[I])
+    #                 return False
+    #     return True
+
+
+# ---------------------------------------------------------------------------
+# Shapley Approx Transform
+# ---------------------------------------------------------------------------
+
+# class ShapleyApprox(SFun):
+#
+#     @staticmethod
+#     def from_file(fname):
+#         data = load_data(fname)
+#         return ShapleyApprox(data)
+#     # end
+#
+#     @staticmethod
+#     def from_setfun(self: SetFunction):
+#         assert isinstance(self, SetFunction)
+#         xi = self.xi
+#         sv = shapley_value(xi)
+#         siv = shapley_interaction_index(xi)
+#         ii = ii_from_sv_siv(sv, siv)
+#         return ShapleyApprox(ii)
+#     # end
+#
+#     @staticmethod
+#     def from_sv_siv(sv: ndarray, siv: ndarray):
+#         if type(sv) in [tuple, list]:
+#             sv = array(sv)
+#         if type(siv) in [tuple, list]:
+#             siv = array(siv)
+#
+#         assert isinstance(sv, ndarray)
+#         assert isinstance(siv, ndarray)
+#         assert len(siv.shape) == 2
+#
+#         ii = ii_from_sv_siv(sv, siv)
+#         return ShapleyApprox(ii)
+#     # end
+#
+#     """
+#     Shapley Approx Transform
+#     """
+#
+#     def __init__(self, ii):
+#         super().__init__()
+#         assert isinstance(ii, ndarray)
+#         self.ii = ii
+#     # end
+#
+#     @property
+#     def data(self) -> ndarray:
+#         return self.ii
+#
+#     @property
+#     def shapley_value(self):
+#         ii = self.ii
+#         return ii_shapley_value(ii)
+#
+#     @property
+#     def shapley_interaction_index(self):
+#         ii = self.ii
+#         return ii_shapley_interaction_index(ii)
+#
+#     def _eval(self, S) -> float:
+#         ii = self.ii
+#         return inverse_ii_approx_value(ii, S, degree=2)
+#     # end
+#
+#     def set_function(self):
+#         ii = self.ii
+#         ix = inverse_ii_approx_transform(ii, degree=2)
+#         return SetFunction(ix)
+#     # end
+# # end
+
+
+# ---------------------------------------------------------------------------
+# k-Banzhaf
+# ---------------------------------------------------------------------------
+
+# class KBanzhaf(SFun):
+#
+#     @staticmethod
+#     def from_setfun(self: SetFunction):
+#         assert isinstance(self, SetFunction)
+#         xi = self.xi
+#         pai = partial_banzhaf_approx_compose(xi)
+#
+#         return KBanzhaf(pai)
+#     # end
+#
+#     """
+#     Partial Banzhaf
+#     """
+#
+#     def __init__(self, pai):
+#         super().__init__()
+#         if type(pai) in [list, tuple]:
+#             pai = array(pai)
+#         assert isinstance(pai, ndarray)
+#
+#         self.pai = pai
+#     # end
+#
+#     @property
+#     def data(self) -> ndarray:
+#         return self.pai
+#
+#     def _eval(self, S):
+#         return self.approximate(S, None, None)
+#
+#     def approximate(self, S, kmin=None, kmax=None):
+#         pba = self.kvalues(kmin, kmax)
+#
+#         return 0. + sum(pba[e] for e in imembers(S))
+#     # end
+#
+#     def kvalues(self, kmin=None, kmax=None):
+#         _, n = self.pai.shape
+#         pai = self.pai
+#
+#         if kmin is None and kmax is None:
+#             kmin, kmax = 0, n-1
+#         if kmax is None:
+#             kmax = kmin
+#         if kmax < 0:
+#             kmax = n + kmax + 1
+#
+#         assert 0 <= kmin <= kmax < n
+#
+#         return partial_banzhaf_approx(pai, kmin, kmax)
+#     # end
+#
+# # end
+

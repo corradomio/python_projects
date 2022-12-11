@@ -1,0 +1,503 @@
+Per generare delle funzioni random si potrebbe procedere mediante
+delle permutazioni, MA l'idea e' cercare di generare delle catene
+in modo da evitare di dover per forza provare tutte le n! permutazioni
+ma SOLO quelle che servono per generare i 2^n possibili subset
+
+
+0
+1,2,3,4
+12,13,14,23,24,34
+123,124,134,234
+1234
+
+1,12,123,1234
+     124
+  13,134
+  14
+2,23,234
+  24
+3,34
+4
+
+
+
+
+Ciao, giusto come conferma:
+
+calcolo di w(x)   (Pagina 17 del tuo paper)
+
+n: n di elementi del set. Possibili valori: [0,1,2...]
+k: livello/n di elementi dei subset. Possibili valori: [0,1,...n]
+x: n elementi dei subset usati per il calcolo di w(x). Possibili valori: [0..k-1]
+
+Casi limite:   (n=0,k=0), (n=1,k=0), (n=1,k=1)
+
+Usando n e k invece di m e h, w(x) potrebbe avere questa forma:
+
+w(x ; n,k) = n1/(d1*d2)
+
+dove:
+
+n1 = combinations(n-x, k-x)
+d1 = combinations(n, k)
+d2 = SUM( j=x .. k-1 | combinations(n - 1 - x, j - x))
+
+Ci sono casi LIMITE:
+
+quando j==x,                              combinations(n-1. 0)    == 1  (ok, perche per convenzione 0! = 1)
+quando n == 0 (empty set)        SUM( j=0 .. -1 | ...)         == 1  ???
+
+Ed ora la domandona:
+
+si ha che
+
+SUM( k=0 .. n | combinations(n, k) )  == 2^n
+
+Allora dovrei avere
+
+SUM( k=0 .. n,  x=0..k-1 | w(x ; n,k) ) == 2^n
+
+cioe': se sommo il w(x; n, k)   per TUTTI i sottoinsiemi PROPRI del livello k, e lo faccio per TUTTI i k,
+ma NON FUNZIONA!
+
+
+# def isubsetsc(s: int, l=None, u=None):
+#     """
+#     Generate the list of subsets S with l <= |S| <= u
+#     :param s: set
+#     :param l: (lower) minimum number of elements
+#     :param u: (upper) maximum number of elements
+#     :return: generator
+#     """
+#     n = ihighbit(s) + 1
+#
+#     if l is None and u is None:
+#         l, u = 0, n
+#     if u is None:
+#         u = l
+#
+#     sl = ilist(s)  # elements list
+#     nl = len(sl)  # number of elements
+#     n = 1 << nl  # total number of elements
+#
+#     def _isetm(mask: int) -> int:
+#         s = 0
+#         for i in range(nl):
+#             if mask & _BIT_POS[i]:
+#                 j = sl[i]
+#                 s |= _BIT_POS[j]
+#         return s
+#
+#     for m in range(n):
+#         if l <= icount(m) <= u:
+#             yield _isetm(m)
+# # end
+
+
+# def ipowersetc(N: int, l: int = None, u: int = None) -> Iterator[int]:
+#     """
+#     Generate all subsets of the fullset N with a number of elements
+#     between l (lower limit) and u (upper limit)
+#
+#     :param N: fullset
+#     :param l: lower limit
+#     :param u: upper limit
+#     :return: subset generator
+#     """
+#     n = ilog2(N)
+#     if l is None and u is None:
+#         l, u = 0, n
+#     if u is None:
+#         u = l
+#
+#     for s in range(N+1):
+#         c = icount(s)
+#         if l <= c <= u:
+#             yield s
+# # end
+
+
+
+def compose_subadditive_1(r: ndarray) -> ndarray:
+    """
+    Compose a superadditive function
+
+        xi(A union B) < xi(A) + xi(B)    disjoint A, B
+
+    :param r:
+    :return:
+    """
+    p = len(r)
+    n = 1 << p
+    N = n - 1
+    xi = fzeros(n)  # subset values
+
+    def _max(S):
+        # m = 0
+        # for T in isubsets(S, full=False):
+        #     m = max(m, xi[T])
+        # return m
+        return max((xi[T] for T in isubsets(S, full=False)), default=0)
+
+    for i in range(p):
+        S = iset([i])
+        xi[S] = r[i]
+
+    for A, B in isubsetpairs(N):
+        U = iunion(A, B)
+        if xi[U] == 0 or xi[U] > (xi[A] + xi[B]):
+            mu = _max(U)
+            xi[U] = mu + random()*max(xi[A] + xi[B] - mu, 0)
+    return xi
+# end
+
+
+def compose_subadditive_2(r: ndarray) -> ndarray:
+    p = len(r)
+    n = 1 << p
+    N = n - 1
+    m = fzeros(n)
+
+    # it uses the mobius transform
+
+    for i in range(p):
+        S = iset([i])
+        m[S] = r[i]
+
+    for A, B in isubsetpairs(N):
+        U = iunion(A, B)
+        a = inverse_mobius_eval(m, A)
+        b = inverse_mobius_eval(m, B)
+        u = a + b
+        m[U] = random()*u - u
+    # end
+
+    xi = inverse_mobius_transform(m)
+    return xi
+# end
+
+
+def compose_subadditive_3(r: ndarray) -> ndarray:
+    """
+    Compose a superadditive function
+
+        xi(A union B) < xi(A) + xi(B)    disjoint A, B
+
+    :param r:
+    :return:
+    """
+    p = len(r)
+    n = 1 << p
+    N = n - 1
+    xi = fzeros(n)  # subset values
+
+    for i in range(p):
+        S = iset([i])
+        xi[S] = r[i]
+
+    for A, B in isubsetpairs(N):
+        U = iunion(A, B)
+        if xi[U] == 0 or xi[U] > xi[A] + xi[B]:
+            xi[U] = sqrt(sq(xi[A] + sq(xi[B])))
+
+        # if xi[U] == 0 or xi[U] > xi[A] + xi[B]:
+        #     R = 1 - random()
+        #     xi[U] = max(xi[A], xi[B]) + R*abs(xi[A] - xi[B])
+    return xi
+# end
+
+
+
+
+# def _slow_svt(xi: ndarray):
+#     from itertools import permutations
+#
+#     n = len(xi)                 # size fo the powerset
+#     p = ilog2(n)                # n of elements
+#     sv = zeros(p)               # Shapley Value
+#
+#     c = 0
+#     for perm in permutations(range(p)):
+#         for h in range(p):
+#             A = iset(perm[0:h])
+#
+#             i = perm[h]
+#             Ai = iadd(A, i)
+#
+#             sv[i] += xi[Ai] - xi[A]
+#         pass
+#         c += 1
+#     pass
+#     sv /= c
+#     return sv
+# # end
+
+# def interaction_value_transform(xi: ndarray, slow=False):
+#     if slow:
+#         return _slow_ivt(xi)
+#     else:
+#         return _fast_ivt(xi)
+# # end
+
+
+# def interaction_index_2(xi: ndarray, T: int):
+#     n = len(xi)  # size fo the powerset
+#     p = ilog2(n)  # n of elements
+#     N = n - 1
+#     iv = 0.
+#
+#     i, j = ilist(T)
+#     Nt = idiff(N, T)
+#
+#     for S in isubsets(Nt):
+#         s = icount(S)
+#         Si = iadd(S, i)
+#         Sj = iadd(S, j)
+#         Sij = iunion(Si, Sj)
+#
+#         t = qfact(p - 1, s) * (xi[Sij] - xi[Si] - xi[Sj] + xi[S])
+#         iv += t
+#     return iv
+
+
+# def interaction_index_transform_2(xi: ndarray):
+#     # def _fast_ivt(xi: ndarray):
+#     n = len(xi)         # size fo the powerset
+#     p = ilog2(n)        # n of elements
+#     iv = zeros(n)   # Shapley Value
+#     N = n - 1  # full set
+#
+#     for i in range(p-1):
+#         for j in range(i+1, p):
+#             N = isub(N, i)
+#             N = isub(N, j)
+#             ij = iset([i,j])
+#
+#             for S in isubsets(N):
+#                 s = icount(S)
+#                 Si = iadd(S, i)
+#                 Sj = iadd(S, j)
+#                 Sij = iunion(Si, Sj)
+#
+#                 t = qfact(p-1, s) * (xi[Sij] - xi[Si] - xi[Sj] + xi[S])
+#                 iv[ij] += t
+#             # end
+#     return iv
+
+
+# def _slow_ivt(xi: ndarray):
+#     """
+#     Compute the Shapley Interaction Value
+#
+#     :param xi: set function
+#     :return:   siv matrix
+#     """
+#     from itertools import permutations
+#
+#     n = len(xi)   # size fo the powerset
+#     p = ilog2(n)  # n of elements
+#     siv = zeros((p, p))  # Shapley Intercation Value
+#
+#     d = 0
+#     for perm in permutations(range(p)):
+#         for h in range(p-1):
+#             A = iset(perm[0:h])
+#
+#             i = perm[h]
+#             j = perm[h + 1]
+#
+#             Ai = iadd(A, i)
+#             Aj = iadd(A, j)
+#             Aij = iadd(Ai, j)
+#
+#             siv[i, j] += xi[Aij] - xi[Ai] - xi[Aj] + xi[A]
+#
+#             if i == 1 and j == 2:
+#                 d += 1
+#         pass
+#     pass
+#     siv /= d
+#     return siv
+
+
+# def shapley_pair_value_transform_slow(xi: ndarray):
+#     """
+#     Compute the Shapley Interaction Value
+#
+#     :param xi: set function
+#     :return:   siv matrix
+#     """
+#     from itertools import permutations
+#
+#     n = len(xi)   # size fo the powerset
+#     p = ilog2(n)  # n of elements
+#     pv = zeros((p, p))  # Shapley Intercation Value
+#
+#     d = 0
+#     for perm in permutations(range(p)):
+#         for h in range(p-2):
+#             A = iset(perm[0:h])
+#
+#             i = perm[h]
+#             j = perm[h + 1]
+#
+#             Aij = iadd(A, i)
+#             Aij = iadd(Aij, j)
+#
+#             pv[i, j] += xi[Aij] - xi[A]
+#
+#             if i == 1 and j == 2:
+#                 d += 1
+#         pass
+#     pass
+#     pv /= d
+#     return pv
+
+
+# def shapley_value_inverse(sv: ndarray):
+#     p = len(sv)
+#     n = 1 << p
+#     xi = zeros(n)
+#
+#     for S in range(n):
+#         xi[S] = sum(sv[i] for i in ibits(S))
+#     return xi
+# # end
+
+
+# def shapley_value_set_value(S: int, sv: ndarray):
+#     return sum(sv[i] for i in ibits(S))
+
+
+
+# def shapley_pair_value_transform(xi: ndarray):
+#     n = len(xi)         # size fo the powerset
+#     p = ilog2(n)        # n of elements
+#     pv = zeros((p, p))  # Shapley Value
+#     N = n - 1           # full set
+#
+#     for i in range(p-1):
+#         for j in range(i+1, p):
+#             N = isub(N, i)
+#             N = isub(N, j)
+#
+#             for S in isubsets(N):
+#                 s = icount(S)
+#                 Sij = iadd(S, i)
+#                 Sij = iadd(Sij, j)
+#
+#                 # t = kfact(p, s, 2)*(xi[Sij] - xi[S])
+#                 t = qfact(p-1, s)*(xi[Sij] - xi[S])
+#                 pv[i, j] += t
+#                 # pv[j, i] += t
+#             # end
+#         # end
+#     return pv
+# # end
+
+
+# def shapley_value_transform(xi: ndarray, slow=False):
+#     """
+#     Compute the Shapley Value
+#
+#     :param xi: set function
+#     :return:   sv array
+#     """
+#     if slow:
+#         return _slow_svt(xi)
+#     else:
+#         return _fast_svt(xi)
+# # end
+
+
+# def isubsetpairs(s: int) -> Generator[List[int], None, None]:
+#     """
+#     Generate all possible pairs of non intersecting bitset
+#
+#     :param s: bitset
+#     :return: pair generator
+#     """
+#     ls = ilist(s)
+#     ns = len(ls)
+#
+#     visited = set()
+#
+#     # generate all permutations from n elements (permutation
+#     # composed by singleton) to 2
+#     # for each permutation
+#     #   generate all possible pairs using indices i, j
+#     #       if the pair was already visited, skips it
+#     #           emit the pair
+#
+#     for m in range(ns, 1, -1):
+#         for p in _algorithm_u(ls, m):
+#             np = len(p)     # permutation length
+#             for i in range(np-1):
+#                 for j in range(i+1, np):
+#                     pair = (iset(p[i]), iset(p[j]))
+#                     if pair not in visited:
+#                         visited.add(pair)
+#                         yield pair
+#     return
+# # end
+
+
+# def isubsets1(s: int) -> Generator[int, None, None]:
+#     """
+#     Generate the immediate subset of s (the subsets generated removing
+#     a single element)
+#
+#     :param s: bitset
+#     :return: bitset generator
+#     """
+#     for i in range(ihighbit(s)+1):
+#         if s & BIT_POS[i]:
+#             yield s & ~BIT_POS[i]
+# # end
+
+
+# def isuperset1(s: int, p: int) -> Generator[int, None, None]:
+#     """
+#     Generate the immediate superset of the bitset with p as superset
+#
+#     :param s: bitset
+#     :param p: superset
+#     :return: bitset generator
+#     """
+#     for i in range(ihighbit(s)+1):
+#         if not s & BIT_POS[i] and p & BIT_POS[i]:
+#             yield s | BIT_POS[i]
+# # end
+
+        # n = len(iv)
+        # N = n - 1
+        #
+        # def b(K):
+        #     l = icount(K)
+        #     k = icount(iinterset(S, K))
+        #     return 0. + sum(comb(k, j) * bernoulli(l - j) for j in range(k + 1))
+        #
+        # if degree == -1:
+        #     return 0. + sum(b(K)*iv[K] for K in isubsets(N))
+        # elif False == degree:
+        #     return 0. + sum(iv[K] for K in isubsetsc(S, 1, 1))
+        # elif True == degree:
+        #     return 0. + sum(-sign(K, 0) * iv[K] for K in isubsetsc(S, 1, 2))
+        # else:
+        #     return 0. + sum(b(K)*iv[K] for K in isubsetsc(N, 0, degree))
+
+        # if type(degree) == bool:
+        #     use_siv = bool(degree)
+        #     return inverse_ii_approx(iv, S, use_siv=use_siv)
+        # elif degree >= 0:
+        #     return inverse_ii_value(iv, S, degree=degree)
+        # elif S == 0:
+        #     iv = self.iv
+        #     return iv[0]
+        # else:
+        #     trydeg = -degree
+        #     v = inverse_ii_value(iv, S, degree=trydeg)
+        #     while v < 0 and trydeg > 1:
+        #         trydeg -= 1
+        #         v = inverse_ii_value(iv, S, degree=trydeg)
+        #     return v

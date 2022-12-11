@@ -1,0 +1,108 @@
+Ciao,
+
+ho alcune ulteriori note', che potrebbero essere utili.
+
+
+Prima parte
+----------------------
+
+1) la funzione da approssimare (la qualita' del risultato di un algo di ML in base al numero di feature selezionate) e' sicuramente MONOTONA,
+    ma e' anche SUBADDITIVA, non additiva (troppo facile), ne superadditiva (troppa grazia)
+
+2) quando si usa una PERMUTAZIONE per valutare lo shapley value, stiamo anche valutando la funzione su tutti i sottoinsiemi generati dai
+   PREFISSI della permutazione (gli elemnti dalla poizione 1 alla k, con k che va da 1 a n, n il numero totale di elementi)
+   Tenere traccia di questi valori, potrebbe NON FUNZIONARE, perche' c'e' ne sarebbero troppi
+
+   Spannometricamente:  per ogni permutazione di N elementi, abbiamo N sottoinsiemi, Se usiamo K permutazioni per fare delle approssimazioni,
+   dovremmo tenere traccia di N*K sottoinsiemi.
+
+   Vabbe' scritta cosi', forse non e' cosi' grave.
+
+3) considerando i prefissi della permutazione, noi percorriamo il reticolo dal'insieme vuoto all'insieme al fullset.
+   La prima cosa che possiamo notare e' che, poiche' la funzione e' SUBADDITIVA e noi conosciamo gia' il valore finale (quello sul fullset),
+   ci potremmo fermare PRIMA, perche' l'apporto degli elementi mancanti, da un certo punto in poi, e' facilmente calcolabile.
+
+   (Nota implementativa: se si salvano i risultati dell'algo di ML per un certo set, NON SERVE RIESEGUIRLO per lo stesso set!!!!)
+
+4) l'altro modo di approssimare la funzione e' quello di fare del campionamento sui punti del reticolo. Qui' ci sarebbero almeno due meccanismi
+    un campionamento REGOLARE dei vari livelli (quelli con K, K+1 ,... elementi in ogni insieme), oppure un campionamento RANDOM
+
+4.1) qui si potrebbe aggiungere un qualche meccanismo che campiona di piu' le zone del reticolo che sembrano piu' "interessanti" (dove la
+      funzione varia di piu'), In particolare, questo sistema prediligerebbe i livelli piu' bassi del reticolo, dove sappiamo gia' che si "annida" la
+     maggior parte dell'informazione
+
+
+
+Seconda parte.
+----------------------
+
+Qualunque sistema di approssimazione venga selezionato, deve essere validato.
+
+E la validazione non puo' che essere fatta usando delle set function che conosciamo perfettamente.
+
+Il problema e' COME generare la funzione: servono delle funzioni che mimino il comportamento delle performace degli algo di ML.
+Ma questo e' un'altro problema ancora.
+
+Al momento abbiamo tre tipi di approssimazioni:  SV, SV+SIV, Interaction Index di K-mo grado. Ed altre possono arrivare nel futuro
+
+Il meccanismo per validare l'approssimazione potrebbe essere questo:
+
+generiamo un certo numero di funzioni  in modo random, e calcoliamo il mean square error (MSE), in base al numero di elemento del fullset .
+
+Fino a 2^16 ci arriviamo. Si potrebbe arrivare anche fino a 2^20, ma ci vorrebbe un sacco di tempo di calcolo.
+
+
+
+Terza parte:
+------------------------
+
+Identificazione della migliore partizione di 2 componenti.
+
+Anche qui il meccanismo potrebbe essere questo: si cerca la VERA partizione in 2 componenti
+
+Si calcola la partizione con i vari sistemi che avevo messo in piedi l'altra volta (ottimizzazione, l'algoritmo salterino che mi ero inventato, ...)
+E si calcola il MSE
+
+Poi bisogna applicarlo alla feature selection
+
+
+
+Quarta parte
+-------------------
+Ovviamente bisognerebbe provare il tutto su un vero dataset.
+
+Ma il nostro e' un META algoritmo, e quindi dell'algo di ML ci serve SOLO le sue performance su tutti i possibili subset di feature.
+
+Qui non ci starebbe male subappaltare il lavoro a qualche "adepto"/"adepta" :-)
+
+
+
+Problemi aperti
+----------------------
+
+I problemi aperti sarebbero:
+
+1) come generare una funzione
+2) come trovare una buona approssimazione
+
+view splittinge e feature selection sarebbero una conseguenza
+
+
+
+Per Passau
+---------------------------
+
+Che dici?
+Anche solo a raccontare queste cose, con qualche risultato iniziale, dovrebbe andare bene.
+
+
+
+Nota
+---------------
+Le varie trasformate descritte in "2000 - Grabisch" sono presenti anche nel suo libro e, cosa
+utile, ha anche normalizzato la simbologia. Alcune le ho implementate. Ci sono altre
+ma bisogna vedere se sono utili per i nostri scopi.
+
+Mi manca la rappresentazione stile "Hammer"
+
+

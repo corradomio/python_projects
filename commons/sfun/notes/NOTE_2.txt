@@ -1,0 +1,36 @@
+Quando si calcola lo SV, in realta' si puo' ragionare in modo alternativo:
+Calcolare DIRETTAMENTE la set function
+
+Approcci:
+    generate TUTTI i possibili sottoinsiemi
+    generare TUTTE le permutazioni, ma e' ESTREMAMENTE inefficiente
+    generare TUTTI i sottoinsiemi sotto un certo numero di elementi
+        ed aggiungere un campionamento degli insiemi piu' grandi
+    generare un campionamento delle permutazioni
+
+Se si usano le permutazioni, si puo' calcolare un'approssimazione della funzione
+per tutti i subset composti dai vari prefissi della permutazione
+
+Se non ci sono i valori per TUTTI i possibili sottoinsiemi, c'e' modo di
+creare delle plausibili approsimazioni?
+Mediante Mobius
+
+
+Partizione in 2 set
+
+Feature selection:
+
+Approssimaazione:
+
+Shapley minimizza il chi quadro: buona in media
+
+Kriging : stimare i punti mancantyi dai punti fissi.
+
+Gli insimei piccoli sono stati gia' stimati o hanno dei vicini stimati.
+Valore di un elemento.
+
+
+Leopold: feature selection
+--------------------------
+Quale e' la coalizione migliore se non abbiamo non ammiamo informazioni
+sulle

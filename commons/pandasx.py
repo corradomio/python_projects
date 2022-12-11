@@ -2,15 +2,17 @@
 # Pandas reader
 # Some simple data set loaders: from csv and .arff data files
 #
-from typing import List, AnyStr
+from typing import List, AnyStr, Union
 
 import arff
 import pandas as pd
+import numpy as np
 from math import isnan
 
 
 # ---------------------------------------------------------------------------
-# Read data
+# read_arff
+# load_data == read_data
 # ---------------------------------------------------------------------------
 
 def read_arff(file, **args):
@@ -47,7 +49,7 @@ def read_arff(file, **args):
             if atype == list:
                 df[aname] = df[aname].astype('category')
     return df
-
+# end
 
 def _parse_dtype(columns, dtype):
     categorical = []
@@ -64,8 +66,30 @@ def _parse_dtype(columns, dtype):
     return categorical, boolean
 # end
 
+def _read_header(file: str, comment="#", sep=",") -> List[str]:
+    def trim(s: str) -> str:
+        return s.strip(" '\"")
+    with open(file) as fin:
+        line = comment
+        while line.startswith(comment):
+            line = next(fin)
+        return list(map(trim, line.split(sep)))
+    # end
+# end
 
-def load_data(file: str, categorical=[], boolean=[], dtype= None, **args) -> pd.DataFrame:
+def _pandas_dtype(columns, dtype) -> dict:
+    assert len(columns) == len(dtype)
+    dt = dict()
+    for i in range(len(columns)):
+        ct = dtype[i]
+        if ct == enumerate:
+            dt[columns[i]] = str
+        else:
+            dt[columns[i]] = ct
+    return dt
+# end
+
+def load_data(file: str, categorical=[], boolean=[], dtype=None, **args) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -81,22 +105,28 @@ def load_data(file: str, categorical=[], boolean=[], dtype= None, **args) -> pd.
     if file is None:
         raise TypeError("expected str, bytes or os.Path like object, not NoneType")
 
+    dt = None
+    if dtype is not None:
+        h = _read_header(file)
+        dt = _pandas_dtype(h, dtype)
+    # end
+
     print("Loading {} ...".format(file))
 
     if file.endswith(".csv"):
-        df = pd.read_csv(file, **args)
+        df = pd.read_csv(file, dtype=dt, **args)
     elif file.endswith(".json"):
-        df = pd.read_json(file, **args)
+        df = pd.read_json(file, dtype=dt, **args)
     elif file.endswith(".html"):
-        df = pd.read_html(file, **args)
+        df = pd.read_html(file, dtype=dt, **args)
     elif file.endswith(".xls"):
-        df = pd.read_excel(file, **args)
+        df = pd.read_excel(file, dtype=dt, **args)
     elif file.endswith(".xlsx"):
-        df = pd.read_excel(file, **args)
+        df = pd.read_excel(file, dtype=dt, **args)
     elif file.endswith(".hdf"):
-        df = pd.read_hdf(file, **args)
+        df = pd.read_hdf(file, dtype=dt, **args)
     elif file.endswith(".arff"):
-        df = read_arff(file, **args)
+        df = read_arff(file, dtype=dt, **args)
     else:
         raise TypeError("File extension unsupported: " + file)
 
@@ -135,6 +165,71 @@ def onehot_encode(data: pd.DataFrame, columns: List[AnyStr]=[]) -> pd.DataFrame:
         data = data.join(dummies)
     return data
 
+
+# ---------------------------------------------------------------------------
+# Series argmax
+# ---------------------------------------------------------------------------
+
+def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str, int]):
+    """
+    Let df a dataframe, search the row in 'argmax_col' with the highest value
+    then extract from 'col' the related value
+    
+    :param df: database 
+    :param col: columns where to extract the value
+    :param argmax_col: column where to search the maximum value
+    :return: 
+    """
+    s = df[argmax_col]
+    at = s.argmax()
+    key = s.index[at]
+    val = df[col][key]
+    return val
+# end
+
+def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str, int]):
+    """
+    Let df a dataframe, search the row in 'argmin_col' with the lowest value
+    then extract from 'col' the related value
+
+    :param df: database 
+    :param col: columns where to extract the value
+    :param argmin_col: column where to search the minimum value
+    :return: 
+    """
+    s = df[argmax_col]
+    at = s.argmin()
+    key = s.index[at]
+    val = df[col][key]
+    return val
+# end
+
+def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
+    """
+    Retrieve the unique values in the column
+    
+    :param df: dataframe 
+    :param col: colum where to extract the values
+    :return: a ndarray with values ordered
+    """
+    ser: pd.Series = df[col]
+    ser: np.ndarray = ser.unique()
+    ser.sort()
+    return ser
+# end
+
+def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
+    """
+    Retrieve the values range in the column
+
+    :param df: dataframe 
+    :param col: colum where to extract the values
+    :return: tuple with min & max value
+    """
+    ser: pd.Series = df[col]
+    smin = ser.min() - dx
+    smax = ser.max() + dx
+    return smin, smax
 
 # ---------------------------------------------------------------------------
 # Cumulant, Lift

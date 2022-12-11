@@ -5,6 +5,7 @@
 # https://graphics.stanford.edu/~seander/bithacks.html
 #
 from typing import *
+from itertools import combinations
 
 # ---------------------------------------------------------------------------
 # Support
@@ -270,8 +271,14 @@ def ilexidx(S: int, n: int) -> int:
 # Constructor
 # ---------------------------------------------------------------------------
 
-def ibinset(bits: list) -> int:
-    """[0,1,1,0] -> int"""
+def ibinset(bits: Iterable[int]) -> int:
+    """
+    Binary set (composed by {0,1}) to integer
+
+        [0,1,1,0] -> 6:int
+         0 1 2 3
+         1 2 4 8
+    """
     S = 0
     m = 1
     for i in bits:
@@ -283,7 +290,7 @@ def ibinset(bits: list) -> int:
 
 
 def isetn(n: int) -> int:
-    """full set"""
+    """Full set"""
     return (1 << n) - 1
 # end
 
@@ -291,6 +298,9 @@ def isetn(n: int) -> int:
 def iset(L: Iterable[int]) -> int:
     """
     Convert the list into a integer
+
+        (1,2) -> 6
+
     :param L: list of elements
     :return: set as integer
     """
@@ -300,38 +310,26 @@ def iset(L: Iterable[int]) -> int:
 
 
 def ilist(S: int) -> Tuple[int]:
-    """convert a bitset in the tuple of elements"""
+    """
+    Convert a bitset in the tuple of elements
+
+        6 -> (1,2)
+
+    :param S: bitset
+    :return: list of elements
+    """
     return tuple(imembers(S))
 # end
 
 
-def imembers(S: int, reverse: bool=False) -> Iterable[int]:
-    """
-    Iterator on the set's members
+def ilist_tuple(S: int) -> Tuple[int]:
+    return tuple(imembers(S))
 
-    :param S: bitset
-    :param reverse: if to scan the bitset in the reverse order
-    :return: an iterator on the elements
-    """
-    if S == 0:
-        return
-    else:
-        h = ihighbit(S)
+def ilist_set(S: int) -> Set[int]:
+    return set(imembers(S))
 
-    if not reverse:
-        i = 0
-        while i <= h:
-            if S & (1 << i):
-                yield i
-            i += 1
-    else:
-        i = h
-        while i >= 0:
-            if S & (1 << i):
-                yield i
-            i -= 1
-    return
-# end
+def ilist_list(S: int) -> List[int]:
+    return list(imembers(S))
 
 
 # ---------------------------------------------------------------------------
@@ -339,7 +337,7 @@ def imembers(S: int, reverse: bool=False) -> Iterable[int]:
 # ---------------------------------------------------------------------------
 
 def icard(S: int) -> int:
-    """cardinality of the bitset"""
+    """Cardinality of the bitset"""
     c = 0
     while S != 0:
         c += _BIT_COUNTS[S & 0xFF]
@@ -351,7 +349,7 @@ icount = icard
 
 
 def iinsert(S: int, i: int) -> int:
-    """add the element i into the bitset"""
+    """Add the element i into the bitset"""
     return S | (1 << i)
 # end
 
@@ -359,7 +357,7 @@ iadd = iinsert
 
 
 def iremove(S: int, i: int) -> int:
-    """remove the element i from the bitset"""
+    """Remove the element i from the bitset"""
     a = 1 << i
     if S & a:
         S = S ^ a
@@ -370,7 +368,7 @@ isub = iremove
 
 
 def ireplace(S: int, i: int, j: int) -> int:
-    """remove the element 'i' and add the element 'j'"""
+    """Remove the element 'i' and add the element 'j'"""
     return iinsert(iremove(S, i), j)
 # end
 
@@ -380,7 +378,7 @@ def ireplace(S: int, i: int, j: int) -> int:
 # ---------------------------------------------------------------------------
 
 def isplit(S: int) -> tuple:
-    """split the set in two parts"""
+    """Split the set in two parts"""
     s = icard(S)
     t = s//2
     T = 0
@@ -401,9 +399,9 @@ def ireduceset(S: int, P: int, n: int, L=None):
     Note: the elements in P are COLLAPSED into the element with the minimal index 'c'
 
     :param S: set
-    :param P: reduction set
+    :param P: reduction set (as bitset)
     :param n: n of elements in the set
-    :param L: P in list form
+    :param L: P in form of list
     :return: reduced set
     """
     assert icard(P) > 1
@@ -435,31 +433,31 @@ def ireduceset(S: int, P: int, n: int, L=None):
 # ---------------------------------------------------------------------------
 
 def iismember(S: int, i: int) -> bool:
-    """check if the element i is in the bitset"""
+    """Check if the element i is in the bitset"""
     return S & (1 << i) != 0
 # end
 
 
 def iissameset(S1: int, S2: int) -> bool:
-    """check if the two sets are equal"""
+    """Check if the two sets are equal"""
     return S1 == S2
 # end
 
 
 def iissubset(S1: int, S2: int) -> bool:
-    """check is S1 is a subset of S2"""
+    """Check is S1 is a subset of S2"""
     return S1 & ~S2 == 0
 # end
 
 
 def iissuperset(S1: int, S2: int) -> bool:
-    """check if S1 is a superset of S2"""
+    """Check if S1 is a superset of S2"""
     return S2 & ~S1 == 0
 # end
 
 
 def ihasintersect(S1: int, S2: int) -> bool:
-    """check if S1 has intersection with S2"""
+    """Check if S1 has intersection with S2"""
     return S1 & S2 != 0
 # end
 
@@ -499,7 +497,7 @@ def isdiff(S1: int, S2: int) -> int:
 
 
 def idiffn(S1: int, S2: int, S3: int=0) -> int:
-    """difference between 3 bitsets (S1 - S2)"""
+    """difference between 3 bitsets (S1 - S2) - S3"""
     return S1 & ~S2 & ~S3
 # end
 
@@ -507,6 +505,39 @@ def idiffn(S1: int, S2: int, S3: int=0) -> int:
 def idiff_gt(S1: int, S2: int) -> int:
     l = ilowbit(S2)+1
     return S1 & ~S2 & (-1 << l)
+
+
+# ---------------------------------------------------------------------------
+# Iterators
+# ---------------------------------------------------------------------------
+
+def imembers(S: int, reverse: bool=False) -> Iterable[int]:
+    """
+    Iterator on the set's members
+
+    :param S: bitset
+    :param reverse: if to scan the bitset in the reverse order
+    :return: an iterator on the elements
+    """
+    if S == 0:
+        return
+    else:
+        h = ihighbit(S)
+
+    if not reverse:
+        i = 0
+        while i <= h:
+            if S & (1 << i):
+                yield i
+            i += 1
+    else:
+        i = h
+        while i >= 0:
+            if S & (1 << i):
+                yield i
+            i -= 1
+    return
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -813,6 +844,13 @@ def isubsetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
 # ---------------------------------------------------------------------------
 
 def irandset(n: int, rnd=None) -> int:
+    """
+    Generate a random set with maximum cardinality n
+
+    :param n: cardinality
+    :param rnd: random number generator
+    :return: random set as integer
+    """
     from random import random, Random
     if rnd is None:
         rnd = Random()
@@ -858,6 +896,10 @@ def ijaccard_index(S1: int, S2: int) -> float:
     """
     Jaccard index
 
+        cardinality(intersection(S1,S2))
+        -------------------------------
+        cardinality(union(S1,S2))
+
     :param S1: first bitset
     :param S2: second bitset
     :return:
@@ -873,12 +915,122 @@ def ihamming_distance(S1: int, S2: int) -> int:
     """
     Hamming distance
 
+        cardinality(simmetric_difference(S1, S2))
+
     :param S1: first bitset
     :param S2: second bitset
     :return:
     """
     return icard(isdiff(S1, S2))
 # end
+
+
+# ---------------------------------------------------------------------------
+# Extras/compatibility
+# ---------------------------------------------------------------------------
+
+def ipowersett(n: int, empty=True, full=True, df=False) -> Iterator[int]:
+    """
+    Generate all subsets of the set {0,1,...n-1} using the traversal:
+
+        - depth first    (df=True)
+        - breadth first  (df=False)
+
+    order
+
+    :param n: n of elements in the set
+    :param empty: if include the empty set
+    :param full:  if include the full set
+    :param df: depth first/breadth first
+    :return: an iterator
+    """
+    p = 1 << n
+    N = p - 1
+    b = [0]*p
+
+    if empty:
+        stk = [0]
+    else:
+        b[0] = 1
+        stk = [(1 << i) for i in range(n)]
+    if not full:
+        b[-1] = 1
+
+    while stk:
+        S = stk[0]
+        stk = stk[1:]
+        yield S
+
+        D = idiff(N, S)
+        if df:
+            # depth first
+            for e in imembers(D, reverse=True):
+                T = iadd(S, e)
+                if not b[T]:
+                    stk = [T] + stk
+                    b[T] = 1
+        else:
+            # breadth first
+            for e in imembers(D):
+                T = iadd(S, e)
+                if not b[T]:
+                    stk = stk + [T]
+                    b[T] = 1
+        # end
+    # end
+# end
+
+
+def isubsetsc(S: int, l=None, u=None) -> Iterator[int]:
+    """
+    Generate the subsets of S with a number of elements in the range [l,u]
+
+    :param S: bitset
+    :param l: lower number of elements
+    :param u: upper number of elements
+    :return: an iterator
+    """
+    S = ilist(S)
+    n = len(S)
+    if l is None and u is None:
+        l, u = 0, n
+    if u is None:
+        u = l
+
+    for k in range(l, u+1):
+        for c in combinations(S, k):
+            yield iset(c)
+# end
+
+
+# ---------------------------------------------------------------------------
+# Map
+# ---------------------------------------------------------------------------
+
+def imapset(M : Union[List[List[int]], Dict[int, List[int]]]) -> List[int]:
+    """
+    Convert a map
+
+        e -> [a1,...]
+
+    in a list where e is used as index and [a1,...] is converted in a ibitset
+
+    :param M: map
+    :return: list of ints
+    """
+    if type(M) in [dict]:
+        n = max(M.keys())+1
+        T = [None]*(n)
+        for k in M.keys():
+            T[k] = M[k]
+        M = T
+    n = len(M)
+    S = [0]*(n)
+    for i in range(n):
+        S[i] = iset(M[i])
+    # end
+    return S
+
 
 
 # ---------------------------------------------------------------------------
