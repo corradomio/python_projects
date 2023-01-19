@@ -1,0 +1,69 @@
+[comment]
+   Written by MOSEK version 9.3.20
+   Date 18-05-22
+   Time 10:23:02
+[/comment]
+
+[problemname]cqo1[/problemname]
+
+[hints]
+  [hint NUMVAR] 13 [/hint]
+  [hint NUMCON] 7 [/hint]
+  [hint NUMANZ] 15 [/hint]
+  [hint NUMQNZ] 0 [/hint]
+  [hint NUMCONE] 2 [/hint]
+[/hints]
+
+[variables disallow_new_variables]
+  '1.0' 'x[0]' 'x[1]' 'x[2]' 'y[0]' 'y[1]' 'y[2]' 'qc1[0].coneslack' 'qc1[1].coneslack'
+  'qc1[2].coneslack' 'qc2[0].coneslack' 'qc2[1].coneslack' 'qc2[2].coneslack'
+[/variables]
+
+[objective minimize 'obj']
+   'y[0]' + 'y[1]' + 'y[2]'
+[/objective]
+
+[constraints]
+  [con 'lc[]']  'x[0]' + 'x[1]' + 2 'x[2]' = 1 [/con]
+  [con 'qc1[0]']  'y[0]' - 'qc1[0].coneslack' = 0 [/con]
+  [con 'qc1[1]']  'x[0]' - 'qc1[1].coneslack' = 0 [/con]
+  [con 'qc1[2]']  'x[1]' - 'qc1[2].coneslack' = 0 [/con]
+  [con 'qc2[0]']  'y[1]' - 'qc2[0].coneslack' = 0 [/con]
+  [con 'qc2[1]']  'y[2]' - 'qc2[1].coneslack' = 0 [/con]
+  [con 'qc2[2]']  'x[2]' - 'qc2[2].coneslack' = 0 [/con]
+[/constraints]
+
+[bounds]
+  [b]               '1.0' =  1 [/b]
+  [b] 0e+00      <= 'x[0]','x[1]','x[2]' [/b]
+  [b]               'y[0]','y[1]','y[2]','qc1[0].coneslack','qc1[1].coneslack','qc1[2].coneslack' free [/b]
+  [b]               'qc2[0].coneslack','qc2[1].coneslack','qc2[2].coneslack' free [/b]
+  [cone quad 'k000000000_'] 'qc1[0].coneslack', 'qc1[1].coneslack', 'qc1[2].coneslack' [/cone]
+  [cone rquad 'k000000001_'] 'qc2[0].coneslack', 'qc2[1].coneslack', 'qc2[2].coneslack' [/cone]
+[/bounds]
+
+[solutions]
+  [solution interior status=OPTIMAL]
+    # Variable solution
+    [var '1.0'] sk=FIX    lvl=1e+00                  sl=0e+00                  su=0e+00                  [/var]
+    [var 'x[0]'] sk=SUPBAS lvl=2.609204081408032e-01  sl=6.75555328168804e-15   su=0e+00                  [/var]
+    [var 'x[1]'] sk=SUPBAS lvl=2.609204081408032e-01  sl=6.75555328168804e-15   su=0e+00                  [/var]
+    [var 'x[2]'] sk=SUPBAS lvl=2.390795918591896e-01  sl=1.440397625495127e-14  su=0e+00                  [/var]
+    [var 'y[0]'] sk=SUPBAS lvl=3.689971798926482e-01  sl=0e+00                  su=0e+00                  [/var]
+    [var 'y[1]'] sk=SUPBAS lvl=1.690548006469457e-01  sl=0e+00                  su=0e+00                  [/var]
+    [var 'y[2]'] sk=SUPBAS lvl=1.690548006469457e-01  sl=0e+00                  su=0e+00                  [/var]
+    [var 'qc1[0].coneslack'] sk=SUPBAS lvl=3.689971798926482e-01  sl=0e+00                  su=0e+00                  sn=1.000000000002101e+00  [/var]
+    [var 'qc1[1].coneslack'] sk=SUPBAS lvl=2.609204081408032e-01  sl=0e+00                  su=0e+00                  sn=-7.071067811880326e-01 [/var]
+    [var 'qc1[2].coneslack'] sk=SUPBAS lvl=2.609204081408032e-01  sl=0e+00                  su=0e+00                  sn=-7.071067811880326e-01 [/var]
+    [var 'qc2[0].coneslack'] sk=SUPBAS lvl=1.690548006469457e-01  sl=0e+00                  su=0e+00                  sn=1.000000000004196e+00  [/var]
+    [var 'qc2[1].coneslack'] sk=SUPBAS lvl=1.690548006469457e-01  sl=0e+00                  su=0e+00                  sn=1.000000000004196e+00  [/var]
+    [var 'qc2[2].coneslack'] sk=SUPBAS lvl=2.390795918591896e-01  sl=0e+00                  su=0e+00                  sn=-1.414213562379029e+00 [/var]
+    [con 'lc[]'] sk=FIX    lvl=1e+00                   y=7.071067811865402e-01  sl=7.071067811865402e-01  su=0e+00                  [/con]
+    [con 'qc1[0]'] sk=FIX    lvl=0e+00                   y=1e+00                  sl=1e+00                  su=0e+00                  [/con]
+    [con 'qc1[1]'] sk=FIX    lvl=0e+00                   y=-7.07106781186547e-01  sl=0e+00                  su=7.07106781186547e-01   [/con]
+    [con 'qc1[2]'] sk=FIX    lvl=0e+00                   y=-7.07106781186547e-01  sl=0e+00                  su=7.07106781186547e-01   [/con]
+    [con 'qc2[0]'] sk=FIX    lvl=0e+00                   y=1e+00                  sl=1e+00                  su=0e+00                  [/con]
+    [con 'qc2[1]'] sk=FIX    lvl=0e+00                   y=1e+00                  sl=1e+00                  su=0e+00                  [/con]
+    [con 'qc2[2]'] sk=FIX    lvl=0e+00                   y=-1.414213562373095e+00 sl=0e+00                  su=1.414213562373095e+00  [/con]
+  [/solution]
+[/solutions]
