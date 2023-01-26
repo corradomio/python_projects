@@ -1,0 +1,25 @@
+# https://github.com/jaraco/path
+# https://path.readthedocs.io/en/latest/
+path
+
+matplotlib
+seaborn
+numpy
+scipy
+pandas
+
+
+# https://bab2min.github.io/tomotopy/v/en/
+tomotopy
+# https://radimrehurek.com/gensim/
+gensim
+# https://www.nltk.org/
+nltk
+
+# pytorch
+torch
+torchvision
+torchaudio
+
+# https://www.sbert.net/
+sentence-transformers
