@@ -3,8 +3,9 @@ import tomotopy as tp
 import os
 from path import Path as path
 
-ROOT_DIR = "D:/Dropbox/Software/Mathematica/GraphNLP/cocome"
-FILE_IDS = "D:/Dropbox/Software/Mathematica/GraphNLP/cocome/graph-4fe291fd-source-vertices.csv"
+NAME = "cocome"
+ROOT_DIR = f"D:/Dropbox/Software/Mathematica/GraphNLP/{NAME}"
+FILE_IDS = f"D:/Dropbox/Software/Mathematica/GraphNLP/{NAME}/graph-source-vertices.csv"
 DOT_TOKENS = ".tokens"
 
 MIN_LENGTH = 4
@@ -110,11 +111,12 @@ def load_fileids():
 
 def load_doc(p: path, minlen=0, skipwords=set()):
     tokens = []
-    with open(p) as file:
+    with open(p, encoding="iso-8859-1") as file:
         for line in file:
             tokens.append(line.strip())
 
     tokens = list(filter(lambda t: len(t) >= minlen and t not in skipwords, tokens))
+    # tokens = list(filter(lambda t: isinstance(t, str), tokens))
     return tokens
 
 
