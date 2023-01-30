@@ -1,0 +1,48 @@
+# https://packaging.python.org/en/latest/
+packaging
+# https://matplotlib.org/
+matplotlib
+# https://seaborn.pydata.org/
+seaborn
+# https://networkx.org/
+networkx
+# https://numpy.org/
+numpy
+# https://scipy.org/
+scipy
+# https://pandas.pydata.org/
+pandas
+# https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+xarray
+# https://scikit-learn.org
+scikit-learn
+# https://github.com/scikit-learn-contrib/sklearn-pandas
+sklearn-pandas
+# https://sklearn-xarray.readthedocs.io/en/latest/
+sklearn-xarray
+# https://umap-learn.readthedocs.io/en/latest/
+umap-learn
+# https://sktime.org/
+sktime
+# https://scikit-image.org/
+scikit-image
+# https://scikit-network.readthedocs.io/en/latest/
+scikit-network
+# https://github.com/scikit-learn-contrib/category_encoders
+category_encoders
+# https://github.com/solegalli/feature_engine
+feature_engine
+# https://scikit-optimize.github.io/stable/
+scikit-optimize
+# https://github.com/skorch-dev/skorch
+skorch
+# https://xgboost.readthedocs.io/en/stable/
+xgboost
+# https://catboost.ai/
+catboost
+# https://numba.pydata.org/
+numba
+# https://pynndescent.readthedocs.io/en/latest/
+pynndescent
+# https://automl.github.io/auto-sklearn/master/
+# auto-sklearn

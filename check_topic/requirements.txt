@@ -1,0 +1,12 @@
+matplotlib
+seaborn
+
+numpy
+pandas
+
+spacy
+gensim
+nltk
+lda
+pbr
+tomotopy

@@ -1,0 +1,22 @@
+accelerate==0.15.0
+# cuda==11.6.1
+
+huggingface_hub==0.12.0
+diffusers==0.12.1
+transformers==4.26.0
+sentence-transformers==2.2.2
+sentencepiece==0.1.97
+
+numpy==1.23.5
+pandas==1.5.3
+pillow==9.3.0
+scipy==1.10.0
+scikit-learn==1.2.1
+
+# pytorch-cuda==11.6
+# pytorch==1.13.1
+
+torchaudio==0.13.1
+torchvision==0.14.1
+
+tqdm==4.64.1
