@@ -11,4 +11,6 @@ removed
 *.jfr
 __pycache__
 *.whl
+*.zip
+*.gz
 

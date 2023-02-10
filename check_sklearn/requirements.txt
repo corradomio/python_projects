@@ -22,6 +22,9 @@ sklearn-pandas
 sklearn-xarray
 # https://umap-learn.readthedocs.io/en/latest/
 umap-learn
+# trimap isa based on annoy (https://github.com/spotify/annoy)
+# can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
+trimap
 # https://sktime.org/
 sktime
 # https://scikit-image.org/
@@ -44,5 +47,20 @@ catboost
 numba
 # https://pynndescent.readthedocs.io/en/latest/
 pynndescent
+# https://github.com/scikit-learn-contrib/hdbscan
+# (https://www.lfd.uci.edu/~gohlke/pythonlibs/#hdbscan)
+hdbscan
+
+# (https://github.com/spotify/annoy)
+annoy
+# https://github.com/eamid/trimap
+# trimap isa based on annoy (https://github.com/spotify/annoy)
+# can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
+trimap
+# https://igraph.org/python/
+# https://igraph.readthedocs.io/en/stable/
+igraph
+
 # https://automl.github.io/auto-sklearn/master/
 # auto-sklearn
+

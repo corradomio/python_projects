@@ -1,0 +1,10 @@
+fire
+ipython
+numpy
+pandas
+pyzmq
+regex
+setuptools
+transformers
+torch
+tqdm

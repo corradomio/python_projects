@@ -1,0 +1,9 @@
+numpy
+scipy
+
+torch
+torchvision
+torchaudio
+
+transformers[torch]
+sentence-transformers
