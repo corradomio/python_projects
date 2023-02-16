@@ -129,7 +129,7 @@ def relative_path(p):
 # end
 
 
-def load_corpus(minlen=0, skipwords=set()):
+def load_corpus(minlen=0, skipwords=set(), tokens=True):
     corpus = []
     files = []
     root = path(ROOT_DIR)
@@ -138,6 +138,10 @@ def load_corpus(minlen=0, skipwords=set()):
             continue
         files.append(relative_path(p))
         corpus.append(load_doc(p, minlen=minlen, skipwords=skipwords))
+
+    if not tokens:
+        corpus = list(map(lambda l: " ".join(l), corpus))
+
     return corpus, files
 # end
 

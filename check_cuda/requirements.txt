@@ -1,0 +1,4 @@
+numpy
+numba
+cupy
+# cupy-cuda115

@@ -23,3 +23,8 @@ torchaudio
 
 # https://www.sbert.net/
 sentence-transformers
+sentencepiece
+
+huggingface_hub
+transformers
+accelerate

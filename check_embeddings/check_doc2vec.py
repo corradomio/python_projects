@@ -14,7 +14,7 @@ def gen_embeddings(vsz):
 
     model.train(train_corpus, total_examples=model.corpus_count, epochs=model.epochs)
 
-    fname = f"{PROJECT}-doc2vec-{vsz}.vec"
+    fname = f"{NAME}-doc2vec-{vsz}.vec"
     with open(fname, mode='w') as wrt:
         for i in range(n):
             file = files[i]
