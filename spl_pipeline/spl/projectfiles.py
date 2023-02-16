@@ -162,9 +162,17 @@ class ProjectFiles:
 
             for file in dir.files(sel_files):
                 assert file.name.endswith(file_ext)
-                self._files.append(file)
+                rpath = file.relpath(self._home).replace('\\', '/')
+                finfo = {
+                    "path": rpath,
+                    "file": file,
+                    "name": file.name,
+                    "stem": file.stem
+                }
+                self._files.append(finfo)
             # end
         # end
+        pass
     # end
 
     # -----------------------------------------------------------------------

@@ -25,6 +25,10 @@ torchvision
 torchaudio
 
 transformers
+sentence-transformers
+
+bertopic
+
 
 
 

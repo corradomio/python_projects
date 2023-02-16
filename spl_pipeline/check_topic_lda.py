@@ -20,19 +20,23 @@ def main():
 
     pl = ProjectFiles()
 
-    # pl_name = 'cocome-%s.csv'
-    # pl.scan(r'D:\SPLGroup\spl-workspaces\java\cocome-maven-project')
+    pl_name = 'cocome-%1s-%s.csv'
+    pl.scan(r'D:\Projects\Java\\cocome-maven-project')
 
-    # pl_name = 'dl4j-%s.csv'
-    # pl.scan(r'D:\Projects.github\other_projects\deeplearning4j-1.0.0-M2')
+    # pl_name = 'dl4j-%1s-%s.csv'
+    # pl.scan(r'D:\Projects\Java\\deeplearning4j-1.0.0-M2')
 
-    pl_name = 'elasticsearch-%s.csv'
-    pl.scan(r'D:\Projects\Java\elasticsearch-8.1.2')
+    # pl_name = 'elasticsearch-%1s-%s.csv'
+    # pl.scan(r'D:\Projects\Java\elasticsearch-8.1.2')
 
     ft = FilesTokenizer(stem=True,
                         min_len=3,
                         min_count=3,
                         min_tfidf=0.001,
+                        # min_len=0,
+                        # min_count=0,
+                        # min_tfidf=0,
+
                         unique=True,
                         stopwords='java')
     ft.fit(pl.files)
@@ -93,7 +97,6 @@ def main():
     #     print(tn)
     # print(tm.documents.shape)
     pass
-
 
 
 if __name__ == "__main__":

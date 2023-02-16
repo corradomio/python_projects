@@ -390,6 +390,7 @@ class LDATopicModel:
 
     def save_topics(self, file):
         file = file.replace('%s', 'topics')
+        file = file.replace('%1s', str(self.k))
         self._log.info(f"saving '{file}'")
 
         tokens = self.tokens
@@ -412,6 +413,7 @@ class LDATopicModel:
 
     def save_documents(self, file):
         file = file.replace('%s', 'documents')
+        file = file.replace('%1s', str(self.k))
         self._log.info(f"saving '{file}'")
 
         topic_names = self.topic_names
@@ -434,6 +436,7 @@ class LDATopicModel:
 
     def save_ordered_topics(self, file):
         file = file.replace('%s', 'ordered-topics')
+        file = file.replace('%1s', str(self.k))
         self._log.info(f"saving '{file}'")
 
         topic_names = self.topic_names
@@ -457,6 +460,7 @@ class LDATopicModel:
 
     def save_ordered_documents(self, file):
         file = file.replace('%s', 'ordered-documents')
+        file = file.replace('%1s', str(self.k))
         self._log.info(f"saving '{file}'")
 
         file_names = self._file_names

@@ -1,11 +1,12 @@
 import re
 import math
+from collections import Counter
 from random import shuffle
 
 from .commons import *
 from .lang_keywords import LANGUAGE_KEYWORDS
 from .loggingx import Logger
-from .utils_stdlib import flatten, list_filter, set_filter
+from .utils_stdlib import flatten, list_filter, set_filter, list_map
 
 
 # ---------------------------------------------------------------------------
@@ -216,7 +217,7 @@ class FilesTokenizer:
             self.re = None
         elif isinstance(tokenize, bool):
             if tokenize:
-                self.re = "[ \t\n\r@$,.:;?!*/0-9'\"()\\[\\]\\\\/{}=<>_+-]"
+                self.re = "[ \t\n\r%#&@$,.:;?!*/0-9'\"()\\[\\]\\\\/{}=<>_+-]"
             else:
                 self.re = None
         elif isinstance(tokenize, str):
@@ -275,11 +276,11 @@ class FilesTokenizer:
 
     @property
     def paths(self) -> list[str]:
-        return list(map(lambda fi: fi['path'], self._files))
+        return list_map(lambda fi: fi['path'], self._files)
 
     @property
     def names(self) -> list[str]:
-        return list(map(lambda fi: fi['stem'], self._files))
+        return list_map(lambda fi: fi['stem'], self._files)
 
     @property
     def corpus(self) -> Union[list[str], list[list[str]]]:
@@ -287,10 +288,16 @@ class FilesTokenizer:
         List of strings (content of each file) or list of list of tokens
         :return:
         """
-        # shuffle the tokens at each call
-        if self.shuffle and self.re is not None:
-            self._corpus = list(map(shuffle_list, self._corpus))
-        return self._corpus
+        # # shuffle the tokens at each call
+        # if self.shuffle and self.re is not None:
+        #     self._corpus = list(map(shuffle_list, self._corpus))
+        # return self._corpus
+        return self.get_corpus(bag=False)
+
+    @property
+    def documents(self):
+        """Alias for 'corpus'"""
+        return self.corpus
 
     @property
     def dictionary(self) -> TokenDict:
@@ -361,7 +368,7 @@ class FilesTokenizer:
             tokens = list_filter(is_ident, tokens)
         # stemming
         if self.stem:
-            tokens = list(map(stem_ident, tokens))
+            tokens = list_map(stem_ident, tokens)
         # stopwords
         if self.stopwords:
             tokens = list_filter(lambda t: t not in self.stopwords, tokens)
@@ -413,8 +420,36 @@ class FilesTokenizer:
             self._log.warn(f'... found {n_empty} empty documents')
     # end
 
+    # -----------------------------------------------------------------------
+
+    def get_corpus(self, bag=False, normalized=False):
+        """
+                List of strings (content of each file) or list of list of tokens
+                :return:
+                """
+        # shuffle the tokens at each call
+        if self.shuffle and self.re is not None:
+            self._corpus = list_map(shuffle_list, self._corpus)
+        if not bag:
+            return self._corpus
+
+        def normalize(bag: dict):
+            maxv = max(bag.values())
+            for key in bag:
+                bag[key] = bag[key]/maxv
+            return bag
+
+        bag_corpus = list_map(Counter, self._corpus)
+        if normalized:
+            bag_corpus = list_map(normalize, bag_corpus)
+        return bag_corpus
+    # end
+
+    # -----------------------------------------------------------------------
+
     def save(self, file: str):
         file = file.replace('%s', 'dictionary')
+        file = file.replace('%1s', '')
         self._log.info(f"saving '{file}'")
 
         with open(file, mode='w', encoding='utf-8') as wrt:

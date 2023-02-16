@@ -1,6 +1,10 @@
 from typing import Iterable
 
 
+def list_map(f, l):
+    return list(map(f, l))
+
+
 def list_filter(p, l):
     r = list()
     for e in l:
