@@ -7,15 +7,18 @@ pillow
 scipy
 scikit-learn
 
+--extra-index-url https://download.pytorch.org/whl/cu116
 torch
-torchaudio
+pytorch-lightning
 torchvision
+torchaudio
 
 huggingface_hub
 diffusers
 transformers
 sentence-transformers
 sentencepiece
+datasets
 
 path
 
