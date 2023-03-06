@@ -12,7 +12,7 @@ def save_embeddings():
     model = SentenceTransformer('all-MiniLM-L6-v2')
     dvects = model.encode(corpus, normalize_embeddings=True)
 
-    fname = f"cocome-bert.vec"
+    fname = f"cocome-sbert.vec"
     with open(fname, mode='w') as wrt:
         for i in range(n):
             file = files[i]
@@ -20,6 +20,7 @@ def save_embeddings():
                 print(f"file skipped: '{file}'")
                 continue
 
+            print(f"[{i:4}] processing {file}")
             # doc = corpus[i]
             # dvect = model.encode(doc, normalize_embeddings=True)
             dvect = dvects[i]

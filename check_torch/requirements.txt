@@ -1,0 +1,21 @@
+numpy
+scipy
+pandas
+
+scikit-learn
+sktime
+
+matplotlib
+seaborn
+
+--extra-index-url https://download.pytorch.org/whl/cu116
+torch
+pytorch-lightning
+torchvision
+torchaudio
+
+ipython
+jupyter
+
+tabulate
+

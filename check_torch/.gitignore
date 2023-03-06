@@ -1,0 +1,5 @@
+*.tar
+saved_models
+MNIST
+lightning_logs
+data
