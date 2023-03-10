@@ -1,0 +1,15 @@
+numpy
+scipy
+matplotlib
+pandas
+
+# --index-url https://download.pytorch.org/whl/nightly/cu117
+# --pre
+# torch
+# torchvision
+# torchaudio
+# torchtext
+
+# pytorch-lightning
+
+jupyter

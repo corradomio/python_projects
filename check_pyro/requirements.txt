@@ -1,22 +1,13 @@
 numpy
 scipy
 pandas
-
-scikit-learn
-sktime
-
 matplotlib
-seaborn
+
 
 --extra-index-url https://download.pytorch.org/whl/cu116
+
 torch
 torchvision
 torchaudio
-pytorch-lightning
 
-ipython
-jupyter
-
-tabulate
-opendatasets
-
+pyro-ppl

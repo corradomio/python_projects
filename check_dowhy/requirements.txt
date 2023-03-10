@@ -1,0 +1,30 @@
+numpy
+scipy
+pandas
+
+matplotlib
+seaborn
+
+networkx
+igraph
+jupyter
+
+pydot
+# pygraphviz
+
+# llvmlite
+
+scikit-learn
+catboost
+xgboost
+
+cdt
+econml
+
+# only Linux/Mac
+# causalml
+
+tensorflow
+
+dowhy
+
