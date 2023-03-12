@@ -1,0 +1,7 @@
+Pandas  (https://pandas.pydata.org/ )
+Dask    (https://dask.org/ )
+Vaex    (https://vaex.io/ )
+Polars  (https://www.pola.rs/)
+RAPIDS  (https://rapids.ai/ )
+Modin   (https://modin.readthedocs.io/  )
+Ray     (https://www.ray.io/)
