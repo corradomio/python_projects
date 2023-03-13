@@ -127,7 +127,7 @@ def flatten(l) -> list:
     elif type(l[0]) in [list, tuple]:
         return accumulate(list_map(flatten, l), lambda a,b: a+b)
     else:
-        return l
+        return [l]
 # end
 
 # ---------------------------------------------------------------------------

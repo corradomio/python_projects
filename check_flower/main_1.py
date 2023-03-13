@@ -1,19 +1,17 @@
 from collections import OrderedDict
 from typing import List, Tuple
 
+import flwr as fl
+import flwr.server.strategy
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torchvision
 import torchvision.transforms as transforms
+from flwr.common import Metrics
 from torch.utils.data import DataLoader, random_split
 from torchvision.datasets import CIFAR10
-
-import flwr as fl
-import flwr.server.strategy
-from flwr.common import Metrics
 
 #
 # Preparation
