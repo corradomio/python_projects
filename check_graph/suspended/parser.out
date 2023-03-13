@@ -1,0 +1,389 @@
+Created by PLY version 3.11 (http://www.dabeaz.com/ply)
+
+Grammar
+
+Rule 0     S' -> graph
+Rule 1     graph -> strict graphtype ID { stmtlist }
+Rule 2     strict -> STRICT
+Rule 3     strict -> empty
+Rule 4     graphtype -> GRAPH
+Rule 5     graphtype -> DIGRAPH
+Rule 6     stmtlist -> stmt ; stmtlist
+Rule 7     stmtlist -> stmt
+Rule 8     stmtlist -> empty
+Rule 9     stmt -> vertex
+Rule 10    stmt -> edge
+Rule 11    vertex -> NUMBER attributes
+Rule 12    edge -> NUMBER DIRECTED NUMBER
+Rule 13    edge -> NUMBER UNDIRECTED NUMBER
+Rule 14    attributes -> [ attributelist ]
+Rule 15    attributes -> empty
+Rule 16    attributelist -> attribute , attributes
+Rule 17    attributelist -> attribute
+Rule 18    attributelist -> empty
+Rule 19    attribute -> ID = STRING
+Rule 20    empty -> <empty>
+
+Terminals, with rules where they appear
+
+,                    : 16
+;                    : 6
+=                    : 19
+DIGRAPH              : 5
+DIRECTED             : 12
+GRAPH                : 4
+ID                   : 1 19
+NUMBER               : 11 12 12 13 13
+STRICT               : 2
+STRING               : 19
+UNDIRECTED           : 13
+[                    : 14
+]                    : 14
+error                : 
+{                    : 1
+}                    : 1
+
+Nonterminals, with rules where they appear
+
+attribute            : 16 17
+attributelist        : 14
+attributes           : 11 16
+edge                 : 10
+empty                : 3 8 15 18
+graph                : 0
+graphtype            : 1
+stmt                 : 6 7
+stmtlist             : 1 6
+strict               : 1
+vertex               : 9
+
+Parsing method: LALR
+
+state 0
+
+    (0) S' -> . graph
+    (1) graph -> . strict graphtype ID { stmtlist }
+    (2) strict -> . STRICT
+    (3) strict -> . empty
+    (20) empty -> .
+
+    STRICT          shift and go to state 3
+    GRAPH           reduce using rule 20 (empty -> .)
+    DIGRAPH         reduce using rule 20 (empty -> .)
+
+    graph                          shift and go to state 1
+    strict                         shift and go to state 2
+    empty                          shift and go to state 4
+
+state 1
+
+    (0) S' -> graph .
+
+
+
+state 2
+
+    (1) graph -> strict . graphtype ID { stmtlist }
+    (4) graphtype -> . GRAPH
+    (5) graphtype -> . DIGRAPH
+
+    GRAPH           shift and go to state 6
+    DIGRAPH         shift and go to state 7
+
+    graphtype                      shift and go to state 5
+
+state 3
+
+    (2) strict -> STRICT .
+
+    GRAPH           reduce using rule 2 (strict -> STRICT .)
+    DIGRAPH         reduce using rule 2 (strict -> STRICT .)
+
+
+state 4
+
+    (3) strict -> empty .
+
+    GRAPH           reduce using rule 3 (strict -> empty .)
+    DIGRAPH         reduce using rule 3 (strict -> empty .)
+
+
+state 5
+
+    (1) graph -> strict graphtype . ID { stmtlist }
+
+    ID              shift and go to state 8
+
+
+state 6
+
+    (4) graphtype -> GRAPH .
+
+    ID              reduce using rule 4 (graphtype -> GRAPH .)
+
+
+state 7
+
+    (5) graphtype -> DIGRAPH .
+
+    ID              reduce using rule 5 (graphtype -> DIGRAPH .)
+
+
+state 8
+
+    (1) graph -> strict graphtype ID . { stmtlist }
+
+    {               shift and go to state 9
+
+
+state 9
+
+    (1) graph -> strict graphtype ID { . stmtlist }
+    (6) stmtlist -> . stmt ; stmtlist
+    (7) stmtlist -> . stmt
+    (8) stmtlist -> . empty
+    (9) stmt -> . vertex
+    (10) stmt -> . edge
+    (20) empty -> .
+    (11) vertex -> . NUMBER attributes
+    (12) edge -> . NUMBER DIRECTED NUMBER
+    (13) edge -> . NUMBER UNDIRECTED NUMBER
+
+    }               reduce using rule 20 (empty -> .)
+    NUMBER          shift and go to state 15
+
+    stmtlist                       shift and go to state 10
+    stmt                           shift and go to state 11
+    empty                          shift and go to state 12
+    vertex                         shift and go to state 13
+    edge                           shift and go to state 14
+
+state 10
+
+    (1) graph -> strict graphtype ID { stmtlist . }
+
+    }               shift and go to state 16
+
+
+state 11
+
+    (6) stmtlist -> stmt . ; stmtlist
+    (7) stmtlist -> stmt .
+
+    ;               shift and go to state 17
+    }               reduce using rule 7 (stmtlist -> stmt .)
+
+
+state 12
+
+    (8) stmtlist -> empty .
+
+    }               reduce using rule 8 (stmtlist -> empty .)
+
+
+state 13
+
+    (9) stmt -> vertex .
+
+    ;               reduce using rule 9 (stmt -> vertex .)
+    }               reduce using rule 9 (stmt -> vertex .)
+
+
+state 14
+
+    (10) stmt -> edge .
+
+    ;               reduce using rule 10 (stmt -> edge .)
+    }               reduce using rule 10 (stmt -> edge .)
+
+
+state 15
+
+    (11) vertex -> NUMBER . attributes
+    (12) edge -> NUMBER . DIRECTED NUMBER
+    (13) edge -> NUMBER . UNDIRECTED NUMBER
+    (14) attributes -> . [ attributelist ]
+    (15) attributes -> . empty
+    (20) empty -> .
+
+    DIRECTED        shift and go to state 19
+    UNDIRECTED      shift and go to state 20
+    [               shift and go to state 21
+    ;               reduce using rule 20 (empty -> .)
+    }               reduce using rule 20 (empty -> .)
+
+    attributes                     shift and go to state 18
+    empty                          shift and go to state 22
+
+state 16
+
+    (1) graph -> strict graphtype ID { stmtlist } .
+
+    $end            reduce using rule 1 (graph -> strict graphtype ID { stmtlist } .)
+
+
+state 17
+
+    (6) stmtlist -> stmt ; . stmtlist
+    (6) stmtlist -> . stmt ; stmtlist
+    (7) stmtlist -> . stmt
+    (8) stmtlist -> . empty
+    (9) stmt -> . vertex
+    (10) stmt -> . edge
+    (20) empty -> .
+    (11) vertex -> . NUMBER attributes
+    (12) edge -> . NUMBER DIRECTED NUMBER
+    (13) edge -> . NUMBER UNDIRECTED NUMBER
+
+    }               reduce using rule 20 (empty -> .)
+    NUMBER          shift and go to state 15
+
+    stmt                           shift and go to state 11
+    stmtlist                       shift and go to state 23
+    empty                          shift and go to state 12
+    vertex                         shift and go to state 13
+    edge                           shift and go to state 14
+
+state 18
+
+    (11) vertex -> NUMBER attributes .
+
+    ;               reduce using rule 11 (vertex -> NUMBER attributes .)
+    }               reduce using rule 11 (vertex -> NUMBER attributes .)
+
+
+state 19
+
+    (12) edge -> NUMBER DIRECTED . NUMBER
+
+    NUMBER          shift and go to state 24
+
+
+state 20
+
+    (13) edge -> NUMBER UNDIRECTED . NUMBER
+
+    NUMBER          shift and go to state 25
+
+
+state 21
+
+    (14) attributes -> [ . attributelist ]
+    (16) attributelist -> . attribute , attributes
+    (17) attributelist -> . attribute
+    (18) attributelist -> . empty
+    (19) attribute -> . ID = STRING
+    (20) empty -> .
+
+    ID              shift and go to state 29
+    ]               reduce using rule 20 (empty -> .)
+
+    attributelist                  shift and go to state 26
+    attribute                      shift and go to state 27
+    empty                          shift and go to state 28
+
+state 22
+
+    (15) attributes -> empty .
+
+    ;               reduce using rule 15 (attributes -> empty .)
+    }               reduce using rule 15 (attributes -> empty .)
+    ]               reduce using rule 15 (attributes -> empty .)
+
+
+state 23
+
+    (6) stmtlist -> stmt ; stmtlist .
+
+    }               reduce using rule 6 (stmtlist -> stmt ; stmtlist .)
+
+
+state 24
+
+    (12) edge -> NUMBER DIRECTED NUMBER .
+
+    ;               reduce using rule 12 (edge -> NUMBER DIRECTED NUMBER .)
+    }               reduce using rule 12 (edge -> NUMBER DIRECTED NUMBER .)
+
+
+state 25
+
+    (13) edge -> NUMBER UNDIRECTED NUMBER .
+
+    ;               reduce using rule 13 (edge -> NUMBER UNDIRECTED NUMBER .)
+    }               reduce using rule 13 (edge -> NUMBER UNDIRECTED NUMBER .)
+
+
+state 26
+
+    (14) attributes -> [ attributelist . ]
+
+    ]               shift and go to state 30
+
+
+state 27
+
+    (16) attributelist -> attribute . , attributes
+    (17) attributelist -> attribute .
+
+    ,               shift and go to state 31
+    ]               reduce using rule 17 (attributelist -> attribute .)
+
+
+state 28
+
+    (18) attributelist -> empty .
+
+    ]               reduce using rule 18 (attributelist -> empty .)
+
+
+state 29
+
+    (19) attribute -> ID . = STRING
+
+    =               shift and go to state 32
+
+
+state 30
+
+    (14) attributes -> [ attributelist ] .
+
+    ;               reduce using rule 14 (attributes -> [ attributelist ] .)
+    }               reduce using rule 14 (attributes -> [ attributelist ] .)
+    ]               reduce using rule 14 (attributes -> [ attributelist ] .)
+
+
+state 31
+
+    (16) attributelist -> attribute , . attributes
+    (14) attributes -> . [ attributelist ]
+    (15) attributes -> . empty
+    (20) empty -> .
+
+    [               shift and go to state 21
+    ]               reduce using rule 20 (empty -> .)
+
+    attributes                     shift and go to state 33
+    empty                          shift and go to state 22
+
+state 32
+
+    (19) attribute -> ID = . STRING
+
+    STRING          shift and go to state 34
+
+
+state 33
+
+    (16) attributelist -> attribute , attributes .
+
+    ]               reduce using rule 16 (attributelist -> attribute , attributes .)
+
+
+state 34
+
+    (19) attribute -> ID = STRING .
+
+    ,               reduce using rule 19 (attribute -> ID = STRING .)
+    ]               reduce using rule 19 (attribute -> ID = STRING .)
+
