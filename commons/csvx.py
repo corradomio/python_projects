@@ -9,7 +9,10 @@ from csv import *
 
 def load_arff(fname, na=None):
     """
-    Load a ARFF file
+    Load an ARFF file
+
+    https://www.cs.waikato.ac.nz/ml/weka/arff.html
+    https://waikato.github.io/weka-wiki/formats_and_processing/arff_stable/
     """
 
     def parse_attr(attr):
@@ -67,14 +70,16 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
         "None"  replace the value with None
         "enum", enumerate
                 replace the string value with an integer (an enumerative)
-        "datetime:fmt", "timeLfmt"
+        "datetime:fmt", "time:fmt"
                 replace the string with a datetime or time object using
                 the specified format
         0, "0", "zero"
                 replace the string with the constant 0 (zero)
-        str, "str"  keep the string
+        str, "str"  keep the string as is
         float, "float", int, "int"
                 replace the string with the numeric value
+        bool, "bool",
+                replace the string with a boolean value
 
     :param str fname: path of the file to load
     :param Iterable dtype: list of types, one for each column
@@ -154,6 +159,19 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
             else:
                 raise e
 
+    def _tobool(x):
+        if isinstance(x, str):
+            x = x.lower()
+        if x in [None, 0, False, 'f', 'false', 'no', 'off']:
+            return False
+        if x in [0, True, 't', 'true', 'yes', 'on']:
+            return True
+        else:
+            return bool(x)
+
+    def _tonone(x):
+        return None
+
     def _fmt(s: str):
         p = s.find(":")
         return s[p + 1:]
@@ -181,6 +199,9 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
             # str -> int
             elif dtype[i] in [int, "int"]:
                 dtype[i] = _toint
+            # str -> bool
+            elif dtype[i] in [bool, "bool"]:
+                dtype[i] = _tobool
             # str -> None
             elif dtype[i] is None:
                 dtype[i] = None
@@ -250,7 +271,20 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
     return INVERSECAT
 # end
 
+
 def load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
+    """
+    Load a CSV file and convert the values based on the specified 'dtype' values
+    :param fname: file to load
+    :param dtype: list of data types to use
+    :param skiprows: number of rows to skip
+    :param na: value used as 'missing value' ('not available')
+    :param limit: maximum number of rows to read
+    :param kwargs: extra parameters passed to
+    :return: a tuple composed by
+        data: a list of records where a record is a list of values
+        inversecat: dictionary with inverse category mapping (int -> string)
+    """
     data=[]
     
     def _append(rec):
@@ -262,204 +296,6 @@ def load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
     else:
         return data, INVERSECAT
 # end
-
-
-# def load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
-#     """
-#     Load a CSV file and convert the elements as specified in the dtype list
-#     The available conversions are:
-# 
-#         None    skip the column
-#         "None"  replace the value with None
-#         "enum", enumerate
-#                 replace the string value with an integer (an enumerative)
-#         "datetime:fmt", "timeLfmt"
-#                 replace the string with a datetime or time object using
-#                 the specified format
-#         0, "0", "zero"
-#                 replace the string with the constant 0 (zero)
-#         str, "str"  keep the string
-#         float, "float", int, "int"
-#                 replace the string with the numeric value
-# 
-#     :param str fname: path of the file to load
-#     :param Iterable dtype: list of types, one for each column
-#     :param int skiprows: head rows to skip
-#     :param int limit: maximum number of rows to read
-#     :param tuple na: (<simbol used for 'na'>, <replacement>)
-#     :return: tuple(<list_of_records>, <dictionary_of_categories>)
-#     """
-#     print("Loading {} ...".format(fname))
-# 
-#     dtype = dtype[:] if dtype is not None else None
-#     CATEGORIES = dict()
-#     INVERSECAT = dict()
-# 
-#     if na is not None:
-#         NA = na[0]
-#         nv = na[1]
-#     else:
-#         NA = None
-#         nv = None
-# 
-#     if limit is None or limit <= 0:
-#         limit = 9223372036854775807
-# 
-#     class _tocat:
-#         def __init__(self, i):
-#             self.i = i
-# 
-#         def __call__(self, *args, **kwargs):
-#             i = self.i
-#             s = args[0]
-# 
-#             if i not in CATEGORIES:
-#                 CATEGORIES[i] = dict()
-#                 INVERSECAT[i] = list()
-#             C = CATEGORIES[i]
-#             if s not in C:
-#                 c = len(C)
-#                 C[s] = c
-#                 INVERSECAT[i].append(s)
-#             return C[s]
-#     # end
-#     
-#     class _toicat:
-#         def __init__(self, i):
-#             self.i = i
-# 
-#         def __call__(self, *args, **kwargs):
-#             i = self.i
-#             s = int(args[0])
-# 
-#             if i not in CATEGORIES:
-#                 CATEGORIES[i] = dict()
-#                 INVERSECAT[i] = list()
-#             C = CATEGORIES[i]
-#             if s not in C:
-#                 C[s] = len(C)
-#                 INVERSECAT[i].append(s)
-#             return C[s]
-#     # end
-# 
-#     def _tofloat(x):
-#         try:
-#             return float(x)
-#         except Exception as e:
-#             if NA is not None and x.strip() == NA:
-#                 return float(nv)
-#             else:
-#                 raise e
-# 
-#     def _toint(x):
-#         try:
-#             return int(float(x))
-#         except Exception as e:
-#             if NA is not None and x.strip() == NA:
-#                 return int(nv)
-#             else:
-#                 raise e
-# 
-#     def _fmt(s:str):
-#         p = s.find(":")
-#         return s[p+1:]
-# 
-#     def _todatetime(s, fmt):
-#         return datetime.strptime(s, fmt)
-# 
-#     def _totime(s, fmt):
-#         return time.strptime(s, fmt)
-# 
-#     def _dtype():
-#         for i in range(len(dtype)):
-#             # str -> str
-#             if dtype[i] in [str, "str"]:
-#                 dtype[i] = lambda s: s
-#             # str -> enum
-#             elif dtype[i] in ["enum", enumerate]:
-#                 dtype[i] = _tocat(i)  # lambda s: _tocat(s, i)
-#             # str -> integer enum
-#             elif dtype[i] == "ienum":
-#                 dtype[i] = _toicat(i)
-#             #str -> float
-#             elif dtype[i] in [float, "float"]:
-#                 dtype[i] = _tofloat
-#             # str -> int
-#             elif dtype[i] in [int, "int"]:
-#                 dtype[i] = _toint
-#             # str -> None
-#             elif dtype[i] is None:
-#                 dtype[i] = None
-#             elif dtype[i]== "None":
-#                 dtype[i] = lambda s: None
-#             # str -> 0
-#             elif dtype[i] in [0, "0", "zero"]:
-#                 dtype[i] = lambda s: 0
-#             # "datetime:format" -> datetime
-#             elif dtype[i].startswith("datetime:"):
-#                 fmt = _fmt(dtype[i])
-#                 dtype[i] = lambda s: _todatetime(s, fmt)
-#             # "time:format" -> time
-#             elif dtype[i].startswith("time:"):
-#                 fmt = _fmt(dtype[i])
-#                 dtype[i] = lambda s: _totime(s, fmt)
-#             # unsupported
-#             else:
-#                 print("Unsupported", dtype[i])
-#                 dtype[i] = lambda s: s
-#         return dtype
-# 
-#     def openfile(fname, mode):
-#         if fname.endswith(".zip"):
-#             zfile = zipfile.ZipFile(fname)
-#             zname = zfile.namelist()[0]
-#             return io.TextIOWrapper(zfile.open(zname, mode=mode))
-#         elif fname.endswith(".gz"):
-#             if mode.find('t') == -1: mode = mode + 't'
-#             return gzip.open(fname, mode=mode)
-#         else:
-#             return open(fname, mode=mode)
-#     # end
-# 
-#     nr = 0
-# 
-#     if dtype is None:
-#         cvtrow = lambda r: r
-#     else:
-#         dtype = _dtype()
-#         cvtrow = lambda r: [dtype[i](row[i]) for i in range(nr) if dtype[i] is not None]
-#     # end
-# 
-#     line = 0
-#     data = []
-#     with openfile(fname, mode="r") as csv_file:
-#         rdr = csv.reader(csv_file)
-# 
-#         for _ in range(skiprows):
-#             next(rdr)
-# 
-#         for row in rdr:
-#             line += 1
-#             n = len(row)
-#             if nr == 0: nr = n
-#             try:
-#                 cvt = cvtrow(row)
-#                 data.append(cvt)
-#             except Exception as e:
-#                 print(e, "line", line)
-#             # end
-# 
-#             if line >= limit:
-#                 break
-#         # end
-#     # end
-#     print("... loaded {} records".format(line))
-#     
-#     if len(INVERSECAT) == 0:
-#         return data
-#     else:
-#         return data, INVERSECAT
-# # end
 
 
 def load_csv_column_names(fname, skiprows=0):
