@@ -6,6 +6,21 @@ from path import Path as path
 from datetime import datetime, time
 from csv import *
 
+#
+# We suppose that:
+#
+#   1) comment line, starting with '#' or other character
+#   2) header line with the comun names
+#       the column names can start/end with " or '
+#       the column names DON'T contain , (comma)
+#   3) column types:
+#       bool: f, false, False, off, no
+#             t, true,  True,  on,  yes
+#       int:   int(x)   -> valid
+#       float: float(x) -> valid
+#       enum:  str but with a limited number of values (less than 32)
+#       str:   each other case
+
 
 def load_arff(fname, na=None):
     """
@@ -315,6 +330,31 @@ def load_csv_column_names(fname, skiprows=0):
 
     return list(map(normalize, header))
 # end
+
+
+def load_csv_column_types(fname, skiprows=0, comment='#', separator=','):
+    def name_of(s: str) -> str:
+        if s.startswith('"') or s.startswith("'"):
+            s = s[1:]
+        if s.endswith('"') or s.endswith("'"):
+            s = s[:-1]
+        return s
+
+    header = None
+    with open(fname, mode="r") as f:
+        for line in f:
+            line = line.strip()
+            if len(line) == 0:
+                skiprows += 1
+                continue
+            if line.startswith(comment):
+                skiprows += 1
+                continue
+
+            header = [name_of(h) for h in line.split(separator)]
+            break
+        # end
+
 
 
 def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
