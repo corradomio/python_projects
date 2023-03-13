@@ -4,11 +4,12 @@ pandas
 
 scikit-learn
 sktime
+category_encoders
 
 matplotlib
 seaborn
 
---extra-index-url https://download.pytorch.org/whl/cu116
+--extra-index-url https://download.pytorch.org/whl/cu117
 torch
 torchvision
 torchaudio
@@ -19,4 +20,4 @@ jupyter
 
 tabulate
 opendatasets
-
+flwr[simulation]
