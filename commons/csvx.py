@@ -332,7 +332,64 @@ def load_csv_column_names(fname, skiprows=0):
 # end
 
 
-def load_csv_column_types(fname, skiprows=0, comment='#', separator=','):
+def tobool(s: str) -> bool:
+    assert isinstance(s, str)
+    s = s.lower()
+    if s in ['', '0', 'f', 'false', 'off', 'no', 'close', 'closed']:
+        return False
+    if s in ['1', 't', 'true', 'on', 'open', 'opened']:
+        return True
+    raise ValueError(f"invalid literal for tobool(): '{s}'")
+# end
+
+
+def guess_value_type(s: str) -> str:
+    # if s is None -> None
+    if s is None:
+        return 'None'
+    # if s is not a string -> typpe(s)
+    if not isinstance(s, str):
+        return str(type(s))
+    # string of length s
+    if len(s) == 0:
+        return 'str'
+    # check for quoted strings
+    if s.startswith('"') or s.startswith("'"):
+        return 'str'
+    # check for float
+    try:
+        float(s)
+        return 'float'
+    except:
+        pass
+    # check for int
+    try:
+        int(s)
+        return 'int'
+    except:
+        pass
+    # check for bool
+    try:
+        tobool(s)
+        return 'bool'
+    except:
+        pass
+    
+    return 'str'
+# end
+
+
+
+def csv_column_types(fname, comment='#', separator=',', nrows=1, max_values = 32) -> list[tuple]:
+    """
+    Guess the column types based on the first 'nrows' rows
+
+    :param fname: file name
+    :param comment: char used for comment lines
+    :param separator: char used for column separators
+    :param nrows: n of rows to check for type
+    :return:
+    """
     def name_of(s: str) -> str:
         if s.startswith('"') or s.startswith("'"):
             s = s[1:]
@@ -340,7 +397,15 @@ def load_csv_column_types(fname, skiprows=0, comment='#', separator=','):
             s = s[:-1]
         return s
 
+    def to_enum(s: set) -> str:
+        return f"enum[{','.join(sorted(s))}]"
+
+    def to_union(d: dict) -> str:
+        return f"Union[{','.join(sorted(d.keys()))}]"
+
     header = None
+    ctype: list[bag[type]] = []
+    cvalue: list[set[str]] = []
     with open(fname, mode="r") as f:
         for line in f:
             line = line.strip()
@@ -351,10 +416,39 @@ def load_csv_column_types(fname, skiprows=0, comment='#', separator=','):
                 skiprows += 1
                 continue
 
-            header = [name_of(h) for h in line.split(separator)]
-            break
+            parts = line.split(separator)
+            if header is None:
+                n = len(parts)
+                header = [name_of(h) for h in parts]
+                ctype = [bag() for i in range(n)]
+                cvalue = [set() for i in range(n)]
+                continue
+
+            assert n == len(parts)
+            for i in range(n):
+                v = parts[i]
+                t = guess_value_type(parts[i])
+                ctype[i].add(t)
+                cvalue[i].add(v)
+            # end
         # end
 
+    coltypes = []
+    for i in range(n):
+        h = header[i]
+        t = ctype[i]
+        v = cvalue[i]
+        if len(t) == 1 and t.at(0) == 'str' and len(v) <= max_values:
+            coltypes.append((h, to_enum(v)))
+        elif len(t) == 1:
+            coltypes.append((h, t.at(0)))
+        elif len(v) <= max_values:
+            coltypes.append((h, to_enum(v)))
+        else:
+            coltypes.append((h, to_union(t)))
+    # end
+    return coltypes
+# end
 
 
 def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
