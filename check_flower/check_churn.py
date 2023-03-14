@@ -1,18 +1,15 @@
 import warnings
-from typing import Dict, Tuple, List
+from pprint import pprint
+from typing import Tuple, List, Dict
 
 import pandas as pd
 import numpy as np
 import flwr as fl
-import flwr.server.strategy
-
-from flwr.common import Scalar
-from pprint import pprint
+from flwr.common import NDArrays, Scalar
 from pandasx_encoders import *
-from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import confusion_matrix, accuracy_score, log_loss
-
+from sklearn.model_selection import train_test_split
 
 #
 # load the data
@@ -65,6 +62,10 @@ print('confusion_matrix:')
 pprint(cm)
 print('accuracy:', acc)
 
+
+loss = log_loss(y_test, lr.predict_proba(X_test))
+print(f"loss: {loss}")
+
 #
 # Federated Learning
 # https://flower.dev/blog/2021-07-21-federated-scikit-learn-using-flower/
@@ -84,12 +85,12 @@ NUM_CLIENTS = 3
 X_parts, y_parts = split_partitions(X_train, y_train, partitions=NUM_CLIENTS)
 
 
-def get_model_parameters(model: LogisticRegression) -> LogRegParams:
+def get_model_parameters(model: LogisticRegression) -> NDArrays:
     """Returns the paramters of a sklearn LogisticRegression model"""
     if model.fit_intercept:
-        params = (model.coef_, model.intercept_)
+        params = [model.coef_, model.intercept_]
     else:
-        params = (model.coef_,)
+        params = [model.coef_]
     return params
 
 
@@ -117,12 +118,15 @@ class FlowerClient(fl.client.NumPyClient):
         self.X_test = X_test
         self.y_test = y_test
 
-    def get_parameters(self, config: Dict[str, Scalar]) -> LogRegParams:
+        # first train step OTHERWISE 'coef_' and 'intercept_' are MISSING!
+        model.fit(X_train, y_train)
+
+    def get_parameters(self, config: Dict[str, Scalar]) -> NDArrays:
         print(f'[{self.cid}] get_parameters ...')
         return get_model_parameters(self._model)
 
-    def fit(self, parameters: LogRegParams, config: Dict[str, Scalar]) -> LogRegParams:
-        print(f'[{self.cid}] fit ...')
+    def fit(self, parameters: LogRegParams, config: Dict[str, Scalar]) -> Tuple[NDArrays, int, Dict[str, Scalar]]:
+        print(f'[{self.cid}] fit ... {config}')
         model = self._model
         X_train = self.X_train
         y_train = self.y_train
@@ -131,18 +135,25 @@ class FlowerClient(fl.client.NumPyClient):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             model.fit(X_train, y_train)
-            print(f"Training finished for round {config['rnd']}")
-        return get_model_parameters(model)
+            # print(f"Training finished for round {config['rnd']}")
+        return get_model_parameters(model), len(X_train), config
 
     def evaluate(self, parameters: LogRegParams, config: Dict[str, Scalar]) \
             -> Tuple[float, int, Dict[str, Scalar]]:
-        print(f'[{self.cid}] evaluate ...')
+        print(f'[{self.cid}] evaluate ... {config}')
         model = self._model
         X_test = self.X_test
         y_test = self.X_test
 
         set_model_parameters(model, parameters)
-        loss = log_loss(y_test, model.predict_proba(X_test))
+        y_pred = model.predict(X_test)
+
+        print(f'[{self.cid}] ... y_test.shape {y_test.shape}')
+        print(f'[{self.cid}] ... y_pred.shape {y_pred.shape}')
+
+        loss = log_loss(y_test, y_pred)
+
+        print(f'[{self.cid}] ... loss: {loss}')
         accuracy = model.score(X_test, y_test)
 
         # loss, num_examples, metrics: dict
