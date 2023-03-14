@@ -3,10 +3,16 @@ from typing import Dict, Tuple, List
 
 import pandas as pd
 import numpy as np
-from pprint import pprint
+import flwr as fl
+import flwr.server.strategy
 
 from flwr.common import Scalar
+from pprint import pprint
 from pandasx_encoders import *
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import confusion_matrix, accuracy_score, log_loss
+
 
 #
 # load the data
@@ -36,13 +42,11 @@ X, y = df[df.columns.difference(['Churn'])], df['Churn']
 #
 # split X, y -> train, test
 #
-from sklearn.model_selection import train_test_split
 
 X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=0.8)
 
 #
 # train model
-from sklearn.linear_model import LogisticRegression
 
 lr = LogisticRegression(max_iter=500)
 lr.fit(X_train, y_train)
@@ -54,7 +58,6 @@ y_pred = lr.predict(X_test)
 #
 # confusion matrix
 #
-from sklearn.metrics import confusion_matrix, accuracy_score, log_loss
 
 cm = confusion_matrix(y_test, y_pred)
 acc = accuracy_score(y_test, y_pred)
@@ -101,7 +104,6 @@ def set_model_parameters(model: LogisticRegression, params: LogRegParams) -> Log
 #
 # Client
 #
-import flwr as fl
 
 
 class FlowerClient(fl.client.NumPyClient):
@@ -149,24 +151,6 @@ class FlowerClient(fl.client.NumPyClient):
 # end
 
 
-# class ClientFn:
-#
-#     def __init__(self, X_train, y_train, X_test, y_test):
-#         self.X_train = X_train
-#         self.y_train = y_train
-#         self.X_test = X_test
-#         self.y_test = y_test
-#
-#         self.model = LogisticRegression(
-#             penalty="l2",
-#             max_iter=1, # local epoch
-#             warm_start=True, # prevent refreshing weights when fitting
-#         )
-#
-#     def __call__(self, cid):
-#         return FlowerClient(self.model, self.X_train, self.y_train, self.X_test, self.y_test, cid)
-
-
 def client_fn(cid: str) -> FlowerClient:
     cid = int(cid)
 
@@ -187,8 +171,6 @@ def client_fn(cid: str) -> FlowerClient:
 #
 # strategy
 #
-import flwr.server.strategy
-
 
 strategy = fl.server.strategy.FedAvg(
     fraction_fit=1.0,  # Sample 100% of available clients for training
