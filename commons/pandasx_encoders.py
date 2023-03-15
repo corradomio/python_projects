@@ -126,17 +126,25 @@ class Pipeline:
     def __init__(self, steps: list[_Encoder]):
         self._steps: list[_Encoder] = steps
 
-    def fit(self, X: DataFrame, y=None) -> "Pipeline":
+    def fit(self, X: DataFrame, y: Union[None, DataFrame, Series]=None) -> "Pipeline":
+        assert isinstance(X, DataFrame)
+        assert isinstance(y, (type(None), DataFrame, Series))
+
         for step in self._steps:
             X = step.fit_transform(X, y)
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
+        assert isinstance(X, DataFrame)
+
         for step in self._steps:
             X = step.transform(X)
         return X
 
     def fit_transform(self, X: DataFrame, y: Union[None, DataFrame, Series]=None) -> DataFrame:
+        assert isinstance(X, DataFrame)
+        assert isinstance(y, (type(None), DataFrame, Series))
+
         for step in self._steps:
             X = step.fit_transform(X, y)
         return X

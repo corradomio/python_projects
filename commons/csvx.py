@@ -2,9 +2,9 @@ import csv
 import io
 import zipfile
 import gzip
-from path import Path as path
+from path import Path
 from datetime import datetime, time
-from csv import *
+from collectionx import bag
 
 #
 # We suppose that:
@@ -380,75 +380,75 @@ def guess_value_type(s: str) -> str:
 
 
 
-def csv_column_types(fname, comment='#', separator=',', nrows=1, max_values = 32) -> list[tuple]:
-    """
-    Guess the column types based on the first 'nrows' rows
-
-    :param fname: file name
-    :param comment: char used for comment lines
-    :param separator: char used for column separators
-    :param nrows: n of rows to check for type
-    :return:
-    """
-    def name_of(s: str) -> str:
-        if s.startswith('"') or s.startswith("'"):
-            s = s[1:]
-        if s.endswith('"') or s.endswith("'"):
-            s = s[:-1]
-        return s
-
-    def to_enum(s: set) -> str:
-        return f"enum[{','.join(sorted(s))}]"
-
-    def to_union(d: dict) -> str:
-        return f"Union[{','.join(sorted(d.keys()))}]"
-
-    header = None
-    ctype: list[bag[type]] = []
-    cvalue: list[set[str]] = []
-    with open(fname, mode="r") as f:
-        for line in f:
-            line = line.strip()
-            if len(line) == 0:
-                skiprows += 1
-                continue
-            if line.startswith(comment):
-                skiprows += 1
-                continue
-
-            parts = line.split(separator)
-            if header is None:
-                n = len(parts)
-                header = [name_of(h) for h in parts]
-                ctype = [bag() for i in range(n)]
-                cvalue = [set() for i in range(n)]
-                continue
-
-            assert n == len(parts)
-            for i in range(n):
-                v = parts[i]
-                t = guess_value_type(parts[i])
-                ctype[i].add(t)
-                cvalue[i].add(v)
-            # end
-        # end
-
-    coltypes = []
-    for i in range(n):
-        h = header[i]
-        t = ctype[i]
-        v = cvalue[i]
-        if len(t) == 1 and t.at(0) == 'str' and len(v) <= max_values:
-            coltypes.append((h, to_enum(v)))
-        elif len(t) == 1:
-            coltypes.append((h, t.at(0)))
-        elif len(v) <= max_values:
-            coltypes.append((h, to_enum(v)))
-        else:
-            coltypes.append((h, to_union(t)))
-    # end
-    return coltypes
-# end
+# def csv_column_types(fname, comment='#', separator=',', nrows=1, max_values = 32) -> list[tuple]:
+#     """
+#     Guess the column types based on the first 'nrows' rows
+#
+#     :param fname: file name
+#     :param comment: char used for comment lines
+#     :param separator: char used for column separators
+#     :param nrows: n of rows to check for type
+#     :return:
+#     """
+#     def name_of(s: str) -> str:
+#         if s.startswith('"') or s.startswith("'"):
+#             s = s[1:]
+#         if s.endswith('"') or s.endswith("'"):
+#             s = s[:-1]
+#         return s
+#
+#     def to_enum(s: set) -> str:
+#         return f"enum[{','.join(sorted(s))}]"
+#
+#     def to_union(d: dict) -> str:
+#         return f"Union[{','.join(sorted(d.keys()))}]"
+#
+#     header = None
+#     ctype: list[bag[type]] = []
+#     cvalue: list[set[str]] = []
+#     with open(fname, mode="r") as f:
+#         for line in f:
+#             line = line.strip()
+#             if len(line) == 0:
+#                 # skiprows += 1
+#                 continue
+#             if line.startswith(comment):
+#                 # skiprows += 1
+#                 continue
+#
+#             parts = line.split(separator)
+#             if header is None:
+#                 n = len(parts)
+#                 header = [name_of(h) for h in parts]
+#                 ctype = [bag() for i in range(n)]
+#                 cvalue = [set() for i in range(n)]
+#                 continue
+#
+#             assert n == len(parts)
+#             for i in range(n):
+#                 v = parts[i]
+#                 t = guess_value_type(parts[i])
+#                 ctype[i].add(t)
+#                 cvalue[i].add(v)
+#             # end
+#     # end
+#
+#     coltypes = []
+#     for i in range(n):
+#         h = header[i]
+#         t = ctype[i]
+#         v = cvalue[i]
+#         if len(t) == 1 and t.at(0) == 'str' and len(v) <= max_values:
+#             coltypes.append((h, to_enum(v)))
+#         elif len(t) == 1:
+#             coltypes.append((h, t.at(0)))
+#         elif len(v) <= max_values:
+#             coltypes.append((h, to_enum(v)))
+#         else:
+#             coltypes.append((h, to_union(t)))
+#     # end
+#     return coltypes
+# # end
 
 
 def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
@@ -525,12 +525,12 @@ def save_arff(fname:str, data:list, relation:str=None, attributes:list=None, cat
 
     assert len(attributes) == len(dtype)
 
-    # def invert_dict(d: dict) -> dict:
-    #     inverted = dict()
-    #     for k in d:
-    #         v = d[k]
-    #         inverted[v] = k
-    #     return inverted
+    def invert_dict(d: dict) -> dict:
+        inverted = dict()
+        for k in d:
+            v = d[k]
+            inverted[v] = k
+        return inverted
 
     icategory = dict()
     for c in categories:
@@ -580,7 +580,7 @@ def save_arff(fname:str, data:list, relation:str=None, attributes:list=None, cat
 
 
 def convert_to_arff(name, fname, arff=None, dtype=None, skiprows=0, na=None, ycol=None):
-    fpath = path(fname)
+    fpath = Path(fname)
     name = fpath.stem
 
     if arff is None:
@@ -590,6 +590,81 @@ def convert_to_arff(name, fname, arff=None, dtype=None, skiprows=0, na=None, yco
     data, categories = load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
 
     save_arff(arff, data, attributes=header, categories=categories, relation=name, dtype=dtype)
+# end
+
+
+def guess_csv_column_types(fname,
+                           comment='#',
+                           nunique=16,
+                           nrows=0,
+                           **kwargs) -> list[dict]:
+    """
+    Guess the columns types.
+
+    :param fname: file name/path
+    :param comment: character used for line comments
+    :param nunique: max number of unique string values to consider an enumeration
+    :param nrows: n of rows to analyze. With 0, all rows will be analyzed
+    :param kwargs: parameters passsed to 'csv.reader()'
+    """
+    header = None
+    n = 0
+    iline = 0
+    with open(fname, newline='') as csvfile:
+        csvrdr = csv.reader(csvfile, **kwargs)
+        for parts in csvrdr:
+            iline += 1
+
+            # skip empty lines or lines starting with '<comment>' character
+            if len(parts) == 0 or parts[0].startswith(comment):
+                continue
+
+            # header
+            if header is None:
+                header = parts
+                n = len(parts)
+                ctype = [bag() for i in range(n)]
+                cvalue = [set() for i in range(n)]
+                continue
+            # end
+
+            # data
+            if n != len(parts):
+                assert n == len(parts), f"Different number of parts at line {iline}: {len(parts)} instead than {n}"
+
+            # guess the value types
+            for i in range(n):
+                v = parts[i]
+                t = guess_value_type(parts[i])
+                ctype[i].add(t)
+                cvalue[i].add(v)
+            # end
+
+            # analyze only some rows
+            if 0 < nrows <= iline:
+                break
+    # end
+
+    # collect the column types
+    col_types = []
+    for i in range(n):
+        h = header[i]
+        t = ctype[i]
+        v = cvalue[i]
+        if len(t) == 1 and t.at(0) == 'str' and len(v) <= nunique:
+            # col_types.append((h, to_enum(v)))
+            col_types.append({'name': h, 'type': to_enum(v)})
+        elif len(t) == 1:
+            # col_types.append((h, t.at(0)))
+            col_types.append({'name': h, 'type': t.at(0)})
+        elif len(v) <= nunique:
+            # col_types.append((h, to_enum(v)))
+            col_types.append({'name': h, 'type': to_enum(v)})
+        else:
+            # col_types.append((h, to_union(t)))
+            col_types.append({'name': h, 'type': to_union(t)})
+    # end
+    return col_types
 # end
 
 
