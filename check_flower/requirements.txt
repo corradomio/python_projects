@@ -6,6 +6,7 @@ pandas
 matplotlib
 seaborn
 scikit-learn
+imbalanced-learn
 sktime
 category_encoders
 

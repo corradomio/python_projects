@@ -5,6 +5,7 @@ pandas
 scikit-learn
 sktime
 category_encoders
+imbalanced-learn
 
 matplotlib
 seaborn
@@ -14,6 +15,7 @@ torch
 torchvision
 torchaudio
 pytorch-lightning
+gpytorch
 
 ipython
 jupyter
@@ -21,3 +23,5 @@ jupyter
 tabulate
 opendatasets
 flwr[simulation]
+
+gym

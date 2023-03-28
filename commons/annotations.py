@@ -1,7 +1,14 @@
 #
 # Some annotations to extend a class definitng methods outside them
 #
-def add_to_class(Class): #@save
+# def add_to_class(Class): #@save
+#     """Register functions as methods in created class."""
+#     def wrapper(obj):
+#         setattr(Class, obj.__name__, obj)
+#     return wrapper
+
+
+def method(Class):
     """Register functions as methods in created class."""
     def wrapper(obj):
         setattr(Class, obj.__name__, obj)

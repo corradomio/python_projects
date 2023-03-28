@@ -7,7 +7,7 @@ from typing import List, AnyStr, Union
 import arff
 import pandas as pd
 import numpy as np
-from math import isnan
+from math import isnan, sqrt
 
 
 # ---------------------------------------------------------------------------
@@ -144,6 +144,7 @@ def load_data(file: str, categorical=[], boolean=[], dtype=None, **args) -> pd.D
 
     print("... done!")
     return df
+# end
 
 
 read_data = load_data
@@ -153,7 +154,7 @@ read_data = load_data
 # One hot encoding
 # ---------------------------------------------------------------------------
 
-def onehot_encode(data: pd.DataFrame, columns: List[AnyStr]=[]) -> pd.DataFrame:
+def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.DataFrame:
     """
     Add some columns based on One-Hot encode
     :param pd.DataFrame data:
@@ -164,6 +165,7 @@ def onehot_encode(data: pd.DataFrame, columns: List[AnyStr]=[]) -> pd.DataFrame:
         dummies = pd.get_dummies(data[col], prefix=col)
         data = data.join(dummies)
     return data
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -230,9 +232,11 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
     smin = ser.min() - dx
     smax = ser.max() + dx
     return smin, smax
+# end
+
 
 # ---------------------------------------------------------------------------
-# Cumulant, Lift
+# cumulant, lift, prob
 # ---------------------------------------------------------------------------
 
 def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
@@ -313,3 +317,130 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
     gcount = df[select + ['count']].groupby(select).count()/total
 
     return gcount
+
+
+
+# ---------------------------------------------------------------------------
+# split_partitions
+# ---------------------------------------------------------------------------
+
+def partition_lengths(n: int, quota: Union[int, list[int]]) -> list[int]:
+    if isinstance(quota, int):
+        quota = [1]*quota
+    k = len(quota)
+    tot = sum(quota)
+    lengths = []
+    for i in range(k-1):
+        l = int(n*quota[i]/tot + 0.6)
+        lengths.append(l)
+    lengths.append(n - sum(lengths))
+    return lengths
+# end
+
+
+def partitions_split(*data_list, partitions: Union[int, list[int]]=1, index=None, random=False) -> list[Union[pd.DataFrame, pd.Series]]:
+    parts_list = []
+    for data in data_list:
+        parts = _partition_split(data, partitions=partitions, index=index, random=random)
+        parts_list += parts
+    # end
+    return parts_list
+# end
+
+def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], index, random) -> list[pd.DataFrame]:
+        n = len(data)
+        plengths = partition_lengths(n, partitions)
+        pn = len(plengths)
+    s = 0
+        parts = []
+        for i in range(pn):
+            pl = plengths[i]
+        if index is None:
+            part = data.iloc[s:s + pl]
+        else:
+            part_index = index[s:s + pl]
+            part = data.loc[part_index]
+        # end
+            parts.append(part)
+            s += pl
+        # end
+    return parts
+# end
+
+
+
+# ---------------------------------------------------------------------------
+# split_to_Xy
+# ---------------------------------------------------------------------------
+
+def Xy_split(*data_list, target: Union[str, list[str]]) -> list[Union[pd.DataFrame, pd.Series]]:
+    assert isinstance(target, (str, list))
+    Xy_list = []
+    for data in data_list:
+        assert isinstance(data, pd.DataFrame)
+        if isinstance(target, str):
+            X = data[data.columns.difference([target])]
+            y = data[target]
+            Xy_list += [X, y]
+        else:
+            X = data[data.columns.difference(target)]
+            Y = data[target]
+            Xy_list += [X, y]
+    # end
+    return Xy_list
+# end
+
+
+def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None) -> pd.DataFrame:
+    assert isinstance(data, np.ndarray)
+    assert isinstance(target, (str, list))
+    
+    n, c = data.shape
+    if isinstance(target, (tuple, list)):
+        pass
+    elif c == 1:
+        columns = [target]
+    else:
+        columns = [f'{target}_{i}' for i in range(c)]
+    
+    df = pd.DataFrame(data, columns=columns, index=index)
+    return df
+
+def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=None) -> pd.DataFrame:
+    """
+    Compute the classification quality (a number between 0 and 1) based on
+    the euclidean distance, then assign an index (an integer in range [0, n))
+    in such way that the best classification quality has index 0 and the worst
+    index (n-1).
+
+    :param pred_proba: the output of 'ml.pred_proba()'
+    :return: an array (n, 2) where the first column contains the classification
+        quality and the second columnt the quality index
+    """
+    assert isinstance(pred_proba, (pd.DataFrame, pd.Series))
+    if target is None:
+        target = 'pred_qual'
+
+    n, c = pred_proba.shape
+    t = sqrt(c)/c
+    # create the result data structure
+    cq = pd.DataFrame({}, index=pred_proba.index)
+    # classification quality
+    cq[target] = (np.linalg.norm(pred_proba.values, axis=1) - t)/(1 - t)
+    # assign the original prediction indices
+    # cq['origin'] = range(n)
+    # order the classification qualities in desc order
+    cq.sort_values(by=[target], ascending=False, inplace=True)
+    # assign the quality index order
+    cq['rank'] = range(n)
+    # back to the original order
+    cq = cq.loc[pred_proba.index]
+    # remove the extra column
+    # cq = cq[:, 0:2]
+    # done
+    return cq
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------
