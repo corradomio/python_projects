@@ -1,6 +1,8 @@
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformers import GPTJForCausalLM, AutoTokenizer
+import torch
 
-model = AutoModelForCausalLM.from_pretrained("EleutherAI/gpt-j-6B")
+device = "cuda"
+model = GPTJForCausalLM.from_pretrained("EleutherAI/gpt-j-6B", torch_dtype=torch.float16).to(device)
 tokenizer = AutoTokenizer.from_pretrained("EleutherAI/gpt-j-6B")
 
 prompt = (
@@ -9,7 +11,7 @@ prompt = (
     "researchers was the fact that the unicorns spoke perfect English."
 )
 
-input_ids = tokenizer(prompt, return_tensors="pt").input_ids
+input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
 
 gen_tokens = model.generate(
     input_ids,
@@ -18,3 +20,4 @@ gen_tokens = model.generate(
     max_length=100,
 )
 gen_text = tokenizer.batch_decode(gen_tokens)[0]
+print(gen_text)

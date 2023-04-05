@@ -1,9 +1,21 @@
+import os
+import torch
+import transformers
 from diffusers import DiffusionPipeline
 
-pipeline = DiffusionPipeline.from_pretrained("runwayml/stable-diffusion-v1-5")
+os.environ["PYTORCH_CUDA_ALLOC_CON"] = "max_split_size_mb:8192"
 
-pipeline.to("cuda")
+# brutte immagini
+# model = "runwayml/stable-diffusion-v1-5"
 
-image = pipeline("An image of a squirrel in Picasso style").images[0]
+model = "stabilityai/stable-diffusion-2-1"
+# model = "stabilityai/stable-diffusion-2-1-base"
+# model = "stabilityai/stable-diffusion-2-1-unclip"
+# model = "stabilityai/stable-diffusion-2"
 
-image.save("image_of_squirrel_painting.png")
+pipeline = DiffusionPipeline.from_pretrained(model)
+# pipeline.to("cuda")
+
+image = pipeline("sexy girl in a space ship, high resolution").images[0]
+
+image.save("images/sexygirl_spaceship5.png")
