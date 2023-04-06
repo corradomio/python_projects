@@ -18,4 +18,5 @@ __pycache__
 *.dot
 *.hdf5
 venv
+lightning_logs
 
