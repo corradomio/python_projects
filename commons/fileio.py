@@ -1,3 +1,7 @@
+#
+#
+#
+
 def str_from_file(filepath, encoding="utf-8"):
     """
     Return the content of a text file as a string

@@ -321,7 +321,8 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
 
 
 # ---------------------------------------------------------------------------
-# split_partitions
+# partition_lengths
+# partitions_split
 # ---------------------------------------------------------------------------
 
 def partition_lengths(n: int, quota: Union[int, list[int]]) -> list[int]:
@@ -338,35 +339,37 @@ def partition_lengths(n: int, quota: Union[int, list[int]]) -> list[int]:
 # end
 
 
-def partitions_split(*data_list, partitions: Union[int, list[int]]=1, index=None, random=False) -> list[Union[pd.DataFrame, pd.Series]]:
+def partitions_split(*data_list : list[pd.DataFrame], partitions: Union[int, list[int]]=1, index=None, random=False) \
+        -> list[Union[pd.DataFrame, pd.Series]]:
     parts_list = []
     for data in data_list:
         parts = _partition_split(data, partitions=partitions, index=index, random=random)
-        parts_list += parts
+        parts_list.append(parts)
     # end
+    parts_list = list(zip(*parts_list))
     return parts_list
 # end
 
 def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], index, random) -> list[pd.DataFrame]:
-        n = len(data)
-        plengths = partition_lengths(n, partitions)
-        pn = len(plengths)
+    n = len(data)
+    indices = list(range(n)) 
+    plengths = partition_lengths(n, partitions)
+    pn = len(plengths)
     s = 0
-        parts = []
-        for i in range(pn):
-            pl = plengths[i]
+    parts = []
+    for i in range(pn):
+        pl = plengths[i]
         if index is None:
             part = data.iloc[s:s + pl]
         else:
             part_index = index[s:s + pl]
             part = data.loc[part_index]
         # end
-            parts.append(part)
-            s += pl
-        # end
+        parts.append(part)
+        s += pl
+    # end
     return parts
 # end
-
 
 
 # ---------------------------------------------------------------------------
@@ -391,6 +394,10 @@ def Xy_split(*data_list, target: Union[str, list[str]]) -> list[Union[pd.DataFra
 # end
 
 
+# ---------------------------------------------------------------------------
+# to_dataframe
+# ---------------------------------------------------------------------------
+
 def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None) -> pd.DataFrame:
     assert isinstance(data, np.ndarray)
     assert isinstance(target, (str, list))
@@ -405,6 +412,31 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
     
     df = pd.DataFrame(data, columns=columns, index=index)
     return df
+
+
+# ---------------------------------------------------------------------------
+# shuffle_dataframe
+# ---------------------------------------------------------------------------
+
+# def shuffle_dataframe(*data_list, random_state=None) -> list[pd.DataFrame]:
+#     n = 0
+#     indices = []
+#     shuffle_list = []
+#     for data in data_list:
+#         n_data = len(data)
+#         if n_data != n:
+#             n = n_data
+#             indices = list(range(n))
+#             shuffle_dataframeshuffle(indices)
+#         data = data.iloc[indices]
+#         shuffle_list.append(data)
+#     return shuffle_list
+# # end
+
+
+# ---------------------------------------------------------------------------
+# classification_quality
+# ---------------------------------------------------------------------------
 
 def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=None) -> pd.DataFrame:
     """
@@ -439,7 +471,6 @@ def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=No
     # cq = cq[:, 0:2]
     # done
     return cq
-
 
 # ---------------------------------------------------------------------------
 # end

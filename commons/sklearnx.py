@@ -1,5 +1,67 @@
 import math as m
 import numpy as np
+import pandas as pd
+from random import shuffle
+from pandas import DataFrame, Series
+from sklearn.utils import resample
+
+
+# ---------------------------------------------------------------------------
+# balance_dataframe
+# ---------------------------------------------------------------------------
+
+class BalanceDataframe:
+    def __init__(self, max_difference: float=0.1):
+        self.max_difference = max_difference
+        self.df = None
+        self.target: str = ''
+        self.unique_values = []
+        self.min_count = 0
+        self.max_count = 0
+        self.counts = {}
+
+    def balance(self, df: DataFrame, target: str):
+        self.df = df
+        self.target = target
+        self._compute_min_max_counts()
+        return self._balance_dataset()
+
+    def _compute_min_max_counts(self):
+        self.unique_values = self.df[self.target].unique()
+        self.counts = {}
+        for value in self.unique_values:
+            count_value = sum(self.df[self.target] == value)
+            self.counts[value] = count_value
+            self.max_count = max(self.max_count, count_value)
+        # end
+        self.min_count = self.max_count - int(self.max_difference*self.max_count)
+        self.mean_count = (self.min_count + self.max_count)//2
+    # end
+
+    def _balance_dataset(self):
+        dfs_upsampled = [self.df]
+        for value in self.unique_values:
+            if self.counts[value] >= self.min_count:
+                continue
+
+            df_minority = self.df[self.df[self.target] == value]
+            n_samples = self.mean_count - self.counts[value]
+            df_minority_upsampled = resample(df_minority, replace=True, n_samples=n_samples)
+            dfs_upsampled.append(df_minority_upsampled)
+        # end
+        df_balanced = pd.concat(dfs_upsampled)
+        # shuffle the records
+        index = list(range(len(df_balanced)))
+        shuffle(index)
+        return df_balanced.iloc[index]
+    # end
+
+
+def balance_dataframe(df: pd.DataFrame, target: str, max_difference: float=0.1):
+    bdf = BalanceDataframe(max_difference)
+    balanced_df = bdf.balance(df, target)
+    return balanced_df
+# end
 
 
 # def classification_quality(pred_proba: np.ndarray) -> np.ndarray:

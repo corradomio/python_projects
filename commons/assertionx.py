@@ -58,7 +58,7 @@ def assert_is_not_none(obj, msg=None):
 
 def assert_in(member, container, msg=None):
     """Just like assert_true(a in b), but with a nicer default message."""
-    assert  member in container, msg
+    assert member in container, msg
 
 def assert_not_in(member, container, msg=None):
     """Just like assert_true(a not in b), but with a nicer default message.

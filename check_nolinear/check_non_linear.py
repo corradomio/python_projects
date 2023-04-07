@@ -26,9 +26,14 @@ class NonLinear(lightning.LightningModule):
             nn.Linear(64, 16),
             nn.ReLU(),
             nn.Linear(16, 1),
+
             # nn.Linear(1, 32),
             # nn.ReLU(),
             # nn.Linear(32, 1),
+
+            # nn.Linear(1, 64),
+            # nn.ReLU(),
+            # nn.Linear(64, 1)
         )
         self.loss = nn.MSELoss()
 
@@ -41,10 +46,6 @@ class NonLinear(lightning.LightningModule):
         y_hat = self(x)
         loss = self.loss(y_hat, y)
         return loss
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
 
 
 def main():

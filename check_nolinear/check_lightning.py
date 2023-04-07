@@ -49,10 +49,6 @@ class LitAutoEncoder(lightning.Module):
         loss = F.mse_loss(x_hat, x)
         return loss
 
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
-        return optimizer
-
 
 dataset = MNIST(os.getcwd(), download=True, transform=transforms.ToTensor())
 train_loader = DataLoader(dataset, batch_size=1000)
