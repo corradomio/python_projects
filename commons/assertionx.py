@@ -110,6 +110,13 @@ def assert_almost_equal(first, second, places=None, msg=None, delta=None):
     zero, or by comparing that the between the two objects is more than the
     given delta.
     """
+    diff = abs(second - first)
+    if delta is not None:
+        assert diff <= delta, msg
+    elif places is None:
+        assert diff <= 10**-7, msg
+    else:
+        assert diff <= 10**(-places), msg
     pass
 
 
@@ -119,6 +126,13 @@ def assert_not_almost_equal(first, second, places=None, msg=None, delta=None):
     zero, or by comparing that the between the two objects is less than the
     given delta.
     """
+    diff = abs(second - first)
+    if delta is not None:
+        assert diff > delta, msg
+    elif places is None:
+        assert diff > 10 ** -7, msg
+    else:
+        assert diff > 10 ** (-places), msg
     pass
 
 
@@ -152,15 +166,18 @@ def assert_items_equal(expected_seq, actual_seq, msg=None):
     """An unordered sequence specific comparison. It asserts that
     actual_seq and expected_seq have the same element counts.
     """
-    pass
+    assert len(expected_seq) == len(actual_seq)
 
 def assert_dict_contains_subset(expected, actual, msg=None):
     """Checks whether actual is a superset of expected."""
-    pass
+    for key in actual:
+        assert key in expected, msg
 
 def assert_multi_line_equal(first, second, msg=None):
     """Assert that two multi-line strings are equal."""
-    pass
+    def strip(s):
+        return s.replace('\\n',' ').replace('\\r', ' ').replace('  ', ' ')
+    assert strip(first) == strip(second), msg
 
 def assert_sequence_equal(seq1, seq2, msg=None, seq_type=None):
     """An equality assertion for ordered sequences (like lists and tuples).

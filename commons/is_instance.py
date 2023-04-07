@@ -45,6 +45,7 @@ class IsListOrTuple(IsInstance):
         collection_type = self.collection_type
         if not isinstance(obj, collection_type):
             return False
+
         if len(self.args) == 0:
             return True
 
@@ -84,6 +85,8 @@ class IsSet(IsInstance):
     def is_instance(self, obj) -> bool:
         if not isinstance(obj, set):
             return False
+        if len(self.args) == 0:
+            return True
 
         element_type = self.args[0]
         for e in obj:
@@ -156,9 +159,15 @@ IS_INSTANCE_OF = {
     'typing.Dict': IsDict,
 }
 
+def type_name(a_type: type) -> str:
+    if hasattr(a_type, "_name"):
+        return f'{a_type.__module__}.{a_type._name}'
+    else:
+        return f'{a_type.__module__}.{a_type.__name__}'
+
 
 def is_instance(obj, a_type: type) -> bool:
-    t_name = f'{a_type.__module__}.{a_type.__name__}'
+    t_name = type_name(a_type)
 
     if t_name in IS_INSTANCE_OF:
         return IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
