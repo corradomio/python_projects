@@ -1,10 +1,42 @@
 from typing import *
+from typing import _UnionGenericAlias, _SpecialForm, _type_check, _remove_dups_flatten
 from types import *
+from collections import *
 
 __all__ = [
     'is_instance'
 ]
 
+#   Container   __contains__(
+#   Iterable    __iter__
+#   Hashable    __hash__
+#   Sized       __len__
+#   Callable    __call__
+#   Collection  ??
+#   Iterator    __iter__, __next__
+#   Reversible  __reversed__
+#   Awaitable   __await__
+#   Coroutine   ??
+#   AsyncIterable   __aiter__
+#   AsyncIterator   __aiter__, __anext__
+#   .
+
+@_SpecialForm
+def All(self, parameters):
+    """Intersection type; All[X, Y] means X and Y.
+    """
+    if parameters == ():
+        raise TypeError("Cannot take a All of no types.")
+    if not isinstance(parameters, tuple):
+        parameters = (parameters,)
+    msg = "All[arg, ...]: each arg must be a type."
+    parameters = tuple(_type_check(p, msg) for p in parameters)
+    parameters = _remove_dups_flatten(parameters)
+    if len(parameters) == 1:
+        return parameters[0]
+    uga = _UnionGenericAlias(self, parameters)
+    uga._name = "All"
+    return uga
 
 # ---------------------------------------------------------------------------
 #
@@ -19,7 +51,6 @@ class IsInstance:
 
     def is_instance(self, obj) -> bool:
         ...
-# end
 
 
 class IsAny(IsInstance):
@@ -33,18 +64,27 @@ class IsNone(IsInstance):
 
     def is_instance(self, obj) -> bool:
         return obj is None
-# end
 
 
-class IsListOrTuple(IsInstance):
+# ---------------------------------------------------------------------------
+
+def _len(obj):
+    try:
+        return len(obj)
+    except TypeError as e:
+        return 0
+
+
+class IsCollection(IsInstance):
     def __init__(self, tp):
         super().__init__(tp)
-        self.collection_type = None
+        self.collection_type = Collection
 
     def is_instance(self, obj) -> bool:
-        collection_type = self.collection_type
-        if not isinstance(obj, collection_type):
+        if not isinstance(obj, self.collection_type):
             return False
+        # if not isinstance(obj, self.origin):
+        #     return False
 
         if len(self.args) == 0:
             return True
@@ -52,56 +92,54 @@ class IsListOrTuple(IsInstance):
         n = len(obj)
         if len(self.args) > 1 and len(self.args) != n:
             return False
+
         elif len(self.args) == 1:
             element_type = self.args[0]
-            for i in range(n):
-                if not is_instance(obj[i], element_type):
+            for item in obj:
+                if not is_instance(item, element_type):
                     return False
         else:
-            for i in range(n):
-                element_type = self.args[i]
-                if not is_instance(obj[i], element_type):
+            i = 0
+            for item in obj:
+                element_type = self.args[i]; i += 1;
+                if not is_instance(item, element_type):
                     return False
         return True
-# end
 
 
-class IsList(IsListOrTuple):
+class IsList(IsCollection):
     def __init__(self, tp):
         super().__init__(tp)
         self.collection_type = list
 
 
-class IsTuple(IsListOrTuple):
+class IsTuple(IsCollection):
     def __init__(self, tp):
         super().__init__(tp)
         self.collection_type = tuple
 
 
-class IsSet(IsInstance):
+class IsSet(IsCollection):
     def __init__(self, tp):
         super().__init__(tp)
-
-    def is_instance(self, obj) -> bool:
-        if not isinstance(obj, set):
-            return False
-        if len(self.args) == 0:
-            return True
-
-        element_type = self.args[0]
-        for e in obj:
-            if not is_instance(e, element_type):
-                return False
-        return True
-# end
+        self.collection_type = set
 
 
-class IsDict(IsInstance):
+class IsDeque(IsCollection):
     def __init__(self, tp):
         super().__init__(tp)
+        self.collection_type = deque
+
+
+# ---------------------------------------------------------------------------
+
+class IsMapping(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.dictionary_type = Mapping
 
     def is_instance(self, obj) -> bool:
-        if not isinstance(obj, dict):
+        if not isinstance(obj, self.dictionary_type):
             return False
 
         key_type = self.args[0]
@@ -114,16 +152,40 @@ class IsDict(IsInstance):
         return True
 # end
 
+class IsDict(IsMapping):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.dictionary_type = dict
+
+
+class IsDefaultDict(IsMapping):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.dictionary_type = defaultdict
+
+
+# ---------------------------------------------------------------------------
 
 class IsUnion(IsInstance):
     def __init__(self, tp):
         super().__init__(tp)
 
     def is_instance(self, obj) -> bool:
-        for i in range(self.n):
-            if is_instance(obj, self.args[i]):
+        for a_type in self.args:
+            if is_instance(obj, a_type):
                 return True
         return False
+# end
+
+class IsAll(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        for a_type in self.args:
+            if not is_instance(obj, a_type):
+                return False
+        return True
 # end
 
 
@@ -139,6 +201,14 @@ class IsOptional(IsInstance):
 # end
 
 
+class IsNewType(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        return is_instance(obj, self.type.__supertype__)
+
+
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
@@ -150,23 +220,53 @@ IS_INSTANCE_OF = {
     'builtins.set': IsSet,
     'builtins.dict': IsDict,
 
+    'typing.None': IsNone,
     'typing.Union': IsUnion,
+    'typing.All': IsAll,
     'typing.Any': IsAny,
     'typing.Optional': IsOptional,
     'typing.List': IsList,
     'typing.Tuple': IsTuple,
     'typing.Set': IsSet,
     'typing.Dict': IsDict,
+    'typing.Deque': IsDeque,
+    'typing.DefaultDict': IsDefaultDict,
+    'typing.NewType': IsNewType,
+    'typing.Collection': IsCollection
 }
 
 def type_name(a_type: type) -> str:
-    if hasattr(a_type, "_name"):
-        return f'{a_type.__module__}.{a_type._name}'
+    # if hasattr(a_type, '__origin__'):
+    #     return str(a_type.__origin__)
+    if hasattr(a_type, '__supertype__'):
+        return f'typing.NewType'
+
+    if hasattr(a_type, '_name'):
+        name = a_type._name
+    elif hasattr(a_type, '__name__'):
+        name = a_type.__name__
     else:
-        return f'{a_type.__module__}.{a_type.__name__}'
+        name = str(a_type)
+
+    if name is None and hasattr(a_type, '__origin__'):
+        t_name = str(a_type.__origin__)
+    else:
+        t_name = f'{a_type.__module__}.{name}'
+
+    return t_name
 
 
-def is_instance(obj, a_type: type) -> bool:
+def is_instance(obj, a_type: Union[type, Collection[type]]) -> bool:
+    # if hasattr(a_type, '__supertype__'):
+    #     return is_instance(obj, a_type.__supertype__)
+    if isinstance(a_type, tuple):
+        a_types: tuple[type] = a_type
+        for a_type in a_types:
+            if is_instance(obj, a_type):
+                return True
+        return False
+    # end
+
     t_name = type_name(a_type)
 
     if t_name in IS_INSTANCE_OF:

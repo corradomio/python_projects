@@ -1,3 +1,4 @@
+from typing import Union
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,6 +10,28 @@ import matplotlib.pyplot as plt
 
 print("torch", torch.__version__)
 print("pytorch_lightning", pl.__version__)
+
+
+class PowerModule(nn.Module):
+
+    def __init__(self, order: Union[int, float, list] = 1, cross: int = 1):
+        super().__init__()
+        if isinstance(order, float):
+            self.order = [1, order]
+        elif isinstance(order, int):
+            self.order = list(range(1, order+1))
+        elif isinstance(order, (list, tuple)):
+            self.order = order
+        else:
+            raise ValueError(f"Unsupported order '{order}'")
+        self.cross = cross
+
+    def forward(self, x):
+        xcat = []
+        for e in self.order:
+            xe = torch.pow(x, e)
+            xcat.append(xe)
+        return torch.cat(xcat, dim=1)
 
 
 class NonLinear(lightning.LightningModule):
@@ -51,6 +74,12 @@ class NonLinear(lightning.LightningModule):
 def main():
     x = np.arange(-6.28, +6.28, 0.001, dtype=float).reshape(-1, 1)
     y = np.sin(x, dtype=float).reshape(-1, 1)
+
+    X = torch.tensor([[1, 11], [2, 22], [3, 33]])
+    pm = PowerModule(order=[1, 0.5, 2])
+    Y = pm(X)
+    print(Y)
+
 
     plt.scatter(x, y, s=0.1)
     plt.show()
