@@ -9,7 +9,7 @@
 # outputs = model.generate(inputs)
 # print(tokenizer.decode(outputs[0]))
 
-from transformers import pipeline, set_seed
+from transformers import pipeline, set_seed, LlamaTokenizer
 from pprint import pprint
 
 model = 'decapoda-research/llama-7b-hf'
@@ -19,6 +19,14 @@ generator = pipeline('text-generation', model=model)
 
 set_seed(42)
 
-res = generator("Hello, I'm a language model,", max_length=30, num_return_sequences=1)
+text = """In a shocking finding, scientist discovered \
+a herd of unicorns living in a remote, previously unexplored \
+valley, in the Andes Mountains. Even more surprising to the \
+researchers was the fact that the unicorns spoke perfect English.\n\n
+"""
+
+# text = "The Artificial Intelligence,"
+
+res = generator(text, max_length=200, num_return_sequences=1)
 
 pprint(res)
