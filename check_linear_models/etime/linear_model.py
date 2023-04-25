@@ -48,14 +48,20 @@ class LinearModel:
     # end
 
     def fit(self, input: DataFrame, target: Series):
-        assert isinstance(input, DataFrame)
-        assert isinstance(target, Series)
+        self._validate_data(input, target)
 
     def predict(self, input: DataFrame, target: Series) -> Series:
-        pass
+        self._validate_data(input, target)
+        return target
 
     def score(self, input: DataFrame, target: Series) -> dict[str, float]:
-        pass
+        self._validate_data(input, target)
+        return {}
+
+    def _validate_data(self, input, target):
+        assert isinstance(input, DataFrame)
+        assert isinstance(target, Series)
+    # end
 # end
 
 
