@@ -83,13 +83,16 @@ class LightningModule(pl.LightningModule):
         elif y.shape[0] == 1:
             return y.detach().numpy()[0]
         else:
-            return y.detach()
+            return y.detach().numpy()
     # end
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
         return optimizer
 
+    def configure_trainer(self, **kwargs):
+        trainer = pl.Trainer(**kwargs)
+        return trainer
 # end
 
 
