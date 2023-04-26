@@ -33,6 +33,7 @@ LAG_DAY = 'day'
 PERIOD_TYPE = 'period_type'
 
 LAG_FACTORS: dict[str, int] = {
+    '': 0,
     'second': 1,
     'minute': 60,
     'hour': 3600,
@@ -47,6 +48,9 @@ LAG_FACTORS: dict[str, int] = {
 }
 
 LAG_TYPES: list[str] = list(LAG_FACTORS)
+
+
+def _max(l): return max(l) if len(l) > 0 else 0
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +71,8 @@ class LagSlots:
         return self._tslots
 
     def __len__(self) -> int:
-        return max(max(self._islots), max(self._tslots)) + 1
+        return max(_max(self._islots), _max(self._tslots)) + 1
+    # end
 
     def __repr__(self):
         return f"slots[input={self._islots}, target={self._tslots}, len={len(self)}]"
@@ -119,20 +124,21 @@ class LagResolver:
 
         assert LAG_INPUT in lag or LAG_TARGET in lag, f"'{lag}' doesn't contain {LAG_INPUT} or {LAG_TARGET} entries"
 
-        if LAG_INPUT not in lag:
-            lag[LAG_INPUT] = lag[LAG_TARGET]
-        if LAG_TARGET not in lag:
+        if LAG_INPUT in lag and LAG_TARGET not in lag:
             lag[LAG_TARGET] = lag[LAG_INPUT]
+        if LAG_INPUT not in lag:
+            lag[LAG_INPUT] = 0
 
         self._lag = lag
 
-        lag[LAG_INPUT] = self._normalize_entry(lag[LAG_INPUT])
-        lag[LAG_TARGET] = self._normalize_entry(lag[LAG_TARGET])
+        period_type = lag[PERIOD_TYPE]
+        lag[LAG_INPUT] = self._normalize_entry(period_type, lag[LAG_INPUT])
+        lag[LAG_TARGET] = self._normalize_entry(period_type, lag[LAG_TARGET])
+
+        self._lag = lag
     # end
 
-    def _normalize_entry(self, lag):
-        period_type = self._lag[PERIOD_TYPE]
-
+    def _normalize_entry(self, period_type, lag):
         if isinstance(lag, int):
             return {
                 period_type: lag
@@ -167,7 +173,7 @@ class LagResolver:
         base_factor = LAG_FACTORS[period_type]
 
         if entry == LAG_INPUT:
-            slots = set([0])
+            slots = {0}
         else:
             slots = set([])
 
@@ -181,11 +187,10 @@ class LagResolver:
             lag_size = lag_factor//base_factor
             lag_repl = lag[lag_type]
 
-            slots.update([i * lag_size for i in range(1, lag_repl + 1)])
-            # if len(slots) == 0:
-            #     slots.update([i * lag_size for i in range(1, lag_repl+1)])
-            # else:
-            #     slots.update([i * lag_size for i in range(1, lag_repl+1)])
+            if lag_repl >= 0:
+                slots.update([i * lag_size for i in range(1, lag_repl + 1)])
+            else:
+                slots = set()
         # end
         return slots
     # end
@@ -234,8 +239,9 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
 
     If not specified, the default value for 'period_type' is 'day'
 
-    It is possible to specify only 'input' or 'target' entries, in this case the configuration is
-    replicated to the other entry ('input' -> 'target', 'target' -> 'input')
+    It is possible to specify only 'input', in this case the configuration is replicated to the other
+    entry ('input' -> 'target'). Instead, if it is specified only 'target' entry, the 'input' entry
+    will be empty
 
     If 'lag' is a single integer value, it is equivalent to:
 
@@ -268,7 +274,9 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
     :return LagSlots: an object containing the time slots to select for the input and target features.
     """
     lr = LagResolver(lag)
-    return lr.resolve()
+    res: LagSlots = lr.resolve()
+    # return res.input_slots, res.target_slots
+    return res
 # end
 
 
