@@ -1,9 +1,8 @@
-from sktime.forecasting.compose import make_reduction
 
 from stdlib import import_from
 
 
-class SklearnForecastRegressor:
+class SktimeForecastRegressor:
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -11,13 +10,9 @@ class SklearnForecastRegressor:
 
     def __init__(self,
                  class_name: str,
-                 window_length=5,
-                 reduction_strategy='recursive',
                  **kwargs):
-
         model_class = import_from(class_name)
-        regressor = model_class(**kwargs)
-        self.forecaster = make_reduction(regressor, window_length=window_length, strategy=reduction_strategy)
+        self.forecaster = model_class(**kwargs)
     # end
 
     # -----------------------------------------------------------------------
@@ -74,7 +69,7 @@ class SklearnForecastRegressor:
     # -----------------------------------------------------------------------
 
     def __repr__(self):
-        return f"SklearnForecastRegressor[{self.forecaster}]"
+        return f"SktimeForecastRegressor[{self.forecaster}]"
 
     # -----------------------------------------------------------------------
     # end
