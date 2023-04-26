@@ -50,9 +50,6 @@ LAG_FACTORS: dict[str, int] = {
 LAG_TYPES: list[str] = list(LAG_FACTORS)
 
 
-def _max(l): return max(l) if len(l) > 0 else 0
-
-
 # ---------------------------------------------------------------------------
 # LagSlots
 # ---------------------------------------------------------------------------
@@ -61,6 +58,10 @@ class LagSlots:
     def __init__(self, islots: set[int], tslots: set[int]):
         self._islots: list[int] = sorted(islots)
         self._tslots: list[int] = sorted(tslots)
+
+        # self._len = 0 if len(tslots) == 0 else max(max(islots), max(tslots)) + 1
+        self._len = 0 if len(tslots) == 0 else max(max(islots), max(tslots))
+    # end
 
     @property
     def input_slots(self) -> list[int]:
@@ -71,7 +72,7 @@ class LagSlots:
         return self._tslots
 
     def __len__(self) -> int:
-        return max(_max(self._islots), _max(self._tslots)) + 1
+        return self._len
     # end
 
     def __repr__(self):
@@ -163,6 +164,7 @@ class LagResolver:
 
     def resolve(self) -> LagSlots:
         islots = self._resolve_entry(LAG_INPUT)
+        islots = self._resolve_input(islots)
         tslots = self._resolve_entry(LAG_TARGET)
         return LagSlots(islots, tslots)
     # end
@@ -175,7 +177,7 @@ class LagResolver:
         if entry == LAG_INPUT:
             slots = {0}
         else:
-            slots = set([])
+            slots = set()
 
         # trick to ke sore that the ORDER of the lag types is from 'smaller' to 'larger'
         for lag_type in LAG_TYPES:
@@ -189,11 +191,30 @@ class LagResolver:
 
             if lag_repl >= 0:
                 slots.update([i * lag_size for i in range(1, lag_repl + 1)])
+                # slots.update([i * lag_size for i in range(1, lag_repl)])
+                # slots.update([i * lag_size for i in range(lag_repl)])
             else:
                 slots = set()
         # end
+
         return slots
     # end
+
+    def _resolve_input(self, islots: set[int]):
+        # for input target add an extra slot
+        lag = self._lag[LAG_INPUT]
+        period_type = self._lag[PERIOD_TYPE]
+
+        for lag_type in lag:
+            if lag_type != period_type:
+                continue
+            lag_repl = lag[lag_type]
+            islots.add(lag_repl)
+            break
+        # end
+        return islots
+    # end
+
 # end
 
 

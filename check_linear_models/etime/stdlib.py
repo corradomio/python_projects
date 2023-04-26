@@ -23,3 +23,8 @@ def import_from(qname: str) -> Any:
     clazz = getattr(module, name)
     return clazz
 # end
+
+
+def qualified_name(clazz: type) -> str:
+    return f'{clazz.__module__}.{clazz.__name__}'
+
