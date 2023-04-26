@@ -1,9 +1,10 @@
-from typing import Union, Optional, Sized
+from typing import Union, Optional, Sized, Any
 
 import numpy as np
 import pandas as pd
 import sktime.forecasting.base as skf
-from .stdlib import NoneType, import_from
+
+from stdlib import import_from
 
 from .lag import resolve_lag, LagSlots
 
@@ -15,6 +16,8 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
+
+NoneType = type(None)
 
 INPUT_TYPES = (NoneType, pd.DataFrame, np.ndarray)
 TARGET_TYPES = (NoneType, pd.DataFrame, pd.Series, np.ndarray)

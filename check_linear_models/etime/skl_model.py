@@ -1,6 +1,6 @@
 from sktime.forecasting.compose import make_reduction
 
-from .stdlib import import_from
+from stdlib import import_from
 
 
 class SklearnForecasterRegressor:

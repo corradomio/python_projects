@@ -4,7 +4,7 @@ from sklearn.linear_model import LinearRegression
 from sktime.forecasting.base import ForecastingHorizon
 from etime.linear_model import LinearForecastRegressor
 from etime.skl_model import SklearnForecasterRegressor
-from etime.stdlib import qualified_name
+from stdlib import qualified_name
 
 print(qualified_name(LinearRegression))
 
