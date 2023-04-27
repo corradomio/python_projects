@@ -89,7 +89,14 @@ def _pandas_dtype(columns, dtype) -> dict:
     return dt
 # end
 
-def load_data(file: str, categorical=[], boolean=[], dtype=None, **args) -> pd.DataFrame:
+def load_data(file: str,
+              categorical=[],
+              boolean=[],
+              dtype=None,
+              index=[],
+              datetime=None,
+
+              **args) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -97,8 +104,14 @@ def load_data(file: str, categorical=[], boolean=[], dtype=None, **args) -> pd.D
     Added the support for '.arff' file format
 
     :param file: file to read
-    :param list categorical: list of categorical fields
-    :param list boolean: list of boolean fields
+    :param categorical: list of categorical fields
+    :param boolean: list of boolean fields
+    :param dtype: list of column types
+    :param datetime: colum used as datetime. Formats:
+                None
+                col: column already in datetime format
+                (col, format): 'format' used to convert the string in datetime
+    :param index: column or list of columns to use as index
     :param dict args: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
@@ -141,6 +154,20 @@ def load_data(file: str, categorical=[], boolean=[], dtype=None, **args) -> pd.D
 
     if 'count' not in df:
         df['count'] = 1.
+
+    if datetime is not None:
+        datetime, format = (datetime, None) if isinstance(datetime, str) else datetime
+        if format is not None:
+            df[datetime] = pd.to_datetime(df[datetime], format=format)
+
+    if isinstance(index, str):
+        dfindex = df[index].values
+        df.set_index(dfindex, inplace=True)
+
+    elif isinstance(index, (list, tuple)):
+        dfindex = df[index].values.tolist()
+        dfindex = pd.MultiIndex.from_tuples(dfindex, names=index)
+        df.set_index(dfindex, inplace=True)
 
     print("... done!")
     return df
