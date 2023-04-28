@@ -1,7 +1,7 @@
 from typing import Any, Union, Optional
 from path import Path as path
 from datetime import datetime
-
+from typing import Any, Union, Optional
 
 NoneType = type(None)
 
@@ -33,16 +33,19 @@ def module_path():
     this_path = path(sys.modules[__name__].__file__)
     return this_path.parent
 
+def to_name(ts) -> str:
+    if len(ts) == 0:
+        return "root"
+    else:
+        return "~".join(list(ts))
 
-# def flatten(l: list) -> list:
-#     if not isinstance(l, (list, tuple)):
-#         return [l]
-#     else:
-#         f = []
-#         for e in l:
-#             f += flatten(e)
-#         return f
-# # end
+
+def from_name(tsname) -> tuple[str]:
+    if tsname == 'root':
+        return tuple()
+    else:
+        return tuple(tsname.split('~'))
+
 
 def tobool(s: str) -> bool:
     if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
@@ -53,14 +56,17 @@ def tobool(s: str) -> bool:
         raise ValueError(f"Unsupported boolean value '{s}'")
 
 
-def qualified_name(o: Any):
-    klass = o.__class__
+def qualified_name(klass: Any):
     module = klass.__module__
     if module == 'builtins':
         return klass.__qualname__   # avoid outputs like 'builtins.str'
     return module + '.' + klass.__qualname__
 # end
 
+
+# ---------------------------------------------------------------------------
+# import_from
+# ---------------------------------------------------------------------------
 
 def import_from(qname: str) -> Any:
     """
@@ -88,7 +94,16 @@ def qualified_name(clazz: type) -> str:
 # generic utilities
 # ---------------------------------------------------------------------------
 
-def kwval(kwargs: dict[str, Any], key: str, defval: Any = None) -> Any:
+def as_kwargs(locals):
+    kwargs = {} | locals
+    for key in ['forecaster', 'window_length', 'reduction_strategy',
+                'self', '__class__']:
+        del kwargs[key]
+    return kwargs
+# end
+
+
+def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[str, tuple], defval: Any = None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
@@ -113,6 +128,18 @@ def kwval(kwargs: dict[str, Any], key: str, defval: Any = None) -> Any:
         else:
             raise ValueError(f"Unsupported conversion from str to '{type(defval)}'")
     return val
+
+
+def dict_contains_some(d: dict, keys: Union[str, list[str]]):
+    """
+    Chekc if the dictionary contains a key in the list
+    """
+    if isinstance(keys, str):
+        keys = [keys]
+    for k in keys:
+        if k in d:
+            return True
+    return False
 
 
 def dict_union(d1: dict, d2: dict) -> dict:
@@ -184,6 +211,21 @@ def dict_rename(d: dict, k1: str, k2: str) -> dict:
     return d
 
 
+def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
+    """
+    Remove the list of keys from the dictionary
+    :param d: dictionary
+    :param keys: key(s) to remove
+    :return: the updated dictionary
+    """
+    if isinstance(keys, str):
+        keys = list[keys]
+    for k in keys:
+        if k in d:
+            del d[k]
+    return d
+
+
 def dict_to_list(d: Union[dict, list, tuple]) -> list:
     """
     Convert a dictionary in a list of tuples
@@ -203,47 +245,6 @@ def dict_to_list(d: Union[dict, list, tuple]) -> list:
     for k in d.keys():
         l.append((k, d[k]))
     return l
-
-
-# ---------------------------------------------------------------------------
-# generic utilities
-# ---------------------------------------------------------------------------
-
-# def dict_numpy_rename_1(data: dict, best_name: str, columns: list[str]):
-#     assert len(columns) == 1
-#     renamed = {}
-#     for model_name in data:
-#         if model_name == best_name:
-#             prefix = ""
-#         else:
-#             prefix = model_name + ":"
-#         values = data[model_name]
-#         if len(values.shape) == 2 and values.shape[1] == 1:
-#             values = values.reshape(values.shape[0])
-#         key = prefix + columns[0]
-#         renamed[key] = values
-#     # end
-#     return renamed
-# # end
-
-
-# def dict_numpy_rename_n(data: dict, best_name: str, columns: list[str]):
-#     n = len(columns)
-#     renamed = {}
-#     for model_name in data:
-#         if model_name == best_name:
-#             prefix = ""
-#         else:
-#             prefix = model_name + ":"
-#         values = data[model_name]
-#         for i in range(n):
-#             key = prefix + columns[i]
-#             v = values[:, i]
-#             renamed[key] = v
-#         # end
-#     # end
-#     return renamed
-# # end
 
 
 # ---------------------------------------------------------------------------
@@ -281,7 +282,7 @@ def is_filesystem(datasource: str) -> bool:
 #
 
 def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
-    assert (dt, (type(None), str))
+    assert (dt, (NoneType, str))
 
     if dt is None:
         return None

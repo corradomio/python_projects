@@ -1,17 +1,12 @@
-from typing import Union, Optional, Sized, Any
+from typing import Union, Optional, Sized
 
 import numpy as np
 import pandas as pd
 import sktime.forecasting.base as skf
-
 from stdlib import import_from
 
 from .lag import resolve_lag, LagSlots
 
-
-__all__ = [
-    "LinearForecastRegressor"
-]
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -121,12 +116,12 @@ class _PredHist:
                 c += 1
         else:
             c = 0
-            for j in reversed(slots.input_slots):
-                tx[0, c:c + m] = at(Xh, Xp, i - j)
-                c += m
             for j in reversed(slots.target_slots):
                 tx[0, c] = at(yh, yp, i - j)
                 c += 1
+            for j in reversed(slots.input_slots):
+                tx[0, c:c + m] = at(Xh, Xp, i - j)
+                c += m
         # end
 
         return self.tx
@@ -366,12 +361,12 @@ class LinearForecastRegressor:
         else:
             for i in range(nt):
                 c = 0
-                for j in reversed(slots.input_slots):
-                    tx[i, c:c + m] = X[s + i - j]
-                    c += m
                 for j in reversed(slots.target_slots):
                     tx[i, c] = y[s + i - j]
                     c += 1
+                for j in reversed(slots.input_slots):
+                    tx[i, c:c + m] = X[s + i - j]
+                    c += m
                 ty[i] = y[s + i]
             # end
 

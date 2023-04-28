@@ -4,7 +4,7 @@ import math as m
 from sklearn.linear_model import LinearRegression
 from sktime.forecasting.base import ForecastingHorizon
 from etime.linear_model import LinearForecastRegressor
-from etime.skl_model import SklearnForecasterRegressor
+from etime.scikit_model import ScikitForecastRegressor
 from stdlib import qualified_name
 
 print(qualified_name(LinearRegression))
@@ -56,7 +56,7 @@ print("\ny_pred_1\n", y_pred)
 # ---------------------------------------------------------
 # print("\n-- SklearnForecasterRegressor (y) --\n")
 
-skr = SklearnForecasterRegressor(
+skr = ScikitForecastRegressor(
     class_name=qualified_name(LinearRegression),
     window_length=1
 )
@@ -88,7 +88,7 @@ print(y_pred)
 # ---------------------------------------------------------
 print("\n-- SklearnForecasterRegressor (X,y) --\n")
 
-skr = SklearnForecasterRegressor(
+skr = ScikitForecastRegressor(
     class_name=qualified_name(LinearRegression),
     window_length=1
 )

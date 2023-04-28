@@ -1,8 +1,26 @@
+from sktime.forecasting.compose import make_reduction
 
-from stdlib import import_from
+from stdlib import import_from, dict_del, kwval
 
 
-class SktimeForecastRegressor:
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
+
+
+# ---------------------------------------------------------------------------
+# ScikitForecastRegressor
+# ---------------------------------------------------------------------------
+
+class ScikitForecastRegressor:
+
+    @staticmethod
+    def is_sklearn(class_name: str):
+        p = class_name.find('.')
+        ns = class_name[:p]
+        return ns in SCIKIT_NAMESPACES
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -11,8 +29,18 @@ class SktimeForecastRegressor:
     def __init__(self,
                  class_name: str,
                  **kwargs):
+
         model_class = import_from(class_name)
-        self.forecaster = model_class(**kwargs)
+        if self.is_sklearn(class_name):
+            window_length = kwval(kwargs, 'window_length', 5)
+            reduction_strategy = kwval(kwargs, 'strategy', 'recursive')
+
+            kwargs = dict_del(kwargs, ['window_length', 'strategy'])
+
+            regressor = model_class(**kwargs)
+            self.forecaster = make_reduction(regressor, window_length=window_length, strategy=reduction_strategy)
+        else:
+            self.forecaster = model_class(**kwargs)
     # end
 
     # -----------------------------------------------------------------------
@@ -69,7 +97,7 @@ class SktimeForecastRegressor:
     # -----------------------------------------------------------------------
 
     def __repr__(self):
-        return f"SktimeForecastRegressor[{self.forecaster}]"
+        return f"SklearnForecastRegressor[{self.forecaster}]"
 
     # -----------------------------------------------------------------------
     # end

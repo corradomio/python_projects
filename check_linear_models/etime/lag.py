@@ -163,18 +163,18 @@ class LagResolver:
     # end
 
     def resolve(self) -> LagSlots:
-        islots = self._resolve_entry(LAG_INPUT)
-        islots = self._resolve_input(islots)
-        tslots = self._resolve_entry(LAG_TARGET)
+        current = True if 'current' not in self._lag else self._lag['current']
+        islots = self._resolve_entry(LAG_INPUT, current)
+        tslots = self._resolve_entry(LAG_TARGET, current)
         return LagSlots(islots, tslots)
     # end
 
-    def _resolve_entry(self, entry) -> set[int]:
+    def _resolve_entry(self, entry, current) -> set[int]:
         lag = self._lag[entry]
         period_type = self._lag[PERIOD_TYPE]
         base_factor = LAG_FACTORS[period_type]
 
-        if entry == LAG_INPUT:
+        if entry == LAG_INPUT and current:
             slots = {0}
         else:
             slots = set()
@@ -191,28 +191,11 @@ class LagResolver:
 
             if lag_repl >= 0:
                 slots.update([i * lag_size for i in range(1, lag_repl + 1)])
-                # slots.update([i * lag_size for i in range(1, lag_repl)])
-                # slots.update([i * lag_size for i in range(lag_repl)])
             else:
                 slots = set()
         # end
 
         return slots
-    # end
-
-    def _resolve_input(self, islots: set[int]):
-        # for input target add an extra slot
-        lag = self._lag[LAG_INPUT]
-        period_type = self._lag[PERIOD_TYPE]
-
-        for lag_type in lag:
-            if lag_type != period_type:
-                continue
-            lag_repl = lag[lag_type]
-            islots.add(lag_repl)
-            break
-        # end
-        return islots
     # end
 
 # end
@@ -240,21 +223,26 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
                 period_type_1>: <count_1>,
                 <period_type_2>: <count_2>,
                 ...
-            }
+            },
+            'current': True
         }
 
-    where <period_type> (and <period_type_i>) is one of the following values:
+    where
 
-        'second'    = 1
-        'minute'    = 60 seconds
-        'hour'      = 60 minutes
-        'day'       = 24 hours
-        'week'      = 7 days
-        'month'     = 30 days
-        'quarter'   = 91 days  (because 365//4 = 91, a little better than 30*3 = 90)
-        'year'      = 365 days
+        - <period_type> (and <period_type_i>) is one of the following values:
 
-    and <count_i> is an integer value
+            'second'    = 1
+            'minute'    = 60 seconds
+            'hour'      = 60 minutes
+            'day'       = 24 hours
+            'week'      = 7 days
+            'month'     = 30 days
+            'quarter'   = 91 days  (because 365//4 = 91 is a little better than 30*3 = 90)
+            'year'      = 365 days
+
+        - <count_i> is an integer value.
+
+        - <current> is a flag used to obtain the same behaviour of sktime (skip the 'current' day)
 
     The main rule is that <period_type_i> MUST BE equals or grater than the reference <period_type>
 
@@ -281,10 +269,10 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
         {
             'period_type': 'day',
             'input': {
-                'day': <value[0]>
+                'day': <values[0]>
             },
             'target': {
-                'day': <value[1]>
+                'day': <values[1]>
             }
         }
 

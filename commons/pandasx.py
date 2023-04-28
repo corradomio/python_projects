@@ -93,9 +93,9 @@ def load_data(file: str,
               categorical=[],
               boolean=[],
               dtype=None,
-              index=[],
+              index=None,
               datetime=None,
-
+              count=False,
               **args) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -152,7 +152,7 @@ def load_data(file: str,
     for col in boolean:
         df[col] = df[col].astype(bool)
 
-    if 'count' not in df:
+    if count and 'count' not in df:
         df['count'] = 1.
 
     if datetime is not None:
@@ -263,6 +263,162 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
 
 
 # ---------------------------------------------------------------------------
+# DataFrame utilities
+# ---------------------------------------------------------------------------
+
+def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[str, list[str]]) \
+        -> dict[tuple[str], pd.DataFrame]:
+    """
+    Split the dataframe based on the content area columns list
+
+    :param df: DataFrame to split
+    :param area: list of columns to use during the split. The columns must be categorical
+
+    :return: a list [((g1,...), gdf), ...]
+    """
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(groups, (str, list))
+    
+    if isinstance(groups, str):
+        groups = [groups]
+
+    # 1) split the dataset recursively in columns in 'area'
+    dflist = [(tuple(), df)]
+    for group in groups:
+        split = []
+        unique = df[group].unique()
+        for value in unique:
+            for gid, gdata in dflist:
+                gid = gid + (value, )
+                gsel = gdata[gdata[group] == value]
+
+                if len(gsel) > 0:
+                    split.append((gid, gsel))
+            # end
+        # end
+        dflist = split
+    # end
+
+    # 2) convert the list in a dictionary
+    dfdict: dict[tuple, DataFrame] = {}
+    for gvalues, df in dflist:
+        dfdict[gvalues] = df
+
+    return dfdict
+# end
+
+
+def dataframe_merge_on_groups(dfdict: dict[tuple[str], pd.DataFrame],
+                              groups: Union[str, list[str]],
+                              sortby: Union[None, str, list[str]] = None) \
+        -> pd.DataFrame:
+    """
+
+    """
+    assert isinstance(dfdict, dict)
+    assert isinstance(groups, (str, list))
+
+    if isinstance(groups, str):
+        groups = [groups]
+    if isinstance(sortby, str):
+        sortby = [sortby]
+
+    n = len(groups)
+    dfonly = []
+    for gvalues in dfdict:
+        assert len(gvalues) == len(groups)
+        gdf = dfdict[gvalues]
+        gdf = gdf.copy()
+
+        for i in range(n):
+            gdf[groups[i]] = gvalues[i]
+
+        dfonly.append(gdf)
+    # end
+
+    df = pd.concat(dfonly, axis=0)
+    if sortby is not None:
+        df.sort_values(*sortby, inplace=True)
+    return df
+
+# end
+
+
+def dataframe_split_on_columns(df: pd.DataFrame,
+                               columns: Union[None, str, list[str]] = None,
+                               ignore: Union[None, str, list[str]] = None) \
+        -> list[pd.Series]:
+    """
+    Split the dataframe in a list of series based on the list of selected columns
+    """
+    if ignore is None:
+        ignore = []
+    elif isinstance(ignore, str):
+        ignore = [ignore]
+        
+    if columns is None:
+        columns = list(df.columns.difference(ignore))
+    elif isinstance(columns, str):
+        columns = [columns]
+
+    series = []
+    for col in columns:
+        series.append(df[col])
+
+    return series
+# end
+
+
+DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
+TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
+
+
+def dataframe_split_train_test(
+        df: DATAFRAME_OR_DICT,
+        train_size: float = 0,
+        test_size: float = 0,
+        test_offset: int = 0) \
+        -> TRAIN_TEST_TYPE:
+    assert isinstance(df, (dict, pd.DataFrame))
+    assert isinstance(train_size, (int, float))
+    assert isinstance(test_size, (int, float))
+
+    if test_size > 0:
+        if test_size < 1:
+            train_size = 1 - test_size
+        elif test_size >= 1:
+            train_size = len(df) - test_size
+    
+    if train_size == 0 or train_size == 1:
+        return df, None
+    
+    def _split(df):
+        n = len(df)
+        if 0 < train_size < 1:
+            train_ratio = int(train_size * n)
+        else:
+            train_ratio = train_size
+        if train_ratio == 0 or train_ratio >= n:
+            return df, None
+        else:
+            return df[0:train_ratio], df[train_ratio-test_offset:]
+    
+    if isinstance(df, pd.DataFrame):
+        return _split(df)
+    else:
+        dtrain = dict()
+        dtest_ = dict()
+        for k, kdf in df.items():
+            ktrain, ktest = _split(kdf)
+            dtrain[k] = ktrain
+            dtest_[k] = ktest
+        return dtrain, dtest_
+    # end
+# end
+    
+
+
+# ---------------------------------------------------------------------------
 # cumulant, lift, prob
 # ---------------------------------------------------------------------------
 
@@ -344,7 +500,6 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
     gcount = df[select + ['count']].groupby(select).count()/total
 
     return gcount
-
 
 
 # ---------------------------------------------------------------------------
