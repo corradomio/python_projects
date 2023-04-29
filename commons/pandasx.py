@@ -196,6 +196,66 @@ def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.D
 
 
 # ---------------------------------------------------------------------------
+# Statistical infer_freq
+# ---------------------------------------------------------------------------
+# B         business day frequency
+# C         custom business day frequency
+# D         calendar day frequency
+# W         weekly frequency
+# M         month end frequency
+# SM        semi-month end frequency (15th and end of month)
+# BM        business month end frequency
+# CBM       custom business month end frequency
+# MS        month start frequency
+# SMS       semi-month start frequency (1st and 15th)
+# BMS       business month start frequency
+# CBMS      custom business month start frequency
+# Q         quarter end frequency
+# BQ        business quarter end frequency
+# QS        quarter start frequency
+# BQS       business quarter start frequency
+# A, Y      year end frequency
+# BA, BY    business year end frequency
+# AS, YS    year start frequency
+# BAS, BYS  business year start frequency
+# BH        business hour frequency
+# H         hourly frequency
+# T, min    minutely frequency
+# S         secondly frequency
+# L, ms     milliseconds
+# U, us     microseconds
+# N         nanoseconds
+
+def infer_freq(index, steps=5, ntries=3) -> str:
+    """
+    Infer 'freq' checking randomly different positions
+    of the index
+
+    :param index:
+    :param steps:
+    :param ntries:
+    :return:
+    """
+    n = len(index)-steps
+    freq = None
+    itry = 0
+    while itry < ntries:
+        i = random.randrange(n)
+        tfreq = pd.infer_freq(index[i:i+steps])
+        if tfreq is None:
+            itry += 1
+        elif tfreq != freq:
+            freq = tfreq
+            itry = 0
+        else:
+            itry += 1
+    # end
+
+    return freq
+# end
+
+
+# ---------------------------------------------------------------------------
 # Series argmax
 # ---------------------------------------------------------------------------
 
@@ -260,6 +320,32 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
     smax = ser.max() + dx
     return smin, smax
 # end
+
+# ---------------------------------------------------------------------------
+# DataFrame utilities
+# ---------------------------------------------------------------------------
+
+def dataframe_datetime_column_to_index(df: DataFrame, datetime: str, date_format: Optional[str]) -> DataFrame:
+    # convert the string in a Python datetime object
+    if date_format is not None:
+        df[datetime] = pd.to_datetime(df[datetime], format=date_format)
+
+    # assign the index
+    df = df.set_index(df[datetime])
+    df = df.to_period()
+
+    # remove the 'datetime' column
+    df = df[df.columns.difference([datetime])]
+
+    return df
+# end
+
+
+def dataframe_ignore(df: DataFrame, ignore: Union[str, list[str]]) -> DataFrame:
+    if isinstance(ignore, str):
+        ignore = [ignore]
+    assert isinstance(ignore, (list, tuple))
+    return df[df.columns.difference(ignore)]
 
 
 # ---------------------------------------------------------------------------
@@ -556,9 +642,12 @@ def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], inde
 
 # ---------------------------------------------------------------------------
 # split_to_Xy
+# split_train_test
 # ---------------------------------------------------------------------------
 
-def Xy_split(*data_list, target: Union[str, list[str]]) -> list[Union[pd.DataFrame, pd.Series]]:
+PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
+
+def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
     assert isinstance(target, (str, list))
     Xy_list = []
     for data in data_list:
@@ -575,6 +664,30 @@ def Xy_split(*data_list, target: Union[str, list[str]]) -> list[Union[pd.DataFra
     return Xy_list
 # end
 
+
+def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]:
+    def _train_size(data) -> int:
+        n = len(data)
+        tsize = train_size
+        if 0 < test_size < 1:
+            tsize = 1 - test_size
+        elif test_size > 1:
+            tsize = n - test_size
+        if 0 < tsize < 1:
+            return int(tsize*n)
+        elif tsize > 1:
+            return tsize
+        else:
+            return 1
+    tt_list = []
+    
+    for data in data_list:
+        t = _train_size(data)
+        tt_list.append(data[:t])
+        tt_list.append(data[t:])
+    # end
+    return tt_list
+# end
 
 # ---------------------------------------------------------------------------
 # to_dataframe

@@ -17,10 +17,16 @@ __all__ = ['LagSlots', 'LagResolver', 'resolve_lag']
 #           },
 #           'target': {
 #               ...
-#           }
+#           },
+#           'current': False,
+#           'length': <count>
 #       }
 #
-# period_type: second, minute, hour, day, week, month, quarter, year
+# period_type: second | minute | hour | day |
+#            | week | month | quarter | year
+#            | <integer>
+#
+# if <integer>, it is a multiple of 'period_type'
 #
 
 # ---------------------------------------------------------------------------
@@ -31,6 +37,7 @@ LAG_INPUT = 'input'
 LAG_TARGET = 'target'
 LAG_DAY = 'day'
 PERIOD_TYPE = 'period_type'
+LAG_LENGTH = 'length'
 
 LAG_FACTORS: dict[str, int] = {
     '': 0,
@@ -123,7 +130,15 @@ class LagResolver:
         if PERIOD_TYPE not in lag:
             lag[PERIOD_TYPE] = LAG_DAY
 
-        assert LAG_INPUT in lag or LAG_TARGET in lag, f"'{lag}' doesn't contain {LAG_INPUT} or {LAG_TARGET} entries"
+        if LAG_LENGTH in lag:
+            period_type = lag[PERIOD_TYPE]
+            lag_length = lag[LAG_LENGTH]
+            del lag[LAG_LENGTH]
+            lag[LAG_INPUT] = {period_type: lag_length}
+            lag[LAG_TARGET] = {period_type: lag_length}
+
+        assert LAG_INPUT in lag or LAG_TARGET in lag, \
+            f"'{lag}' doesn't contain {LAG_INPUT} or {LAG_TARGET} entries"
 
         if LAG_INPUT in lag and LAG_TARGET not in lag:
             lag[LAG_TARGET] = lag[LAG_INPUT]
@@ -157,9 +172,9 @@ class LagResolver:
         period_type = lag[PERIOD_TYPE]
         assert period_type in LAG_TYPES, f"'{period_type}' is not a valid period type"
         for lag_type in lag[LAG_INPUT]:
-            assert lag_type in LAG_TYPES, f"'{lag_type}' is not a valid period type"
+            assert lag_type in LAG_TYPES or isinstance(lag_type, int), f"'{lag_type}' is not a valid period type"
         for lag_type in lag[LAG_TARGET]:
-            assert lag_type in LAG_TYPES, f"'{lag_type}' is not a valid period type"
+            assert lag_type in LAG_TYPES or isinstance(lag_type, int), f"'{lag_type}' is not a valid period type"
     # end
 
     def resolve(self) -> LagSlots:
@@ -179,7 +194,7 @@ class LagResolver:
         else:
             slots = set()
 
-        # trick to ke sore that the ORDER of the lag types is from 'smaller' to 'larger'
+        # trick to be sure that the ORDER of the lag types is from 'smaller' to 'larger'
         for lag_type in LAG_TYPES:
             if lag_type not in lag: continue
 
@@ -189,6 +204,17 @@ class LagResolver:
             lag_size = lag_factor//base_factor
             lag_repl = lag[lag_type]
 
+            if lag_repl >= 0:
+                slots.update([i * lag_size for i in range(1, lag_repl + 1)])
+            else:
+                slots = set()
+        # end
+        # resolve the lag_type of integer type
+        for lag_type in lag:
+            if not isinstance(lag_type, int):
+                continue
+            lag_size = lag_type
+            lag_repl = lag[lag_type]
             if lag_repl >= 0:
                 slots.update([i * lag_size for i in range(1, lag_repl + 1)])
             else:

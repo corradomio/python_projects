@@ -278,7 +278,7 @@ def main1():
     output_dir = "E:\\Datasets\\NLP\\LLAMA.huggingface"
     input_dir = "E:\\Datasets\\NLP\\LLAMA"
 
-    for model_size in ["7B", "13B", "30B"]:
+    for model_size in ["7B", "13B", "30B", "65B"]:
         write_model(
             model_path=os.path.join(output_dir, model_size),
             input_base_path=os.path.join(input_dir, model_size),

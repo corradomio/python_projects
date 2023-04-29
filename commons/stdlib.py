@@ -251,13 +251,6 @@ def dict_to_list(d: Union[dict, list, tuple]) -> list:
 # is_filesystem
 # ---------------------------------------------------------------------------
 
-# def datasource_normalize(datasource: Optional[str]) -> Optional[str]:
-#     if datasource is None:
-#         return None
-#     else:
-#         return datasource.replace('\\', '/')
-
-
 def is_filesystem(datasource: str) -> bool:
     # file://....
     # <disk>:....
@@ -282,7 +275,7 @@ def is_filesystem(datasource: str) -> bool:
 #
 
 def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
-    assert (dt, (NoneType, str))
+    assert (dt, (type(None), str))
 
     if dt is None:
         return None
