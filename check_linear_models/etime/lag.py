@@ -347,15 +347,6 @@ class LagParser:
 
 
 # ---------------------------------------------------------------------------
-# resolve_lag
-# ---------------------------------------------------------------------------
-
-def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
-    return LagParser(lag).parse()
-# end
-
-
-# ---------------------------------------------------------------------------
 # LagTransformer
 # ---------------------------------------------------------------------------
 
@@ -364,7 +355,7 @@ class LagTransformer:
     def __init__(self, lag: Union[int, list[int], dict], Xh=None, yh=None):
         super().__init__()
         self._lag = lag
-        self._slots = resolve_lag(lag)
+        self._slots = LagParser(lag).parse()
         self._Xh = Xh
         self._yh = yh
         self._Xt = None

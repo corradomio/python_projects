@@ -11,7 +11,7 @@ from stdlib import import_from, dict_del, kwval
 # Constants
 # ---------------------------------------------------------------------------
 
-SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
+SKLEARN_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,13 @@ class ScikitForecastRegressor(BaseForecaster):
         self._kwargs = {} | kwargs
 
         model_class = import_from(class_name)
-        if self.is_sklearn(class_name):
+
+        p = class_name.find('.')
+        top_ns = class_name[:p]
+        if top_ns in SKLEARN_NAMESPACES:
+            #
+            # sklearn.* class
+            #
             window_length = kwval(kwargs, 'window_length', 5)
             reduction_strategy = kwval(kwargs, 'strategy', 'recursive')
 
@@ -49,15 +55,14 @@ class ScikitForecastRegressor(BaseForecaster):
 
             regressor = model_class(**kwargs)
             self.forecaster = make_reduction(regressor, window_length=window_length, strategy=reduction_strategy)
-        else:
+        elif top_ns == 'sktime':
+            #
+            # sktime class
+            #
             self.forecaster = model_class(**kwargs)
+        else:
+            raise ValueError(f"Unsupported class {class_name}")
     # end
-
-    @staticmethod
-    def is_sklearn(class_name: str):
-        p = class_name.find('.')
-        ns = class_name[:p]
-        return ns in SCIKIT_NAMESPACES
 
     # -----------------------------------------------------------------------
     # Properties
@@ -77,8 +82,8 @@ class ScikitForecastRegressor(BaseForecaster):
             **self._kwargs
         )
 
-    def get_tags(self):
-        return self.forecaster.get_tags()
+    # def get_tags(self):
+    #     return self.forecaster.get_tags()
 
     # -----------------------------------------------------------------------
     # Operations

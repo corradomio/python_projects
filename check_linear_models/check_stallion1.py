@@ -53,7 +53,6 @@ def main():
         y_pred_2 = lfr.predict(X=x_test, fh=fh)
 
         print(g)
-# end
 
 
 if __name__ == "__main__":

@@ -2,17 +2,18 @@
 # Pandas reader
 # Some simple data set loaders: from csv and .arff data files
 #
-from typing import List, AnyStr, Union
-
 import arff
 import pandas as pd
 import numpy as np
+import warnings
+
+from typing import List, AnyStr, Union, Optional
 from math import isnan, sqrt
 
 
 # ---------------------------------------------------------------------------
 # read_arff
-# load_data == read_data
+# read_data
 # ---------------------------------------------------------------------------
 
 def read_arff(file, **args):
@@ -89,11 +90,12 @@ def _pandas_dtype(columns, dtype) -> dict:
     return dt
 # end
 
-def load_data(file: str,
+def read_data(file: str,
               categorical=[],
               boolean=[],
               dtype=None,
               index=None,
+              ignore=None,
               datetime=None,
               count=False,
               **args) -> pd.DataFrame:
@@ -111,7 +113,9 @@ def load_data(file: str,
                 None
                 col: column already in datetime format
                 (col, format): 'format' used to convert the string in datetime
+                (col, format, freq)
     :param index: column or list of columns to use as index
+    :params ignore: columns to ignore
     :param dict args: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
@@ -156,25 +160,17 @@ def load_data(file: str,
         df['count'] = 1.
 
     if datetime is not None:
-        datetime, format = (datetime, None) if isinstance(datetime, str) else datetime
-        if format is not None:
-            df[datetime] = pd.to_datetime(df[datetime], format=format)
+        df = datetime_encode(df, datetime)
 
-    if isinstance(index, str):
-        dfindex = df[index].values
-        df.set_index(dfindex, inplace=True)
+    if index is not None:
+        df = dataframe_index(df, index)
 
-    elif isinstance(index, (list, tuple)):
-        dfindex = df[index].values.tolist()
-        dfindex = pd.MultiIndex.from_tuples(dfindex, names=index)
-        df.set_index(dfindex, inplace=True)
+    if ignore is not None:
+        df = dataframe_ignore(df, ignore)
 
     print("... done!")
     return df
 # end
-
-
-read_data = load_data
 
 
 # ---------------------------------------------------------------------------
@@ -192,6 +188,27 @@ def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.D
         dummies = pd.get_dummies(data[col], prefix=col)
         data = data.join(dummies)
     return data
+# end
+
+
+def datetime_encode(df: pd.DataFrame, 
+                    datetime: tuple[str], 
+                    format: Optional[str] = None, 
+                    freq: Optional[str] = None):
+    assert isinstance(datetime, (str, list, tuple))
+    assert isinstance(format, (type(None), str))
+    assert isinstance(freq, (type(None), str))
+    assert 1 < len(datetime) < 4
+    if len(datetime) == 2:
+        datetime, format = datetime
+    else:
+        datetime, format, freq = datetime
+    
+    if format is not None:
+        df[datetime] = pd.to_datetime(df[datetime], format=format)
+    if freq is not None:
+        df[datetime] = df[datetime].dt.to_period(freq)
+    return df
 # end
 
 
@@ -276,6 +293,7 @@ def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str,
     return val
 # end
 
+
 def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str, int]):
     """
     Let df a dataframe, search the row in 'argmin_col' with the lowest value
@@ -293,6 +311,7 @@ def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str,
     return val
 # end
 
+
 def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
     """
     Retrieve the unique values in the column
@@ -306,6 +325,7 @@ def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
     ser.sort()
     return ser
 # end
+
 
 def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
     """
@@ -321,39 +341,25 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
     return smin, smax
 # end
 
+
 # ---------------------------------------------------------------------------
 # DataFrame utilities
 # ---------------------------------------------------------------------------
 
-def dataframe_datetime_column_to_index(df: DataFrame, datetime: str, date_format: Optional[str]) -> DataFrame:
-    # convert the string in a Python datetime object
-    if date_format is not None:
-        df[datetime] = pd.to_datetime(df[datetime], format=date_format)
-
-    # assign the index
-    df = df.set_index(df[datetime])
-    df = df.to_period()
-
-    # remove the 'datetime' column
-    df = df[df.columns.difference([datetime])]
-
-    return df
-# end
+DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
+TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
+PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
 
 
-def dataframe_ignore(df: DataFrame, ignore: Union[str, list[str]]) -> DataFrame:
+def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     if isinstance(ignore, str):
         ignore = [ignore]
     assert isinstance(ignore, (list, tuple))
     return df[df.columns.difference(ignore)]
+# end
 
 
-# ---------------------------------------------------------------------------
-# DataFrame utilities
-# ---------------------------------------------------------------------------
-
-def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[str, list[str]]) \
-        -> dict[tuple[str], pd.DataFrame]:
+def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[str, list[str]]) -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content area columns list
 
@@ -426,7 +432,6 @@ def dataframe_merge_on_groups(dfdict: dict[tuple[str], pd.DataFrame],
     if sortby is not None:
         df.sort_values(*sortby, inplace=True)
     return df
-
 # end
 
 
@@ -455,53 +460,163 @@ def dataframe_split_on_columns(df: pd.DataFrame,
 # end
 
 
-DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
-TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
+# ---------------------------------------------------------------------------
+# Dataframe index utilities
+# ---------------------------------------------------------------------------
 
+def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) -> list[tuple]:
+    """
+    Retrieve the multi level values
+    :param mi: multi index or a DataFrame/Series with multi index
+    :param int levels: can be < 0
+    :return: a list of tuples
+    """
+    assert isinstance(mi, (pd.DataFrame, pd.Series, pd.MultiIndex))
+    assert isinstance(levels, int)
 
-def dataframe_split_train_test(
-        df: DATAFRAME_OR_DICT,
-        train_size: float = 0,
-        test_size: float = 0,
-        test_offset: int = 0) \
-        -> TRAIN_TEST_TYPE:
-    assert isinstance(df, (dict, pd.DataFrame))
-    assert isinstance(train_size, (int, float))
-    assert isinstance(test_size, (int, float))
+    if not isinstance(mi, pd.MultiIndex):
+        mi = mi.index
+        assert isinstance(mi, pd.MultiIndex)
 
-    if test_size > 0:
-        if test_size < 1:
-            train_size = 1 - test_size
-        elif test_size >= 1:
-            train_size = len(df) - test_size
-    
-    if train_size == 0 or train_size == 1:
-        return df, None
-    
-    def _split(df):
-        n = len(df)
-        if 0 < train_size < 1:
-            train_ratio = int(train_size * n)
-        else:
-            train_ratio = train_size
-        if train_ratio == 0 or train_ratio >= n:
-            return df, None
-        else:
-            return df[0:train_ratio], df[train_ratio-test_offset:]
-    
-    if isinstance(df, pd.DataFrame):
-        return _split(df)
-    else:
-        dtrain = dict()
-        dtest_ = dict()
-        for k, kdf in df.items():
-            ktrain, ktest = _split(kdf)
-            dtrain[k] = ktrain
-            dtest_[k] = ktest
-        return dtrain, dtest_
-    # end
+    if levels < 0:
+        levels = len(mi.levels) + levels
+    assert levels > 0
+
+    n = len(mi)
+    values = set()
+    for i in range(n):
+        lv = mi.values[i][:levels]
+        values.add(lv)
+    values = list(values)
+    return values
 # end
+
+
+def dataframe_index(df: pd.DataFrame,
+                    index: Union[None, str, list[str]],
+                    inplace=False) -> pd.DataFrame:
+    if inplace:
+        df.set_index(index, inplace=inplace)
+    else:
+        df = df.set_index(index, inplace=inplace)
+    return df
+# end
+
+
+def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = 1) -> dict[tuple, pd.DataFrame]:
+    assert isinstance(df, (pd.DataFrame, pd.Series))
+    assert isinstance(df.index, pd.MultiIndex)
+    lvalues = multiindex_get_level_values(df.index, levels=levels)
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        dfdict = {}
+        for lv in lvalues:
+            dflv = df.loc[lv]
+            dfdict[lv] = dflv
+        # end
+    return dfdict
+
+
+def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
+    dflist = []
+    for lv in dfdict:
+        dflv: pd.DataFrame = dfdict[lv]
+        tuples = []
+        for idx in dflv.index:
+            tuples.append(lv + (idx,))
+        mi = pd.MultiIndex.from_tuples(tuples)
+        dflv.set_index(mi, inplace=True)
+        dflist.append(dflv)
+    # end
+    df = pd.concat(dflist, axis=0)
+    return df
+# end
+
+
+# ---------------------------------------------------------------------------
+# Split utilities
+# ---------------------------------------------------------------------------
+
+def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
+    """
+    Split the df in 'data_list' in X, y
     
+    :param data_list: df list
+    :param target: target column name
+    :return: list of splitte df
+    """
+    assert isinstance(target, (str, list))
+    Xy_list = []
+    for data in data_list:
+        assert isinstance(data, pd.DataFrame)
+        if isinstance(target, str):
+            X = data[data.columns.difference([target])]
+            y = data[[target]]
+            Xy_list += [X, y]
+        else:
+            X = data[data.columns.difference(target)]
+            Y = data[[target]]
+            Xy_list += [X, y]
+    # end
+    return Xy_list
+# end
+
+
+def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]:
+    """
+    Split the df in train/test
+    If df has a MultiIndex, it is splitted each sub-dataframe based on the first [n-1]
+    levels
+    
+    It is possible to specify 'train_size' or 'test_size', not both!
+    The value of 'train_size'/'test_size' can be a number in range [0,1] or greater than 1
+    
+    :param data_list: 
+    :param float train_size: train size
+    :param float test_size: test size 
+    :return: 
+    """
+    def _train_size(data) -> int:
+        n = len(data)
+        tsize = train_size
+        if 0 < test_size < 1:
+            tsize = 1 - test_size
+        elif test_size > 1:
+            tsize = n - test_size
+        if 0 < tsize < 1:
+            return int(tsize * n)
+        elif tsize > 1:
+            return tsize
+        else:
+            return 1
+
+    def _train_split(data):
+        t = _train_size(data)
+        return data[:t], data[t:]
+
+    tt_list = []
+
+    for data in data_list:
+        if type(data.index) == pd.MultiIndex:
+            d_data = dataframe_split_on_index(data, -1)
+            d_trn = {}
+            d_tst = {}
+            for lv in d_data:
+                dlv = d_data[lv]
+                trnlv, tstlv = _train_split(dlv)
+                d_trn[lv] = trnlv
+                d_tst[lv] = tstlv
+            # end
+            trn = dataframe_merge_on_index(d_trn)
+            tst = dataframe_merge_on_index(d_tst)
+        else:
+            trn, tst = _train_split(data)
+        tt_list.append(trn)
+        tt_list.append(tst)
+    # end
+    return tt_list
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -551,7 +666,8 @@ def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
         lvalues.append(lvalue)
     # end
     return index, cvalues, lvalues
-
+# end
+ 
 
 def cumulant(df: pd.DataFrame, select: list) -> pd.DataFrame:
     """
@@ -563,6 +679,7 @@ def cumulant(df: pd.DataFrame, select: list) -> pd.DataFrame:
     """
     index, cvalues, lvalues = _lift_cumulant(df, select)
     return pd.DataFrame(data={"cumulant": pd.Series(cvalues, index=index, name="cumulant")})
+# end
 
 
 def lift(df: pd.DataFrame, select: list) -> pd.DataFrame:
@@ -577,6 +694,7 @@ def lift(df: pd.DataFrame, select: list) -> pd.DataFrame:
     """
     index, cvalues, lvalues = _lift_cumulant(df, select)
     return pd.DataFrame(data={"lift": pd.Series(lvalues, index=index, name="lift")})
+# end
 
 
 def prob(df: pd.DataFrame, select: list) -> pd.Series:
@@ -586,6 +704,7 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
     gcount = df[select + ['count']].groupby(select).count()/total
 
     return gcount
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -641,55 +760,6 @@ def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], inde
 
 
 # ---------------------------------------------------------------------------
-# split_to_Xy
-# split_train_test
-# ---------------------------------------------------------------------------
-
-PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
-
-def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
-    assert isinstance(target, (str, list))
-    Xy_list = []
-    for data in data_list:
-        assert isinstance(data, pd.DataFrame)
-        if isinstance(target, str):
-            X = data[data.columns.difference([target])]
-            y = data[target]
-            Xy_list += [X, y]
-        else:
-            X = data[data.columns.difference(target)]
-            Y = data[target]
-            Xy_list += [X, y]
-    # end
-    return Xy_list
-# end
-
-
-def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]:
-    def _train_size(data) -> int:
-        n = len(data)
-        tsize = train_size
-        if 0 < test_size < 1:
-            tsize = 1 - test_size
-        elif test_size > 1:
-            tsize = n - test_size
-        if 0 < tsize < 1:
-            return int(tsize*n)
-        elif tsize > 1:
-            return tsize
-        else:
-            return 1
-    tt_list = []
-    
-    for data in data_list:
-        t = _train_size(data)
-        tt_list.append(data[:t])
-        tt_list.append(data[t:])
-    # end
-    return tt_list
-# end
-
-# ---------------------------------------------------------------------------
 # to_dataframe
 # ---------------------------------------------------------------------------
 
@@ -707,26 +777,7 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
     
     df = pd.DataFrame(data, columns=columns, index=index)
     return df
-
-
-# ---------------------------------------------------------------------------
-# shuffle_dataframe
-# ---------------------------------------------------------------------------
-
-# def shuffle_dataframe(*data_list, random_state=None) -> list[pd.DataFrame]:
-#     n = 0
-#     indices = []
-#     shuffle_list = []
-#     for data in data_list:
-#         n_data = len(data)
-#         if n_data != n:
-#             n = n_data
-#             indices = list(range(n))
-#             shuffle_dataframeshuffle(indices)
-#         data = data.iloc[indices]
-#         shuffle_list.append(data)
-#     return shuffle_list
-# # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -766,6 +817,8 @@ def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=No
     # cq = cq[:, 0:2]
     # done
     return cq
+# end
+
 
 # ---------------------------------------------------------------------------
 # end

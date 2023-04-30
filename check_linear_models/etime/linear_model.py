@@ -186,17 +186,15 @@ class LinearForecastRegressor(BaseForecaster):
     # Constructor
     # -----------------------------------------------------------------------
 
-    def __init__(self, class_name: str, lag: Union[int, list, tuple, dict], **kwargs):
+    def __init__(self, class_name: str, lag, **kwargs):
         super().__init__()
 
         self._class_name = class_name
         self._lag = lag
         self._kwargs = kwargs
 
-        lp = LagParser()
-        self._slots = lp.parse(lag)
-
         model_class = import_from(class_name)
+        self._slots = LagParser().parse(lag)
         self._model = model_class(**kwargs)
         self._X_history: Optional[np.ndarray] = None
         self._y_history: Optional[np.ndarray] = None

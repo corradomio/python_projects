@@ -7,6 +7,7 @@ from etime.linear_model import LinearForecastRegressor
 from etime.scikit_model import ScikitForecastRegressor
 from stdlib import qualified_name
 
+
 print(qualified_name(LinearRegression))
 
 # ---------------------------------------------------------
