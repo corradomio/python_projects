@@ -1,21 +1,21 @@
-import pandas as pd
 import numpy as np
+import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sktime.forecasting.compose import make_reduction
-from sktime.forecasting.compose._reduce import DirectReductionForecaster, RecursiveReductionForecaster
+from sktime.forecasting.compose._reduce import RecursiveTabularRegressionForecaster
 
 x = np.arange(1, 101)+0.1
 y = np.arange(1, 101)+0.2
 z = np.arange(1, 101)+0.0
 
 df = pd.DataFrame({'x': x, 'y': y, 'z': z})
-tr = df[:80]
-te = df[80:]
+trn = df[:80]
+tst = df[80:]
 
 
-f = make_reduction(LinearRegression(), window_length=2)
+f: RecursiveTabularRegressionForecaster = make_reduction(LinearRegression(), window_length=2)
 
-f.fit(X=tr[['x', 'y']], y=tr['z'])
+f.fit(X=trn[['x', 'y']], y=trn['z'])
 
 #
 # content of Xt and yt in '_reduce.py' line 562

@@ -1,3 +1,7 @@
+from typing import Optional
+
+import numpy as np
+from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
 from sktime.forecasting.compose import make_reduction
 
 from stdlib import import_from, dict_del, kwval
@@ -14,13 +18,15 @@ SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
 # ScikitForecastRegressor
 # ---------------------------------------------------------------------------
 
-class ScikitForecastRegressor:
+class ScikitForecastRegressor(BaseForecaster):
 
-    @staticmethod
-    def is_sklearn(class_name: str):
-        p = class_name.find('.')
-        ns = class_name[:p]
-        return ns in SCIKIT_NAMESPACES
+    _tags = {
+        "ignores-exogeneous-X": False,
+        "requires-fh-in-fit": False,
+        "handles-missing-data": False,
+        "X_inner_mtype": ["pd.DataFrame"],
+        "y_inner_mtype": ["pd.DataFrame"],
+    }
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -29,6 +35,10 @@ class ScikitForecastRegressor:
     def __init__(self,
                  class_name: str,
                  **kwargs):
+        super().__init__()
+
+        self._class_name = class_name
+        self._kwargs = {} | kwargs
 
         model_class = import_from(class_name)
         if self.is_sklearn(class_name):
@@ -43,16 +53,63 @@ class ScikitForecastRegressor:
             self.forecaster = model_class(**kwargs)
     # end
 
+    @staticmethod
+    def is_sklearn(class_name: str):
+        p = class_name.find('.')
+        ns = class_name[:p]
+        return ns in SCIKIT_NAMESPACES
+
+    # -----------------------------------------------------------------------
+    # Properties
+    # -----------------------------------------------------------------------
+
+    # @property
+    # def cutoff(self):
+    #     return self.forecaster.cutoff
+
+    # @property
+    # def fh(self):
+    #     return self.forecaster.fh
+
+    def get_params(self, deep=True):
+        return dict(
+            class_name=self._class_name,
+            **self._kwargs
+        )
+
+    def get_tags(self):
+        return self.forecaster.get_tags()
+
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
+    # Sembra ci sia un errore su come fh e' utilizzato in sktime.
+    # In teoria, si dovrebbe poter scrivere fh=[1,2,3,4,5], E ANCHE fh=[1,5]
+    # Ma nei due casi, y[1] e y[5]  risultano avere valori diversi!
+    # Per ovviare al problema, si usa fh=[1,2,3,4,5] e solo DOPO si filtrano
+    # i risultati
+    #
 
-    def fit(self, y, X=None, fh=None):
+    def _fit(self, y, X=None, fh=None):
         self.forecaster.fit(y=y, X=X, fh=fh)
         return self
 
-    def predict(self, fh=None, X=None, y=None):
-        return self.forecaster.predict(fh=fh, X=X)
+    def _predict(self, fh: ForecastingHorizon, X=None, y=None):
+        # convert fh into relative
+        fhr = fh.to_relative(self.cutoff).to_numpy()
+        # n of slots to predict
+        n = fhr[-1]
+        # fh = [1,2,3,....,n]
+        fhp = ForecastingHorizon(np.arange(1, n+1), is_relative=True)
+        # clip of X with datetime starting from cutoff+1 (clip is an array[bool])
+        clip = X.index > self.cutoff[0]
+        Xp = X
+        if not clip[0]: Xp = Xp[clip]
+        if len(Xp) > n: Xp = Xp[:n]
+        # prediction
+        y_pred = self.forecaster.predict(fh=fhp, X=Xp)
+        # selection of the required results: fh==1 -> y_pred[0]
+        return y_pred.iloc[fhr-1]
 
     # def fit_predict(self, y, X=None, fh=None):
     #     return self.forecaster.fit_predict(y=y, X=X, fh=fh)

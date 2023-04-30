@@ -1,6 +1,10 @@
+import numpy as np
 from typing import Union
+from sktime.transformations.base import BaseTransformer
 
-__all__ = ['LagSlots', 'LagResolver', 'resolve_lag']
+
+__all__ = ['LagSlots', 'LagParser', 'resolve_lag']
+
 
 # ---------------------------------------------------------------------------
 # Documentation
@@ -19,7 +23,15 @@ __all__ = ['LagSlots', 'LagResolver', 'resolve_lag']
 #               ...
 #           },
 #           'current': False,
+#       }
+#
+#       {
 #           'length': <count>
+#       }.
+#
+#       {
+#           'input': [0,1,2,5],
+#           'target': [2,3]
 #       }
 #
 # period_type: second | minute | hour | day |
@@ -91,16 +103,109 @@ class LagSlots:
 # LagResolver
 # ---------------------------------------------------------------------------
 
-class LagResolver:
+class LagParser:
+    """
+    Resolve the 'lag' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
+    is a record.
 
-    def __init__(self, lag):
-        self._lag = lag
-        self._normalize()
-        self._validate()
+    The complete configuration is a dictionary having the following structure:
+
+        {
+            'period_type': <period_type>,
+            'input': {
+                <period_type_1>: <count_1>,
+                <period_type_2>: <count_2>,
+                ...
+            },
+            'target: {
+                period_type_1>: <count_1>,
+                <period_type_2>: <count_2>,
+                ...
+            },
+            'current': True
+        }
+
+    where
+
+        - <period_type> (and <period_type_i>) is one of the following values:
+
+            'second'    = 1
+            'minute'    = 60 seconds
+            'hour'      = 60 minutes
+            'day'       = 24 hours
+            'week'      = 7 days
+            'month'     = 30 days
+            'quarter'   = 91 days  (because 365//4 = 91 is a little better than 30*3 = 90)
+            'year'      = 365 days
+
+        - <count_i> is an integer value.
+
+        - <current> is a flag used to obtain the same behaviour of sktime (skip the 'current' day)
+
+    The main rule is that <period_type_i> MUST BE equals or grater than the reference <period_type>
+
+    If not specified, the default value for 'period_type' is 'day'
+
+    It is possible to specify only 'input', in this case the configuration is replicated to the other
+    entry ('input' -> 'target'). Instead, if it is specified only 'target' entry, the 'input' entry
+    will be empty
+
+    If 'lag' is a single integer value, it is equivalent to:
+
+        lag = <value>
+        ==>
+        {
+            'period_type': 'day',
+            'input': {
+                'day': <value>
+            },
+            'target': {
+                'day': <value>
+            }
+        }
+
+    If 'lag' is two integer values, it is equivalent to:
+
+        lag = (<value1, <value2>)
+        ==>
+        {
+            'period_type': 'day',
+            'input': {
+                'day': <value1>
+            },
+            'target': {
+                'day': <value2>
+            }
+        }
+
+        lag = { 'length': <value> }
+        ==>
+        {
+            'period_type': 'day',
+            'input': {
+                'day': <value>
+            },
+            'target': {
+                'day': <value>
+            }
+        }
+
+    :param lag: the lag configuration
+        1. a single integer value
+        2. two integer values
+        3. a dictionary
+    :return LagSlots: an object containing the time slots to select for the input and target features.
+    """
+    def __init__(self, lag=None):
+        if lag is not None:
+            self._lag = lag
+            self._normalize()
+            self._validate()
+        # end
     # end
 
     @property
-    def normalized(self) -> dict:
+    def lag(self) -> dict:
         return self._lag
     # end
 
@@ -121,6 +226,9 @@ class LagResolver:
             )
 
         assert isinstance(lag, dict), f"'{lag}' is not a valid lag configuration"
+
+        if len(lag) == 0:
+            lag[LAG_LENGTH] = 0
 
         # 'type' as alias of 'period_type'
         if 'type' in lag:
@@ -177,6 +285,13 @@ class LagResolver:
             assert lag_type in LAG_TYPES or isinstance(lag_type, int), f"'{lag_type}' is not a valid period type"
     # end
 
+    def parse(self, lag=None) -> LagSlots:
+        if lag is not None:
+            self._lag = lag
+            self._normalize()
+            self._validate()
+        return self.resolve()
+
     def resolve(self) -> LagSlots:
         current = True if 'current' not in self._lag else self._lag['current']
         islots = self._resolve_entry(LAG_INPUT, current)
@@ -193,6 +308,11 @@ class LagResolver:
             slots = {0}
         else:
             slots = set()
+
+        # lag is already a list of integers
+        if isinstance(lag, (tuple, list)):
+            slots.update(lag)
+            return slots
 
         # trick to be sure that the ORDER of the lag types is from 'smaller' to 'larger'
         for lag_type in LAG_TYPES:
@@ -223,7 +343,6 @@ class LagResolver:
 
         return slots
     # end
-
 # end
 
 
@@ -232,88 +351,117 @@ class LagResolver:
 # ---------------------------------------------------------------------------
 
 def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
-    """
-    Resolve the 'lag' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
-    is a record.
-
-    The complete configuration is a dictionary having the following structure:
-
-        {
-            'period_type': <period_type>,
-            'input': {
-                <period_type_1>: <count_1>,
-                <period_type_2>: <count_2>,
-                ...
-            },
-            'target: {
-                period_type_1>: <count_1>,
-                <period_type_2>: <count_2>,
-                ...
-            },
-            'current': True
-        }
-
-    where
-
-        - <period_type> (and <period_type_i>) is one of the following values:
-
-            'second'    = 1
-            'minute'    = 60 seconds
-            'hour'      = 60 minutes
-            'day'       = 24 hours
-            'week'      = 7 days
-            'month'     = 30 days
-            'quarter'   = 91 days  (because 365//4 = 91 is a little better than 30*3 = 90)
-            'year'      = 365 days
-
-        - <count_i> is an integer value.
-
-        - <current> is a flag used to obtain the same behaviour of sktime (skip the 'current' day)
-
-    The main rule is that <period_type_i> MUST BE equals or grater than the reference <period_type>
-
-    If not specified, the default value for 'period_type' is 'day'
-
-    It is possible to specify only 'input', in this case the configuration is replicated to the other
-    entry ('input' -> 'target'). Instead, if it is specified only 'target' entry, the 'input' entry
-    will be empty
-
-    If 'lag' is a single integer value, it is equivalent to:
-
-        {
-            'period_type': 'day',
-            'input': {
-                'day': <value>
-            },
-            'target': {
-                'day': <value>
-            }
-        }
-
-    If 'lag' is two integer values, it is equivalent to:
-
-        {
-            'period_type': 'day',
-            'input': {
-                'day': <values[0]>
-            },
-            'target': {
-                'day': <values[1]>
-            }
-        }
-
-    :param lag: the lag configuration
-        1. a single integer value
-        2. two integer values
-        3. a dictionary
-    :return LagSlots: an object containing the time slots to select for the input and target features.
-    """
-    lr = LagResolver(lag)
-    res: LagSlots = lr.resolve()
-    # return res.input_slots, res.target_slots
-    return res
+    return LagParser(lag).parse()
 # end
 
+
+# ---------------------------------------------------------------------------
+# LagTransformer
+# ---------------------------------------------------------------------------
+
+class LagTransformer:
+
+    def __init__(self, lag: Union[int, list[int], dict], Xh=None, yh=None):
+        super().__init__()
+        self._lag = lag
+        self._slots = resolve_lag(lag)
+        self._Xh = Xh
+        self._yh = yh
+        self._Xt = None
+        self._i = 0
+    # end
+
+    def fit(self, X, y=None):
+        slots = self._slots
+        sx = len(slots.input_slots)
+        sy = len(slots.target_slots)
+        m = 0 if X is None else X.shape[1]
+
+        nt = 1
+        mt = sx * m + sy
+
+        self._Xt = np.zeros((nt, mt))
+        return self
+
+    def transform(self, X, y=None):
+        if self._Xh is None:
+            return self._for_train(X, y)
+        else:
+            return self._for_predict(X, y)
+
+    def _for_train(self, X, y):
+        slots: LagSlots = self._slots
+        s = len(slots)
+
+        if X is not None:
+            assert len(y) == len(X)
+
+        sx = len(slots.input_slots)
+        sy = len(slots.target_slots)
+        n = len(y)
+        m = 0 if X is None else X.shape[1]
+
+        nt = n - s
+        mt = sx * m + sy
+        Xt = np.zeros((nt, mt))
+        yt = np.zeros(nt)
+
+        if X is None:
+            for i in range(nt):
+                c = 0
+                for j in reversed(slots.target_slots):
+                    Xt[i, c] = y[s + i - j]
+                    c += 1
+                yt[i] = y[s + i]
+            # end
+        else:
+            for i in range(nt):
+                c = 0
+                for j in reversed(slots.target_slots):
+                    Xt[i, c] = y[s + i - j]
+                    c += 1
+                for j in reversed(slots.input_slots):
+                    Xt[i, c:c + m] = X[s + i - j]
+                    c += m
+                yt[i] = y[s + i]
+            # end
+
+        return Xt, yt
+    # end
+
+    def _for_predict(self, Xp, yp):
+        def at(past, future, index) -> np.ndarray:
+            return past[index] if index < 0 else future[index]
+
+        slots = self._slots
+        Xh = self._Xh
+        yh = self._yh
+        Xt = self._Xt
+        m = Xh.shape[1]
+        i = self._i
+
+        if Xh is None:
+            c = 0
+            for j in reversed(slots.target_slots):
+                Xt[0, c] = at(yh, yp, i - j)
+                c += 1
+        else:
+            c = 0
+            for j in reversed(slots.target_slots):
+                Xt[0, c] = at(yh, yp, i - j)
+                c += 1
+            for j in reversed(slots.input_slots):
+                Xt[0, c:c + m] = at(Xh, Xp, i - j)
+                c += m
+        # end
+
+        self._i += 1
+        return Xt, None
+    # end
+
+    def fit_transform(self, X, y=None):
+        return self.fit(X, y).transform(X, y)
+# end
 
 # ---------------------------------------------------------------------------
 # end

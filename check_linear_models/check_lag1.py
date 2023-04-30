@@ -1,9 +1,14 @@
 from etime.lag import resolve_lag
 
+print(resolve_lag({
+    'input': [0, 2, 4, 6],
+    'target': [1, 3, 5]
+
+}))
+
 print(resolve_lag(1))
 print(resolve_lag(0))
 print(resolve_lag(3))
-
 
 print(resolve_lag({
     'type': 'day',

@@ -1,11 +1,7 @@
-import pandas as pd
 import pandasx as pdx
-import numpy as np
-import numpyx as npx
-from sktime.forecasting.base import ForecastingHorizon
-
-from stdlib import qualified_name
 from sklearn.linear_model import LinearRegression
+from sktime.forecasting.base import ForecastingHorizon
+from stdlib import qualified_name
 
 from etime.linear_model import LinearForecastRegressor
 from etime.scikit_model import ScikitForecastRegressor
@@ -40,7 +36,7 @@ def main():
 
         skr = ScikitForecastRegressor(
             class_name=qualified_name(LinearRegression),
-            window_length=1,
+            window_length=5,
             strategy='recursive'
         )
         skr.fit(X=x_train, y=y_train, fh=fh)
@@ -49,8 +45,7 @@ def main():
         lfr = LinearForecastRegressor(
             class_name=qualified_name(LinearRegression),
             lag=dict(
-                input=1,
-                target=1,
+                length=5,
                 current=False
             )
         )
