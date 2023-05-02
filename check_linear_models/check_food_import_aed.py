@@ -7,7 +7,9 @@ def main():
                        datetime=("imp_date", "%Y-%m-%d"),
                        categorical=["imp_month"],
                        index=["item_country", "imp_date"],
-                       ignore=[""])
+                       ignore=[""],
+                       dropna=True)
+    df1 = df.dropna(how='any')
     print(df.info())
     pass
 

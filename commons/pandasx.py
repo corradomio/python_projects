@@ -98,6 +98,7 @@ def read_data(file: str,
               ignore=[],
               datetime=None,
               count=False,
+              dropna=True,
               **args) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -115,7 +116,9 @@ def read_data(file: str,
                 (col, format): 'format' used to convert the string in datetime
                 (col, format, freq)
     :param index: column or list of columns to use as index
-    :params ignore: columns to ignore
+    :params ignore: column or list of columns to ignore
+    :param count: if to add the column 'count' with value 1
+    :param dropna: if to drop rows containing NA values
     :param dict args: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
@@ -174,6 +177,9 @@ def read_data(file: str,
 
     if ignore is not None:
         df = dataframe_ignore(df, ignore)
+
+    if dropna:
+        df = df.dropna(how='any', axis=0)
 
     print(f"... done ({df.shape})")
     return df
