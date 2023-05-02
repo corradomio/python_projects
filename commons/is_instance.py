@@ -7,6 +7,8 @@ __all__ = [
     'is_instance'
 ]
 
+
+#
 #   Container   __contains__(
 #   Iterable    __iter__
 #   Hashable    __hash__
@@ -20,6 +22,96 @@ __all__ = [
 #   AsyncIterable   __aiter__
 #   AsyncIterator   __aiter__, __anext__
 #   .
+
+#     # Super-special typing primitives.
+#     'Annotated',
+#     'Any',
+#     'Callable',
+#     'ClassVar',
+#     'Final',
+#     'ForwardRef',
+#     'Generic',
+#     'Literal',
+#     'Optional',
+#     'Protocol',
+#     'Tuple',
+#     'Type',
+#     'TypeVar',
+#     'Union',
+# 
+#     # ABCs (from collections.abc).
+#     'AbstractSet',  # collections.abc.Set.
+#     'ByteString',
+#     'Container',
+#     'ContextManager',
+#     'Hashable',
+#     'ItemsView',
+#     'Iterable',
+#     'Iterator',
+#     'KeysView',
+#     'Mapping',
+#     'MappingView',
+#     'MutableMapping',
+#     'MutableSequence',
+#     'MutableSet',
+#     'Sequence',
+#     'Sized',
+#     'ValuesView',
+#     'Awaitable',
+#     'AsyncIterator',
+#     'AsyncIterable',
+#     'Coroutine',
+#     'Collection',
+#     'AsyncGenerator',
+#     'AsyncContextManager',
+# 
+#     # Structural checks, a.k.a. protocols.
+#     'Reversible',
+#     'SupportsAbs',
+#     'SupportsBytes',
+#     'SupportsComplex',
+#     'SupportsFloat',
+#     'SupportsIndex',
+#     'SupportsInt',
+#     'SupportsRound',
+# 
+#     # Concrete collection types.
+#     'ChainMap',
+#     'Counter',
+#     'Deque',
+#     'Dict',
+#     'DefaultDict',
+#     'List',
+#     'OrderedDict',
+#     'Set',
+#     'FrozenSet',
+#     'NamedTuple',  # Not really a type.
+#     'TypedDict',  # Not really a type.
+#     'Generator',
+# 
+#     # Other concrete types.
+#     'BinaryIO',
+#     'IO',
+#     'Match',
+#     'Pattern',
+#     'TextIO',
+# 
+#     # One-off things.
+#     'AnyStr',
+#     'cast',
+#     'final',
+#     'get_args',
+#     'get_origin',
+#     'get_type_hints',
+#     'NewType',
+#     'no_type_check',
+#     'no_type_check_decorator',
+#     'NoReturn',
+#     'overload',
+#     'runtime_checkable',
+#     'Text',
+#     'TYPE_CHECKING',.
+
 
 @_SpecialForm
 def All(self, parameters):
@@ -209,6 +301,24 @@ class IsNewType(IsInstance):
         return is_instance(obj, self.type.__supertype__)
 
 
+
+# ---------------------------------------------------------------------------
+
+class HasAttribute(IsInstance):
+    def __init__(self, *attrs):
+        self.attrs = attrs
+        
+    def __call__(self, *args, **kwargs):
+        return self
+        
+    def is_instance(self, obj) -> bool:
+        for attr in self.attrs:
+            if not hasattr(obj, attr):
+                return False
+        return True
+# end
+
+
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
@@ -232,7 +342,18 @@ IS_INSTANCE_OF = {
     'typing.Deque': IsDeque,
     'typing.DefaultDict': IsDefaultDict,
     'typing.NewType': IsNewType,
-    'typing.Collection': IsCollection
+    'typing.Collection': IsCollection,
+
+    'typing.Container': HasAttribute('__contains__'),
+    'typing.Iterable': HasAttribute('__iter__'),
+    'typing.Hashable': HasAttribute('__hash__'),
+    'typing.Sized': HasAttribute('__len__'),
+    'typing.Callable': HasAttribute('__call__'),
+    'typing.Iterator': HasAttribute('__iter__', '__next__'),
+    'typing.Reversible': HasAttribute('__reversed__'),
+    'typing.Awaitable': HasAttribute('__await__'),
+    'typing.AsyncIterable': HasAttribute('__aiter__'),
+    'typing.AsyncIterator': HasAttribute('__aiter__', '__anext__'),
 }
 
 def type_name(a_type: type) -> str:

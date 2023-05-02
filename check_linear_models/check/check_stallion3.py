@@ -12,7 +12,7 @@ def main():
     # d1 = pdx.dataframe_index(d1, index=['agency', 'sku', 'date'], inplace=True)
     # # df.to_period('M')
 
-    df = pdx.read_data('stallion_all.csv', datetime=('date', '%Y-%m-%d', 'M'), index='date')
+    df = pdx.read_data('../stallion_all.csv', datetime=('date', '%Y-%m-%d', 'M'), index='date')
     dfdict = pdx.dataframe_split_on_groups(df, groups=['agency', 'sku'])
 
     for ts in dfdict.keys():

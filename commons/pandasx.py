@@ -94,8 +94,8 @@ def read_data(file: str,
               categorical=[],
               boolean=[],
               dtype=None,
-              index=None,
-              ignore=None,
+              index=[],
+              ignore=[],
               datetime=None,
               count=False,
               **args) -> pd.DataFrame:
@@ -119,8 +119,15 @@ def read_data(file: str,
     :param dict args: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
-    if file is None:
-        raise TypeError("expected str, bytes or os.Path like object, not NoneType")
+    # if file is None:
+    #     raise TypeError("expected str, bytes or os.Path like object, not NoneType")
+    assert isinstance(file, str), "'file' must be a str"
+    assert isinstance(categorical, list), "'categorical' must be a list[str]"
+    assert isinstance(boolean, list), "'boolean' must be a list[str]"
+    assert isinstance(index, list), "'index' must be a list[str]"
+    assert isinstance(ignore, list), "'ignore' must be a list[str]"
+    assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, list, tuple)"
+    assert isinstance(count, bool), "'count' bool"
 
     dt = None
     if dtype is not None:
@@ -168,7 +175,7 @@ def read_data(file: str,
     if ignore is not None:
         df = dataframe_ignore(df, ignore)
 
-    print("... done!")
+    print(f"... done ({df.shape})")
     return df
 # end
 
