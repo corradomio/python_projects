@@ -19,5 +19,7 @@ __pycache__
 *.hdf5
 *.jpg
 *.png
+*.temp
+*Copy*
 venv
 lightning_logs
