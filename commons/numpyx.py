@@ -287,6 +287,114 @@ def xym2vec(x, y, m):
             k += 1
     return xs, ys, zs
 
+
+# ---------------------------------------------------------------------------
+# filter_outliers
+# ---------------------------------------------------------------------------
+
+def filter_outliers(array: np.ndarray, outlier_std: float) -> np.ndarray:
+    """
+    Replace all values in the dataset that exceed 'outlier_std' with
+    the median
+
+    :param array: array to analyze
+    :param outlier_std: n of Standard Deviation to use to decide if a value is
+        an outlier
+    :return: a copy of the array with the outliers removed
+    """
+    # if outlier_std is 0 , no test is executed
+    if outlier_std == 0:
+        return array
+
+    # because data is modified, it is better to create a copy
+    array = array.copy()
+    mean = np.mean(array, axis=0)
+    std = np.std(array, axis=0)
+    max_value = mean + (outlier_std * std)
+    min_value = mean - (outlier_std * std)
+    median = np.median(array, axis=0)
+
+    array[(array <= min_value) | (array >= max_value)] = median
+    return array
+# end
+
+
+def weighted_absolute_percentage_error(v_true: np.ndarray, v_pred: np.ndarray):
+    if is_vector(v_true):
+        v_true = v_true.reshape(len(v_true))
+        v_pred = v_pred.reshape(len(v_pred))
+        return _wape_score(v_true, v_pred)
+
+    wape = 0
+    for i in range(v_true.shape[-1]):
+        wape += _wape_score(v_true[:, i], v_pred[:, i])
+    return wape
+# end
+
+
+def _wape_score(v_true: np.ndarray, v_pred: np.ndarray):
+    total_actual = 0.0
+    total_abs_diff = 0.0
+    count = 0
+    for value in v_true:
+        total_actual = total_actual + value
+        # prediction = 0.0
+        if count == len(v_pred):
+            break
+        prediction = v_pred[count]
+        total_abs_diff = total_abs_diff + np.abs(value - prediction)
+        count = count + 1
+    if total_actual > 0:
+        return total_abs_diff / total_actual
+    return total_abs_diff
+# end
+
+
+def multi_r2_score(v_true: np.ndarray, v_pred: np.ndarray):
+    if is_vector(v_true):
+        v_true = v_true.reshape(len(v_true))
+        v_pred = v_pred.reshape(len(v_pred))
+        return r2_score(v_true, v_pred)
+
+    r2 = 0
+    for i in range(v_true.shape[-1]):
+        r2 += r2_score(v_true[:, i], v_pred[:, i])
+    return r2
+# end
+
+
+# ---------------------------------------------------------------------------
+
+def is_vector(array: np.ndarray) -> bool:
+    """
+    Check if  array can be converted in an 1d vector.
+    This is possible it the array has a unique dimension or there is a unique
+    dimension greater that 1
+
+    :param array: array to analyze
+    :retur: True if there is a single dim greater than 1
+    """
+    return len(strip_shape(array)) == 1
+# end
+
+
+def strip_shape(array: np.ndarray) -> tuple:
+    """
+    Remove all dimensions equals to 1
+
+    :param array: array to analyze
+    :return: the new shape without dimensions equals to 1
+    """
+    dims = []
+    for dim in array.shape:
+        if dim > 1:
+            dims.append(dim)
+    if len(dims) == 0:
+        dims = [1]
+    return tuple(dims)
+# end
+
+
 # ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------

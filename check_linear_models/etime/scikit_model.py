@@ -1,7 +1,5 @@
-from typing import Optional
-
 import numpy as np
-from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
+from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose import make_reduction
 
 from stdlib import import_from, dict_del, kwval
@@ -11,22 +9,15 @@ from stdlib import import_from, dict_del, kwval
 # Constants
 # ---------------------------------------------------------------------------
 
-SKLEARN_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
+SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
+SKTIME_NAMESPACES = ['sktime']
 
 
 # ---------------------------------------------------------------------------
 # ScikitForecastRegressor
 # ---------------------------------------------------------------------------
 
-class ScikitForecastRegressor(BaseForecaster):
-
-    _tags = {
-        "ignores-exogeneous-X": False,
-        "requires-fh-in-fit": False,
-        "handles-missing-data": False,
-        "X_inner_mtype": ["pd.DataFrame"],
-        "y_inner_mtype": ["pd.DataFrame"],
-    }
+class ScikitForecastRegressor:
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -35,86 +26,58 @@ class ScikitForecastRegressor(BaseForecaster):
     def __init__(self,
                  class_name: str,
                  **kwargs):
-        super().__init__()
-
-        self._class_name = class_name
-        self._kwargs = {} | kwargs
 
         model_class = import_from(class_name)
 
+        # extract the top namespace
         p = class_name.find('.')
-        top_ns = class_name[:p]
-        if top_ns in SKLEARN_NAMESPACES:
-            #
-            # sklearn.* class
-            #
+        ns = class_name[:p]
+        if ns in SCIKIT_NAMESPACES:
             window_length = kwval(kwargs, 'window_length', 5)
-            reduction_strategy = kwval(kwargs, 'strategy', 'recursive')
+            strategy = kwval(kwargs, 'strategy', 'recursive')
 
             kwargs = dict_del(kwargs, ['window_length', 'strategy'])
 
             regressor = model_class(**kwargs)
-            self.forecaster = make_reduction(regressor, window_length=window_length, strategy=reduction_strategy)
-        elif top_ns == 'sktime':
-            #
-            # sktime class
-            #
+            self.forecaster = make_reduction(regressor, window_length=window_length, strategy=strategy)
+        elif ns in SKTIME_NAMESPACES:
             self.forecaster = model_class(**kwargs)
         else:
-            raise ValueError(f"Unsupported class {class_name}")
+            raise ValueError(f"Unsupported class_name '{class_name}'")
     # end
 
     # -----------------------------------------------------------------------
     # Properties
     # -----------------------------------------------------------------------
 
-    # @property
-    # def cutoff(self):
-    #     return self.forecaster.cutoff
+    @property
+    def cutoff(self):
+        return self.forecaster.cutoff
 
-    # @property
-    # def fh(self):
-    #     return self.forecaster.fh
-
-    def get_params(self, deep=True):
-        return dict(
-            class_name=self._class_name,
-            **self._kwargs
-        )
-
-    # def get_tags(self):
-    #     return self.forecaster.get_tags()
+    @property
+    def fh(self):
+        return self.forecaster.fh
 
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
-    # Sembra ci sia un errore su come fh e' utilizzato in sktime.
-    # In teoria, si dovrebbe poter scrivere fh=[1,2,3,4,5], E ANCHE fh=[1,5]
-    # Ma nei due casi, y[1] e y[5]  risultano avere valori diversi!
-    # Per ovviare al problema, si usa fh=[1,2,3,4,5] e solo DOPO si filtrano
-    # i risultati
-    #
 
-    def _fit(self, y, X=None, fh=None):
+    def fit(self, y, X=None, fh=None):
         self.forecaster.fit(y=y, X=X, fh=fh)
         return self
 
-    def _predict(self, fh: ForecastingHorizon, X=None, y=None):
-        # convert fh into relative
-        fhr = fh.to_relative(self.cutoff).to_numpy()
-        # n of slots to predict
-        n = fhr[-1]
-        # fh = [1,2,3,....,n]
-        fhp = ForecastingHorizon(np.arange(1, n+1), is_relative=True)
-        # clip of X with datetime starting from cutoff+1 (clip is an array[bool])
-        clip = X.index > self.cutoff[0]
-        Xp = X
-        if not clip[0]: Xp = Xp[clip]
-        if len(Xp) > n: Xp = Xp[:n]
-        # prediction
-        y_pred = self.forecaster.predict(fh=fhp, X=Xp)
-        # selection of the required results: fh==1 -> y_pred[0]
-        return y_pred.iloc[fhr-1]
+    def predict(self, fh: ForecastingHorizon = None, X=None, y=None):
+        # [BUG]
+        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select
+        # the WRONG rows.
+        fh = fh.to_relative(self.forecaster.cutoff).to_numpy()
+        if X is not None:
+            n = len(X)
+        else:
+            n = fh[-1]
+        fhr = ForecastingHorizon(np.arange(1, n + 1))
+        y_pred = self.forecaster.predict(fh=fhr, X=X)
+        return y_pred.iloc[fh-1]
 
     # def fit_predict(self, y, X=None, fh=None):
     #     return self.forecaster.fit_predict(y=y, X=X, fh=fh)

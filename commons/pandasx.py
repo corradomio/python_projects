@@ -17,15 +17,15 @@ from math import isnan, sqrt
 # ---------------------------------------------------------------------------
 
 def read_arff(file, **args):
-    def _parse_bool(s, default=False):
+    def _tobool(s, default=False):
         if s is None:
             return default
         if type(s) == str:
-            assert type(s) == str
             s = s.lower()
-        if s in [1, "true", "on", "open", "1"]:
+        assert isinstance(s, (bool, str, int))
+        if s in [1, True, "true", "on", "open", "1"]:
             return True
-        if s in [0, "false", "off", "close", "0", ""]:
+        if s in [0, False, "false", "off", "close", "0", ""]:
             return False
         return default
 
@@ -40,7 +40,7 @@ def read_arff(file, **args):
     """:type: pd.DataFrame"""
 
     category = True if "category" not in args \
-        else _parse_bool(args.get("category"))
+        else _tobool(args.get("category"))
     """:type: bool"""
 
     if category:
@@ -90,12 +90,19 @@ def _pandas_dtype(columns, dtype) -> dict:
     return dt
 # end
 
+
+# ---------------------------------------------------------------------------
+# read_data
+# ---------------------------------------------------------------------------
+
 def read_data(file: str,
+              *,
+              dtype=None,
               categorical=[],
               boolean=[],
-              dtype=None,
               index=[],
               ignore=[],
+              onehot=[],
               datetime=None,
               count=False,
               dropna=True,
@@ -107,8 +114,8 @@ def read_data(file: str,
     Added the support for '.arff' file format
 
     :param file: file to read
-    :param categorical: list of categorical fields
-    :param boolean: list of boolean fields
+    :param categorical: list of categorical columns
+    :param boolean: list of boolean columns
     :param dtype: list of column types
     :param datetime: colum used as datetime. Formats:
                 None
@@ -116,7 +123,8 @@ def read_data(file: str,
                 (col, format): 'format' used to convert the string in datetime
                 (col, format, freq)
     :param index: column or list of columns to use as index
-    :params ignore: column or list of columns to ignore
+    :param ignore: column or list of columns to ignore
+    :param onehot: columns to convert using onehot encoding
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
     :param dict args: extra parameters passed to pd.read_xxx()
@@ -129,6 +137,7 @@ def read_data(file: str,
     assert isinstance(boolean, list), "'boolean' must be a list[str]"
     assert isinstance(index, list), "'index' must be a list[str]"
     assert isinstance(ignore, list), "'ignore' must be a list[str]"
+    assert isinstance(onehot, list), "'onehot' must be a list[str]"
     assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, list, tuple)"
     assert isinstance(count, bool), "'count' bool"
 
@@ -157,6 +166,9 @@ def read_data(file: str,
     else:
         raise TypeError("File extension unsupported: " + file)
 
+    if dropna:
+        df = df.dropna(how='any', axis=0)
+
     if dtype is not None:
         categorical, boolean = _parse_dtype(list(df.columns), dtype)
 
@@ -166,20 +178,20 @@ def read_data(file: str,
     for col in boolean:
         df[col] = df[col].astype(bool)
 
-    if count and 'count' not in df:
+    if count and 'count' not in df.columns:
         df['count'] = 1.
 
     if datetime is not None:
         df = datetime_encode(df, datetime)
+        
+    if len(onehot) > 0:
+        df = onehot_encode(df, onehot)
 
-    if index is not None:
+    if len(index) > 0:
         df = dataframe_index(df, index)
 
-    if ignore is not None:
+    if len(ignore) > 0:
         df = dataframe_ignore(df, ignore)
-
-    if dropna:
-        df = df.dropna(how='any', axis=0)
 
     print(f"... done ({df.shape})")
     return df
@@ -372,42 +384,47 @@ def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.Data
 # end
 
 
-def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[str, list[str]]) -> dict[tuple[str], pd.DataFrame]:
+def dataframe_split_on_groups(
+        df: pd.DataFrame,
+        groups: Union[None, str, list[str]],
+        drop=False) -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content area columns list
 
     :param df: DataFrame to split
-    :param area: list of columns to use during the split. The columns must be categorical
+    :param groups: list of columns to use during the split. The columns must be categorical
+    :param ignore: if to remove the 'groups' columns'
 
     :return: a list [((g1,...), gdf), ...]
     """
     assert isinstance(df, pd.DataFrame)
-    assert isinstance(groups, (str, list))
-    
+    assert isinstance(groups, (type(None), str, list))
+
     if isinstance(groups, str):
         groups = [groups]
+    elif groups is None:
+        groups = []
 
-    # 1) split the dataset recursively in columns in 'area'
-    dflist = [(tuple(), df)]
-    for group in groups:
-        split = []
-        unique = df[group].unique()
-        for value in unique:
-            for gid, gdata in dflist:
-                gid = gid + (value, )
-                gsel = gdata[gdata[group] == value]
+    if len(groups) == 0:
+        return {tuple(): df}
 
-                if len(gsel) > 0:
-                    split.append((gid, gsel))
-            # end
-        # end
-        dflist = split
+    dfdict: dict[tuple, pd.DataFrame] = {}
+
+    # Note: IF len(groups) == 1, Pandas return 'gname' in instead than '(gname,)'
+    # The library generates a FutureWarning !!!!
+    if len(groups) == 1:
+        for g, gdf in df.groupby(by=groups[0]):
+            dfdict[(g,)] = gdf
+    else:
+        for g, gdf in df.groupby(by=groups):
+            dfdict[g] = gdf
     # end
-
-    # 2) convert the list in a dictionary
-    dfdict: dict[tuple, DataFrame] = {}
-    for gvalues, df in dflist:
-        dfdict[gvalues] = df
+    
+    if drop:
+        for g in dfdict:
+            gdf = dfdict[g]
+            dfdict[g] = gdf[gdf.columns.difference(groups)]
+    # end
 
     return dfdict
 # end
@@ -507,11 +524,12 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
 
 def dataframe_index(df: pd.DataFrame,
                     index: Union[None, str, list[str]],
-                    inplace=False) -> pd.DataFrame:
+                    inplace=False,
+                    drop=False) -> pd.DataFrame:
     if inplace:
-        df.set_index(index, inplace=inplace)
+        df.set_index(index, inplace=inplace, drop=drop)
     else:
-        df = df.set_index(index, inplace=inplace)
+        df = df.set_index(index, inplace=inplace, drop=drop)
     return df
 # end
 
@@ -529,6 +547,7 @@ def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = 1) -> dict[tuple, pd
             dfdict[lv] = dflv
         # end
     return dfdict
+# end
 
 
 def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:

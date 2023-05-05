@@ -4,6 +4,11 @@ from typing import Union, Tuple, Optional
 from pandas import DataFrame, Series
 import category_encoders.utils as util
 
+
+# ---------------------------------------------------------------------------
+# _Encoder
+# ---------------------------------------------------------------------------
+
 class _Encoder:
 
     def fit(self, X: DataFrame, y: Union[None, DataFrame, Series]=None) -> "_Encoder":
