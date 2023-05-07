@@ -351,10 +351,11 @@ class LagTrainTransform:
                 yt[i] = y[s + i]
             # end
 
-        return Xt, yt.reshape((-1, 1))
+        return Xt, yt
 
     def fit_transform(self, y: np.ndarray, X: Optional[ndarray]):
         return self.fit(y, X).transform(y, X)
+# end
 
 
 class LagPredictTransform:
@@ -398,6 +399,13 @@ class LagPredictTransform:
         self._yp = y
         return self.prepare(at)
     # end
+
+    def fit_transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None):
+        return self.fit(X, y).transform(X, y, 0)
+
+    # -----------------------------------------------------------------------
+    # Implementation
+    # -----------------------------------------------------------------------
 
     def atx(self, index):
         return self._Xh[index] if index < 0 else self._Xp[index]

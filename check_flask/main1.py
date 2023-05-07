@@ -1,9 +1,15 @@
 from flask import Flask
-from flask_restful import Resource, Api
+from flask_restx import Resource, Api
+
+
+class ThisApp(Api):
+
+    def render_root(self):
+        return {'hello': 'world'}
 
 
 app = Flask(__name__)
-api = Api(app)
+api = ThisApp(app, doc="/api")
 
 
 class HelloWorld(Resource):

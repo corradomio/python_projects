@@ -1,4 +1,8 @@
+from typing import Union, Optional
+
 import numpy as np
+import pandas as pd
+from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose import make_reduction
 
@@ -11,6 +15,8 @@ from stdlib import import_from, dict_del, kwval
 
 SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
 SKTIME_NAMESPACES = ['sktime']
+
+FH_TYPES = Union[None, int, list[int], np.ndarray, ForecastingHorizon]
 
 
 # ---------------------------------------------------------------------------
@@ -61,23 +67,81 @@ class ScikitForecastRegressor:
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
+    # fit(y)        fit(y, X)
+    #
+    # predict(fh)
+    # predict(fh, X)        == predict(X)
+    # predict(fh, X, y)     == predict(X, y)
+    #                       == fit(y, X[:y]
+    #                          predict(fh, X[y:]
+    #
 
-    def fit(self, y, X=None, fh=None):
+    def fit(self, y, X=None, fh: FH_TYPES = None):
         self.forecaster.fit(y=y, X=X, fh=fh)
         return self
 
-    def predict(self, fh: ForecastingHorizon = None, X=None, y=None):
+    def predict(self,
+                fh: FH_TYPES = None,
+                X: Optional[pd.DataFrame] = None,
+                y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
+        fh = self._resolve_fh(y, X, fh)
+
         # [BUG]
-        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select
-        # the WRONG rows.
-        fh = fh.to_relative(self.forecaster.cutoff).to_numpy()
-        if X is not None:
-            n = len(X)
-        else:
-            n = fh[-1]
-        fhr = ForecastingHorizon(np.arange(1, n + 1))
-        y_pred = self.forecaster.predict(fh=fhr, X=X)
+        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+
+        Xp, yh, Xh = self._prepare_predict(X, y)
+
+        # retrain if yh (and Xh) are available
+        if yh is not None:
+            self.fit(y=yh, X=Xh)
+
+        n = fh[-1]
+        fhp = ForecastingHorizon(np.arange(1, n + 1))
+        y_pred = self.forecaster.predict(fh=fhp, X=Xp)
+
+        assert isinstance(y_pred, pd.DataFrame)
         return y_pred.iloc[fh-1]
+
+    def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
+        # (_, _, fh)        -> fh
+        # (X, None, None)   -> |X|
+        # (None, y, None)   -> error
+        # (X, y, None)      -> |X| - |y|
+
+        if fh is not None:
+            cutoff = self.cutoff if y is None else y.index[-1]
+            fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
+            return fh.to_relative(cutoff)
+        if y is None:
+            n = len(X)
+            return ForecastingHorizon(np.arange(1, n+1))
+        else:
+            n = len(X) - len(y)
+            return ForecastingHorizon(np.arange(1, n+1))
+    # end
+
+    def _prepare_predict(self, X, y):
+
+        if y is None:
+            return X, None, None
+        if X is None:
+            return None, y, None
+
+        n = len(y)
+        Xh = X[:n]
+        yh = y
+        Xp = X[n:]
+        return Xp, yh, Xh
+    # end
+
+    # def _update_fit(self, y, X):
+    #     if X is None or y is None or len(X) == len(y):
+    #         return
+    #
+    #     y_upd = y[y.index > self.cutoff]
+    #     X_upd = X[y.index]
+    #     self.forecaster.update(y=y_upd, X=X_upd)
+    # # end
 
     # def fit_predict(self, y, X=None, fh=None):
     #     return self.forecaster.fit_predict(y=y, X=X, fh=fh)
@@ -118,8 +182,34 @@ class ScikitForecastRegressor:
     #     return self
 
     # -----------------------------------------------------------------------
+    # score
+    # -----------------------------------------------------------------------
+
+    def score(self, y_true, X=None, fh=None) -> dict[str, float]:
+        y_pred = self.predict(fh=fh, X=X)
+        return {
+            'mape': mean_absolute_percentage_error(y_true, y_pred),
+            'r2': r2_score(y_true, y_pred)
+        }
+    # end
+
+    # -----------------------------------------------------------------------
     # Support
     # -----------------------------------------------------------------------
+
+    def set_scores(self, scores):
+        self._scores = scores
+
+    def get_scores(self):
+        return self._scores
+
+    # -----------------------------------------------------------------------
+
+    def get_state(self) -> bytes:
+        import pickle
+        state: bytes = pickle.dumps(self)
+        return state
+    # end
 
     def __repr__(self):
         return f"SklearnForecastRegressor[{self.forecaster}]"
