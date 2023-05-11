@@ -4,6 +4,7 @@ from typing import Union, Optional
 import numpy as np
 import pandas as pd
 import sktime.forecasting.base as skf
+from pandas import PeriodIndex
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from stdlib import import_from
@@ -112,7 +113,7 @@ class LinearForecastRegressor(BaseForecaster):
         model_class = import_from(class_name)
         self._model = model_class(**kwargs)
 
-        self._target = None
+        self._target = target
         self._X_history: Optional[np.ndarray] = None
         self._y_history: Optional[np.ndarray] = None
         self._cutoff: Optional[datetime] = None
@@ -128,6 +129,7 @@ class LinearForecastRegressor(BaseForecaster):
         params['lag'] = self._lag
         params['target'] = self._target
         return params
+    # end
 
     # -----------------------------------------------------------------------
     # fit
@@ -136,6 +138,7 @@ class LinearForecastRegressor(BaseForecaster):
     def fit(self, y, X=None, fh=None):
         self._save_target(y)
         return super().fit(y=y, X=X, fh=fh)
+    # end
 
     def _fit(self, y: pd.Series, X: Optional[pd.DataFrame] = None, fh: Optional[ForecastingHorizon] = None):
         slots = resolve_lag(self._lag)
@@ -172,6 +175,7 @@ class LinearForecastRegressor(BaseForecaster):
                 y: Union[None, pd.DataFrame, pd.Series] = None):
         fh = self._resolve_fh(y, X, fh)
         if y is None:
+            X = self._clip_on_cutoff(X)
             return super().predict(fh=fh, X=X)
         else:
             return self._predict(fh=fh, X=X, y=y)
@@ -192,6 +196,13 @@ class LinearForecastRegressor(BaseForecaster):
         else:
             n = len(X) - len(y)
             return ForecastingHorizon(np.arange(1, n+1))
+    # end
+
+    def _clip_on_cutoff(self, X):
+        cutoff = self._cutoff[0] if isinstance(self._cutoff, PeriodIndex) else self._cutoff
+        if X.index[0] <= cutoff:
+            X = X.loc[X.index > cutoff]
+        return X
     # end
 
     def _predict(self,

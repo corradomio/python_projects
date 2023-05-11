@@ -3,7 +3,7 @@ from typing import Union, Optional
 import numpy as np
 import pandas as pd
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
-from sktime.forecasting.base import ForecastingHorizon
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.forecasting.compose import make_reduction
 
 from stdlib import import_from, dict_del, kwval
@@ -23,7 +23,7 @@ FH_TYPES = Union[None, int, list[int], np.ndarray, ForecastingHorizon]
 # ScikitForecastRegressor
 # ---------------------------------------------------------------------------
 
-class ScikitForecastRegressor:
+class ScikitForecastRegressor(BaseForecaster):
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -32,6 +32,7 @@ class ScikitForecastRegressor:
     def __init__(self,
                  class_name: str,
                  **kwargs):
+        super().__init__()
 
         model_class = import_from(class_name)
 
@@ -43,10 +44,12 @@ class ScikitForecastRegressor:
             strategy = kwval(kwargs, 'strategy', 'recursive')
 
             kwargs = dict_del(kwargs, ['window_length', 'strategy'])
-
+            # create the regressor
             regressor = model_class(**kwargs)
+            # create the forecaster
             self.forecaster = make_reduction(regressor, window_length=window_length, strategy=strategy)
         elif ns in SKTIME_NAMESPACES:
+            # create the forecaster
             self.forecaster = model_class(**kwargs)
         else:
             raise ValueError(f"Unsupported class_name '{class_name}'")
@@ -56,13 +59,13 @@ class ScikitForecastRegressor:
     # Properties
     # -----------------------------------------------------------------------
 
-    @property
-    def cutoff(self):
-        return self.forecaster.cutoff
+    # @property
+    # def cutoff(self):
+    #     return self.forecaster.cutoff
 
-    @property
-    def fh(self):
-        return self.forecaster.fh
+    # @property
+    # def fh(self):
+    #     return self.forecaster.fh
 
     # -----------------------------------------------------------------------
     # Operations

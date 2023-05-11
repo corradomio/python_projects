@@ -28,7 +28,7 @@ def main_pred():
         dropna=False)
 
     dftt = dftt.loc[('ANIMAL FEED~ARGENTINA',)]
-
+    X, y = pdx.xy_split(dftt, target='import_aed')
     train, test = pdx.train_test_split(dftt, train_size=0.8)
 
     X_train, y_train, X_test, y_test = pdx.xy_split(train, test, target='import_aed')
@@ -44,6 +44,8 @@ def main_pred():
 
     lfr.fit(y=y_train, X=X_train)
     y_pred_1 = lfr.predict(fh=fh, X=X_test)
+    y_pred_2 = lfr.predict(fh=fh, X=X)
+    y_pred_3 = lfr.predict(fh=fh, X=X, y=y_train)
 
     # --
 
@@ -60,7 +62,7 @@ def main_pred():
     y_valid, y_nan = pdx.nan_split(y, target='import_aed')
     fh = ForecastingHorizon(y_nan.index, is_relative=False)
 
-    y_pred2 = lfr.predict(fh=fh, X=X, y=y_valid)
+    y_pred_4 = lfr.predict(fh=fh, X=X, y=y_valid)
 
     pass
 
