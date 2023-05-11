@@ -42,7 +42,7 @@ def json_load(path, decoder=JSONDecoderEx()):
     return data
 
 
-def json_save(path, data, encoder=JSONEncoderEx()):
+def json_save(data, path, encoder=JSONEncoderEx()):
     data = encoder.encode(data)
     with open(path, mode="w") as f:
         json.dump(data, f, indent=4, separators=(',', ': '))
