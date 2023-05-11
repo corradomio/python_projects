@@ -1,0 +1,6 @@
+*.zip
+*.ckpt
+lightning_logs
+*.parquet
+stallion
+examples

@@ -17,6 +17,21 @@ from math import isnan, sqrt
 # ---------------------------------------------------------------------------
 
 def read_arff(file, **args):
+    """
+    Read an ARFF file, a CSV like text file with format specified in
+
+        https://www.cs.waikato.ac.nz/~ml/weka/arff.html
+
+    based on the library
+
+        https://pythonhosted.org/liac-arff/
+        https://pypi.org/project/liac-arff/2.2.1/
+
+
+    :param file: file to load
+    :param args: arguments passed to 'liac-arff' library
+    :return:
+    """
     def _tobool(s, default=False):
         if s is None:
             return default
@@ -116,15 +131,27 @@ def read_data(file: str,
     :param file: file to read
     :param categorical: list of categorical columns
     :param boolean: list of boolean columns
-    :param dtype: list of column types
-    :param datetime: colum used as datetime. Formats:
+    :param dtype: list of column types. A column type can be:
+
+                - None: column skipped
+                - str: string
+                - int: integer
+                - float: float
+                - bool: boolean value in form 0/1, off/on, close/open/ f/t, false/true
+                    (case insensitive)
+                - enum: string used as enumeration
+                - ienum: integer value used as enumeration
+
+    :param datetime: column used as datetime. Formats:
                 None
                 col: column already in datetime format
                 (col, format): 'format' used to convert the string in datetime
-                (col, format, freq)
+                (col, format, freq): 'freq' used to convert a datetim in a perio
     :param index: column or list of columns to use as index
     :param ignore: column or list of columns to ignore
     :param onehot: columns to convert using onehot encoding
+    :param categorical: columns to convert in 'pandas.categorical' format
+    :param boolean: columns to convert in 'boolean' type
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
     :param dict args: extra parameters passed to pd.read_xxx()
@@ -204,7 +231,7 @@ def read_data(file: str,
 
 def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.DataFrame:
     """
-    Add some columns based on One-Hot encode
+    Add some columns based on pandas' One-Hot encoding (pd.get_dummies)
     :param pd.DataFrame data:
     :param list[str] columns: list of columns to convert
     :return pd.DataFrame: new dataframe
@@ -220,11 +247,23 @@ def datetime_encode(df: pd.DataFrame,
                     datetime: tuple[str], 
                     format: Optional[str] = None, 
                     freq: Optional[str] = None):
+    """
+    Convert a string column in datatime/period, based on pandas' to_datetime (pd.to_datetime)
+    :param df:
+    :param datetime:
+    :param format:
+    :param freq:
+    :return:
+    """
     assert isinstance(datetime, (str, list, tuple))
     assert isinstance(format, (type(None), str))
     assert isinstance(freq, (type(None), str))
     assert 1 < len(datetime) < 4
-    if len(datetime) == 2:
+    if isinstance(datetime, str):
+        pass
+    elif len(datetime) == 1:
+        pass
+    elif len(datetime) == 2:
         datetime, format = datetime
     else:
         datetime, format, freq = datetime
@@ -270,13 +309,12 @@ def datetime_encode(df: pd.DataFrame,
 
 def infer_freq(index, steps=5, ntries=3) -> str:
     """
-    Infer 'freq' checking randomly different positions
-    of the index
+    Infer 'freq' checking randomly different positions of the index
 
-    :param index:
-    :param steps:
-    :param ntries:
-    :return:
+    :param index: pandas' index to use
+    :param steps: number of success results
+    :param ntries: maximum number of retries if some check fails
+    :return: the inferred frequency
     """
     n = len(index)-steps
     freq = None
@@ -377,7 +415,15 @@ PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
 
 
 def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
-    if isinstance(ignore, str):
+    """
+    Remove a column or list of columns
+    :param df:
+    :param ignore:
+    :return:
+    """
+    if ignore is None:
+        ignore = []
+    elif isinstance(ignore, str):
         ignore = [ignore]
     assert isinstance(ignore, (list, tuple))
     return df[df.columns.difference(ignore)]
@@ -389,13 +435,16 @@ def dataframe_split_on_groups(
         groups: Union[None, str, list[str]],
         drop=False) -> dict[tuple[str], pd.DataFrame]:
     """
-    Split the dataframe based on the content area columns list
+    Split the dataframe based on the content of 'group' columns list.
+
+    If 'groups' is None or the empty list, it is returned a dictionary with key
+    the 'empty tuple' (a tuple of length zero)
 
     :param df: DataFrame to split
-    :param groups: list of columns to use during the split. The columns must be categorical
-    :param ignore: if to remove the 'groups' columns'
+    :param groups: list of columns to use during the split. The columns must be categorical or string
+    :param ignore: if to remove the 'groups' columns
 
-    :return: a list [((g1,...), gdf), ...]
+    :return dict[tuple[str], DataFrame]: a dictionary
     """
     assert isinstance(df, pd.DataFrame)
     assert isinstance(groups, (type(None), str, list))
@@ -435,7 +484,14 @@ def dataframe_merge_on_groups(dfdict: dict[tuple[str], pd.DataFrame],
                               sortby: Union[None, str, list[str]] = None) \
         -> pd.DataFrame:
     """
+    Recreate a df based on the content of 'dfdict' and the list of groups.
+    Note: the number of columns in 'groups' must be the same of the tuple's length.
 
+    The result dataframe can be reordered base on 'sortby' columns
+
+    :param dfdict: dictionary of dataframes
+    :param groups: columns used to save the values of the tuples
+    :param sortby: columns to use in the sort
     """
     assert isinstance(dfdict, dict)
     assert isinstance(groups, (str, list))
@@ -526,6 +582,15 @@ def dataframe_index(df: pd.DataFrame,
                     index: Union[None, str, list[str]],
                     inplace=False,
                     drop=False) -> pd.DataFrame:
+    """
+    Create a multiindex based on the list of columns
+
+    :param df: dataframe to process
+    :param index: column or list of columns to use in the index
+    :param inplace: if to apply the transformation inplace
+    :param drop: if to drop the columns
+    :return: the new dataframe
+    """
     if inplace:
         df.set_index(index, inplace=inplace, drop=drop)
     else:
@@ -534,7 +599,14 @@ def dataframe_index(df: pd.DataFrame,
 # end
 
 
-def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = 1) -> dict[tuple, pd.DataFrame]:
+def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = -1) -> dict[tuple, pd.DataFrame]:
+    """
+    Split the dataframe based on the first 'levels' values of the multiindex
+
+    :param df: dataframe to process
+    :param levels: n of multiidex levels to consider. Can be < 0
+    :return: a dictionary
+    """
     assert isinstance(df, (pd.DataFrame, pd.Series))
     assert isinstance(df.index, pd.MultiIndex)
     lvalues = multiindex_get_level_values(df.index, levels=levels)
@@ -551,6 +623,11 @@ def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = 1) -> dict[tuple, pd
 
 
 def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
+    """
+    Recreate a dataframe using the keys in the dictionary as multiindex
+    :param dfdict:
+    :return: the new dataframe
+    """
     dflist = []
     for lv in dfdict:
         dflv: pd.DataFrame = dfdict[lv]
@@ -598,7 +675,7 @@ def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
 def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]:
     """
     Split the df in train/test
-    If df has a MultiIndex, it is splitted each sub-dataframe based on the first [n-1]
+    If df has a MultiIndex, it is split each sub-dataframe based on the first [n-1]
     levels
     
     It is possible to specify 'train_size' or 'test_size', not both!
@@ -769,6 +846,7 @@ def partitions_split(*data_list : list[pd.DataFrame], partitions: Union[int, lis
     return parts_list
 # end
 
+
 def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], index, random) -> list[pd.DataFrame]:
     n = len(data)
     indices = list(range(n)) 
@@ -796,6 +874,14 @@ def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], inde
 # ---------------------------------------------------------------------------
 
 def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None) -> pd.DataFrame:
+    """
+    Convert a numpy array in a dataframe
+
+    :param data: numpy array
+    :param target:
+    :param index:
+    :return: 
+    """
     assert isinstance(data, np.ndarray)
     assert isinstance(target, (str, list))
     
