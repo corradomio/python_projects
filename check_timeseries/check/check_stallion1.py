@@ -8,7 +8,7 @@ from etime.scikit_model import ScikitForecastRegressor
 
 
 def main():
-    df = pdx.read_data('../stallion_all.csv', datetime=('date', '%Y-%m-%d'), index='date')
+    df = pdx.read_data('../data/stallion_all.csv', datetime=('date', '%Y-%m-%d'), index='date')
     df_groups = pdx.dataframe_split_on_groups(df, ['agency', 'sku'])
 
     for g in df_groups:

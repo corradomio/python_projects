@@ -20,7 +20,7 @@ def main_train():
 
 def main_pred():
     dftt = pdx.read_data(
-        "vw_food_import_aed_train_test.csv",
+        "../data/vw_food_import_aed_train_test.csv",
         datetime=("imp_date", "%Y-%m-%d", "M"),
         onehot=["imp_month"],
         index=["item_country", "imp_date"],
@@ -50,7 +50,7 @@ def main_pred():
     # --
 
     dfp = pdx.read_data(
-        "vw_food_import_aed_pred.csv",
+        "../data/vw_food_import_aed_pred.csv",
         datetime=("imp_date", "%Y-%m-%d", "M"),
         onehot=["imp_month"],
         index=["item_country", "imp_date"],

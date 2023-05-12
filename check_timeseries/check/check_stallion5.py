@@ -10,13 +10,13 @@ from etime.scikit_model import ScikitForecastRegressor
 
 
 def main():
-    df_all = pdx.read_data('./stallion_all.csv',
-                       datetime=('date', '%Y-%m-%d', 'M'),
-                       index=['agency', 'sku', 'date'],
-                       ignore=['agency', 'sku', 'date', 'timeseries'])
+    df_all = pdx.read_data('../data/stallion_all.csv',
+                           datetime=('date', '%Y-%m-%d', 'M'),
+                           index=['agency', 'sku', 'date'],
+                           ignore=['agency', 'sku', 'date', 'timeseries'])
 
     df: pd.DataFrame = df_all.loc[('Agency_22', 'SKU_01')]
-    df.to_csv("data.csv")
+    df.to_csv("../data.csv")
 
     df_train, df_test = pdx.train_test_split(df, train_size=0.8)
     X_train, y_train, X_test, y_test = pdx.xy_split(df_train, df_test, target='volume')

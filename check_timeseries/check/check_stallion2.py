@@ -13,7 +13,7 @@ def main():
     # d1 = pdx.dataframe_index(d1, index=['agency', 'sku', 'date'], inplace=True)
     # # df.to_period('M')
 
-    df = pdx.read_data('../stallion_all.csv', datetime=('date', '%Y-%m-%d', 'M'),
+    df = pdx.read_data('../data/stallion_all.csv', datetime=('date', '%Y-%m-%d', 'M'),
                        index=['agency', 'sku', 'date'],
                        ignore=['agency', 'sku', 'date', 'timeseries'])
 

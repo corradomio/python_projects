@@ -164,7 +164,8 @@ def read_data(file: str,
               onehot=[],
               datetime=None,
               count=False,
-              dropna=True,
+              dropna=False,
+              reindex=False,
               **kwargs) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -266,6 +267,9 @@ def read_data(file: str,
     if len(ignore) > 0:
         df = dataframe_ignore(df, ignore)
 
+    if reindex:
+        df = dataframe_datetime_reindex(df)
+
     print(f"... done ({df.shape})")
     return df
 # end
@@ -292,7 +296,7 @@ def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd
 def datetime_encode(df: pd.DataFrame,
                     datetime: tuple[str],
                     format: Optional[str] = None,
-                    freq: Optional[str] = None):
+                    freq: Optional[str] = None) -> pd.DataFrame:
     """
     Convert a string column in datatime/period, based on pandas' to_datetime (pd.to_datetime)
     :param df:
@@ -322,62 +326,14 @@ def datetime_encode(df: pd.DataFrame,
 # end
 
 
-# ---------------------------------------------------------------------------
-# Statistical infer_freq
-# ---------------------------------------------------------------------------
-# B         business day frequency
-# C         custom business day frequency
-# D         calendar day frequency
-# W         weekly frequency
-# M         month end frequency
-# SM        semi-month end frequency (15th and end of month)
-# BM        business month end frequency
-# CBM       custom business month end frequency
-# MS        month start frequency
-# SMS       semi-month start frequency (1st and 15th)
-# BMS       business month start frequency
-# CBMS      custom business month start frequency
-# Q         quarter end frequency
-# BQ        business quarter end frequency
-# QS        quarter start frequency
-# BQS       business quarter start frequency
-# A, Y      year end frequency
-# BA, BY    business year end frequency
-# AS, YS    year start frequency
-# BAS, BYS  business year start frequency
-# BH        business hour frequency
-# H         hourly frequency
-# T, min    minutely frequency
-# S         secondly frequency
-# L, ms     milliseconds
-# U, us     microseconds
-# N         nanoseconds
-
-def infer_freq(index, steps=5, ntries=3) -> str:
-    """
-    Infer 'freq' checking randomly different positions of the index
-
-    :param index: pandas' index to use
-    :param steps: number of success results
-    :param ntries: maximum number of retries if some check fails
-    :return: the inferred frequency
-    """
-    n = len(index) - steps
-    freq = None
-    itry = 0
-    while itry < ntries:
-        i = random.randrange(n)
-        tfreq = pd.infer_freq(index[i:i + steps])
-        if tfreq is None:
-            itry += 1
-        elif tfreq != freq:
-            freq = tfreq
-            itry = 0
-        else:
-            itry += 1
-    # end
-
-    return freq
+def dataframe_datetime_reindex(df: pd.DataFrame) -> pd.DataFrame:
+    start = df.index[0]
+    dtend = df.index[-1]
+    freq = start.freq
+    dtrange = pd.period_range(start, dtend+1, freq=freq)
+    df = df[~df.index.duplicated(keep='first')]
+    df = df.reindex(index= dtrange, method='pad')
+    return df
 # end
 
 
@@ -385,7 +341,7 @@ def infer_freq(index, steps=5, ntries=3) -> str:
 # Series argmax
 # ---------------------------------------------------------------------------
 
-def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str, int]):
+def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str, int]) -> float:
     """
     Let df a dataframe, search the row in 'argmax_col' with the highest value
     then extract from 'col' the related value
@@ -403,7 +359,7 @@ def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str,
 # end
 
 
-def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str, int]):
+def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str, int]) -> float:
     """
     Let df a dataframe, search the row in 'argmin_col' with the lowest value
     then extract from 'col' the related value
@@ -476,10 +432,10 @@ def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.Data
 # end
 
 
-def dataframe_split_on_groups(
-        df: pd.DataFrame,
+def dataframe_split_on_groups(df: pd.DataFrame,
         groups: Union[None, str, list[str]],
-        drop=False) -> dict[tuple[str], pd.DataFrame]:
+                              drop=False) \
+    -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list.
 
@@ -596,7 +552,8 @@ def dataframe_split_on_columns(df: pd.DataFrame,
 # Dataframe index utilities
 # ---------------------------------------------------------------------------
 
-def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) -> list[tuple]:
+def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) \
+    -> list[tuple]:
     """
     Retrieve the multi level values
     :param mi: multi index or a DataFrame/Series with multi index
@@ -771,6 +728,33 @@ def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]
     # end
     return tt_list
 # end
+
+
+def nan_split(*data_list, 
+              excluding: Union[None, str, list[str]]=None,
+              columns: Union[None, str, list[str]]=None) -> list[PANDAS_TYPE]:
+    if isinstance(excluding, str):
+        excluding = [excluding]
+    if isinstance(columns, str):
+        columns = [columns]
+
+    vi_list = []
+
+    for data in data_list:
+        if excluding is not None:
+            columns = data.columns.difference(excluding)
+        if columns is None:
+            columns = data.columns
+            
+        invalid_rows = data[columns].isnull().any(axis=1)
+        invalid = data.loc[invalid_rows]
+        valid = data.loc[data.index.difference(invalid.index)]
+
+        vi_list += [valid, invalid]
+    # end
+    return vi_list
+# end
+
 
 
 # ---------------------------------------------------------------------------
