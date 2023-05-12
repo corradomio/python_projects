@@ -701,20 +701,19 @@ def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
     :param target: target column name
     :return: list of splitte df
     """
-    assert isinstance(target, (str, list))
-    Xy_list = []
+    if isinstance(target, str):
+        target = [target]
+
+    assert isinstance(target, list)
+
+    xy_list = []
     for data in data_list:
         assert isinstance(data, pd.DataFrame)
-        if isinstance(target, str):
-            X = data[data.columns.difference([target])]
-            y = data[[target]]
-            Xy_list += [X, y]
-        else:
-            X = data[data.columns.difference(target)]
-            Y = data[[target]]
-            Xy_list += [X, y]
+        X = data[data.columns.difference(target)]
+        y = data[target]
+        xy_list += [X, y]
     # end
-    return Xy_list
+    return xy_list
 # end
 
 
