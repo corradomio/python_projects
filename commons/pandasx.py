@@ -144,7 +144,7 @@ def _to_url_select(url: str):
 def read_database(url: str, dtype, **kwargs):
     url, sql = _to_url_select(url)
     from sqlalchemy import create_engine
-    engine = create_engine(dburl)
+    engine = create_engine(url)
     with engine.connect() as con:
         df = pd.read_sql(sql=sql, con=con, params=kwargs)
     return df
