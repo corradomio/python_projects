@@ -12,7 +12,7 @@ from etime.scikit_model import ScikitForecastRegressor
 def main():
     df_all = pdx.read_data('./stallion_all.csv',
                        datetime=('date', '%Y-%m-%d', 'M'),
-                       index=[ 'agency', 'sku', 'date'],
+                       index=['agency', 'sku', 'date'],
                        ignore=['agency', 'sku', 'date', 'timeseries'])
 
     df: pd.DataFrame = df_all.loc[('Agency_22', 'SKU_01')]

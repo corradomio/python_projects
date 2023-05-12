@@ -6,14 +6,15 @@ import arff
 import pandas as pd
 import numpy as np
 import warnings
+import random
 
 from typing import List, AnyStr, Union, Optional
 from math import isnan, sqrt
+from random import random
 
 
 # ---------------------------------------------------------------------------
 # read_arff
-# read_data
 # ---------------------------------------------------------------------------
 
 def read_arff(file, **args):
@@ -105,6 +106,49 @@ def _pandas_dtype(columns, dtype) -> dict:
     return dt
 # end
 
+# ---------------------------------------------------------------------------
+# read_database
+# ---------------------------------------------------------------------------
+# protocol://host:port/database?table=...
+# protocol://host:port/database?sql=...
+# protocol://host:port/database/table
+
+def _to_url_select(url: str):
+    p = url.find('?')
+    if p == -1:
+        # .../table
+        p = url.rfind('/')
+        table = url[p + 1:]
+        url = url[0:p]
+        return url, f'select * from {table}'
+
+    # ...?table=...
+    # ...?sql=select ...
+    what = url[p + 1:].strip()
+    url = url[0:p]
+    if what.startswith('table='):
+        what = what[6:]
+    elif what.startswith('sql='):
+        what = what[4:]
+    else:
+        raise ValueError(f'Invalid url {url}')
+    p = what.find(' ')
+    # what: table
+    # what: 'select ....'
+    if p == -1:
+        return url, f'select * from {what}'
+    else:
+        return url, what
+
+
+def read_database(url: str, dtype, **kwargs):
+    url, sql = _to_url_select(url)
+    from sqlalchemy import create_engine
+    engine = create_engine(dburl)
+    with engine.connect() as con:
+        df = pd.read_sql(sql=sql, con=con, params=kwargs)
+    return df
+
 
 # ---------------------------------------------------------------------------
 # read_data
@@ -121,7 +165,7 @@ def read_data(file: str,
               datetime=None,
               count=False,
               dropna=True,
-              **args) -> pd.DataFrame:
+              **kwargs) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -154,7 +198,7 @@ def read_data(file: str,
     :param boolean: columns to convert in 'boolean' type
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
-    :param dict args: extra parameters passed to pd.read_xxx()
+    :param dict kwargs: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
     # if file is None:
@@ -177,19 +221,21 @@ def read_data(file: str,
     print("Loading {} ...".format(file))
 
     if file.endswith(".csv"):
-        df = pd.read_csv(file, dtype=dt, **args)
+        df = pd.read_csv(file, dtype=dt, **kwargs)
     elif file.endswith(".json"):
-        df = pd.read_json(file, dtype=dt, **args)
+        df = pd.read_json(file, dtype=dt, **kwargs)
     elif file.endswith(".html"):
-        df = pd.read_html(file, dtype=dt, **args)
+        df = pd.read_html(file, dtype=dt, **kwargs)
     elif file.endswith(".xls"):
-        df = pd.read_excel(file, dtype=dt, **args)
+        df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".xlsx"):
-        df = pd.read_excel(file, dtype=dt, **args)
+        df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
-        df = pd.read_hdf(file, dtype=dt, **args)
+        df = pd.read_hdf(file, dtype=dt, **kwargs)
     elif file.endswith(".arff"):
-        df = read_arff(file, dtype=dt, **args)
+        df = read_arff(file, dtype=dt, **kwargs)
+    elif "://" in file:
+        df = read_database(file, dtype=dt, **kwargs)
     else:
         raise TypeError("File extension unsupported: " + file)
 
@@ -229,7 +275,7 @@ def read_data(file: str,
 # One hot encoding
 # ---------------------------------------------------------------------------
 
-def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.DataFrame:
+def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
     """
     Add some columns based on pandas' One-Hot encoding (pd.get_dummies)
     :param pd.DataFrame data:
@@ -243,9 +289,9 @@ def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]]=[]) -> pd.D
 # end
 
 
-def datetime_encode(df: pd.DataFrame, 
-                    datetime: tuple[str], 
-                    format: Optional[str] = None, 
+def datetime_encode(df: pd.DataFrame,
+                    datetime: tuple[str],
+                    format: Optional[str] = None,
                     freq: Optional[str] = None):
     """
     Convert a string column in datatime/period, based on pandas' to_datetime (pd.to_datetime)
@@ -267,7 +313,7 @@ def datetime_encode(df: pd.DataFrame,
         datetime, format = datetime
     else:
         datetime, format, freq = datetime
-    
+
     if format is not None:
         df[datetime] = pd.to_datetime(df[datetime], format=format)
     if freq is not None:
@@ -316,12 +362,12 @@ def infer_freq(index, steps=5, ntries=3) -> str:
     :param ntries: maximum number of retries if some check fails
     :return: the inferred frequency
     """
-    n = len(index)-steps
+    n = len(index) - steps
     freq = None
     itry = 0
     while itry < ntries:
         i = random.randrange(n)
-        tfreq = pd.infer_freq(index[i:i+steps])
+        tfreq = pd.infer_freq(index[i:i + steps])
         if tfreq is None:
             itry += 1
         elif tfreq != freq:
@@ -343,11 +389,11 @@ def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str,
     """
     Let df a dataframe, search the row in 'argmax_col' with the highest value
     then extract from 'col' the related value
-    
-    :param df: database 
+
+    :param df: database
     :param col: columns where to extract the value
     :param argmax_col: column where to search the maximum value
-    :return: 
+    :return:
     """
     s = df[argmax_col]
     at = s.argmax()
@@ -362,12 +408,12 @@ def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str,
     Let df a dataframe, search the row in 'argmin_col' with the lowest value
     then extract from 'col' the related value
 
-    :param df: database 
+    :param df: database
     :param col: columns where to extract the value
     :param argmin_col: column where to search the minimum value
-    :return: 
+    :return:
     """
-    s = df[argmax_col]
+    s = df[argmin_col]
     at = s.argmin()
     key = s.index[at]
     val = df[col][key]
@@ -378,8 +424,8 @@ def series_argmin(df: pd.DataFrame, col: Union[str, int], argmin_col: Union[str,
 def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
     """
     Retrieve the unique values in the column
-    
-    :param df: dataframe 
+
+    :param df: dataframe
     :param col: colum where to extract the values
     :return: a ndarray with values ordered
     """
@@ -390,7 +436,7 @@ def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
 # end
 
 
-def series_range(df: pd.DataFrame, col: Union[str, int], dx: float=0) -> tuple:
+def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple:
     """
     Retrieve the values range in the column
 
@@ -532,7 +578,7 @@ def dataframe_split_on_columns(df: pd.DataFrame,
         ignore = []
     elif isinstance(ignore, str):
         ignore = [ignore]
-        
+
     if columns is None:
         columns = list(df.columns.difference(ignore))
     elif isinstance(columns, str):
@@ -650,7 +696,7 @@ def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
     """
     Split the df in 'data_list' in X, y
-    
+
     :param data_list: df list
     :param target: target column name
     :return: list of splitte df
@@ -733,7 +779,6 @@ def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]
 # ---------------------------------------------------------------------------
 
 def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
-
     def float_(x):
         x = float(x)
         # return 0. if isnan(x) else x
@@ -747,12 +792,12 @@ def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
     total = df['count'].count()
 
     # group count
-    gcount = df[select + ['count']].groupby(select).count()/total
+    gcount = df[select + ['count']].groupby(select).count() / total
 
     # single count
     scount = dict()
     for c in select:
-        scount[c] = df[[c] + ['count']].groupby([c]).count()/total
+        scount[c] = df[[c] + ['count']].groupby([c]).count() / total
 
     index = gcount.index
     cvalues = []
@@ -771,7 +816,7 @@ def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
         cvalue = gvalue - sproduct
         cvalues.append(cvalue)
 
-        lvalue = gvalue/sproduct if sproduct != 0. else 0.
+        lvalue = gvalue / sproduct if sproduct != 0. else 0.
         lvalues.append(lvalue)
     # end
     return index, cvalues, lvalues
@@ -810,7 +855,7 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
     if 'count' not in df:
         df['count'] = 1.
     total = df['count'].count()
-    gcount = df[select + ['count']].groupby(select).count()/total
+    gcount = df[select + ['count']].groupby(select).count() / total
 
     return gcount
 # end
@@ -823,19 +868,19 @@ def prob(df: pd.DataFrame, select: list) -> pd.Series:
 
 def partition_lengths(n: int, quota: Union[int, list[int]]) -> list[int]:
     if isinstance(quota, int):
-        quota = [1]*quota
+        quota = [1] * quota
     k = len(quota)
     tot = sum(quota)
     lengths = []
-    for i in range(k-1):
-        l = int(n*quota[i]/tot + 0.6)
+    for i in range(k - 1):
+        l = int(n * quota[i] / tot + 0.6)
         lengths.append(l)
     lengths.append(n - sum(lengths))
     return lengths
 # end
 
 
-def partitions_split(*data_list : list[pd.DataFrame], partitions: Union[int, list[int]]=1, index=None, random=False) \
+def partitions_split(*data_list: list[pd.DataFrame], partitions: Union[int, list[int]] = 1, index=None, random=False) \
         -> list[Union[pd.DataFrame, pd.Series]]:
     parts_list = []
     for data in data_list:
@@ -849,7 +894,7 @@ def partitions_split(*data_list : list[pd.DataFrame], partitions: Union[int, lis
 
 def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], index, random) -> list[pd.DataFrame]:
     n = len(data)
-    indices = list(range(n)) 
+    indices = list(range(n))
     plengths = partition_lengths(n, partitions)
     pn = len(plengths)
     s = 0
@@ -880,11 +925,11 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
     :param data: numpy array
     :param target:
     :param index:
-    :return: 
+    :return:
     """
     assert isinstance(data, np.ndarray)
     assert isinstance(target, (str, list))
-    
+
     n, c = data.shape
     if isinstance(target, (tuple, list)):
         pass
@@ -892,7 +937,7 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
         columns = [target]
     else:
         columns = [f'{target}_{i}' for i in range(c)]
-    
+
     df = pd.DataFrame(data, columns=columns, index=index)
     return df
 # end
@@ -918,11 +963,11 @@ def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=No
         target = 'pred_qual'
 
     n, c = pred_proba.shape
-    t = sqrt(c)/c
+    t = sqrt(c) / c
     # create the result data structure
     cq = pd.DataFrame({}, index=pred_proba.index)
     # classification quality
-    cq[target] = (np.linalg.norm(pred_proba.values, axis=1) - t)/(1 - t)
+    cq[target] = (np.linalg.norm(pred_proba.values, axis=1) - t) / (1 - t)
     # assign the original prediction indices
     # cq['origin'] = range(n)
     # order the classification qualities in desc order
