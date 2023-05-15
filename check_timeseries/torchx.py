@@ -62,6 +62,35 @@ def create_layer(layer_config: Union[str, list, tuple, dict]):
 
 
 # ---------------------------------------------------------------------------
+# ConfigurableModule
+# ---------------------------------------------------------------------------
+
+class ConfigurableModule(nn.Module):
+
+    def __init__(self, layers):
+        super().__init__()
+        assert isinstance(layers, list)
+        self.layers_config = layers
+        self._create_layers()
+    # end
+
+    def _create_layers(self):
+        layers = []
+        for layer_config in self.layers_config:
+            layer = create_layer(layer_config)
+            layers.append(layer)
+
+        self.model = nn.Sequential(*layers)
+    # end
+
+    def forward(self, input):
+        output = self.model.forward(input)
+        return output
+
+# end
+
+
+# ---------------------------------------------------------------------------
 # PowerModule
 # ---------------------------------------------------------------------------
 
