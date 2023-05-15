@@ -3,14 +3,12 @@ from typing import Union, Optional
 
 import numpy as np
 import pandas as pd
-import sktime.forecasting.base as skf
 from pandas import PeriodIndex
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from stdlib import import_from
 
 from .lag import resolve_lag, LagTrainTransform, LagPredictTransform
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -99,6 +97,8 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
     # Constructor
     # -----------------------------------------------------------------------
+    # 'target' is not necessary in 'theory', but it is useful to create a
+    # predictions dataframe where we need the name of the 'target' column
 
     def __init__(self,
                  class_name: str,
@@ -347,7 +347,6 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
     # End
     # -----------------------------------------------------------------------
-
 # end
 
 
