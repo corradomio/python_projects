@@ -18,8 +18,7 @@ def main2():
                        datetime=('date_time', '%Y-%m-%d %H:%M:%S', 'H'),
                        index=['date_time'],
                        ignore=['date_time', 'holiday', 'weather_main', 'weather_description'],
-                       reindex=True
-                       )
+                       reindex=True)
 
     df = pdxt.dataframe_periodic(df, freq='D', columns=['cos', 'sin'], method='cossin', datetime=None)
 
