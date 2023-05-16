@@ -102,6 +102,11 @@ def create_optimizer(module: nn.Module, optimizer_config: Union[None, str, list,
 
 
 def create_loss_function(module: nn.Module, loss_config: Union[None, str, list, tuple, dict]) -> torch.nn.modules.loss._Loss:
+    if loss_config is None:
+        loss_config = {
+            LOSS: "nn.MSELoss"
+        }
+
     loss_config = _normalize_config(loss_config, LOSS)
     loss_class_name = _normalize_class_name(loss_config, LOSS, NS="nn")
     loss_params = _class_params(loss_config, LOSS)
@@ -123,7 +128,10 @@ class NumpyDataset(TensorDataset):
     def __init__(self, X, y):
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
-        super().__init__(torch.tensor(X), torch.tensor(y))
+        super().__init__(
+            torch.from_numpy(X).type(torch.float),
+            torch.from_numpy(y).type(torch.float)
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -132,13 +140,14 @@ class NumpyDataset(TensorDataset):
 
 class LossHistory:
     def __init__(self):
-        self.mode = None
         self._train_loss = 0.
         self._valid_loss = 0.
         self.train_history = []
-        self.validation_histry = []
+        self.validation_history = []
+        self.iepoch = 0
 
     def start_epoch(self):
+        self.iepoch += 1
         self._train_loss = 0.
         self._valid_loss = 0.
 
@@ -153,10 +162,18 @@ class LossHistory:
     def validation_loss(self, loss):
         self._valid_loss += loss.item()
 
-    def end_validation(self, n):
-        valid_loss = self._valid_loss / n if n > 0 else 0
-        self.validation_histry.append(valid_loss)
+    def end_epoch(self, n=0):
+        if n > 0:
+            valid_loss = self._valid_loss / n
+            self.validation_history.append(valid_loss)
+        if self.iepoch %100 > 0:
+            return
+        if len(self.validation_history) > 0:
+            print(f"[{self.iepoch}] train_loss={self.train_history[-1]}, val_loss={self.validation_history[-1]}")
+        else:
+            print(f"[{self.iepoch}] train_loss={self.train_history[-1]}")
     # end
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -244,20 +261,21 @@ class ConfigurableModule(nn.Module):
             dl_val = None
 
         for epoch in range(epochs):
-            train_loss, valid_loss = 0.0, 0.0
-
             self.train()
+            lh.start_epoch()
             for x, y_true in dl_train:
-                self.optimizer.zero_grad()
                 y_pred = self(x)
                 loss = self._loss(y_pred, y_true)
                 lh.train_loss(loss)
+
+                self._optimizer.zero_grad()
                 loss.backward()
                 self._optimizer.step()
             # end
             lh.end_train(len(dl_train))
 
             if dl_val is None:
+                lh.end_epoch()
                 continue
 
             for x, y_val in dl_val:
@@ -266,10 +284,19 @@ class ConfigurableModule(nn.Module):
                     error = self._loss(y_pred, y_val)
                     lh.validation_loss(error)
             # end
-            lh.end_validation(len(dl_val))
+
+            lh.end_epoch(len(dl_val))
         # end
         self.lh = lh
         return self
+    # end
+
+    def predict(self, X):
+        X = torch.from_numpy(X).type(torch.float)
+        self.eval()
+        with torch.no_grad():
+            y_pred: torch.Tensor = self(X)
+        return y_pred.numpy()
     # end
 
 # end

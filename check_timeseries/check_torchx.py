@@ -1,6 +1,8 @@
+import numpy as np
 import pandas as pd
 import pandasx as pdx
 import torch
+from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader, random_split
 
@@ -83,7 +85,7 @@ def prepare_data():
     testloader = DataLoader(test_ds, batch_size=BATCH_SIZE, shuffle=True, drop_last=True)
 
 
-def main():
+def main1():
 
     input_size = 1
     output_size = 1
@@ -142,6 +144,37 @@ def main():
 
 
     pass
+
+
+def main():
+    cm = ConfigurableModule(
+        layers=[
+            {
+                'layer': 'torch.nn.Linear',
+                'in_features': 1,
+                'out_features': 1,
+                'bias': True
+            },
+        ]
+    )
+
+    cm.compile()
+
+    x = np.arange(0, 2*np.pi, .01, dtype=float).reshape((-1,1))
+    y = 1 + 2*x
+
+    # l = torch.nn.Linear(in_features=1, out_features=1)
+    # y_pred = l(torch.from_numpy(x).type(torch.float32))
+
+    cm.fit(x, y, batch_size=5, epochs=500)
+
+    y_pred = cm.predict(x)
+
+    plt.plot(x, y)
+    plt.plot(x, y_pred)
+    plt.show()
+    pass
+
 
 
 if __name__ == "__main__":
