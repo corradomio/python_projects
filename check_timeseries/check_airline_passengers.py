@@ -25,7 +25,9 @@ def create_dataset(dataset, lookback):
         y.append(target)
     X = np.array(X)
     y = np.array(y)
-    return torch.tensor(X), torch.tensor(y)
+    X = torch.tensor(X)
+    y = torch.tensor(y)
+    return X, y
 
 
 # https://machinelearningmastery.com/lstm-for-time-series-prediction-in-pytorch/
@@ -76,6 +78,7 @@ class AirModel(nn.Module):
 
 # https://towardsdatascience.com/time-series-forecasting-with-deep-learning-in-pytorch-lstm-rnn-1ba339885f0c
 class LSTMForecaster(nn.Module):
+
     def __init__(self, n_features=1, n_hidden=50, n_outputs=1, sequence_len=1, n_lstm_layers=1, n_deep_layers=10,
                  dropout=0.2,
                  use_cuda=False):
@@ -148,8 +151,11 @@ class LSTMForecaster(nn.Module):
     def compile(self, lr=4e-4):
         self.criterion = nn.MSELoss()
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=lr)
+    # end
 
-    def train_(self, trainloader, X_train, y_train, X_test, y_test, n_epochs=2000):
+    def train_(self, trainloader, testloader, n_epochs=2000):
+        device = torch.device('cpu')
+
         model = self
         optimizer = self.optimizer
         criterion = self.criterion
@@ -190,7 +196,17 @@ class LSTMForecaster(nn.Module):
             v_losses.append(valid_loss)
 
             print(f'{epoch} - train: {epoch_loss}, valid: {valid_loss}')
-        plot_losses(t_losses, v_losses)
+        # plot_losses(t_losses, v_losses)
+        return t_losses, v_losses
+    # end
+
+    def predict(self, X):
+        model = self
+        with torch.no_grad():
+            y_pred = model(X)
+        return y_pred
+    # end
+# end
 
 
 def model_train(X_train, y_train, X_test, y_test, n_epochs=2000, lookback=1):
@@ -265,11 +281,11 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    timeseries = df[["#Passengers"]].values.astype('float32')
+    timeseries: np.ndarray = df[["#Passengers"]].values.astype('float32')
 
     df_train, df_test = pdx.train_test_split(df, train_size=0.67)
-    np_train = df_train.to_numpy().astype('float32')
-    np_test = df_test.to_numpy().astype('float32')
+    np_train: np.ndarray = df_train.to_numpy().astype('float32')
+    np_test: np.ndarray = df_test.to_numpy().astype('float32')
 
     for lookback in [3, 1, 3, 4, 12]:
         # lookback = 12
