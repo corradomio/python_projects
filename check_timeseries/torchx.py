@@ -2,6 +2,8 @@ from typing import Union, Optional
 
 import torch
 import torch.nn as nn
+from torch.utils.data import TensorDataset
+from torch.utils.data.dataloader import Dataset, DataLoader, IterableDataset
 import numpy as np
 from stdlib import import_from
 
@@ -113,37 +115,87 @@ def create_loss_function(module: nn.Module, loss_config: Union[None, str, list, 
 
 
 # ---------------------------------------------------------------------------
+# NumpyDataset
+# ---------------------------------------------------------------------------
+
+class NumpyDataset(TensorDataset):
+
+    def __init__(self, X, y):
+        assert isinstance(X, np.ndarray)
+        assert isinstance(y, np.ndarray)
+        super().__init__(torch.tensor(X), torch.tensor(y))
+
+
+# ---------------------------------------------------------------------------
+# LossHistory
+# ---------------------------------------------------------------------------
+
+class LossHistory:
+    def __init__(self):
+        self.mode = None
+        self._train_loss = 0.
+        self._valid_loss = 0.
+        self.train_history = []
+        self.validation_histry = []
+
+    def start_epoch(self):
+        self._train_loss = 0.
+        self._valid_loss = 0.
+
+    def train_loss(self, loss):
+        self._train_loss += loss.item()
+        pass
+
+    def end_train(self, n):
+        epoch_loss = self._train_loss / n if n > 0 else 0
+        self.train_history.append(epoch_loss)
+
+    def validation_loss(self, loss):
+        self._valid_loss += loss.item()
+
+    def end_validation(self, n):
+        valid_loss = self._valid_loss / n if n > 0 else 0
+        self.validation_histry.append(valid_loss)
+    # end
+
+
+# ---------------------------------------------------------------------------
 # compose_data
 # ---------------------------------------------------------------------------
 
-def compose_data(y: np.ndarray, X: Optional[np.ndarray], slots: Union[int, list[int]]) \
-    -> tuple[np.ndarray, np.ndarray]:
+def compose_data(y: np.ndarray, X: Optional[np.ndarray],
+                 slots: Union[int, list[int]] = 1,
+                 forecast: Union[int, list[int]] = 1) -> tuple[np.ndarray, np.ndarray]:
 
     if isinstance(slots, int):
         slots = list(range(1, slots+1))
+    if isinstance(forecast, int):
+        forecast = list(range(forecast))
 
     n = len(y)
     m = 0 if X is None else X.shape[1]
     s = max(slots)
+    t = max(forecast)
     ls = len(slots)
-    r = n-s
+    lf = len(forecast)
+    r = n-s-t
 
-    Xt: np.ndarray = np.zeros((n-s, ls, (m+1)))
-    yt: np.ndarray = np.zeros(n-s)
+    Xt: np.ndarray = np.zeros((r, ls, (m+1)))
+    yt: np.ndarray = np.zeros((r, lf))
     rslots = list(reversed(slots))
 
     for i in range(r):
         for j in range(ls):
             c = rslots[j]
             if X is not None:
-                Xt[i, j, 0:m] = X[s+i+j-c]
-            Xt[i, j, m:m+1] = y[s+i+j-c]
-        yt[i] = y[s+i+1]
-
-
+                Xt[i, j, 0:m] = X[s+i-c]
+            Xt[i, j, m:m+1] = y[s+i-c]
+        for j in range(lf):
+            c = forecast[j]
+            yt[i, j] = y[s+i+c]
 
     return Xt, yt
-
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +209,7 @@ class ConfigurableModule(nn.Module):
         assert isinstance(layers, list)
         self.layers_config = layers
         self._create_layers(**kwargs)
+        self.lh: LossHistory = LossHistory()
     # end
 
     def _create_layers(self, **kwargs):
@@ -176,6 +229,47 @@ class ConfigurableModule(nn.Module):
     def compile(self, optimizer=None, loss=None):
         self._optimizer = create_optimizer(self, optimizer)
         self._loss = create_loss_function(self, loss)
+    # end
+
+    def fit(self, y, X, batch_size=1, epochs=1, val=None):
+        lh: LossHistory = LossHistory()
+
+        ds_train = NumpyDataset(X, y)
+        dl_train = DataLoader(ds_train, batch_size=batch_size, shuffle=True)
+        if val is not None:
+            X_val, y_val = val
+            ds_val = NumpyDataset(X_val, y_val)
+            dl_val = DataLoader(ds_val, batch_size=batch_size, shuffle=True)
+        else:
+            dl_val = None
+
+        for epoch in range(epochs):
+            train_loss, valid_loss = 0.0, 0.0
+
+            self.train()
+            for x, y_true in dl_train:
+                self.optimizer.zero_grad()
+                y_pred = self(x)
+                loss = self._loss(y_pred, y_true)
+                lh.train_loss(loss)
+                loss.backward()
+                self._optimizer.step()
+            # end
+            lh.end_train(len(dl_train))
+
+            if dl_val is None:
+                continue
+
+            for x, y_val in dl_val:
+                with torch.no_grad():
+                    y_pred = self(x)
+                    error = self._loss(y_pred, y_val)
+                    lh.validation_loss(error)
+            # end
+            lh.end_validation(len(dl_val))
+        # end
+        self.lh = lh
+        return self
     # end
 
 # end
