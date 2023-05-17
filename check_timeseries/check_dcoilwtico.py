@@ -52,7 +52,14 @@ class SequenceDataset(Dataset):
 
 class LSTMForecaster(nn.Module):
 
-    def __init__(self, n_features, n_hidden, n_outputs, sequence_len, n_lstm_layers=1, n_deep_layers=10, use_cuda=False,
+    def __init__(self,
+                 n_features,
+                 n_hidden,
+                 n_outputs,
+                 sequence_len,
+                 n_lstm_layers=1,
+                 n_deep_layers=10,
+                 use_cuda=False,
                  dropout=0.2):
         '''
         n_features: number of input features (1 for univariate forecasting)
@@ -110,8 +117,9 @@ class LSTMForecaster(nn.Module):
         self.hidden = (hidden_state, cell_state)
 
         # Forward Pass
-        x, h = self.lstm(x, self.hidden)  # LSTM
-        x = self.dropout(x.contiguous().view(x.shape[0], -1))  # Flatten lstm out
+        x, h = self.lstm(x, self.hidden)
+        x = x.contiguous().view(x.shape[0], -1)
+        x = self.dropout(x)  # Flatten lstm out
         x = self.fc1(x)  # First Dense
         return self.dnn(x)  # Pass forward through fully connected DNN.
 
@@ -151,16 +159,19 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    # Fit scalers
-    scalers: dict[str, StandardScaler] = {}
-    for c in df.columns:
-        scalers[c] = StandardScaler().fit(df[c].values.reshape(-1, 1))
+    # # Fit scalers
+    # scalers: dict[str, StandardScaler] = {}
+    # for c in df.columns:
+    #     scalers[c] = StandardScaler().fit(df[c].values.reshape(-1, 1))
+    #
+    # # Transform data via scalers
+    # norm_df = df.copy()
+    # for i, key in enumerate(scalers.keys()):
+    #     norm = scalers[key].transform(norm_df.iloc[:, i].values.reshape(-1, 1))
+    #     norm_df.iloc[:, i] = norm
 
-    # Transform data via scalers
+    # NO scaling
     norm_df = df.copy()
-    for i, key in enumerate(scalers.keys()):
-        norm = scalers[key].transform(norm_df.iloc[:, i].values.reshape(-1, 1))
-        norm_df.iloc[:, i] = norm
 
     # Here we are defining properties for our model
 

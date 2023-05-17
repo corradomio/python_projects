@@ -26,16 +26,10 @@ from typing import Union, Optional
 
 import numpy as np
 import pandas as pd
-import sktime.forecasting.base as skf
-from pandas import PeriodIndex
-from sklearn.metrics import mean_absolute_percentage_error, r2_score
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from stdlib import import_from
-from torchx import create_layer
-import torch.nn as nn
-import torchx
+from sktime.forecasting.base import BaseForecaster
 
-from .lag import resolve_lag, LagTrainTransform, LagPredictTransform
+import torchx
+from .lag import resolve_lag, LagTrainTransform
 
 
 # ---------------------------------------------------------------------------

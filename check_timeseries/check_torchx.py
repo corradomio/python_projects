@@ -121,16 +121,16 @@ def main1():
             "ReLU",
             ["Linear", {"in_features": 'n_hidden_', "out_features": 'n_hidden_'}],
             ["Dropout", {"p": 'dropout_'}],
-            # sublayer 2
             "ReLU",
+            # sublayer 2
             ["Linear", {"in_features": 'n_hidden_', "out_features": 'n_hidden_'}],
             ["nn.Dropout", {"p": 'dropout_'}],
-            # sublayer 3
             "ReLU",
+            # sublayer 3
             ["Linear", {"in_features": 'n_hidden_', "out_features": 'n_hidden_'}],
             ["Dropout", {"p": 'dropout_'}],
-            # sublayer 4
             "ReLU",
+            # sublayer 4
             ["Linear", {"in_features": 'n_hidden_', "out_features": 'output_size_'}],
         ],
         input_size_=input_size,
