@@ -4,7 +4,6 @@ from typing import Union, Optional
 import numpy as np
 import torch
 import torch.nn as nn
-from torchsummary import summary
 from stdlib import import_from, qualified_name, kwval
 from torch.utils.data import TensorDataset
 from torch.utils.data.dataloader import DataLoader
@@ -14,10 +13,10 @@ from torch.utils.data.dataloader import DataLoader
 # NumpyDataset
 # ---------------------------------------------------------------------------
 
-def as_tensor(v: np.ndarray) -> torch.Tensor:
+def as_tensor(v: np.ndarray, dtype=torch.float32) -> torch.Tensor:
     if len(v.shape) == 1:
         v = v.reshape((-1, 1))
-    return torch.from_numpy(v).type(torch.float32)
+    return torch.from_numpy(v).type(dtype)
 # end
 
 
@@ -27,8 +26,8 @@ class NumpyDataset(TensorDataset):
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
         super().__init__(
-            as_tensor(X),
-            as_tensor(y)
+            as_tensor(X, dtype=dtype),
+            as_tensor(y, dtype=dtype)
         )
 # end
 
@@ -79,7 +78,8 @@ class LossHistory:
 # compose_data
 # ---------------------------------------------------------------------------
 
-def compose_data(y: np.ndarray, X: Optional[np.ndarray],
+def compose_data(y: np.ndarray,
+                 X: Optional[np.ndarray] = None,
                  slots: Union[int, list[int]] = 1,
                  forecast: Union[int, list[int]] = 1) -> tuple[np.ndarray, np.ndarray]:
 
@@ -482,6 +482,85 @@ class PowerModule(nn.Module):
             Xcat.append(Xi)
         return torch.cat(Xcat, 1)
     # end
+# end
+
+
+# ---------------------------------------------------------------------------
+# FirstOnlyModule
+# ---------------------------------------------------------------------------
+
+class SelectResult(nn.Module):
+
+    def __init__(self, index=0):
+        super().__init__()
+        self.index = index
+
+    def forward(self, seq: tuple[torch.tensor]):
+        return seq[self.index]
+# end
+
+
+# ---------------------------------------------------------------------------
+# LSTM
+# ---------------------------------------------------------------------------
+#
+#     Args:
+#         input_size: The number of expected features in the input `x`
+#         hidden_size: The number of features in the hidden state `h`
+#         num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+#             would mean stacking two LSTMs together to form a `stacked LSTM`,
+#             with the second LSTM taking in outputs of the first LSTM and
+#             computing the final results. Default: 1
+#         bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+#             Default: ``True``
+#         batch_first: If ``True``, then the input and output tensors are provided
+#             as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+#             Note that this does not apply to hidden or cell states. See the
+#             Inputs/Outputs sections below for details.  Default: ``False``
+#         dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+#             LSTM layer except the last layer, with dropout probability equal to
+#             :attr:`dropout`. Default: 0
+#         bidirectional: If ``True``, becomes a bidirectional LSTM. Default: ``False``
+#         proj_size: If ``> 0``, will use LSTM with projections of corresponding size. Default: 0
+
+
+class LSTM(nn.LSTM):
+
+    def __init__(self, *, input_size, hidden_size, num_layers, **kwargs):
+        super().__init__(input_size, hidden_size, num_layers, **kwargs)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.num_layers = num_layers
+        self.hidden = None
+
+    def forward(self, input, hx=None):
+        hidden_state = torch.zeros(self.num_layers, input.shape[0], self.hidden_size)
+        cell_state = torch.zeros(self.num_layers, input.shape[0], self.hidden_size)
+        self.hidden = (hidden_state, cell_state)
+
+        input, h = super().forward(input, self.hidden)
+
+        return input
+# end
+
+
+# ---------------------------------------------------------------------------
+# DropDimension
+# ---------------------------------------------------------------------------
+
+class DropDimensions(nn.Module):
+
+    def __init__(self, dim=-1):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, input):
+        if self.dim == -1:
+            shape = input.shape[:-2] + torch.Size([-1])
+        else:
+            raise ValueError("Unsupported index")
+        input = input.reshape(shape)
+        return input
 # end
 
 
