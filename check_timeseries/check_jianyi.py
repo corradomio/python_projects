@@ -3,28 +3,24 @@ from torch import nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 import pytorch_lightning as pl
+import torch.nn
 from sklearn.model_selection import train_test_split
 
- 
 
 a = 2.4785694
 b = 7.3256989
 error = 0.1
 n = 100
 
- 
 
 # Data
 x = torch.randn(n, 1)
 t = a * x + b + (torch.randn(n, 1) * error)
 
- 
 
-#model = nn.Linear(1, 1)
-#optimizer = optim.Adam(model.parameters(), lr=0.1)
-#loss_fn = nn.MSELoss()
-
- 
+# model = nn.Linear(1, 1)
+# optimizer = optim.Adam(model.parameters(), lr=0.1)
+# loss_fn = nn.MSELoss()
 
 
 class ProblemaLS(pl.LightningModule):
@@ -33,21 +29,15 @@ class ProblemaLS(pl.LightningModule):
         self.a = torch.randn(1)
         self.b = torch.randn(1)
         self.f = lambda x : self.a*x+self.b
-        #print(a,b,self.f)
-
- 
+        # print(a,b,self.f)
 
     def forward(self, x):
         embedding = self.f(x)
         return embedding
 
- 
-
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=0.1)
         return optimizer
-
- 
 
     def training_step(self, train_batch, batch_idx):
         x, y = train_batch

@@ -8,6 +8,7 @@ scikit-learn
 sktime
 
 torch
+# torch-summary
 # pytorch-forecasting[mqf2]
 # pyarrow
 # fastparquet

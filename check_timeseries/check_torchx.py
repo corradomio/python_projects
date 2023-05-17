@@ -1,13 +1,15 @@
+import logging.config
+
 import numpy as np
 import pandas as pd
 import pandasx as pdx
 import torch
 import torch.nn as nn
-import torchx
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader, random_split
 
+import torchx
 from torchx import ConfigurableModule
 
 
@@ -168,7 +170,9 @@ def main2():
     # l = torch.nn.Linear(in_features=1, out_features=1)
     # y_pred = l(torch.from_numpy(x).type(torch.float32))
 
-    cm.fit(x, y, batch_size=5, epochs=500)
+    cm.compile()
+
+    cm.fit(x, y)
 
     y_pred = cm.predict(x)
 
@@ -179,22 +183,74 @@ def main2():
 
 
 def main():
+    print("start")
+    m = torchx.ConfigurableModule(
+        layers=[
+            {"layer": "nn.Linear", "in_features": 1, "out_features": 32},
+            "nn.Sigmoid",
+            {"layer": "nn.Linear", "in_features": 32, "out_features": 1},
+        ],
+        loss="nn.MSELoss",
+        optimizer=["Adam", {"lr": 1.e-3}],
+        data={"batch_size": 16, "epochs": 500}
+    )
+    # m = torchx.Module(
+    #     model=[nn.Linear(1, 32), nn.Sigmoid(), nn.Linear(32, 1)],
+    #     epochs=500,
+    #     batch_size=16,
+    #     loss=nn.MSELoss(),
+    #     # non si puo' fare!
+    #     # l'optimizer DEVE essere costruito DOPO che e' stato creato il modello
+    #     # perche' riceve come PRIMO argomento 'module.parameters()' cioe' la lista
+    #     # dei parametri 'ottimizzabili'
+    #     # optimizer=torch.optim.Adam
+    # )
 
-    m = torchx.Module([nn.Linear(1, 1)])
+    x = np.arange(0, 4 * np.pi, .01, dtype=float)
+    # y = 1 + 2*x
+    y = np.sin(x)
 
-    x = np.arange(0, 2*np.pi, .01, dtype=float)
-    y = 1 + 2*x
+    # print("compile")
+    # m.compile(epochs=1000, batch_size=16)
 
+    print("fit")
     m.fit(x, y)
+
+    print("predict")
     y_pred = m.predict(x)
 
+    print("plot")
+    plt.plot(x, y)
+    plt.plot(x, y_pred)
+    plt.show()
+
+
+def main3():
+    print("start")
+    m = torchx.Module([nn.Linear(1, 32), nn.Sigmoid(), nn.Linear(32, 1)])
+
+    x = np.arange(0, 4*np.pi, .01, dtype=float)
+    # y = 1 + 2*x
+    y = np.sin(x)
+
+    print("compile")
+    m.compile(epochs=1000, batch_size=16)
+
+    print("fit")
+    m.fit(x, y)
+
+    print("predict")
+    y_pred = m.predict(x)
+
+    print("plot")
     plt.plot(x, y)
     plt.plot(x, y_pred)
     plt.show()
     pass
 
 
-
-
 if __name__ == "__main__":
+    logging.config.fileConfig('logging_config.ini')
+    log = logging.getLogger("root")
+    log.info("Logging system configured")
     main()
