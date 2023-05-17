@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 import pandasx as pdx
 import torch
+import torch.nn as nn
+import torchx
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import StandardScaler
 from torch.utils.data import Dataset, DataLoader, random_split
@@ -146,7 +148,7 @@ def main1():
     pass
 
 
-def main():
+def main2():
     cm = ConfigurableModule(
         layers=[
             {
@@ -174,6 +176,23 @@ def main():
     plt.plot(x, y_pred)
     plt.show()
     pass
+
+
+def main():
+
+    m = torchx.Module([nn.Linear(1, 1)])
+
+    x = np.arange(0, 2*np.pi, .01, dtype=float)
+    y = 1 + 2*x
+
+    m.fit(x, y)
+    y_pred = m.predict(x)
+
+    plt.plot(x, y)
+    plt.plot(x, y_pred)
+    plt.show()
+    pass
+
 
 
 

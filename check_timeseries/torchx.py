@@ -1,11 +1,11 @@
 from typing import Union, Optional
 
+import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data import TensorDataset
-from torch.utils.data.dataloader import Dataset, DataLoader, IterableDataset
-import numpy as np
 from stdlib import import_from
+from torch.utils.data import TensorDataset
+from torch.utils.data.dataloader import DataLoader
 
 # ---------------------------------------------------------------------------
 # create_layer
@@ -298,7 +298,72 @@ class ConfigurableModule(nn.Module):
             y_pred: torch.Tensor = self(X)
         return y_pred.numpy()
     # end
+# end
 
+
+# ---------------------------------------------------------------------------
+# Module
+# ---------------------------------------------------------------------------
+
+def as_tensor(v: np.ndarray) -> torch.Tensor:
+    if len(v.shape) == 1:
+        v = v.reshape((-1, 1))
+    return torch.from_numpy(v).type(torch.float32)
+
+
+class Module(nn.Module):
+    def __init__(self, model=None):
+        super().__init__()
+        if isinstance(model, list):
+            self.model = nn.Sequential(*model)
+        else:
+            self.model = model
+
+        self.loss = nn.MSELoss()
+        self.optimizer = torch.optim.SGD(self.parameters(), lr=1e-3)
+        self.batch_size = 10
+        self.epochs = 10
+    # end
+
+    def forward(self, X):
+        return self.model(X)
+
+    def compile(self, loss, optimizer, batch_size=10, epochs=10):
+        self.loss = loss
+        self.optimizer = optimizer
+        self.batch_size = batch_size
+        self.epochs = epochs
+
+    def fit(self, X: np.ndarray, y: np.ndarray) -> "Module":
+        X = as_tensor(X)
+        y = as_tensor(y)
+        ds = TensorDataset(X, y)
+        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=True)
+        size = len(ds)
+
+        for epoch in range(self.epochs):
+            for batch, (X, y) in enumerate(dl):
+                y_pred = self(X)
+                loss = self.loss(y_pred, y)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
+
+                if batch % 1000 == 0:
+                    loss, current = loss.item(), (batch + 1) * len(X)
+                    print(f"loss: {loss:>7f}  [{current:>5d}/{size:>5d}]")
+            # end
+        # end
+        return self
+    # end
+
+    def predict(self, X: np.ndarray) -> np.ndarray:
+        X = as_tensor(X)
+        with torch.no_grad():
+            y_pred = self(X)
+        return y_pred.numpy()
+    # end
 # end
 
 
