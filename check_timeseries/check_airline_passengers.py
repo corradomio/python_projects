@@ -296,8 +296,6 @@ def main():
 
         model = model_train(X_train, y_train, X_test, y_test, n_epochs=20, lookback=lookback)
         model_predict(model, timeseries, X_train, X_test, lookback=lookback)
-
-
     pass
 
 

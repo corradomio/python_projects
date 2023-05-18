@@ -171,7 +171,7 @@ def read_data(file: str,
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
 
-    Added the support for '.arff' file format
+    Added support for '.arff' file format
 
     :param file: file to read
     :param categorical: list of categorical columns
@@ -281,7 +281,8 @@ def read_data(file: str,
 
 def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
     """
-    Add some columns based on pandas' One-Hot encoding (pd.get_dummies)
+    Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
+
     :param pd.DataFrame data:
     :param list[str] columns: list of columns to convert
     :return pd.DataFrame: new dataframe
@@ -298,12 +299,13 @@ def datetime_encode(df: pd.DataFrame,
                     format: Optional[str] = None,
                     freq: Optional[str] = None) -> pd.DataFrame:
     """
-    Convert a string column in datatime/period, based on pandas' to_datetime (pd.to_datetime)
-    :param df:
-    :param datetime:
-    :param format:
-    :param freq:
-    :return:
+    Convert a string column in datatime/period, based on pandas' 'to_datetime' (pd.to_datetime)
+
+    :param df: dataframe to process
+    :param datetime: col | (col, format) | (col, format, freq)
+    :param format: datetime format
+    :param freq: period frequency
+    :return: the 'datetime' column converted
     """
     assert isinstance(datetime, (str, list, tuple))
     assert isinstance(format, (type(None), str))
@@ -327,12 +329,67 @@ def datetime_encode(df: pd.DataFrame,
 
 
 def dataframe_datetime_reindex(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Make sure that the datetime index in dataframe is complete, based
+    on the index's 'frequency'
+    :param df: dataframe to process
+    :return: reindexed dataframe
+    """
     start = df.index[0]
     dtend = df.index[-1]
     freq = start.freq
     dtrange = pd.period_range(start, dtend+1, freq=freq)
     df = df[~df.index.duplicated(keep='first')]
     df = df.reindex(index= dtrange, method='pad')
+    return df
+# end
+
+
+def dataframe_split_column(df: pd.DataFrame,
+                           col: str,
+                           columns: Optional[list[str]] = None,
+                           sep: str = '~') -> pd.DataFrame:
+    """
+    Split the content (a string) of the selected 'col', based on the specified separator 'sep'.
+    then, it created 2 or more columns with the specified names ('columns') or based on the
+    originam column name ('col') adding the suffix '_1', '_2', ...
+
+    :param df: dataframe to process
+    :param col: column to analyze
+    :param columns: columns to generate
+    :param sep: separator to use
+    :return: the updated dataframe
+    """
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(col, str)
+    assert isinstance(sep, str)
+
+    data = df[col]
+    n = len(data)
+    
+    # analyze the first row:
+    s = data.iloc[0]
+    parts = s.split(sep)
+    p = len(parts)
+    
+    splits = [[] for p in parts]
+    
+    for i in range(n):
+        s = data.iloc[i]
+        parts = s.split(sep)
+        for j in range(p):
+            splits[j].append(parts[j])
+    # end
+    
+    # create the columns if not specified
+    if columns is None:
+        columns = [f'{col}_{j+1}' for j in range(p)]
+        
+    # populate the dataframe
+    df = df.copy()
+    for j in range(p):
+        df[columns[j]] = splits[j]
+
     return df
 # end
 
@@ -404,6 +461,19 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple
     smin = ser.min() - dx
     smax = ser.max() + dx
     return smin, smax
+# end
+
+
+# ---------------------------------------------------------------------------
+# Index labels
+# ---------------------------------------------------------------------------
+
+def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> list[str]:
+    labels = list(data.index)
+    if n_labels > 0 and n_labels < len(labels):
+        n = len(labels)
+        labels = labels[0:n_labels] + ["" for i in range(n - n_labels)]
+    return labels
 # end
 
 
