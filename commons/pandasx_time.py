@@ -9,7 +9,6 @@ from typing import Optional
 
 import numpy as np
 import pandas as pd
-from pandas import Period, PeriodIndex
 
 
 # ---------------------------------------------------------------------------
@@ -65,8 +64,8 @@ FREQUENCIES = {
     'BAS': 60 * 60 * 24 * 365,
     'BYS': 60 * 60 * 24 * 365,
 
-    'WOM': 0,
-    'LWOM': 0,
+    # 'WOM': 1,
+    # 'LWOM': 1,
 
     # 'L': 1, 'ms': 1,    # milliseconds
     # 'U': 1, 'us': 1,    # microseconds
@@ -122,9 +121,9 @@ def infer_freq(index, steps=5, ntries=3) -> str:
     :param ntries: maximum number of retries if some check fails
     :return: the inferred frequency
     """
-    if isinstance(index, Period):
+    if isinstance(index, pd.Period):
         return index.freqstr
-    if isinstance(index, PeriodIndex):
+    if isinstance(index, pd.PeriodIndex):
         return index.iloc[0].freqstr
     if isinstance(index, pd.Series):
         return infer_freq(index.iloc[0], steps, ntries)
@@ -182,7 +181,7 @@ def circular_periodic(df: pd.DataFrame, freq: str, columns: list[str], date_valu
 
     sfact = FREQUENCIES[freq]
 
-    values = date_values.map(Period.to_timestamp).map(pd.Timestamp.timestamp).to_numpy()
+    values = date_values.map(pd.Period.to_timestamp).map(pd.Timestamp.timestamp).to_numpy()
     values = np.mod(values, sfact)
     cos_v = np.cos(values * 2 * np.pi / sfact)
     sin_v = np.sin(values * 2 * np.pi / sfact)
