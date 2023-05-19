@@ -139,6 +139,7 @@ def _to_url_select(url: str):
         return url, f'select * from {what}'
     else:
         return url, what
+# end
 
 
 def read_database(url: str, dtype, **kwargs):
@@ -148,6 +149,7 @@ def read_database(url: str, dtype, **kwargs):
     with engine.connect() as con:
         df = pd.read_sql(sql=sql, con=con, params=kwargs)
     return df
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -276,7 +278,10 @@ def read_data(file: str,
 
 
 # ---------------------------------------------------------------------------
-# One hot encoding
+# onehot_encode
+# datetime_encode
+# dataframe_datetime_reindex
+# dataframe_split_column
 # ---------------------------------------------------------------------------
 
 def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
@@ -295,7 +300,7 @@ def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd
 
 
 def datetime_encode(df: pd.DataFrame,
-                    datetime: tuple[str],
+                    datetime: Union[str, tuple[str]],
                     format: Optional[str] = None,
                     freq: Optional[str] = None) -> pd.DataFrame:
     """
@@ -305,12 +310,12 @@ def datetime_encode(df: pd.DataFrame,
     :param datetime: col | (col, format) | (col, format, freq)
     :param format: datetime format
     :param freq: period frequency
-    :return: the 'datetime' column converted
+    :return: the df with the 'datetime' column converted
     """
     assert isinstance(datetime, (str, list, tuple))
     assert isinstance(format, (type(None), str))
     assert isinstance(freq, (type(None), str))
-    assert 1 < len(datetime) < 4
+    # assert 1 < len(datetime) < 4
     if isinstance(datetime, str):
         pass
     elif len(datetime) == 1:
@@ -328,19 +333,23 @@ def datetime_encode(df: pd.DataFrame,
 # end
 
 
-def dataframe_datetime_reindex(df: pd.DataFrame) -> pd.DataFrame:
+def dataframe_datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFrame:
     """
     Make sure that the datetime index in dataframe is complete, based
     on the index's 'frequency'
     :param df: dataframe to process
+    :param keep: used in 'index.duplicated(leep=...)'
+    :param method: used in 'index.reindex(method=...)'
     :return: reindexed dataframe
     """
     start = df.index[0]
     dtend = df.index[-1]
     freq = start.freq
     dtrange = pd.period_range(start, dtend+1, freq=freq)
-    df = df[~df.index.duplicated(keep='first')]
-    df = df.reindex(index= dtrange, method='pad')
+    # remove duplicated index keys
+    df = df[~df.index.duplicated(keep=keep)]
+    # make sure that all timestamps are present
+    df = df.reindex(index= dtrange, method=mehod)
     return df
 # end
 
@@ -348,11 +357,12 @@ def dataframe_datetime_reindex(df: pd.DataFrame) -> pd.DataFrame:
 def dataframe_split_column(df: pd.DataFrame,
                            col: str,
                            columns: Optional[list[str]] = None,
-                           sep: str = '~') -> pd.DataFrame:
+                           sep: str = '~',
+                           drop=False) -> pd.DataFrame:
     """
     Split the content (a string) of the selected 'col', based on the specified separator 'sep'.
     then, it created 2 or more columns with the specified names ('columns') or based on the
-    originam column name ('col') adding the suffix '_1', '_2', ...
+    original column name ('col') adding the suffix '_1', '_2', ...
 
     :param df: dataframe to process
     :param col: column to analyze
@@ -373,7 +383,8 @@ def dataframe_split_column(df: pd.DataFrame,
     p = len(parts)
     
     splits = [[] for p in parts]
-    
+
+    # analyze the data
     for i in range(n):
         s = data.iloc[i]
         parts = s.split(sep)
@@ -390,12 +401,19 @@ def dataframe_split_column(df: pd.DataFrame,
     for j in range(p):
         df[columns[j]] = splits[j]
 
+    # drop the column if required
+    if drop:
+        df.drop(col, inplace=True)
+
     return df
 # end
 
 
 # ---------------------------------------------------------------------------
-# Series argmax
+# series_argmax
+# series_argmin
+# series_unique_values
+# series_range
 # ---------------------------------------------------------------------------
 
 def series_argmax(df: pd.DataFrame, col: Union[str, int], argmax_col: Union[str, int]) -> float:
@@ -469,6 +487,14 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple
 # ---------------------------------------------------------------------------
 
 def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> list[str]:
+    """
+    Retrieve the first 'n_labels' labels from 'data.index' and replace the rest with
+    the empty string
+
+    :param data: dataframe or series with index
+    :param n_labels: n of labels to keep
+    :return: list of labels + empty strings
+    """
     labels = list(data.index)
     if n_labels > 0 and n_labels < len(labels):
         n = len(labels)
@@ -478,7 +504,10 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 
 
 # ---------------------------------------------------------------------------
-# DataFrame utilities
+# dataframe_ignore
+# dataframe_split_on_groups
+# dataframe_merge_on_groups
+# dataframe_split_on_columns
 # ---------------------------------------------------------------------------
 
 DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
@@ -494,7 +523,8 @@ def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.Data
     :return:
     """
     if ignore is None:
-        ignore = []
+        return df
+
     elif isinstance(ignore, str):
         ignore = [ignore]
     assert isinstance(ignore, (list, tuple))
@@ -502,9 +532,7 @@ def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.Data
 # end
 
 
-def dataframe_split_on_groups(df: pd.DataFrame,
-        groups: Union[None, str, list[str]],
-                              drop=False) \
+def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False) \
     -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list.
@@ -544,7 +572,8 @@ def dataframe_split_on_groups(df: pd.DataFrame,
     if drop:
         for g in dfdict:
             gdf = dfdict[g]
-            dfdict[g] = gdf[gdf.columns.difference(groups)]
+            # dfdict[g] = gdf[gdf.columns.difference(groups)]
+            gdf.drop(groups, inplace=True)
     # end
 
     return dfdict
@@ -619,7 +648,10 @@ def dataframe_split_on_columns(df: pd.DataFrame,
 
 
 # ---------------------------------------------------------------------------
-# Dataframe index utilities
+# multiindex_get_level_values
+# dataframe_index
+# dataframe_split_on_index
+# dataframe_merge_on_index
 # ---------------------------------------------------------------------------
 
 def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) \
@@ -717,7 +749,81 @@ def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
-# Split utilities
+# dataframe_correlation
+# ---------------------------------------------------------------------------
+
+def dataframe_correlation(df: Union[DATAFRAME_OR_DICT], 
+                          columns: Union[str, list[str]], 
+                          target: Optional[str] = None, 
+                          groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
+
+    if isinstance(columns, str):
+        columns = [columns]
+    
+    if target is None:
+        target = columns[0]
+    else:
+        columns = [target] + columns
+    
+    if groups is not None:
+        dfdict = dataframe_split_on_groups(df, groups=groups)
+        corr_dict = {}
+        for key in dfdict:
+            df = dfdict[key]
+            dfcorr = dataframe_correlation(df, columns=columns)
+            corr_dict[key] = dfcorr
+        dfcorr = dataframe_merge_on_groups(corr_dict, groups=groups)
+        dfcorr.set_index(dfcorr[groups], inplace=True)
+        return dfcorr
+    # end
+    
+    dftc = df[columns]
+    corr = dftc.corr().loc[target]
+    
+    dfcorr = pd.DataFrame(columns=corr.index)
+    dfcorr = dfcorr.append(corr, ignore_index=True)
+    return dfcorr
+# end
+
+def dataframe_clip_outliers(df: Union[DATAFRAME_OR_DICT], 
+                            columns: Union[str, list[str]],
+                            outlier_std: float = 3,
+                            groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
+
+    if isinstance(columns, str):
+        columns = [columns]
+
+    if groups is not None:
+        dfdict = dataframe_split_on_groups(df, groups=groups)
+        outl_dict = {}
+        for key in dfdict:
+            df = dfdict[key]
+            dfoutl = dataframe_clip_outliers(df, columns=columns)
+            outl_dict[key] = dfoutl
+        dfoutl = dataframe_merge_on_groups(outl_dict, groups=groups)
+        return dfoutl
+    # end
+    
+    for col in columns:
+        data = df[col].copy()
+        mean = data.mean()
+        std = data.std()
+        median = data.median()
+        
+        min = mean-outlier_std*std
+        max = mean+outlier_std*std
+        
+        data[data<min] = median
+        data[data>max] = median
+        df[col] = data
+    # end
+    return df
+
+
+# ---------------------------------------------------------------------------
+# xy_split
+# train_test_split
+# nan_split
 # ---------------------------------------------------------------------------
 
 def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
