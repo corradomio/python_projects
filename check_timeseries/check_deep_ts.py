@@ -41,7 +41,6 @@ def main():
                 hidden_size=n_hidden,
                 num_layers=n_lstm_layers,
                 batch_first=True),
-            torchx.DropDimensions(dim=-1),
             # 0
             nn.Dropout(p=dropout),
             nn.Linear(in_features=n_hidden * sequence_len, out_features=n_hidden),
@@ -69,7 +68,7 @@ def main():
         epochs=200
     )
 
-    Xt, yt = compose_data(y=y, slots=7)
+    Xt, yt = compose_data(y=y, slots=sequence_len)
 
     m.fit(Xt, yt)
     pass

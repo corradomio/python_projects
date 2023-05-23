@@ -1,5 +1,6 @@
 from types import FunctionType
 from typing import Optional, Union
+import numpy as np
 from numpy import ndarray, zeros, dot, mean, asarray, all, abs
 from numpy.linalg import eig, eigvals
 import csvx

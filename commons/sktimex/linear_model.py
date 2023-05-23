@@ -185,7 +185,7 @@ class LinearForecastRegressor(BaseForecaster):
         # (X, None, None)   -> |X|
         # (None, y, None)   -> error
         # (X, y, None)      -> |X| - |y|
-
+        
         if isinstance(fh, PeriodIndex):
             cutoff = self.cutoff if y is None else y.index[-1]
             fh = ForecastingHorizon(fh, is_relative=False)

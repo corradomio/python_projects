@@ -161,6 +161,7 @@ def read_data(file: str,
               dtype=None,
               categorical=[],
               boolean=[],
+              numeric=[],
               index=[],
               ignore=[],
               onehot=[],
@@ -168,6 +169,7 @@ def read_data(file: str,
               count=False,
               dropna=False,
               reindex=False,
+              na_values=None,
               **kwargs) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -209,17 +211,22 @@ def read_data(file: str,
     assert isinstance(file, str), "'file' must be a str"
     assert isinstance(categorical, list), "'categorical' must be a list[str]"
     assert isinstance(boolean, list), "'boolean' must be a list[str]"
+    assert isinstance(numeric, list), "'numeric' must be a list[str]"
     assert isinstance(index, list), "'index' must be a list[str]"
     assert isinstance(ignore, list), "'ignore' must be a list[str]"
     assert isinstance(onehot, list), "'onehot' must be a list[str]"
-    assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, list, tuple)"
+    assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, (str, str), (str, str, str))"
     assert isinstance(count, bool), "'count' bool"
 
-    dt = None
+    # move 'na_values' in kwargs
+    if na_values is not None:
+        kwargs['na_values'] = na_values
+
     if dtype is not None:
         h = _read_header(file)
         dt = _pandas_dtype(h, dtype)
-    # end
+    else:
+        dt = None
 
     print("Loading {} ...".format(file))
 
@@ -253,6 +260,9 @@ def read_data(file: str,
 
     for col in boolean:
         df[col] = df[col].astype(bool)
+
+    for col in numeric:
+        df[col] = df[col].astype(float)
 
     if count and 'count' not in df.columns:
         df['count'] = 1.
