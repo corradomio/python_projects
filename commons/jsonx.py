@@ -49,6 +49,7 @@ def json_save(data, path, encoder=JSONEncoderEx()):
         # data = json.dump(data, f)
     return
 
+read_json = json_load
 
 # ---------------------------------------------------------------------------
 
