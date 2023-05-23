@@ -101,43 +101,123 @@ class LossHistory:
 # compose_data
 # ---------------------------------------------------------------------------
 
-# def compose_data(y: np.ndarray,
-#                  X: Optional[np.ndarray] = None,
-#                  slots: int = 1,
-#                  current: bool = False) -> tuple[np.ndarray, np.ndarray]:
-# 
-#     assert isinstance(y, np.ndarray)
-#     assert isinstance(X, (type(None), np.ndarray))
-# 
-#     if isinstance(slots, int):
-#         slots = list(range(1, slots+1))
-#     if isinstance(forecast, int):
-#         forecast = list(range(forecast))
-# 
-#     n = len(y)
-#     m = 0 if X is None else X.shape[1]
-#     s = max(slots)
-#     t = max(forecast)
-#     ls = len(slots)
-#     lf = len(forecast)
-#     r = n-s-t
-# 
-#     Xt: np.ndarray = np.zeros((r, ls, (m+1)))
-#     yt: np.ndarray = np.zeros((r, lf))
-#     rslots = list(reversed(slots))
-# 
-#     for i in range(r):
-#         for j in range(ls):
-#             c = rslots[j]
-#             if X is not None:
-#                 Xt[i, j, 0:m] = X[s+i-c]
-#             Xt[i, j, m:m+1] = y[s+i-c]
-#         for j in range(lf):
-#             c = forecast[j]
-#             yt[i, j] = y[s+i+c]
-# 
-#     return Xt, yt
-# # end
+class DataTrainer:
+
+    def __init__(self, slots: list[int], current: bool = False, last: bool = False):
+        if isinstance(slots, int):
+            slots = list(range(slots+1))
+        elif 0 not in slots:
+            slots += [0]
+        slots = list(reversed(slots))
+
+        self.slots = slots
+        self.current = current
+        self.last = last
+        self.X = None
+        self.y = None
+
+    def compose(self, X: Optional[np.ndarray], y: np.ndarray):
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        assert X is None or isinstance(X, np.ndarray) and len(X.shape) == 2
+        assert isinstance(y, np.ndarray) and len(y.shape) == 2
+
+        self.X = X
+        self.y = y
+
+        Xt = self._compose_xt()
+        yt = self._compose_yt()
+
+        return Xt, yt
+    # end
+
+    def _compose_xt(self):
+        # current:
+        #   False   X[-1],y[-1]
+        #   True    X[-1],y[-1],X[0]
+        #
+        # last
+        #   False   y[-1],y[0]
+        #   True    y[0]
+        #
+        X = self.X
+        y = self.y
+        slots = self.slots
+        current = False if X is None else self.current
+
+        s = max(slots)
+        ns = len(slots) - 1
+
+        mx = 0 if X is None else X.shape[1]
+        ny, my = y.shape
+        xdim = mx + my + (mx if current else 0)
+
+        lx = ny - s
+
+        Xt = np.zeros((lx, ns, xdim))
+
+        for i in range(lx):
+            for j in range(ns):
+                c = slots[j + 0]
+                if X is not None:
+                    Xt[i, j, 0:mx] = X[s+i-c]
+                Xt[i, j, mx:mx+my] = y[s+i-c]
+                if current:
+                    c = slots[j + 1]
+                    Xt[i, j, mx+my:mx+my+mx] = X[s+i-c]
+            # end
+        # end
+
+        return Xt
+    # end
+
+    def _compose_yt(self):
+        # last
+        #   False   y[-1],y[0]
+        #   True    y[0]
+        #
+        y = self.y
+        slots = self.slots
+        last = self.last
+
+        s = max(slots)
+        ns = len(slots) - 1
+
+        ny, my = y.shape
+
+        ly = ny - s
+
+        if last:
+            yt = np.zeros((ly, 1, my))
+
+            for i in range(ly):
+                yt[i, 0] = y[s + i]
+        else:
+            yt = np.zeros((ly, ns, my))
+
+            for i in range(ly):
+                for j in range(ns):
+                    c = slots[j + 1]
+                    yt[i, j] = y[s + i - c]
+
+        return yt
+    # end
+
+# end
+
+
+def compose_data(y: np.ndarray,
+                 X: Optional[np.ndarray] = None,
+                 slots: int = 1,
+                 current: bool = False,
+                 last: bool=False) -> tuple[np.ndarray, np.ndarray]:
+
+    dc = DataTrainer(slots, current=current, last=last)
+    Xt, yt = dc.compose(X, y)
+
+    return Xt, yt
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -151,53 +231,109 @@ class LossHistory:
 #
 #   [(X[-t+1],y[-t+1])...(X_predict[0],y[0])]
 
-# def predict_recursive(model: nn.Module,
-#                       y: np.ndarray,
-#                       slots: Union[int, list[int]] = 1,
-#                       forecast: Union[int, list[int]] = 1,
-#                       X: Optional[np.ndarray] = None,
-#                       X_predict: Optional[np.ndarray] = None):
-#     
-#     assert isinstance(y, np.ndarray)
-#     assert isinstance(X, (type(None), np.ndarray))
-# 
-#     if isinstance(slots, int):
-#         slots = list(range(1, slots + 1))
-#     if isinstance(forecast, int):
-#         forecast = list(range(forecast))
-# 
-#     n = len(y)
-#     m = 0 if X is None else X.shape[1]
-#     s = max(slots)
-#     t = max(forecast)
-#     ls = len(slots)
-#     lf = len(forecast)
-#     # r = n - s - t
-#     r = 1
-# 
-#     Xt: np.ndarray = np.zeros((r, ls, (m + 1)))
-#     yt: np.ndarray = np.zeros((r, lf))
-#     rslots = list(reversed(slots))
-#     y_predict = np.zeros(lf)
-# 
-#     def atx(i):
-#         return X[i,:] if i < 0 else X_predict[i,:]
-# 
-#     def aty(i):
-#         return y[i] if i < 0 else y_predict[i]
-# 
-#     for i in range(t+1):
-        for j in range(ls):
-            c = rslots[j]
+class DataPredictor:
+
+    def __init__(self, slots: list[int], current: bool = False, last: bool = False):
+        if isinstance(slots, int):
+            slots = list(range(slots+1))
+        elif 0 not in slots:
+            slots += [0]
+        slots = list(reversed(slots))
+
+        self.slots = slots
+        self.current = current
+        self.last = last
+        self.X = None
+        self.y = None
+        self.Xp = None
+        self.yp = None
+        self.Xt = None
+
+    def prepare(self, fh, X, y, Xp):
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        self.X = X
+        self.y = y
+        self.Xp = Xp
+
+        slots = self.slots
+        current = False if X is None else self.current
+
+        s = max(slots)
+        ns = len(slots) - 1
+
+        mx = 0 if X is None else X.shape[1]
+        ny, my = y.shape
+        xdim = mx + my + (mx if current else 0)
+
+        self.Xt = np.zeros((1, ns, xdim))
+        self.yp = np.zeros((fh, my))
+
+        self.yp
+    # end
+
+    def _atx(self, i):
+        return self.X[i] if i < 0 else self.Xp[i]
+
+    def _aty(self, i):
+        return self.y[i] if i < 0 else self.yp[i]
+
+    def compose(self, i):
+        atx = self._atx
+        aty = self._aty
+
+        X = self.X
+        Xt = self.Xt
+
+        slots = self.slots
+        current = False if X is None else self.current
+
+        s = max(slots)
+        ns = len(slots) - 1
+        mx = 0 if X is None else X.shape[1]
+        my = self.y.shape[1]
+
+        for j in range(ns):
+            c = slots[j + 0]
             if X is not None:
-                Xt[0, j, 0:m] = atx(i-c)
-            Xt[0, j, m:m+1] = aty(i-c)
-        
-        y = model.predict(Xt)
-        y_predict[t] = y[0]
+                Xt[0, j, 0:mx] = atx(i - c)
+            Xt[0, j, mx:mx + my] = aty(i - c)
+            if current:
+                c = slots[j + 1]
+                Xt[0, j, mx + my:mx + my + mx] = atx(i - c)
+        # end
+
+        return Xt
+    # end
+# end
+
+
+def prepare_data(fh, X, y, Xp, slots, current: bool = False, last: bool = False):
+    dp = DataPredictor(slots, current, last)
+    yp = dp.prepare(fh, X, y, Xp)
+    return dp
+
+
+def predict_recursive(model: nn.Module,
+                      fh: int,
+                      y: np.ndarray,
+                      slots: Union[int, list[int]] = 1,
+                      current: bool = False,
+                      last: bool = False,
+                      X: Optional[np.ndarray] = None,
+                      Xp: Optional[np.ndarray] = None):
+
+    dp = DataPredictor(slots, current, last)
+    yp = dp.prepare(fh, X, y, Xp)
+
+    for i in range(fh):
+        Xt = dp.compose(i)
+        yt = model.predict(Xt)
+        yp[i] = yt[0]
     # end
     
-    return y_predict
+    return yp
 # end
 
 
