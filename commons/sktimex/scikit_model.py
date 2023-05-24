@@ -25,14 +25,60 @@ FH_TYPES = Union[None, int, list[int], np.ndarray, ForecastingHorizon]
 
 class ScikitForecastRegressor(BaseForecaster):
 
+    _tags = {
+        # to list all valid tags with description, use sktime.registry.all_tags
+        #   all_tags(estimator_types="forecaster", as_dataframe=True)
+        #
+        # behavioural tags: internal type
+        # -------------------------------
+        #
+        # y_inner_mtype, X_inner_mtype control which format X/y appears in
+        # in the inner functions _fit, _predict, etc
+        "y_inner_mtype": "pd.Series",
+        "X_inner_mtype": "pd.DataFrame",
+        # valid values: str and list of str
+        # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
+        #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
+        #   in that case, all inputs are converted to that one type
+        # if list of str, must be a list of valid str specifiers
+        #   in that case, X/y are passed through without conversion if on the list
+        #   if not on the list, converted to the first entry of the same scitype
+        #
+        # scitype:y controls whether internal y can be univariate/multivariate
+        # if multivariate is not valid, applies vectorization over variables
+        "scitype:y": "univariate",
+        # valid values: "univariate", "multivariate", "both"
+        #   "univariate": inner _fit, _predict, etc, receive only univariate series
+        #   "multivariate": inner methods receive only series with 2 or more variables
+        #   "both": inner methods can see series with any number of variables
+        #
+        # capability tags: properties of the estimator
+        # --------------------------------------------
+        #
+        # ignores-exogeneous-X = does estimator ignore the exogeneous X?
+        "ignores-exogeneous-X": False,
+        # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
+        # CAVEAT: if tag is set to True, inner methods always see X=None
+        #
+        # requires-fh-in-fit = is forecasting horizon always required in fit?
+        "requires-fh-in-fit": False,
+        # valid values: boolean True (yes), False (no)
+        # if True, raises exception in fit if fh has not been passed
+    }
+
     # -----------------------------------------------------------------------
     # Constructor
     # -----------------------------------------------------------------------
 
     def __init__(self,
-                 class_name: str,
+                 class_name: str = "sklearn.linear_model.LinearRegression",
+                 y_only: bool = False,
                  **kwargs):
         super().__init__()
+        
+        self._class_name = class_name
+        self._kwargs = kwargs
+        self._y_only = y_only
 
         model_class = import_from(class_name)
 
@@ -62,6 +108,7 @@ class ScikitForecastRegressor(BaseForecaster):
     def get_params(self, deep=True):
         params = {} | self._kwargs
         params['class_name'] = self._class_name
+        params['y_only'] = self._y_only
         return params
     # end
 
@@ -85,11 +132,14 @@ class ScikitForecastRegressor(BaseForecaster):
     #                          predict(fh, X[y:]
     #
 
-    def fit(self, y, X=None, fh: FH_TYPES = None):
-        self.forecaster.fit(y=y, X=X, fh=fh)
+    def _fit(self, y, X=None, fh: FH_TYPES = None):
+        if self._y_only:
+            self.forecaster.fit(y=y, fh=fh)
+        else:
+            self.forecaster.fit(y=y, X=X, fh=fh)
         return self
 
-    def predict(self,
+    def _predict(self,
                 fh: FH_TYPES = None,
                 X: Optional[pd.DataFrame] = None,
                 y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
@@ -106,9 +156,13 @@ class ScikitForecastRegressor(BaseForecaster):
 
         n = fh[-1]
         fhp = ForecastingHorizon(np.arange(1, n + 1))
-        y_pred = self.forecaster.predict(fh=fhp, X=Xp)
+        
+        if self._y_only:
+            y_pred = self.forecaster.predict(fh=fhp, X=None)
+        else:
+            y_pred = self.forecaster.predict(fh=fhp, X=Xp)
 
-        assert isinstance(y_pred, pd.DataFrame)
+        assert isinstance(y_pred, (pd.DataFrame, pd.Series))
         return y_pred.iloc[fh-1]
 
     def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:

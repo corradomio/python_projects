@@ -218,6 +218,7 @@ def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
     :param keys: key(s) to remove
     :return: the updated dictionary
     """
+    d = {} | d
     if isinstance(keys, str):
         keys = list[keys]
     for k in keys:

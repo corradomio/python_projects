@@ -104,6 +104,7 @@ class LinearForecastRegressor(BaseForecaster):
                  lag: Union[int, list, tuple, dict],
                  current=None,
                  class_name: str = "sklearn.linear_model.LinearRegression",
+                 y_only: bool = False,
                  target: Optional[str] = None,
                  **kwargs):
         """
@@ -134,6 +135,7 @@ class LinearForecastRegressor(BaseForecaster):
         self._class_name = class_name
         self._lag = lag
         self._current = current
+        self._y_only = y_only
         self._kwargs = kwargs
 
         model_class = import_from(class_name)
@@ -153,6 +155,7 @@ class LinearForecastRegressor(BaseForecaster):
     def get_params(self, deep=True):
         params = {} | self._kwargs
         params['class_name'] = self._class_name
+        params['y_only'] = self._y_only
         params['lag'] = self._lag
         params['current'] = self._current
         params['target'] = self._target
@@ -165,13 +168,19 @@ class LinearForecastRegressor(BaseForecaster):
 
     def fit(self, y, X=None, fh=None):
         self._save_target(y)
-        return super().fit(y=y, X=X, fh=fh)
+        if self._y_only:
+            return super().fit(y=y, X=None, fh=fh)
+        else:
+            return super().fit(y=y, X=X, fh=fh)
     # end
 
     def _fit(self, y: pd.Series, X: Optional[pd.DataFrame] = None, fh: Optional[ForecastingHorizon] = None):
         # slots = resolve_lag(self._lag)
         slots = self._slots
         s = len(slots)
+
+        if self._y_only:
+            X = None
 
         # DataFrame/Series -> np.ndarray
         # save only the s last slots (used in prediction)
@@ -202,6 +211,9 @@ class LinearForecastRegressor(BaseForecaster):
                 fh: FH_TYPES = None,
                 X: Optional[pd.DataFrame] = None,
                 y: Union[None, pd.DataFrame, pd.Series] = None):
+        if self._y_only:
+            X = None
+            
         fh = self._resolve_fh(y, X, fh)
         if y is None:
             X = self._clip_on_cutoff(X)
