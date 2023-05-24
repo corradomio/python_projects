@@ -12,9 +12,9 @@ X, y = pdx.xy_split(data, target='import_kg')
 X = X.to_numpy()
 y = y.to_numpy().reshape((-1, 1))
 
-Xt, yt = tcx.compose_data(y=y, X=X, slots=12, current=True, last=True)
+Xt, yt = tcx.compose_data(y=y, X=X, slots=12, flags=3)
 
-dp = tcx.prepare_data(12, y=y, X=X, Xp=X, slots=12, current=True, last=True)
+dp = tcx.prepare_data(12, y=y, X=X, Xp=X, slots=12, flags=3)
 yp = dp.yp
 for i in range(12):
     Xt = dp.compose(i)
