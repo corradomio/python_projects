@@ -100,10 +100,26 @@ class LossHistory:
 # ---------------------------------------------------------------------------
 # compose_data
 # ---------------------------------------------------------------------------
+#
+#   current = 0x01
+#   last    = 0x02
+#   input   = 0x03
+#   mode    = current | last | input
+#
+#   (X[-2],y[-2]),       (X[-1],y[-1])      -> y[0]         last=T,current=F
+#   (X[-1],y[-1],X[-1]), (X[-1],y[-1],X[0]) -> y[0]         last=T,current=T
+#
+#   (X[-2],y[-2]),       (X[-1],y[-1])      -> y[-1],y[0]   last=F,current=F
+#   (X[-1],y[-1],X[-1]), (X[-1],y[-1],X[0]) -> y[-1],y[0]   last=T,current=T
+#
+
+FLAG_CURRENT = 0x01
+FLAG_LAST    = 0x02
+FLAG_INPUT   = 0x03
 
 class DataTrainer:
 
-    def __init__(self, slots: list[int], current: bool = False, last: bool = False):
+    def __init__(self, slots: list[int], flags: int):
         if isinstance(slots, int):
             slots = list(range(slots+1))
         elif 0 not in slots:
@@ -111,8 +127,7 @@ class DataTrainer:
         slots = list(reversed(slots))
 
         self.slots = slots
-        self.current = current
-        self.last = last
+        self.flags = flags
         self.X = None
         self.y = None
 
@@ -144,7 +159,7 @@ class DataTrainer:
         X = self.X
         y = self.y
         slots = self.slots
-        current = False if X is None else self.current
+        current = False if X is None else (self.flags & FLAG_CURRENT != 0)
 
         s = max(slots)
         ns = len(slots) - 1
@@ -179,13 +194,12 @@ class DataTrainer:
         #
         y = self.y
         slots = self.slots
-        last = self.last
+        last = (self.flags & FLAG_LAST) != 0
 
         s = max(slots)
         ns = len(slots) - 1
 
         ny, my = y.shape
-
         ly = ny - s
 
         if last:
@@ -203,17 +217,15 @@ class DataTrainer:
 
         return yt
     # end
-
 # end
 
 
 def compose_data(y: np.ndarray,
                  X: Optional[np.ndarray] = None,
                  slots: int = 1,
-                 current: bool = False,
-                 last: bool=False) -> tuple[np.ndarray, np.ndarray]:
+                 flags: int = 0) -> tuple[np.ndarray, np.ndarray]:
 
-    dc = DataTrainer(slots, current=current, last=last)
+    dc = DataTrainer(slots, flags=flags)
     Xt, yt = dc.compose(X, y)
 
     return Xt, yt
@@ -233,7 +245,7 @@ def compose_data(y: np.ndarray,
 
 class DataPredictor:
 
-    def __init__(self, slots: list[int], current: bool = False, last: bool = False):
+    def __init__(self, slots: list[int], flags: int = 0):
         if isinstance(slots, int):
             slots = list(range(slots+1))
         elif 0 not in slots:
@@ -241,8 +253,7 @@ class DataPredictor:
         slots = list(reversed(slots))
 
         self.slots = slots
-        self.current = current
-        self.last = last
+        self.flags = flags
         self.X = None
         self.y = None
         self.Xp = None
@@ -258,7 +269,7 @@ class DataPredictor:
         self.Xp = Xp
 
         slots = self.slots
-        current = False if X is None else self.current
+        current = False if X is None else (self.flags & FLAG_CURRENT != 0)
 
         s = max(slots)
         ns = len(slots) - 1
@@ -287,7 +298,7 @@ class DataPredictor:
         Xt = self.Xt
 
         slots = self.slots
-        current = False if X is None else self.current
+        current = False if X is None else (self.flags & FLAG_CURRENT != 0)
 
         s = max(slots)
         ns = len(slots) - 1
@@ -309,8 +320,8 @@ class DataPredictor:
 # end
 
 
-def prepare_data(fh, X, y, Xp, slots, current: bool = False, last: bool = False):
-    dp = DataPredictor(slots, current, last)
+def prepare_data(fh, X, y, Xp, slots, flags=0):
+    dp = DataPredictor(slots, flags)
     yp = dp.prepare(fh, X, y, Xp)
     return dp
 
@@ -319,12 +330,11 @@ def predict_recursive(model: nn.Module,
                       fh: int,
                       y: np.ndarray,
                       slots: Union[int, list[int]] = 1,
-                      current: bool = False,
-                      last: bool = False,
                       X: Optional[np.ndarray] = None,
-                      Xp: Optional[np.ndarray] = None):
+                      Xp: Optional[np.ndarray] = None,
+                      flags: int = 0):
 
-    dp = DataPredictor(slots, current, last)
+    dp = DataPredictor(slots, flags)
     yp = dp.prepare(fh, X, y, Xp)
 
     for i in range(fh):

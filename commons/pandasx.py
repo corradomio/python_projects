@@ -7,6 +7,7 @@ import pandas as pd
 import numpy as np
 import warnings
 import random
+import math
 
 from typing import List, AnyStr, Union, Optional
 from math import isnan, sqrt
@@ -166,6 +167,7 @@ def read_data(file: str,
               ignore=[],
               onehot=[],
               datetime=None,
+              periodic=None,
               count=False,
               dropna=False,
               reindex=False,
@@ -216,6 +218,7 @@ def read_data(file: str,
     assert isinstance(ignore, list), "'ignore' must be a list[str]"
     assert isinstance(onehot, list), "'onehot' must be a list[str]"
     assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, (str, str), (str, str, str))"
+    assert isinstance(periodic, (type(None), str, list, tuple)), "'periodic' must be (None, str, (str, str))"
     assert isinstance(count, bool), "'count' bool"
 
     # move 'na_values' in kwargs
@@ -269,6 +272,9 @@ def read_data(file: str,
 
     if datetime is not None:
         df = datetime_encode(df, datetime)
+
+    if periodic is not None:
+        df = periodic_encode(df, *periodic)
         
     if len(onehot) > 0:
         df = onehot_encode(df, onehot)
@@ -291,21 +297,20 @@ def read_data(file: str,
 # onehot_encode
 # datetime_encode
 # dataframe_datetime_reindex
-# dataframe_split_column
 # ---------------------------------------------------------------------------
 
-def onehot_encode(data: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
+def onehot_encode(df: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
     """
     Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
 
-    :param pd.DataFrame data:
+    :param pd.DataFrame df:
     :param list[str] columns: list of columns to convert
     :return pd.DataFrame: new dataframe
     """
     for col in columns:
-        dummies = pd.get_dummies(data[col], prefix=col)
-        data = data.join(dummies)
-    return data
+        dummies = pd.get_dummies(df[col], prefix=col)
+        df = df.join(dummies)
+    return df
 # end
 
 
@@ -343,7 +348,7 @@ def datetime_encode(df: pd.DataFrame,
 # end
 
 
-def dataframe_datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFrame:
+def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFrame:
     """
     Make sure that the datetime index in dataframe is complete, based
     on the index's 'frequency'
@@ -364,8 +369,69 @@ def dataframe_datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> p
 # end
 
 
+# ---------------------------------------------------------------------------
+# periodic_encode
+# ---------------------------------------------------------------------------
+
+def periodic_encode(df, column, method, freq: Optional[str]=None) -> pd.DataFrame:
+    if method == 'onehot':
+        return onehot_encode(df, column)
+    elif method == 'M' or freq == 'M':
+        return _monthly_encoder(df, column)
+    elif method == 'W' or freq == 'W':
+        return _weekly_encoder(df, column)
+    elif method == 'D' or freq == 'D':
+        return _daily_encoder(df, column)
+    else:
+        raise ValueError(f"'Unsupported periodic_encode method '{method}/{freq}'")
+# end
+
+
+def _monthly_encoder(df, column):
+    FACTOR = 2 * math.pi / 12
+    dt = df[column]
+
+    dtcos = dt.apply(lambda x: math.cos(FACTOR*(x.month-1)))
+    dtsin = dt.apply(lambda x: math.sin(FACTOR*(x.month-1)))
+
+    df[column + "_c"] = dtcos
+    df[column + "_s"] = dtsin
+
+    return df
+
+
+def _weekly_encoder(df, column):
+    FACTOR = 2 * math.pi / 7
+    dt = df[column]
+
+    dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.weekday)))
+    dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.weekday)))
+
+    df[column + "_c"] = dtcos
+    df[column + "_s"] = dtsin
+
+    return df
+
+
+def _daily_encoder(df, column):
+    FACTOR = 2 * math.pi / 24
+    dt = df[column]
+
+    dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.hour)))
+    dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.hour)))
+
+    df[column + "_c"] = dtcos
+    df[column + "_s"] = dtsin
+
+    return df
+
+
+# ---------------------------------------------------------------------------
+# dataframe_split_column
+# ---------------------------------------------------------------------------
+
 def dataframe_split_column(df: pd.DataFrame,
-                           col: str,
+                           column: str,
                            columns: Optional[list[str]] = None,
                            sep: str = '~',
                            drop=False) -> pd.DataFrame:
@@ -381,10 +447,10 @@ def dataframe_split_column(df: pd.DataFrame,
     :return: the updated dataframe
     """
     assert isinstance(df, pd.DataFrame)
-    assert isinstance(col, str)
+    assert isinstance(column, str)
     assert isinstance(sep, str)
 
-    data = df[col]
+    data = df[column]
     n = len(data)
     
     # analyze the first row:
@@ -515,15 +581,7 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 
 # ---------------------------------------------------------------------------
 # dataframe_ignore
-# dataframe_split_on_groups
-# dataframe_merge_on_groups
-# dataframe_split_on_columns
 # ---------------------------------------------------------------------------
-
-DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
-TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
-PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
-
 
 def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     """
@@ -542,7 +600,17 @@ def dataframe_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.Data
 # end
 
 
-def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False) \
+# ---------------------------------------------------------------------------
+# dataframe_split_on_groups
+# dataframe_merge_on_groups
+# ---------------------------------------------------------------------------
+
+DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
+TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
+PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
+
+
+def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False) \
     -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list.
@@ -583,16 +651,16 @@ def dataframe_split_on_groups(df: pd.DataFrame, groups: Union[None, str, list[st
         for g in dfdict:
             gdf = dfdict[g]
             # dfdict[g] = gdf[gdf.columns.difference(groups)]
-            gdf.drop(groups, inplace=True)
+            gdf.drop(groups, inplace=True, axis=1)
     # end
 
     return dfdict
 # end
 
 
-def dataframe_merge_on_groups(dfdict: dict[tuple[str], pd.DataFrame],
-                              groups: Union[str, list[str]],
-                              sortby: Union[None, str, list[str]] = None) \
+def groups_merge(dfdict: dict[tuple[str], pd.DataFrame],
+                 groups: Union[str, list[str]],
+                 sortby: Union[None, str, list[str]] = None) \
         -> pd.DataFrame:
     """
     Recreate a df based on the content of 'dfdict' and the list of groups.
@@ -632,9 +700,17 @@ def dataframe_merge_on_groups(dfdict: dict[tuple[str], pd.DataFrame],
 # end
 
 
-def dataframe_split_on_columns(df: pd.DataFrame,
-                               columns: Union[None, str, list[str]] = None,
-                               ignore: Union[None, str, list[str]] = None) \
+dataframe_split_on_groups = groups_split
+dataframe_merge_on_groups = groups_merge
+
+
+# ---------------------------------------------------------------------------
+# dataframe_split_on_columns
+# ---------------------------------------------------------------------------
+
+def columns_split(df: pd.DataFrame,
+                  columns: Union[None, str, list[str]] = None,
+                  ignore: Union[None, str, list[str]] = None) \
         -> list[pd.Series]:
     """
     Split the dataframe in a list of series based on the list of selected columns
@@ -655,6 +731,9 @@ def dataframe_split_on_columns(df: pd.DataFrame,
 
     return series
 # end
+
+
+dataframe_split_on_columns = columns_split
 
 
 # ---------------------------------------------------------------------------
@@ -714,7 +793,7 @@ def dataframe_index(df: pd.DataFrame,
 # end
 
 
-def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = -1) -> dict[tuple, pd.DataFrame]:
+def index_split(df: PANDAS_TYPE, levels: int = -1) -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the first 'levels' values of the multiindex
 
@@ -737,7 +816,7 @@ def dataframe_split_on_index(df: PANDAS_TYPE, levels: int = -1) -> dict[tuple, p
 # end
 
 
-def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
+def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
     """
     Recreate a dataframe using the keys in the dictionary as multiindex
     :param dfdict:
@@ -758,8 +837,12 @@ def dataframe_merge_on_index(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 # end
 
 
+dataframe_split_on_index = index_split
+dataframe_merge_on_index = index_merge
+
 # ---------------------------------------------------------------------------
 # dataframe_correlation
+# dataframe_clip_outliers
 # ---------------------------------------------------------------------------
 
 def dataframe_correlation(df: Union[DATAFRAME_OR_DICT], 
@@ -795,10 +878,10 @@ def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
     return dfcorr
 # end
 
-def dataframe_clip_outliers(df: Union[DATAFRAME_OR_DICT], 
-                            columns: Union[str, list[str]],
-                            outlier_std: float = 3,
-                            groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
+def clip_outliers(df: Union[DATAFRAME_OR_DICT],
+                  columns: Union[str, list[str]],
+                  outlier_std: float = 3,
+                  groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
 
     if isinstance(columns, str):
         columns = [columns]
@@ -828,6 +911,9 @@ def dataframe_clip_outliers(df: Union[DATAFRAME_OR_DICT],
         df[col] = data
     # end
     return df
+
+
+dataframe_clip_outliers = clip_outliers
 
 
 # ---------------------------------------------------------------------------

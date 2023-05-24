@@ -14,6 +14,7 @@ LAG_TARGET = 'target'
 LAG_DAY = 'day'
 PERIOD_TYPE = 'period_type'
 LAG_LENGTH = 'length'
+LAG_CURRENT = 'current'
 
 LAG_FACTORS: dict[str, int] = {
     '': 0,
@@ -37,14 +38,16 @@ LAG_TYPES: list[str] = list(LAG_FACTORS)
 # LagSlots
 # ---------------------------------------------------------------------------
 
+def _max(l: list[int]) -> int:
+    return 0 if len(l) == 0 else max(l)
+
 class LagSlots:
     def __init__(self, islots: set[int], tslots: set[int]):
         self._islots: list[int] = sorted(islots)
         self._tslots: list[int] = sorted(tslots)
 
         # self._len = 0 if len(tslots) == 0 else max(max(islots), max(tslots)) + 1
-        self._len = 0 if len(tslots) == 0 else max(max(islots), max(tslots))
-
+        self._len = 0 if len(tslots) == 0 else max(_max(islots), _max(tslots))
     # end
 
     @property
@@ -71,11 +74,12 @@ class LagSlots:
 
 class LagResolver:
 
-    def __init__(self, lag):
+    def __init__(self, lag, current=None):
         self._lag = lag
         self._normalize()
         self._validate()
-
+        if current is not None:
+            self._lag[LAG_CURRENT] = current
     # end
 
     @property
@@ -157,7 +161,7 @@ class LagResolver:
     # end
 
     def resolve(self) -> LagSlots:
-        current = True if 'current' not in self._lag else self._lag['current']
+        current = True if LAG_CURRENT not in self._lag else self._lag[LAG_CURRENT]
         islots = self._resolve_entry(LAG_INPUT, current)
         tslots = self._resolve_entry(LAG_TARGET, current)
         return LagSlots(islots, tslots)
@@ -214,7 +218,7 @@ class LagResolver:
 # resolve_lag
 # ---------------------------------------------------------------------------
 
-def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
+def resolve_lag(lag: Union[int, tuple, dict], current=None) -> LagSlots:
     """
     Resolve the 'lag' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
     is a record.
@@ -229,7 +233,7 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
                 ...
             },
             'target: {
-                period_type_1>: <count_1>,
+                <period_type_1>: <count_1>,
                 <period_type_2>: <count_2>,
                 ...
             },
@@ -291,7 +295,7 @@ def resolve_lag(lag: Union[int, tuple, dict]) -> LagSlots:
         3. a dictionary
     :return LagSlots: an object containing the time slots to select for the input and target features.
     """
-    lr = LagResolver(lag)
+    lr = LagResolver(lag, current)
     res: LagSlots = lr.resolve()
     # return res.input_slots, res.target_slots
     return res
