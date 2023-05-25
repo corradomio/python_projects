@@ -51,12 +51,18 @@ class LagSlots:
     # end
 
     @property
-    def input_slots(self) -> list[int]:
+    def input(self) -> list[int]:
         return self._islots
 
     @property
-    def target_slots(self) -> list[int]:
+    def target(self) -> list[int]:
         return self._tslots
+    
+    def __getitem__(self, item):
+        if item == 0:
+            return self._islots
+        else:
+            return self._tslots
 
     def __len__(self) -> int:
         return self._len
@@ -297,14 +303,15 @@ def resolve_lag(lag: Union[int, tuple, dict], current=None) -> LagSlots:
     """
     lr = LagResolver(lag, current)
     res: LagSlots = lr.resolve()
-    # return res.input_slots, res.target_slots
     return res
 # end
 
 
 # ---------------------------------------------------------------------------
 # LagTrainTransformer
+# LagPredictTransform
 # ---------------------------------------------------------------------------
+# X can be None or X[n, 0]
 
 class LagTrainTransform:
 
@@ -312,53 +319,60 @@ class LagTrainTransform:
         assert isinstance(slots, LagSlots)
         self._slots: LagSlots = slots
 
-    def fit(self, y: np.ndarray, X: Optional[ndarray]):
-        assert isinstance(y, np.ndarray)
-        assert isinstance(X, (type(None), np.ndarray))
-        return self
-
-    def transform(self, y: np.ndarray, X: Optional[ndarray]):
+    def fit(self, X: Optional[ndarray], y: np.ndarray):
         assert isinstance(y, np.ndarray)
         assert isinstance(X, (type(None), np.ndarray))
         if X is not None: assert len(y) == len(X)
+        return self
+
+    def transform(self, X: Optional[ndarray], y: np.ndarray):
+        assert isinstance(y, np.ndarray)
+        assert isinstance(X, (type(None), np.ndarray))
 
         slots: LagSlots = self._slots
+
+        islots = list(reversed(slots.input))
+        tslots = list(reversed(slots.target))
         s = len(slots)
 
-        sx = len(slots.input_slots)
-        sy = len(slots.target_slots)
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        # create a X[n,0] if X is None
+        # and uses an empty list as islots
+        if X is None:
+            n = len(y)
+            X = np.zeros((n, 0))
+            islots = []
+
+        assert len(y) == len(X)
+
+        sx = len(islots)
+        sy = len(tslots)
         n = y.shape[0]
-        m = 0 if X is None else X.shape[1]
+        my = y.shape[1]
+        mx = X.shape[1]
 
         nt = n - s
-        mt = sx * m + sy
+        mt = sx * mx + sy
         Xt = np.zeros((nt, mt))
-        yt = np.zeros(nt)
+        yt = np.zeros((nt, my))
 
-        if X is None:
-            for i in range(nt):
-                c = 0
-                for j in reversed(slots.target_slots):
-                    Xt[i, c] = y[s + i - j]
-                    c += 1
-                yt[i] = y[s + i]
-            # end
-        else:
-            for i in range(nt):
-                c = 0
-                for j in reversed(slots.target_slots):
-                    Xt[i, c] = y[s + i - j]
-                    c += 1
-                for j in reversed(slots.input_slots):
-                    Xt[i, c:c + m] = X[s + i - j]
-                    c += m
-                yt[i] = y[s + i]
-            # end
+        for i in range(nt):
+            c = 0
+            for j in tslots:
+                Xt[i, c:c + my] = y[s + i - j]
+                c += my
+            for j in islots:
+                Xt[i, c:c + mx] = X[s + i - j]
+                c += mx
+            yt[i] = y[s + i]
+        # end
 
         return Xt, yt
 
-    def fit_transform(self, y: np.ndarray, X: Optional[ndarray]):
-        return self.fit(y, X).transform(y, X)
+    def fit_transform(self, X: Optional[ndarray], y: np.ndarray):
+        return self.fit(X=X, y=y).transform(X=X, y=y)
 # end
 
 
@@ -367,27 +381,40 @@ class LagPredictTransform:
     def __init__(self, slots: LagSlots):
         assert isinstance(slots, LagSlots)
 
+        # Xh, yh: history (past)
+        #   Xh can be None
+        # Xp, yp: prediction (future)
+        #   yp is created if not already passed
+        #   Xp can be None
+        # Xt: temporary input matrix used to generate yt (a SINGLE value)
+        #   yt MUST be saved in yp ad the correct index
+
         self._slots: LagSlots = slots
         self._yh: Optional[ndarray] = None
         self._Xh: Optional[ndarray] = None
-        self._Xt: Optional[ndarray] = None
         # --
         self._Xp: Optional[ndarray] = None
         self._yp: Optional[ndarray] = None
+        # --
+        self._Xt: Optional[ndarray] = None
+        # --
         self._m = 0
     # end
 
     def fit(self, X: Optional[ndarray], y: Optional[ndarray]):
-        # X_history, y_history
         assert isinstance(y, np.ndarray)
         assert isinstance(X, (type(None), np.ndarray))
 
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        # X_history, y_history
         self._Xh = X
         self._yh = y
 
         slots = self._slots
-        sx = len(slots.input_slots)
-        sy = len(slots.target_slots)
+        sx = len(slots.input)
+        sy = len(slots.target)
         m = 0 if X is None else X.shape[1]
 
         nt = 1
@@ -397,51 +424,59 @@ class LagPredictTransform:
         self._Xt = np.zeros((nt, mt))
         return self
 
-    def transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, at: int = 0):
+    def transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, fh: int = 0):
+        assert isinstance(fh, int)
+        assert y is not None or fh > 0
+
+        if y is None:
+            my = self._yh.shape[1]
+            y = np.zeros((fh, my))
+
         # X_pred, y_pred
         self._Xp = X
         self._yp = y
-        return self.prepare(at)
+
+        return y
     # end
 
-    def fit_transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None):
-        return self.fit(X, y).transform(X, y, 0)
+    def fit_transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, fh: int = 0):
+        return self.fit(X=X, y=y).transform(X=X, y=y, fh=fh)
 
     # -----------------------------------------------------------------------
     # Implementation
     # -----------------------------------------------------------------------
 
-    def atx(self, index):
+    def _atx(self, index):
         return self._Xh[index] if index < 0 else self._Xp[index]
 
-    def aty(self, index):
+    def _aty(self, index):
         return self._yh[index] if index < 0 else self._yp[index]
 
-    def prepare(self, at: int):
-        atx = self.atx
-        aty = self.aty
+    def prepare(self, i: int):
+        atx = self._atx
+        aty = self._aty
 
-        i = at
         slots = self._slots
         m = self._m
         Xt = self._Xt
 
         if m == 0:
             c = 0
-            for j in reversed(slots.target_slots):
+            for j in reversed(slots.target):
                 Xt[0, c] = aty(i - j)
                 c += 1
         else:
             c = 0
-            for j in reversed(slots.target_slots):
+            for j in reversed(slots.target):
                 Xt[0, c] = aty(i - j)
                 c += 1
-            for j in reversed(slots.input_slots):
+            for j in reversed(slots.input):
                 Xt[0, c:c + m] = atx(i - j)
                 c += m
         # end
         return Xt
 # end
+
 
 # ---------------------------------------------------------------------------
 # end
