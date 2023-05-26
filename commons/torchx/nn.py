@@ -190,14 +190,17 @@ class Module(nn.Module):
     # fit
     # -----------------------------------------------------------------------
 
-    def fit(self, X: np.ndarray, y: np.ndarray) -> "Module":
+    def fit(self, X: np.ndarray, y: np.ndarray, batch_size=None, epochs=None) -> "Module":
+        if epochs is None: epochs = self.epochs
+        if batch_size is None: batch_size = self.batch_size
+
         X = as_tensor(X)
         y = as_tensor(y)
         ds = TensorDataset(X, y)
-        dl = DataLoader(ds, batch_size=self.batch_size, shuffle=True)
+        dl = DataLoader(ds, batch_size=batch_size, shuffle=True)
 
         self.train()
-        for epoch in range(self.epochs):
+        for epoch in range(epochs):
             losses = []
             for batch_idx, (X, y) in enumerate(dl):
                 y_pred = self(X)
@@ -279,21 +282,31 @@ class Module(nn.Module):
 
 class LSTM(nn.LSTM):
 
-    def __init__(self, *, input_size, hidden_size, num_layers, **kwargs):
-        super().__init__(input_size, hidden_size, num_layers, **kwargs)
+    def __init__(self, *, input_size, hidden_size, num_layers, batch_first=True, **kwargs):
+        super().__init__(input_size=input_size,
+                         hidden_size=hidden_size,
+                         num_layers=num_layers,
+                         batch_first= batch_first,
+                         **kwargs)
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.num_layers = num_layers
-        self.hidden = None
+        self.hidden = {}
 
     def forward(self, input, hx=None):
-        hidden_state = torch.zeros(self.num_layers, input.shape[0], self.hidden_size)
-        cell_state = torch.zeros(self.num_layers, input.shape[0], self.hidden_size)
-        self.hidden = (hidden_state, cell_state)
+        L = input.shape[0 if self.batch_first else 1]
+        D = (2*self.num_layers) if self.bidirectional else self.num_layers
+        N = self.hidden_size
 
-        input, h = super().forward(input, self.hidden)
+        if L not in self.hidden:
+            hidden_state = torch.zeros(D, L, N)
+            cell_state = torch.zeros(D, L, N)
+            self.hidden[L] = (hidden_state, cell_state)
 
-        return input
+        hidden = self.hidden[L]
+        predict, h = super().forward(input, hidden)
+
+        return predict
 # end
 
 

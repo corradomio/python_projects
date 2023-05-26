@@ -1,53 +1,14 @@
 from types import FunctionType
 from typing import Optional, Union
+
+import numpy
 import numpy as np
 from numpy import ndarray, zeros, dot, mean, asarray, all, abs
 from numpy.linalg import eig, eigvals
-import csvx
 
 
 # ---------------------------------------------------------------------------
-# load_data
-# ---------------------------------------------------------------------------
-
-def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=None):
-
-    if fname.endswith(".arff"):
-        data, _, dtype = csvx.load_arff(fname, na=na)
-    else:
-        data, _ = csvx.load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
-
-    data = asarray(data)
-    nr, nc = data.shape
-
-    if ycol == 0:
-        X = data[:, 1:]
-        y = data[:, 0]
-    elif ycol == -1 or ycol == (nc - 1):
-        X = data[:, 0:-1]
-        y = data[:, -1]
-    else:
-        X = data[:, list(range(0, ycol)) + list(range(ycol + 1, nc))]
-        y = data[:, ycol]
-
-    if ycol == 0:
-        dtypes = list(set(dtype[1:]))
-    elif ycol == -1:
-        dtypes = list(set(dtype[0:-1]))
-    else:
-        dtypes = list(set(dtype[0:ycol] + dtype[ycol+1:]))
-    if len(dtypes) == 1 and dtypes[0] in ["enum", "ienum", enumerate]:
-        X = X.astype(int)
-
-    if dtype[ycol] in ["enum", "ienum", str, int, enumerate]:
-        y = y.astype(int)
-
-    return X, y
-# end
-
-
-# ---------------------------------------------------------------------------
-# reshape
+# LagReshaper
 # ---------------------------------------------------------------------------
 # (X, y, xslot, yslots) -> Xt, yt
 #
@@ -56,6 +17,10 @@ def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=Non
 #   y[-1],X[-1]       -> y[0]
 #   y[-1],X[-1],X[0]  -> y[0]
 #
+
+def _max(l):
+    return 0 if len(l) == 0 else max(l)
+
 
 class LagReshaper:
     def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
@@ -66,6 +31,9 @@ class LagReshaper:
         self.ylags = ylags
         self.tlags = tlags
 
+    def __len__(self):
+        return max(_max(self.xlags), _max(self.ylags))
+
     def fit(self, X: np.ndarray, y: np.ndarray):
         assert isinstance(X, (type(None), np.ndarray))
         assert isinstance(y, np.ndarray)
@@ -74,9 +42,6 @@ class LagReshaper:
     def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         assert isinstance(X, (type(None), np.ndarray))
         assert isinstance(y, np.ndarray)
-
-        def _max(l):
-            return 0 if len(l) == 0 else max(l)
 
         xlags = self.xlags
         ylags = self.ylags
@@ -135,9 +100,12 @@ def reshape(X: np.ndarray, y: np.ndarray,
 # end
 
 
-class LagFuture:
-    def __init__(self,
-                 xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
+# ---------------------------------------------------------------------------
+# LagPreparer
+# ---------------------------------------------------------------------------
+
+class LagPreparer:
+    def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
         assert isinstance(xlags, list)
         assert isinstance(ylags, list)
         assert isinstance(tlags, list)
@@ -149,27 +117,27 @@ class LagFuture:
         self.Xp = None
         self.yp = None
         self.Xt = None
-        self.fh = 0
+    # end
+
+    def __len__(self):
+        return max(_max(self.xlags), _max(self.ylags))
 
     def fit(self, X: np.ndarray, y: np.ndarray):
-    assert isinstance(X, (type(None), np.ndarray))
-    assert isinstance(y, np.ndarray)
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
 
-    if len(y.shape) == 1:
-        y = y.reshape((-1, 1))
-    if X is None:
-        X = np.zeros((len(y), 0), dtype=y.dtype)
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
 
-        self.Xh = X
-        self.yh = y
+            self.Xh = X
+            self.yh = y
         return self
 
     def transform(self, Xp: np.ndarray, fh: int) -> np.ndarray:
         assert isinstance(Xp, (type(None), np.ndarray))
         assert isinstance(fh, int)
-
-        def _max(l):
-            return 0 if len(l) == 0 else max(l)
 
         X = self.Xh
         y = self.yh
@@ -183,9 +151,9 @@ class LagFuture:
         s = max(_max(xlags), _max(ylags))
         t = max(tlags)
 
-    mx = X.shape[1]
-    my = y.shape[1]
-    n = y.shape[0] - s - t
+        mx = X.shape[1]
+        my = y.shape[1]
+        n = y.shape[0] - s - t
 
         mt = len(xlags) * mx + len(ylags) * my
         mu = len(tlags) * my
@@ -230,37 +198,200 @@ class LagFuture:
 # end
 
 # ---------------------------------------------------------------------------
-# unroll_loop
+# LoopUnroller
 # ---------------------------------------------------------------------------
 # X[0]      -> (X[0],X[1],X[2],...)
 # X[1]      -> (X[1],X[2],X[3],...)
 # X[2]      -> (X[2],X[3],X[4],...)
 #
+#   y[-1]            -> y[0]
+#   X[-1]            -> y[0]
+#   X[-1],y[-1]      -> y[0]
+#   X[-1],y[-1],X[0] -> y[0]
+
+class UnfoldLoop:
+    def __init__(self, steps: int=1, use_X=True, use_y=True, use_current=False):
+        self.steps = steps
+        self.use_X = use_X
+        self.use_y = use_y
+        self.use_c = use_current
+
+    def __len__(self):
+        return self.steps+1
+
+    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+            
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        use_X = self.use_X
+        use_y = self.use_y
+        use_c = self.use_c
+
+        s = self.steps
+        n = X.shape[0] - s
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = (mx if use_X else 0) + (my if use_y else 0) + (mx if use_c else 0)
+        Xt = np.zeros((n, s, mt), dtype=X.dtype)
+
+        for i in range(n):
+            for j in range(s):
+                c = 0
+                if use_X:
+                    Xt[i, j, c:c+mx] = X[i + j]
+                    c += mx
+                if use_y:
+                    Xt[i, j, c:c+my] = y[i + j]
+                    c += my
+                if use_c:
+                    Xt[i, j, c:c+mx] = X[i + j + 1]
+            # end
+        # end
+
+        if y is not None:
+            yt = start_at(y, s)
+        else:
+            yt = None
+
+        assert len(Xt) == len(yt)
+        return Xt, yt
+    # end
+
+    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return self.fit(X, y).transform(X, y)
+
+# end
+
 
 def unroll_loop(X: np.ndarray, steps:int = 1) -> np.ndarray:
-    """
-    Add an extra axes:
-    
-        (n, m) -> (n-s+1, s, m)
-    
-    :param X: 
-    :param steps: 
-    :return: 
-    """
-    if len(X.shape) == 1:
-        X = X.resshape((-1, 1))
+    return LoopUnroller(steps).fit_transform(X)
+# end
 
-    s = steps
-    n = X.shape[0] - s + 1
-    m = X.shape[1:]
+# ---------------------------------------------------------------------------
+# LoopPredictor
+# ---------------------------------------------------------------------------
 
-    t = np.zeros((n, s, *m), dtype=X.dtype)
+class UnfoldPredictor:
+    def __init__(self, steps: int=1, use_X=True, use_y=True, use_current=False):
+        self.steps = steps
+        self.use_X = use_X
+        self.use_y = use_y
+        self.use_c = use_current
 
-    for i in range(n):
+        self.Xh = None
+        self.yh = None
+        self.Xp = None
+        self.yp = None
+        self.Xt = None
+    # end
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+        if X is None:
+            n = len(y)
+            X = np.zeros((n, 0), dtype=y.dtype)
+        self.Xh = X
+        self.yh = y
+
+        assert len(X) == len(y)
+        return self
+
+    def transform(self, X: np.ndarray, fh: int=0):
+        assert X is None and fh > 0 or X is not None and fh == 0 or len(X) == fh
+
+        y = self.yh
+
+        if fh == 0: fh = len(X)
+        if X is None:
+            X = np.zeros((fh, 0), dtype=y.dtype)
+
+        self.Xp = X
+
+        use_X = self.use_X
+        use_y = self.use_y
+        use_c = self.use_c
+
+        s = self.steps
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = (mx if use_X else 0) + (my if use_y else 0) + (mx if use_c else 0)
+        Xt = np.zeros((1, s, mt), dtype=X.dtype)
+        yp = np.zeros((fh, my), dtype=y.dtype)
+
+        self.Xt = Xt
+        self.yp = yp
+        return yp
+    # end
+
+    def _atx(self, i):
+        return self.Xh[i] if i < 0 else self.Xp[i]
+
+    def _aty(self, i):
+        return self.yh[i] if i < 0 else self.yp[i]
+
+    def step(self, i):
+        atx = self._atx
+        aty = self._aty
+
+        X = self.Xh
+        y = self.yh
+
+        use_X = self.use_X
+        use_y = self.use_y
+        use_c = self.use_c
+
+        s = self.steps
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        Xt = self.Xt
+
         for j in range(s):
-            t[i, j] = X[i+j]
+            c = 0
+            if use_X:
+                Xt[0, j, c:c + mx] = atx(i + j - s)
+                c += mx
+            if use_y:
+                Xt[0, j, c:c + my] = aty(i + j - s)
+                c += my
+            if use_c:
+                Xt[0, j, c:c + mx] = atx(i + j - s + 1)
+        # end
 
-    return t
+        return Xt
+    # end
+# end
+
+
+# ---------------------------------------------------------------------------
+# start_at
+# ---------------------------------------------------------------------------
+
+def start_at(data: np.ndarray, start:int = 0) -> np.ndarray:
+    if data is None:
+        return None
+    elif start == 0:
+        return data
+    else:
+        return data[start:]
 # end
 
 
@@ -270,6 +401,7 @@ def unroll_loop(X: np.ndarray, steps:int = 1) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 ShapeType = Union[int, list[int], tuple[int]]
+
 
 def fzeros(n: ShapeType) -> ndarray: return zeros(n, dtype=float)
 

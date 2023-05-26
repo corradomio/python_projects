@@ -1171,6 +1171,7 @@ def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], inde
 
 # ---------------------------------------------------------------------------
 # to_dataframe
+# to_numpy
 # ---------------------------------------------------------------------------
 
 def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None) -> pd.DataFrame:
@@ -1197,6 +1198,13 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
     return df
 # end
 
+
+def to_numpy(data: Union[pd.DataFrame, pd.Series]) -> np.ndarray:
+    if data is None:
+        return None
+    else:
+        return data.to_numpy()
+# end
 
 # ---------------------------------------------------------------------------
 # classification_quality
