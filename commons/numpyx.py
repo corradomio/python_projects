@@ -57,64 +57,177 @@ def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=Non
 #   y[-1],X[-1],X[0]  -> y[0]
 #
 
-def reshape(X: np.ndarray, y: np.ndarray, 
-            xslots: list[int] = [0], yslots: list[int] = [], 
-            tslots: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
-    """
-    
-    :param X:
-    :param y:
-    :param xslots:
-    :param yslots:
-    :return:
-    """
+class LagReshaper:
+    def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
+        assert isinstance(xlags, list)
+        assert isinstance(ylags, list)
+        assert isinstance(tlags, list)
+        self.xlags = xlags
+        self.ylags = ylags
+        self.tlags = tlags
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+
+    def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+
+        def _max(l):
+            return 0 if len(l) == 0 else max(l)
+
+        xlags = self.xlags
+        ylags = self.ylags
+        tlags = self.tlags
+
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+            xlags = []
+
+        assert len(X) == len(y)
+
+        s = max(_max(xlags), _max(ylags))
+        t = max(tlags)
+
+        mx = X.shape[1]
+        my = y.shape[1]
+        n = y.shape[0] - s - t
+
+        mt = len(xlags) * mx + len(ylags) * my
+        mu = len(tlags) * my
+
+        Xt = np.zeros((n, mt), dtype=X.dtype)
+        yt = np.zeros((n, mu), dtype=y.dtype)
+
+        for i in range(n):
+            c = 0
+            for j in ylags:
+                Xt[i, c:c + my] = y[s + i - j]
+                c += my
+            for j in xlags:
+                Xt[i, c:c + mx] = X[s + i - j]
+                c += mx
+
+            c = 0
+            for j in tlags:
+                yt[i, c:c + my] = y[s + i + j]
+                c += my
+        # end
+
+        return Xt, yt
+    # end
+
+    def fit_transform(self, X, y):
+        return self.fit(X, y).transform(X, y)
+# end
+
+
+def reshape(X: np.ndarray, y: np.ndarray,
+            xlags: list[int] = [0], ylags: list[int] = [],
+            tlags: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
+    lr = LagReshaper(xlags, ylags, tlags)
+    return lr.fit_transform(X, y)
+# end
+
+
+class LagFuture:
+    def __init__(self,
+                 xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
+        assert isinstance(xlags, list)
+        assert isinstance(ylags, list)
+        assert isinstance(tlags, list)
+        self.xlags = xlags
+        self.ylags = ylags
+        self.tlags = tlags
+        self.Xh = None
+        self.yh = None
+        self.Xp = None
+        self.yp = None
+        self.Xt = None
+        self.fh = 0
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
     assert isinstance(X, (type(None), np.ndarray))
     assert isinstance(y, np.ndarray)
-    assert isinstance(xslots, list)
-    assert isinstance(yslots, list)
-    assert isinstance(tslots, list)
-    def _max(l): return 0 if len(l) == 0 else max(l)
 
     if len(y.shape) == 1:
         y = y.reshape((-1, 1))
-
     if X is None:
         X = np.zeros((len(y), 0), dtype=y.dtype)
-        xslots = []
 
-    assert len(X) == len(y)
+        self.Xh = X
+        self.yh = y
+        return self
 
-    s = max(_max(xslots), _max(yslots))
-    t = max(tslots)
-    
+    def transform(self, Xp: np.ndarray, fh: int) -> np.ndarray:
+        assert isinstance(Xp, (type(None), np.ndarray))
+        assert isinstance(fh, int)
+
+        def _max(l):
+            return 0 if len(l) == 0 else max(l)
+
+        X = self.Xh
+        y = self.yh
+        xlags = self.xlags
+        ylags = self.ylags
+        tlags = self.tlags
+
+        if Xp is None:
+            Xp = np.zeros((len(y), 0), dtype=X.dtype)
+
+        s = max(_max(xlags), _max(ylags))
+        t = max(tlags)
+
     mx = X.shape[1]
     my = y.shape[1]
     n = y.shape[0] - s - t
-    
-    mt = len(xslots)*mx + len(yslots)*my
-    mu = len(tslots)*my
-    
-    Xt = np.zeros((n, mt), dtype=X.dtype)
-    yt = np.zeros((n, mu), dtype=y.dtype)
-    
-    for i in range(n):
-        c = 0
-        for j in yslots:
-            Xt[i, c:c+my] = y[s+i-j]
-            c += my
-        for j in xslots:
-            Xt[i, c:c+mx] = X[s+i-j]
-            c += mx
-        
-        c = 0
-        for j in tslots:
-            yt[i, c:c+my] = y[s+i+j]
-            c += my
-    # end
-    
-    return Xt, yt
-# end
 
+        mt = len(xlags) * mx + len(ylags) * my
+        mu = len(tlags) * my
+
+        yp = np.zeros((fh, mu), dtype=y.dtype)
+        Xt = np.zeros((1, mt), dtype=X.dtype)
+
+        self.Xp = Xp
+        self.yp = yp
+        self.Xt = Xt
+
+        return yp
+    # end
+
+    def _xat(self, i):
+        return self.Xh[i] if i < 0 else self.Xp[i]
+    def _yat(self, i):
+        return self.yh[i,0] if i < 0 else self.yp[i,0]
+
+    def step(self, i) -> np.ndarray:
+        xat = self._xat
+        yat = self._yat
+        xlags = self.xlags
+        ylags = self.ylags
+        mx = self.Xh.shape[1]
+        my = self.yh.shape[1]
+        Xt = self.Xt
+
+        c = 0
+        for j in ylags:
+            Xt[i, c:c + my] = yat(i - j)
+            c += my
+        for j in xlags:
+            Xt[i, c:c + mx] = xat(i - j)
+            c += mx
+
+        return Xt
+    # end
+
+    def fit_transform(self, X, y):
+        raise NotImplemented()
+# end
 
 # ---------------------------------------------------------------------------
 # unroll_loop
