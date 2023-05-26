@@ -213,7 +213,7 @@ class LinearForecastRegressor(BaseForecaster):
                 y: Union[None, pd.DataFrame, pd.Series] = None):
         if self._y_only:
             X = None
-            
+
         fh = self._resolve_fh(y, X, fh)
         if y is None:
             X = self._clip_on_cutoff(X)

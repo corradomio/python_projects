@@ -7,7 +7,7 @@ import csvx
 
 
 # ---------------------------------------------------------------------------
-# IO
+# load_data
 # ---------------------------------------------------------------------------
 
 def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=None):
@@ -47,7 +47,113 @@ def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=Non
 
 
 # ---------------------------------------------------------------------------
-# Support
+# reshape
+# ---------------------------------------------------------------------------
+# (X, y, xslot, yslots) -> Xt, yt
+#
+# back_step
+#   y[-1]             -> y[0]
+#   y[-1],X[-1]       -> y[0]
+#   y[-1],X[-1],X[0]  -> y[0]
+#
+
+def reshape(X: np.ndarray, y: np.ndarray, 
+            xslots: list[int] = [0], yslots: list[int] = [], 
+            tslots: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
+    """
+    
+    :param X:
+    :param y:
+    :param xslots:
+    :param yslots:
+    :return:
+    """
+    assert isinstance(X, (type(None), np.ndarray))
+    assert isinstance(y, np.ndarray)
+    assert isinstance(xslots, list)
+    assert isinstance(yslots, list)
+    assert isinstance(tslots, list)
+    def _max(l): return 0 if len(l) == 0 else max(l)
+
+    if len(y.shape) == 1:
+        y = y.reshape((-1, 1))
+
+    if X is None:
+        X = np.zeros((len(y), 0), dtype=y.dtype)
+        xslots = []
+
+    assert len(X) == len(y)
+
+    s = max(_max(xslots), _max(yslots))
+    t = max(tslots)
+    
+    mx = X.shape[1]
+    my = y.shape[1]
+    n = y.shape[0] - s - t
+    
+    mt = len(xslots)*mx + len(yslots)*my
+    mu = len(tslots)*my
+    
+    Xt = np.zeros((n, mt), dtype=X.dtype)
+    yt = np.zeros((n, mu), dtype=y.dtype)
+    
+    for i in range(n):
+        c = 0
+        for j in yslots:
+            Xt[i, c:c+my] = y[s+i-j]
+            c += my
+        for j in xslots:
+            Xt[i, c:c+mx] = X[s+i-j]
+            c += mx
+        
+        c = 0
+        for j in tslots:
+            yt[i, c:c+my] = y[s+i+j]
+            c += my
+    # end
+    
+    return Xt, yt
+# end
+
+
+# ---------------------------------------------------------------------------
+# unroll_loop
+# ---------------------------------------------------------------------------
+# X[0]      -> (X[0],X[1],X[2],...)
+# X[1]      -> (X[1],X[2],X[3],...)
+# X[2]      -> (X[2],X[3],X[4],...)
+#
+
+def unroll_loop(X: np.ndarray, steps:int = 1) -> np.ndarray:
+    """
+    Add an extra axes:
+    
+        (n, m) -> (n-s+1, s, m)
+    
+    :param X: 
+    :param steps: 
+    :return: 
+    """
+    if len(X.shape) == 1:
+        X = X.resshape((-1, 1))
+
+    s = steps
+    n = X.shape[0] - s + 1
+    m = X.shape[1:]
+
+    t = np.zeros((n, s, *m), dtype=X.dtype)
+
+    for i in range(n):
+        for j in range(s):
+            t[i, j] = X[i+j]
+
+    return t
+# end
+
+
+# ---------------------------------------------------------------------------
+# fzeros
+# fones
 # ---------------------------------------------------------------------------
 
 ShapeType = Union[int, list[int], tuple[int]]

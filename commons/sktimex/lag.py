@@ -342,7 +342,7 @@ class LagTrainTransform:
         # and uses an empty list as islots
         if X is None:
             n = len(y)
-            X = np.zeros((n, 0))
+            X = np.zeros((n, 0), dtype=y.dtype)
             islots = []
 
         assert len(y) == len(X)
@@ -355,8 +355,8 @@ class LagTrainTransform:
 
         nt = n - s
         mt = sx * mx + sy
-        Xt = np.zeros((nt, mt))
-        yt = np.zeros((nt, my))
+        Xt = np.zeros((nt, mt), dtype=y.dtype)
+        yt = np.zeros((nt, my), dtype=y.dtype)
 
         for i in range(nt):
             c = 0
@@ -421,7 +421,7 @@ class LagPredictTransform:
         mt = sx*m + sy
 
         self._m = m
-        self._Xt = np.zeros((nt, mt))
+        self._Xt = np.zeros((nt, mt), dtype=y.dtype)
         return self
 
     def transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, fh: int = 0):
@@ -430,7 +430,7 @@ class LagPredictTransform:
 
         if y is None:
             my = self._yh.shape[1]
-            y = np.zeros((fh, my))
+            y = np.zeros((fh, my), dtype=self._yh.dtype)
 
         # X_pred, y_pred
         self._Xp = X

@@ -1,5 +1,5 @@
 import numpy as np
-from sktimex.lag import resolve_lag, LagTrainTransform, LagPredictTransform
+from sktimex.lag import resolve_lag, LagTrainTransform, LagPredictTransform, unroll_loop, back_step
 
 
 def main():
@@ -19,7 +19,6 @@ def main():
     ltt = LagTrainTransform(lags)
     Xt, yt = ltt.fit_transform(None, y)
 
-
     lpt = LagPredictTransform(lags)
     yp = lpt.fit(X, y).transform(Xp, fh=9)
 
@@ -30,6 +29,11 @@ def main():
 
     print(Xt)
     print(yt)
+
+    Xt = unroll_loop(X, 1)
+    yt = unroll_loop(y, 1)
+
+    Xt, yt = back_step(X, y, steps=1)
 
     pass
 
