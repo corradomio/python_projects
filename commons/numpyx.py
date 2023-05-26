@@ -216,10 +216,10 @@ class LagFuture:
 
         c = 0
         for j in ylags:
-            Xt[i, c:c + my] = yat(i - j)
+            Xt[0, c:c + my] = yat(i - j)
             c += my
         for j in xlags:
-            Xt[i, c:c + mx] = xat(i - j)
+            Xt[0, c:c + mx] = xat(i - j)
             c += mx
 
         return Xt
