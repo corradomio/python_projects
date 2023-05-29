@@ -218,7 +218,7 @@ def read_data(file: str,
     assert isinstance(ignore, list), "'ignore' must be a list[str]"
     assert isinstance(onehot, list), "'onehot' must be a list[str]"
     assert isinstance(datetime, (type(None), str, list, tuple)), "'datetime' must be (None, str, (str, str), (str, str, str))"
-    assert isinstance(periodic, (type(None), str, list, tuple)), "'periodic' must be (None, str, (str, str))"
+    assert isinstance(periodic, (type(None), str, list, tuple)), "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
 
     # move 'na_values' in kwargs
@@ -372,56 +372,160 @@ def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFram
 # ---------------------------------------------------------------------------
 # periodic_encode
 # ---------------------------------------------------------------------------
+#
+#
 
-def periodic_encode(df, column, method, freq: Optional[str]=None) -> pd.DataFrame:
+def periodic_encode(df,
+                    datetime: Optional[str] = None,
+                    method: str = 'onehot',
+                    columns: Optional[list[str]] = None,
+                    freq: Optional[str]=None) -> pd.DataFrame:
+    """
+    Add some extra column to represent a periodic time
+    
+    Supported methods:
+    
+        onehot:     year/month      -> year, month (onehot encoded)
+        order:      year/month      -> year, month (index, 0-based)
+                    year/month/day  -> year, month (index, 0-based), day (0-based) 
+        circle      year/month/day/h    year, month, day, cos(h/24), sin(h/24)
+                    year/month/day      year, month, cos(day/30), sin(day/30)
+                    year/month          year, cos(month/12), sin(month/12)
+
+    :param df: dataframe to process
+    :param datetime: if to use a datetime column. If None, it is used the index
+    :param method: method to use
+    :param columns: column names to use. The n of columns depends on the method
+    :param freq: frequency ('H', 'D', 'W', 'M')
+    :return:
+    """
     if method == 'onehot':
-        return onehot_encode(df, column)
+        return _onehot_encode(df, datetime, columns, freq)
+    elif method == 'order' and freq == 'M':
+        return _order_month_encoder(df, datetime, columns)
+    elif method == 'order' and freq == 'D':
+        return _order_day_encoder(df, datetime, columns)
     elif method == 'M' or freq == 'M':
-        return _monthly_encoder(df, column)
+        return _monthly_encoder(df, datetime, columns)
     elif method == 'W' or freq == 'W':
-        return _weekly_encoder(df, column)
+        return _weekly_encoder(df, datetime, columns)
     elif method == 'D' or freq == 'D':
-        return _daily_encoder(df, column)
+        return _daily_encoder(df, datetime, columns)
     else:
         raise ValueError(f"'Unsupported periodic_encode method '{method}/{freq}'")
 # end
 
+def _columns_name(columns, datetime, suffixes):
+    if columns is None:
+        columns = [datetime + s for s in suffixes]
+    assert len(columns) == len(suffixes), f"It is necessary to have {len(suffixes)} columns ({suffixes})"
+    return columns
 
-def _monthly_encoder(df, column):
+
+def _onehot_encode(df, datetime, columns, freq):
+    dt = df[datetime]
+
+    columns = _columns_name(
+        columns, datetime,
+        ["_y", "_01", "_02", "_03", "_04", "_05", "_06", "_07", "_08", "_09", "_10", "_11", "_12"]
+        # "_y", "_jan", "_feb", "_mar", "_apr", "_may", "_jun", "_jul", "_aug", "_sep", "_oct", "_nov", "_dec"]
+    )
+    
+    # year == 0
+    dty = dt.apply(lambda x: x.year)
+    df[columns[0]] = dty
+    
+    # month  in range [1, 12]
+    for month in range(1, 12):
+        dtm = dt.apply(lambda x: int(x.month == month))
+        df[columns[month]] = dtm
+
+    return df
+
+
+def _order_month_encoder(df, datetime, columns):
+    dt = df[datetime]
+
+    columns = _columns_name(columns, datetime, ["_y", "_m"])
+
+    dty = dt.apply(lambda x: x.year)
+    dtm = dt.apply(lambda x: x.month-1)
+    
+    df[columns[0]] = dty
+    df[columns[1]] = dtm
+    
+    return df
+
+
+def _order_day_encoder(df, datetime, columns):
+    dt = df[datetime]
+
+    columns = _columns_name(columns, datetime, ["_y", "_m", "_d"])
+
+    dty = dt.apply(lambda x: x.year)
+    dtm = dt.apply(lambda x: x.month - 1)
+    dtd = dt.apply(lambda x: x.day - 1)
+
+    df[columns[0]] = dty
+    df[columns[1]] = dtm
+    df[columns[2]] = dtd
+
+    return df
+
+
+def _monthly_encoder(df, datetime, columns):
     FACTOR = 2 * math.pi / 12
-    dt = df[column]
+    dt = df[datetime]
 
+    columns = _columns_name(columns, datetime, ["_y", "_c", "_s"])
+
+    dty   = dt.apply(lambda x: x.year)
     dtcos = dt.apply(lambda x: math.cos(FACTOR*(x.month-1)))
     dtsin = dt.apply(lambda x: math.sin(FACTOR*(x.month-1)))
 
-    df[column + "_c"] = dtcos
-    df[column + "_s"] = dtsin
+    df[columns[0]] = dty
+    df[columns[1]] = dtcos
+    df[columns[2]] = dtsin
 
     return df
 
 
-def _weekly_encoder(df, column):
+def _weekly_encoder(df, datetime, columns):
     FACTOR = 2 * math.pi / 7
-    dt = df[column]
+    dt = df[datetime]
 
+    columns = _columns_name(columns, datetime, ["_y", "_m", "_c", "_s"])
+
+    dty   = dt.apply(lambda x: x.year)
+    dtm   = dt.apply(lambda x: x.month-1)
     dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.weekday)))
     dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.weekday)))
 
-    df[column + "_c"] = dtcos
-    df[column + "_s"] = dtsin
+    df[columns[0]] = dty
+    df[columns[1]] = dtm
+    df[columns[2]] = dtcos
+    df[columns[3]] = dtsin
 
     return df
 
 
-def _daily_encoder(df, column):
+def _daily_encoder(df, datetime, columns):
     FACTOR = 2 * math.pi / 24
-    dt = df[column]
+    dt = df[datetime]
 
+    columns = _columns_name(columns, datetime, ["_y", "_m", "_d", "_c", "_s"])
+
+    dty   = dt.apply(lambda x: x.year)
+    dtm   = dt.apply(lambda x: x.month-1)
+    dtd   = dt.apply(lambda x: x.day-1)
     dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.hour)))
     dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.hour)))
 
-    df[column + "_c"] = dtcos
-    df[column + "_s"] = dtsin
+    df[columns[0]] = dty
+    df[columns[1]] = dtm
+    df[columns[2]] = dtd
+    df[columns[4]] = dtcos
+    df[columns[5]] = dtsin
 
     return df
 

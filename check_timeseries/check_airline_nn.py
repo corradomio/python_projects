@@ -17,7 +17,7 @@ class TSModel1(nnx.Module):
         self.slots = slots
         super().__init__(
             model=[
-                nnx.LSTM(input_size=1, hidden_size=64, num_layers=2, dropout=.2, bidirectional=True),
+                nnx.LSTM(input_size=1, hidden_size=32, num_layers=2, dropout=.2, bidirectional=True),
                 nnx.DropDimensions(),
                 nn.ReLU(),
                 nn.Linear(in_features=2*64*slots, out_features=16*slots),
@@ -96,7 +96,6 @@ def main():
 
     plot_series(y, y_pred, labels=['y', 'y_pred'])
     plt.show()
-
 # end
 
 

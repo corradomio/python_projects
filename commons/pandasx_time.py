@@ -147,52 +147,5 @@ def infer_freq(index, steps=5, ntries=3) -> str:
 
 
 # ---------------------------------------------------------------------------
-# datetime_periodic
-# ---------------------------------------------------------------------------
-# add different periodic columns to df
-
-def dataframe_periodic(df: pd.DataFrame, freq: str, columns: list[str], method: str = 'circle',
-                       datetime: Optional[str] = None) -> pd.DataFrame:
-    """
-    Add some extra column to represent a periodic time
-
-    :param df: dataframe to process
-    :param freq: frequency
-    :param columns: column names to use. The n of columns depends on the method
-    :param method: method to use
-    :param datetime: if to use a datetime column or the DatetimeIndex/PeriodIndex
-    :return:
-    """
-    if datetime is not None:
-        date_values = df[datetime]
-    else:
-        date_values = df.index.to_series()
-
-    if method in ['cossin', 'sincos', 'circle']:
-        return circular_periodic(df, freq, columns, date_values)
-    else:
-        raise ValueError(f'Unsupported method {method}')
-
-
-def circular_periodic(df: pd.DataFrame, freq: str, columns: list[str], date_values):
-    assert len(df) == len(date_values)
-    assert isinstance(columns, list) and len(columns) == 2
-    dfreq = infer_freq(date_values)
-
-    sfact = FREQUENCIES[freq]
-
-    values = date_values.map(pd.Period.to_timestamp).map(pd.Timestamp.timestamp).to_numpy()
-    values = np.mod(values, sfact)
-    cos_v = np.cos(values * 2 * np.pi / sfact)
-    sin_v = np.sin(values * 2 * np.pi / sfact)
-
-    df[columns[0]] = cos_v
-    df[columns[1]] = sin_v
-
-    return df
-# end
-
-
-# ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------
