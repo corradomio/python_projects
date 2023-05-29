@@ -282,7 +282,7 @@ class Module(nn.Module):
 
 class LSTM(nn.LSTM):
 
-    def __init__(self, *, input_size, hidden_size, num_layers, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -290,12 +290,16 @@ class LSTM(nn.LSTM):
                          **kwargs)
         self.input_size = input_size
         self.hidden_size = hidden_size
+        self.output_size = output_size
         self.num_layers = num_layers
         self.hidden = {}
+        f = (2 if self.bidirectional else 1)
+        self.D = f*self.num_layers 
+        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
 
     def forward(self, input, hx=None):
         L = input.shape[0 if self.batch_first else 1]
-        D = (2*self.num_layers) if self.bidirectional else self.num_layers
+        D = self.D
         N = self.hidden_size
 
         if L not in self.hidden:
@@ -305,8 +309,75 @@ class LSTM(nn.LSTM):
 
         hidden = self.hidden[L]
         predict, h = super().forward(input, hidden)
+        output = self.V(predict)
+        return output
+# end
 
-        return predict
+
+class GRU(nn.GRU):
+
+    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
+        super().__init__(input_size=input_size,
+                         hidden_size=hidden_size,
+                         num_layers=num_layers,
+                         batch_first= batch_first,
+                         **kwargs)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_layers = num_layers
+        self.hidden = {}
+        f = (2 if self.bidirectional else 1)
+        self.D = f*self.num_layers 
+        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
+
+    def forward(self, input, hx=None):
+        L = input.shape[0 if self.batch_first else 1]
+        D = self.D
+        N = self.hidden_size
+
+        if L not in self.hidden:
+            hidden_state = torch.zeros(D, L, N)
+            self.hidden[L] = hidden_state
+
+        hidden = self.hidden[L]
+        predict, h = super().forward(input, hidden)
+        output = self.V(predict)
+        return output
+# end
+
+
+class RNN(nn.RNN):
+
+    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
+        super().__init__(input_size=input_size,
+                         hidden_size=hidden_size,
+                         num_layers=num_layers,
+                         batch_first= batch_first,
+                         **kwargs)
+        self.input_size = input_size
+        self.hidden_size = hidden_size
+        self.output_size = output_size
+        self.num_layers = num_layers
+        self.hidden = {}
+        f = (2 if self.bidirectional else 1)
+        self.D = f*self.num_layers 
+        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
+
+    def forward(self, input, hx=None):
+        L = input.shape[0 if self.batch_first else 1]
+        D = self.D
+        N = self.hidden_size
+
+        if L not in self.hidden:
+            hidden_state = torch.zeros(D, L, N)
+            cell_state = torch.zeros(D, L, N)
+            self.hidden[L] = (hidden_state, cell_state)
+
+        hidden = self.hidden[L]
+        predict, h = super().forward(input, hidden)
+        output = self.V(predict)
+        return output
 # end
 
 
@@ -329,6 +400,35 @@ class DropDimensions(nn.Module):
         return input
 # end
 
+
+# ---------------------------------------------------------------------------
+# Snake
+# ---------------------------------------------------------------------------
+# x + 1/f sin(f x)^2
+#
+# x + (1 - cos(2 f x)/(2 f)
+
+class Snake(nn.Module):
+
+    def __init__(self, frequency=1):
+        super().__init__()
+        # self.frequency = nn.Parameter(torch.tensor(frequency, dtype=float))
+        self.frequency = torch.tensor(frequency, dtype=float)
+
+    def forward(self, x):
+        f = self.frequency
+        return x + torch.pow(torch.sin(f*x), 2)/f
+        # return x + torch.pow(torch.sin(x), 2)
+
+
+class Difference(nn.Module):
+
+    def __init__(self, n=1):
+        super().__init__()
+        self.n = n
+
+    def forward(self, x):
+        return torch.diff(x, n=n, dim=-1)
 
 # ---------------------------------------------------------------------------
 # PowerModule

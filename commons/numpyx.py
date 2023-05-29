@@ -208,8 +208,72 @@ class LagPreparer:
 #   X[-1]            -> y[0]
 #   X[-1],y[-1]      -> y[0]
 #   X[-1],y[-1],X[0] -> y[0]
+#
+# xlags: [], [1], [0], [0,1]
+# ylags: [], [1]
+
 
 class UnfoldLoop:
+    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
+        self.steps = steps
+        self.xlags = xlags
+        self.ylags = ylags
+
+    def __len__(self):
+        return self.steps + 1
+
+    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        xlags = self.xlags
+        ylags = self.ylags
+
+        s = self.steps
+        n = X.shape[0] - s
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = mx*len(xlags) + my*len(ylags)
+        Xt = np.zeros((n, s, mt), dtype=X.dtype)
+        yt = np.zeros((n, s, my), dtype=y.dtype)
+
+        for i in range(n):
+            for j in range(s):
+                c = 0
+                for k in xlags:
+                    Xt[i, j, c:c + mx] = X[i + j + k]
+                    c += mx
+                for k in ylags:
+                    Xt[i, j, c:c + my] = y[i + j]
+                    c += my
+
+                yt[i, j] = y[i + j + 1]
+            # end
+        # end
+
+        return Xt, yt
+
+    # end
+
+    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return self.fit(X, y).transform(X, y)
+# end
+
+
+class UnfoldLoop1:
     def __init__(self, steps: int=1, use_X=True, use_y=True, use_current=False):
         self.steps = steps
         self.use_X = use_X
@@ -246,6 +310,7 @@ class UnfoldLoop:
 
         mt = (mx if use_X else 0) + (my if use_y else 0) + (mx if use_c else 0)
         Xt = np.zeros((n, s, mt), dtype=X.dtype)
+        yt = np.zeros((n, s, my), dtype=y.dtype)
 
         for i in range(n):
             for j in range(s):
@@ -258,26 +323,21 @@ class UnfoldLoop:
                     c += my
                 if use_c:
                     Xt[i, j, c:c+mx] = X[i + j + 1]
+
+                yt[i, j] = y[i+j+1]
             # end
         # end
 
-        if y is not None:
-            yt = start_at(y, s)
-        else:
-            yt = None
-
-        assert len(Xt) == len(yt)
         return Xt, yt
     # end
 
     def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         return self.fit(X, y).transform(X, y)
-
 # end
 
 
-def unroll_loop(X: np.ndarray, steps:int = 1) -> np.ndarray:
-    return LoopUnroller(steps).fit_transform(X)
+def unfold_loop(X: Optional[np.ndarray], y: np.ndarray, steps:int = 1) -> np.ndarray:
+    return UnfoldLoop(steps).fit_transform(X, y)
 # end
 
 # ---------------------------------------------------------------------------
