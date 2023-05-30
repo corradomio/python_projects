@@ -24,16 +24,22 @@ n = len(t)
 p = 3*s
 
 periodic = np.sin(a3 + b3*t)
-# amplitude = (a2 + b2*t)
-amplitude = (1 + 3*np.exp(-.01*t))
-# trend = (a1 + b1*t)
-trend = (1 + 5*np.exp(-.005*t))
+amplitude = (a2 + b2*t)
+# amplitude = (1 + 3*np.exp(-.01*t))
+trend = (a1 + b1*t)
+# trend = (1 + 5*np.exp(-.005*t))
 y = trend + amplitude*periodic
 # y += (a2 + b2*t)*0.5*np.random.random(y.shape)
 
-X = np.zeros((n, 2))
+X = np.zeros((n, 3))
 X[:, 0] = t
 X[:, 1] = periodic
+X[:, 2] = np.sqrt(1 - np.power(periodic, 2))
+
+# X[:, 0] = 1
+# X[:, 1] = 1
+# X[:, 2] = 1
+
 y = y.reshape((-1, 1))
 
 # --

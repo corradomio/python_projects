@@ -244,6 +244,8 @@ class UnfoldLoop:
         ylags = self.ylags
 
         s = self.steps
+        t = max(_max(xlags), _max(ylags))
+
         n = X.shape[0] - s
         mx = X.shape[1]
         my = y.shape[1]
@@ -393,6 +395,7 @@ class UnfoldPredictor:
         self.Xp = X
 
         s = self.steps
+        t = max(_max(xlags), _max(ylags))
         mx = X.shape[1]
         my = y.shape[1]
 
@@ -418,8 +421,11 @@ class UnfoldPredictor:
 
         X = self.Xh
         y = self.yh
+        xlags = self.xlags
+        ylags = self.ylags
 
         s = self.steps
+        t = max(_max(xlags), _max(ylags))
         mx = X.shape[1]
         my = y.shape[1]
 
