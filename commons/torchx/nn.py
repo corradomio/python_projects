@@ -258,8 +258,11 @@ class Module(nn.Module):
 
 
 # ---------------------------------------------------------------------------
-# LSTM
+# RNN/GRU/LSTM
 # ---------------------------------------------------------------------------
+# It combines in a module a RNN layer connected to a Linear layer,
+# batch_first = True for default
+
 #
 #     Args:
 #         input_size: The number of expected features in the input `x`
@@ -282,7 +285,7 @@ class Module(nn.Module):
 
 class LSTM(nn.LSTM):
 
-    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -313,10 +316,27 @@ class LSTM(nn.LSTM):
         return output
 # end
 
-
+#
+#     Args:
+#         input_size: The number of expected features in the input `x`
+#         hidden_size: The number of features in the hidden state `h`
+#         num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+#             would mean stacking two GRUs together to form a `stacked GRU`,
+#             with the second GRU taking in outputs of the first GRU and
+#             computing the final results. Default: 1
+#         bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+#             Default: ``True``
+#         batch_first: If ``True``, then the input and output tensors are provided
+#             as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+#             Note that this does not apply to hidden or cell states. See the
+#             Inputs/Outputs sections below for details.  Default: ``False``
+#         dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+#             GRU layer except the last layer, with dropout probability equal to
+#             :attr:`dropout`. Default: 0
+#         bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
 class GRU(nn.GRU):
 
-    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -347,9 +367,29 @@ class GRU(nn.GRU):
 # end
 
 
+#
+#     Args:
+#         input_size: The number of expected features in the input `x`
+#         hidden_size: The number of features in the hidden state `h`
+#         num_layers: Number of recurrent layers. E.g., setting ``num_layers=2``
+#             would mean stacking two RNNs together to form a `stacked RNN`,
+#             with the second RNN taking in outputs of the first RNN and
+#             computing the final results. Default: 1
+#         nonlinearity: The non-linearity to use. Can be either ``'tanh'`` or ``'relu'``. Default: ``'tanh'``
+#         bias: If ``False``, then the layer does not use bias weights `b_ih` and `b_hh`.
+#             Default: ``True``
+#         batch_first: If ``True``, then the input and output tensors are provided
+#             as `(batch, seq, feature)` instead of `(seq, batch, feature)`.
+#             Note that this does not apply to hidden or cell states. See the
+#             Inputs/Outputs sections below for details.  Default: ``False``
+#         dropout: If non-zero, introduces a `Dropout` layer on the outputs of each
+#             RNN layer except the last layer, with dropout probability equal to
+#             :attr:`dropout`. Default: 0
+#         bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False``
+
 class RNN(nn.RNN):
 
-    def __init__(self, *, input_size, hidden_size, num_layers, output_size, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,

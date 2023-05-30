@@ -23,8 +23,12 @@ t = np.arange(0, 20*s, 1)
 n = len(t)
 p = 3*s
 
-periodic = np.sin(b3*t)
-y = (a1 + b1*t) + (a2 + b2*t)*np.sin(a3 + b3*t)
+periodic = np.sin(a3 + b3*t)
+# amplitude = (a2 + b2*t)
+amplitude = (1 + 3*np.exp(-.01*t))
+# trend = (a1 + b1*t)
+trend = (1 + 5*np.exp(-.005*t))
+y = trend + amplitude*periodic
 # y += (a2 + b2*t)*0.5*np.random.random(y.shape)
 
 X = np.zeros((n, 2))
@@ -49,6 +53,7 @@ ytr = yt[:-p]
 Xts = Xt[-p:]
 yts = yt[-p:]
 
+
 # --
 
 class Model(nnx.Module):
@@ -59,11 +64,11 @@ class Model(nnx.Module):
                      hidden_size=8,
                      output_size=ouput_size,
                      num_layers=1,
-                     bidirectional=True)
-        ],
-        batch_size=16,
-        epochs=2000,
-        log_epochs=100)
+                     bidirectional=False)
+            ],
+            batch_size=16,
+            epochs=2000,
+            log_epochs=100)
 
 
 model = Model()
