@@ -1,7 +1,9 @@
 from typing import Union, Optional
 import numpy as np
-import sktimex as sktx
 import numpyx as npx
+import pandas as pd
+import pandasx as pdx
+import sktimex as sktx
 import torchx.nn as nnx
 from sktimex.utils import PD_TYPES, FH_TYPES
 
@@ -98,7 +100,7 @@ class DeepForecastRegressor:
     def _normalize_xy(self, X, y):
         if X is None:
             n = len(y)
-            X = np.zeros((n, 0))
+            X = pd.DataFrame({}, index=y.index)
 
         if len(y.shape) == 1:
             y = y.reshape((-1, 1))
@@ -118,13 +120,12 @@ class DeepForecastRegressor:
         input_size = mx * len(xlags) + my * len(ylags)
         return input_size, my
 
-
     def fit(self, y: PD_TYPES, X: PD_TYPES=None, fh: FH_TYPES=None, val=None):
         X, y = self._normalize_xy(X, y)
 
-        # scaled, if necessary
-        Xs = X
-        ys = y
+        # convert into numpy & scaled, if necessary
+        Xs = X.to_numpy()
+        ys = y.to_numpy()
 
         input_size, output_size = self._input_output_sizes()
 
