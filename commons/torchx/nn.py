@@ -190,7 +190,7 @@ class Module(nn.Module):
     # fit
     # -----------------------------------------------------------------------
 
-    def fit(self, X: np.ndarray, y: np.ndarray, batch_size=None, epochs=None) -> "Module":
+    def fit(self, X: np.ndarray, y: np.ndarray, batch_size=None, epochs=None, val=None) -> "Module":
         if epochs is None: epochs = self.epochs
         if batch_size is None: batch_size = self.batch_size
 
@@ -198,22 +198,44 @@ class Module(nn.Module):
         y = as_tensor(y)
         ds = TensorDataset(X, y)
         dl = DataLoader(ds, batch_size=batch_size, shuffle=True)
+        
+        if val is not None:
+            X_val, y_val = val
+            X_val = as_tensor(X_val)
+            y_val = as_tensor(y_val)
+        # end
 
         self.train()
         for epoch in range(epochs):
-            losses = []
+            train_losses = []
             for batch_idx, (X, y) in enumerate(dl):
                 y_pred = self(X)
                 loss = self.loss(y_pred, y)
-                losses.append(loss)
+                train_losses.append(loss)
 
                 self.optimizer.zero_grad()
                 loss.backward()
                 self.optimizer.step()
+                
+                if val is None:
+                    continue
+
             # end
-            epoch_metric = torch.mean(torch.stack(losses))
-            if epoch % self.log_epochs == 0:
+
+            if epoch % self.log_epochs != 0:
+                continue
+
+            if val is None:
+                epoch_metric = torch.mean(torch.stack(train_losses))
                 print(f"[{epoch}/{self.epochs}] loss: {epoch_metric.item():.5}")
+            else:
+                with torch.no_grad():
+                    y_pred = self(X_val)
+                    val_loss = self.loss(y_pred, y_val)
+
+                epoch_metric = torch.mean(torch.stack(train_losses))
+                print(f"[{epoch}/{self.epochs}] train loss: {epoch_metric.item():.5}, val loss: {val_loss.item()}")
+
         # end
         return self
     # end

@@ -379,7 +379,8 @@ def periodic_encode(df,
                     datetime: Optional[str] = None,
                     method: str = 'onehot',
                     columns: Optional[list[str]] = None,
-                    freq: Optional[str]=None) -> pd.DataFrame:
+                    freq: Optional[str]=None,
+                    year_scale=None) -> pd.DataFrame:
     """
     Add some extra column to represent a periodic time
     
@@ -400,19 +401,21 @@ def periodic_encode(df,
     :return:
     """
     if method == 'onehot':
-        return _onehot_encode(df, datetime, columns, freq)
+        df = _onehot_encode(df, datetime, columns, freq, year_scale)
     elif method == 'order' and freq == 'M':
-        return _order_month_encoder(df, datetime, columns)
+        df = _order_month_encoder(df, datetime, columns, year_scale)
     elif method == 'order' and freq == 'D':
-        return _order_day_encoder(df, datetime, columns)
+        df = _order_day_encoder(df, datetime, columns, year_scale)
     elif method == 'M' or freq == 'M':
-        return _monthly_encoder(df, datetime, columns)
+        df = _monthly_encoder(df, datetime, columns, year_scale)
     elif method == 'W' or freq == 'W':
-        return _weekly_encoder(df, datetime, columns)
+        df = _weekly_encoder(df, datetime, columns, year_scale)
     elif method == 'D' or freq == 'D':
-        return _daily_encoder(df, datetime, columns)
+        df = _daily_encoder(df, datetime, columns, year_scale)
     else:
         raise ValueError(f"'Unsupported periodic_encode method '{method}/{freq}'")
+    
+    return df
 # end
 
 def _columns_name(columns, datetime, suffixes):
@@ -422,8 +425,30 @@ def _columns_name(columns, datetime, suffixes):
     return columns
 
 
-def _onehot_encode(df, datetime, columns, freq):
-    dt = df[datetime]
+def _scale_year(year, year_scaler):
+    if year_scaler is None:
+        return year
+
+    if len(year_scaler) == 2:
+        y1, s1 = year_scaler
+        s0 = 0.
+        y0 = year[0]
+    else:
+        y0, s0, y1, s1 = year_scaler
+        
+    dy = y1 - y0
+    ds = s1 - s0
+    
+    year = year.apply(lambda y: s0 + (y-y0)*ds/dy)
+    return year
+
+
+def _onehot_encode(df, datetime, columns, freq, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
 
     columns = _columns_name(
         columns, datetime,
@@ -433,22 +458,29 @@ def _onehot_encode(df, datetime, columns, freq):
     
     # year == 0
     dty = dt.apply(lambda x: x.year)
+    dty = _scale_year(dty, year_scale)
+    
     df[columns[0]] = dty
     
     # month  in range [1, 12]
-    for month in range(1, 12):
+    for month in range(1, 13):
         dtm = dt.apply(lambda x: int(x.month == month))
         df[columns[month]] = dtm
 
     return df
 
 
-def _order_month_encoder(df, datetime, columns):
-    dt = df[datetime]
+def _order_month_encoder(df, datetime, columns, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
 
     columns = _columns_name(columns, datetime, ["_y", "_m"])
 
     dty = dt.apply(lambda x: x.year)
+    dty = _scale_year(dty, year_scale)
     dtm = dt.apply(lambda x: x.month-1)
     
     df[columns[0]] = dty
@@ -457,12 +489,17 @@ def _order_month_encoder(df, datetime, columns):
     return df
 
 
-def _order_day_encoder(df, datetime, columns):
-    dt = df[datetime]
+def _order_day_encoder(df, datetime, columns, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
 
     columns = _columns_name(columns, datetime, ["_y", "_m", "_d"])
 
     dty = dt.apply(lambda x: x.year)
+    dty = _scale_year(dty, year_scale)
     dtm = dt.apply(lambda x: x.month - 1)
     dtd = dt.apply(lambda x: x.day - 1)
 
@@ -473,15 +510,20 @@ def _order_day_encoder(df, datetime, columns):
     return df
 
 
-def _monthly_encoder(df, datetime, columns):
-    FACTOR = 2 * math.pi / 12
-    dt = df[datetime]
+def _monthly_encoder(df, datetime, columns, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
+    FREQ = 2 * math.pi / 12
 
     columns = _columns_name(columns, datetime, ["_y", "_c", "_s"])
 
     dty   = dt.apply(lambda x: x.year)
-    dtcos = dt.apply(lambda x: math.cos(FACTOR*(x.month-1)))
-    dtsin = dt.apply(lambda x: math.sin(FACTOR*(x.month-1)))
+    dty   = _scale_year(dty, year_scale)
+    dtcos = dt.apply(lambda x: math.cos(FREQ*(x.month-1)))
+    dtsin = dt.apply(lambda x: math.sin(FREQ*(x.month-1)))
 
     df[columns[0]] = dty
     df[columns[1]] = dtcos
@@ -490,16 +532,21 @@ def _monthly_encoder(df, datetime, columns):
     return df
 
 
-def _weekly_encoder(df, datetime, columns):
-    FACTOR = 2 * math.pi / 7
-    dt = df[datetime]
+def _weekly_encoder(df, datetime, columns, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
+    FREQ = 2 * math.pi / 7
 
     columns = _columns_name(columns, datetime, ["_y", "_m", "_c", "_s"])
 
     dty   = dt.apply(lambda x: x.year)
+    dty   = _scale_year(dty, year_scale)
     dtm   = dt.apply(lambda x: x.month-1)
-    dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.weekday)))
-    dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.weekday)))
+    dtcos = dt.apply(lambda x: math.cos(FREQ * (x.weekday)))
+    dtsin = dt.apply(lambda x: math.sin(FREQ * (x.weekday)))
 
     df[columns[0]] = dty
     df[columns[1]] = dtm
@@ -509,17 +556,22 @@ def _weekly_encoder(df, datetime, columns):
     return df
 
 
-def _daily_encoder(df, datetime, columns):
-    FACTOR = 2 * math.pi / 24
-    dt = df[datetime]
+def _daily_encoder(df, datetime, columns, year_scale):
+    if datetime is None:
+        dt = df.index.to_series()
+        datetime = "dt"
+    else:
+        dt = df[datetime]
+    FREQ = 2 * math.pi / 24
 
     columns = _columns_name(columns, datetime, ["_y", "_m", "_d", "_c", "_s"])
 
     dty   = dt.apply(lambda x: x.year)
+    dty   = _scale_year(dty, year_scale)
     dtm   = dt.apply(lambda x: x.month-1)
     dtd   = dt.apply(lambda x: x.day-1)
-    dtcos = dt.apply(lambda x: math.cos(FACTOR * (x.hour)))
-    dtsin = dt.apply(lambda x: math.sin(FACTOR * (x.hour)))
+    dtcos = dt.apply(lambda x: math.cos(FREQ * (x.hour)))
+    dtsin = dt.apply(lambda x: math.sin(FREQ * (x.hour)))
 
     df[columns[0]] = dty
     df[columns[1]] = dtm

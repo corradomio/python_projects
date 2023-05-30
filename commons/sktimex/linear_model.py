@@ -9,12 +9,7 @@ from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from stdlib import import_from
 
 from .lag import resolve_lag, LagTrainTransform, LagPredictTransform
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-FH_TYPES = Union[None, int, list[int], np.ndarray, ForecastingHorizon]
+from .utils import *
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +169,7 @@ class LinearForecastRegressor(BaseForecaster):
             return super().fit(y=y, X=X, fh=fh)
     # end
 
-    def _fit(self, y: pd.Series, X: Optional[pd.DataFrame] = None, fh: Optional[ForecastingHorizon] = None):
+    def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
         # slots = resolve_lag(self._lag)
         slots = self._slots
         s = len(slots)
@@ -209,8 +204,8 @@ class LinearForecastRegressor(BaseForecaster):
 
     def predict(self,
                 fh: FH_TYPES = None,
-                X: Optional[pd.DataFrame] = None,
-                y: Union[None, pd.DataFrame, pd.Series] = None):
+                X: PD_TYPES = None,
+                y: PD_TYPES = None):
         if self._y_only:
             X = None
 
@@ -257,8 +252,8 @@ class LinearForecastRegressor(BaseForecaster):
 
     def _predict(self,
                 fh: Optional[ForecastingHorizon],
-                X: Optional[pd.DataFrame] = None,
-                y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
+                X: PD_TYPES = None,
+                y: PD_TYPES = None) -> pd.DataFrame:
         # fh is not None and it is relative!
         # normalize fh, y, X
         assert fh.is_relative

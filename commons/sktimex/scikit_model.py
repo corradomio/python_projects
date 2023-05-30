@@ -7,16 +7,7 @@ from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.forecasting.compose import make_reduction
 
 from stdlib import import_from, dict_del, kwval
-
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
-SKTIME_NAMESPACES = ['sktime']
-
-FH_TYPES = Union[None, int, list[int], np.ndarray, ForecastingHorizon]
+from .utils import *
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +64,7 @@ class ScikitForecastRegressor(BaseForecaster):
     def __init__(self,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
+                 # windows_length: int = 5,  in kwargs
                  **kwargs):
         super().__init__()
         

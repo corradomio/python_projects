@@ -33,27 +33,6 @@ from .lag import resolve_lag, LagTrainTransform
 
 
 # ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-class DataWindow:
-    def __init__(self, lag):
-        self._lag = lag
-        self.slots = resolve_lag(lag)
-
-        self.y = None
-        self.X = None
-
-    def fit(self, y, X=None):
-        self.y = y
-        self.X = X
-        return self
-
-    def transform(self, y, X=None) -> np.ndarray:
-        pass
-
-
-# ---------------------------------------------------------------------------
 # DeppForecastRegressor
 # ---------------------------------------------------------------------------
 # model: how many layers, layer's types, layer's sizes
@@ -61,6 +40,18 @@ class DataWindow:
 # loss: which loss function to use
 #
 # note: some 'predefined' models can have a 'name'
+#
+# nnx.LSTM
+#   input_size      this depends on lagx, |X[0]| and |y[0]|
+#   hidden_size     2*input_size
+#   output_size=1
+#   num_layers=1
+#   bias=True
+#   batch_first=True
+#   dropout=0
+#   bidirectional=False
+#   proj_size =0
+#
 #
 
 class DeepForecastRegressor(BaseForecaster):

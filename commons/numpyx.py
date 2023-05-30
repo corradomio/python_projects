@@ -92,12 +92,12 @@ class LagReshaper:
 # end
 
 
-def reshape(X: np.ndarray, y: np.ndarray,
-            xlags: list[int] = [0], ylags: list[int] = [],
-            tlags: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
-    lr = LagReshaper(xlags, ylags, tlags)
-    return lr.fit_transform(X, y)
-# end
+# def reshape(X: np.ndarray, y: np.ndarray,
+#             xlags: list[int] = [0], ylags: list[int] = [],
+#             tlags: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
+#     lr = LagReshaper(xlags, ylags, tlags)
+#     return lr.fit_transform(X, y)
+# # end
 
 
 # ---------------------------------------------------------------------------
@@ -131,8 +131,8 @@ class LagPreparer:
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
 
-            self.Xh = X
-            self.yh = y
+        self.Xh = X
+        self.yh = y
         return self
 
     def transform(self, Xp: np.ndarray, fh: int) -> np.ndarray:
@@ -197,6 +197,7 @@ class LagPreparer:
         raise NotImplemented()
 # end
 
+
 # ---------------------------------------------------------------------------
 # UnfoldLoop
 # ---------------------------------------------------------------------------
@@ -218,6 +219,7 @@ class UnfoldLoop:
         self.steps = steps
         self.xlags = xlags
         self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
 
     def __len__(self):
         return self.steps + 1
@@ -244,9 +246,9 @@ class UnfoldLoop:
         ylags = self.ylags
 
         s = self.steps
-        t = max(_max(xlags), _max(ylags))
+        t = self.t
 
-        n = X.shape[0] - s
+        n = X.shape[0] - t - s + 1
         mx = X.shape[1]
         my = y.shape[1]
 
@@ -257,102 +259,38 @@ class UnfoldLoop:
         for i in range(n):
             for j in range(s):
                 c = 0
-                for k in xlags:
-                    Xt[i, j, c:c + mx] = X[i + j + k]
-                    c += mx
                 for k in ylags:
-                    Xt[i, j, c:c + my] = y[i + j]
+                    Xt[i, j, c:c + my] = y[i + j + t - k]
                     c += my
+                for k in xlags:
+                    Xt[i, j, c:c + mx] = X[i + j + t - k]
+                    c += mx
 
-                yt[i, j] = y[i + j + 1]
-            # end
+                yt[i, j] = y[i + j + t]
         # end
 
         return Xt, yt
-
     # end
 
     def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
         return self.fit(X, y).transform(X, y)
 # end
 
-#
-# class UnfoldLoop1:
-#     def __init__(self, steps: int=1, use_X=True, use_y=True, use_current=False):
-#         self.steps = steps
-#         self.use_X = use_X
-#         self.use_y = use_y
-#         self.use_c = use_current
-#
-#     def __len__(self):
-#         return self.steps+1
-#
-#     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-#         assert isinstance(X, (type(None), np.ndarray))
-#         assert isinstance(y, np.ndarray)
-#         return self
-#
-#     def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
-#         assert isinstance(X, (type(None), np.ndarray))
-#         assert isinstance(y, np.ndarray)
-#         if X is None:
-#             X = np.zeros((len(y), 0), dtype=y.dtype)
-#
-#         if len(X.shape) == 1:
-#             X = X.reshape((-1, 1))
-#         if len(y.shape) == 1:
-#             y = y.reshape((-1, 1))
-#
-#         use_X = self.use_X
-#         use_y = self.use_y
-#         use_c = self.use_c
-#
-#         s = self.steps
-#         n = X.shape[0] - s
-#         mx = X.shape[1]
-#         my = y.shape[1]
-#
-#         mt = (mx if use_X else 0) + (my if use_y else 0) + (mx if use_c else 0)
-#         Xt = np.zeros((n, s, mt), dtype=X.dtype)
-#         yt = np.zeros((n, s, my), dtype=y.dtype)
-#
-#         for i in range(n):
-#             for j in range(s):
-#                 c = 0
-#                 if use_X:
-#                     Xt[i, j, c:c+mx] = X[i + j]
-#                     c += mx
-#                 if use_y:
-#                     Xt[i, j, c:c+my] = y[i + j]
-#                     c += my
-#                 if use_c:
-#                     Xt[i, j, c:c+mx] = X[i + j + 1]
-#
-#                 yt[i, j] = y[i+j+1]
-#             # end
-#         # end
-#
-#         return Xt, yt
-#     # end
-#
-#     def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
-#         return self.fit(X, y).transform(X, y)
+
+# def unfold_loop(X: Optional[np.ndarray], y: np.ndarray, steps:int = 1) -> np.ndarray:
+#     return UnfoldLoop(steps).fit_transform(X, y)
 # # end
 
-
-def unfold_loop(X: Optional[np.ndarray], y: np.ndarray, steps:int = 1) -> np.ndarray:
-    return UnfoldLoop(steps).fit_transform(X, y)
-# end
-
 # ---------------------------------------------------------------------------
-# LoopPredictor
+# UnfoldPreparer
 # ---------------------------------------------------------------------------
 
-class UnfoldPredictor:
+class UnfoldPreparer:
     def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
         self.steps = steps
         self.xlags = xlags
         self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
 
         self.Xh = None
         self.yh = None
@@ -360,7 +298,6 @@ class UnfoldPredictor:
         self.yp = None
         self.Xt = None
     # end
-
 
     def fit(self, X: np.ndarray, y: np.ndarray):
         assert isinstance(X, (type(None), np.ndarray))
@@ -386,6 +323,8 @@ class UnfoldPredictor:
     def transform(self, X: np.ndarray, fh: int = 0):
         assert X is None and fh > 0 or X is not None and fh == 0 or len(X) == fh
 
+        xlags = self.xlags
+        ylags = self.ylags
         y = self.yh
 
         if fh == 0: fh = len(X)
@@ -395,18 +334,17 @@ class UnfoldPredictor:
         self.Xp = X
 
         s = self.steps
-        t = max(_max(xlags), _max(ylags))
+        t = self.t
         mx = X.shape[1]
         my = y.shape[1]
 
-        mt = mt = mx*len(xlags) + my*len(ylags)
+        mt = mx*len(xlags) + my*len(ylags)
         Xt = np.zeros((1, s, mt), dtype=X.dtype)
-        yp = np.zeros((fh, s, my), dtype=y.dtype)
+        yp = np.zeros((fh, my), dtype=y.dtype)
 
         self.Xt = Xt
         self.yp = yp
         return yp
-
     # end
 
     def _atx(self, i):
@@ -425,7 +363,7 @@ class UnfoldPredictor:
         ylags = self.ylags
 
         s = self.steps
-        t = max(_max(xlags), _max(ylags))
+        t = self.t
         mx = X.shape[1]
         my = y.shape[1]
 
@@ -433,12 +371,12 @@ class UnfoldPredictor:
 
         for j in range(s):
             c = 0
-            for k in xlags:
-                Xt[0, j, c:c + mx] = atx(i + j + k - s)
-                c += mx
             for k in ylags:
-                Xt[0, j, c:c + my] = aty(i + j + k - s)
+                Xt[0, j, c:c + my] = aty(i + j - k - s + 1)
                 c += my
+            for k in xlags:
+                Xt[0, j, c:c + mx] = atx(i + j - k - s + 1)
+                c += mx
         # end
 
         return Xt
@@ -446,115 +384,18 @@ class UnfoldPredictor:
 # end
 
 
-# class UnfoldPredictor1:
-#     def __init__(self, steps: int=1, use_X=True, use_y=True, use_current=False):
-#         self.steps = steps
-#         self.use_X = use_X
-#         self.use_y = use_y
-#         self.use_c = use_current
-#
-#         self.Xh = None
-#         self.yh = None
-#         self.Xp = None
-#         self.yp = None
-#         self.Xt = None
-#     # end
-#
-#     def fit(self, X: np.ndarray, y: np.ndarray):
-#         assert isinstance(X, (type(None), np.ndarray))
-#         assert isinstance(y, np.ndarray)
-#
-#         if len(y.shape) == 1:
-#             y = y.reshape((-1, 1))
-#         if X is None:
-#             n = len(y)
-#             X = np.zeros((n, 0), dtype=y.dtype)
-#         self.Xh = X
-#         self.yh = y
-#
-#         assert len(X) == len(y)
-#         return self
-#
-#     def transform(self, X: np.ndarray, fh: int=0):
-#         assert X is None and fh > 0 or X is not None and fh == 0 or len(X) == fh
-#
-#         y = self.yh
-#
-#         if fh == 0: fh = len(X)
-#         if X is None:
-#             X = np.zeros((fh, 0), dtype=y.dtype)
-#
-#         self.Xp = X
-#
-#         use_X = self.use_X
-#         use_y = self.use_y
-#         use_c = self.use_c
-#
-#         s = self.steps
-#         mx = X.shape[1]
-#         my = y.shape[1]
-#
-#         mt = (mx if use_X else 0) + (my if use_y else 0) + (mx if use_c else 0)
-#         Xt = np.zeros((1, s, mt), dtype=X.dtype)
-#         yp = np.zeros((fh, my), dtype=y.dtype)
-#
-#         self.Xt = Xt
-#         self.yp = yp
-#         return yp
-#     # end
-#
-#     def _atx(self, i):
-#         return self.Xh[i] if i < 0 else self.Xp[i]
-#
-#     def _aty(self, i):
-#         return self.yh[i] if i < 0 else self.yp[i]
-#
-#     def step(self, i):
-#         atx = self._atx
-#         aty = self._aty
-#
-#         X = self.Xh
-#         y = self.yh
-#
-#         use_X = self.use_X
-#         use_y = self.use_y
-#         use_c = self.use_c
-#
-#         s = self.steps
-#         mx = X.shape[1]
-#         my = y.shape[1]
-#
-#         Xt = self.Xt
-#
-#         for j in range(s):
-#             c = 0
-#             if use_X:
-#                 Xt[0, j, c:c + mx] = atx(i + j - s)
-#                 c += mx
-#             if use_y:
-#                 Xt[0, j, c:c + my] = aty(i + j - s)
-#                 c += my
-#             if use_c:
-#                 Xt[0, j, c:c + mx] = atx(i + j - s + 1)
-#         # end
-#
-#         return Xt
-#     # end
-# # end
-
-
 # ---------------------------------------------------------------------------
 # start_at
 # ---------------------------------------------------------------------------
 
-def start_at(data: np.ndarray, start:int = 0) -> np.ndarray:
-    if data is None:
-        return None
-    elif start == 0:
-        return data
-    else:
-        return data[start:]
-# end
+# def start_at(data: np.ndarray, start:int = 0) -> np.ndarray:
+#     if data is None:
+#         return None
+#     elif start == 0:
+#         return data
+#     else:
+#         return data[start:]
+# # end
 
 
 # ---------------------------------------------------------------------------
