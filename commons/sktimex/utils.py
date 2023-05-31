@@ -1,5 +1,6 @@
 from typing import Union, Optional
 import numpy as np
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 

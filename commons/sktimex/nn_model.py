@@ -1,46 +1,33 @@
-# 'sktime' protocols
-#
-#       cutoff
-#       fh
-#
-#       model.fit(y, X=None, fh=None)
-#       model.predict(fh=None, X=None)
-#
-#       fit_predict(y, X=None, fh=None):
-#
-#       update(y, X=None, update_params=True)
-#       update_predict(y, cv=None, X=None, update_params=True, reset_forecaster=True)
-#       update_predict_single(y=None, fh=None, X=None, update_params=True)
-#
-# In 'Time Series Forecasting in Python', the library predict MULTIPLE
-# predictions in a single step
-# In 'sktime' it is used a 'autoregressive approach: it is predictied just a single
-# next timeslot, then this timeslot (and k-1 previous) is used to predict the next,
-# etc
-#
-# To create a Deep Learning model we need to CREATE the MODEL and to COMPILE it
-# using a LOSS function AND an OPTIMIZER.
-
-from datetime import datetime
 from typing import Union, Optional
 
 import numpy as np
+import numpyx as npx
 import pandas as pd
-from sktime.forecasting.base import BaseForecaster
-
-import torchx
-from .lag import resolve_lag, LagTrainTransform
-
+import pandasx as pdx
+import skorch
+import sktimex as sktx
+import stdlib
+import torch.optim
+import torchx.nn as nnx
+from sklearn.preprocessing import MinMaxScaler
+from skorchx.callbacks import EarlyStopping
+from sktime.forecasting.base import ForecastingHorizon
+from sktimex.utils import PD_TYPES, FH_TYPES
 
 # ---------------------------------------------------------------------------
-# DeppForecastRegressor
+#
 # ---------------------------------------------------------------------------
-# model: how many layers, layer's types, layer's sizes
-# optimizer: which optimizer to use
-# loss: which loss function to use
-#
-# note: some 'predefined' models can have a 'name'
-#
+
+def fh_len(fh):
+    if isinstance(fh, int):
+        return fh
+    if isinstance(fh, (list, np.ndarray)):
+        return len(fh)
+    else:
+        return len(fh)
+# end
+
+
 # nnx.LSTM
 #   input_size      this depends on lagx, |X[0]| and |y[0]|
 #   hidden_size     2*input_size
@@ -52,44 +39,143 @@ from .lag import resolve_lag, LagTrainTransform
 #   bidirectional=False
 #   proj_size =0
 #
+# Note: the neural netword can be created ONLY during 'fit', because the NN structure
+# depends on the configuration AND X, y dimensions/ranks
 #
 
-class DeepForecastRegressor(BaseForecaster):
-    def __init__(self,
-                 lag: Union[int, list, tuple, dict],
-                 target: Optional[str] = None,
+RNN_FLAVOURS = {
+    'lstm': nnx.LSTM,
+    'gru': nnx.GRU,
+    'rnn': nnx.RNN,
+    'LSTM': nnx.LSTM,
+    'GRU': nnx.GRU,
+    'RNN': nnx.RNN
 
-                 model: Optional[dict] = None,
-                 optimizer: Optional[dict] = None,
-                 loss: Optional[dict] = None,
-                 **kwargs):
+}
+
+
+class NeuralNetForecaster:
+
+    def __init__(self, *,
+                 lag: Union[int, list, tuple, dict] = (0, 1),
+                 current: Optional[bool] = None,
+                 target: Optional[str] = None,
+                 y_only: bool = False,
+                 periodic: Union[None, str, tuple] = None,
+                 scale: bool = False,
+
+                 steps: int = 1,
+
+                 hidden_size: int = 1,
+                 num_layers: int = 1,
+                 bidirectional: bool = False,
+                 dropout: float = 0,
+
+                 flavour: str = 'lstm',
+                 criterion=None,
+                 optimizer=None,
+                 lr=0.01,
+                 batch_size: int = 16,
+                 max_epochs: int = 300,
+                 callbacks=None,
+                 patience=20,
+                 **kwargs
+                 ):
+        """
+
+        :param lag: input/target lags
+        :param current: if to use the current slot (used when lag is a integer)
+        :param target: name of the target column
+        :param y_only: if to use target only
+        :param period: if to add periodic information
+        :param steps: length of the sequence length
+        :param flavour: type of RNN ('lstm', 'gru', 'rnn')
+        :param optimizer: class of the optimizer to use (default: Adam)
+        :param criterion: class of the loss to use (default: MSLoss)
+        :param batch_size: back size (default 16)
+        :param max_epochs: EPOCHS (default 300)
+        :param hidden_size: number of RNN hidden layers
+        :param num_layers: number of RNN layers
+        :param bidirectional: if to use a bidirectional
+        :param dropout: if to apply a dropout
+        :param kwargs: other parameters
+        """
         super().__init__()
+
+        # some defaults
+        if optimizer is None:
+            optimizer = torch.optim.Adam
+        if criterion is None:
+            criterion = torch.nn.MSELoss
+        if patience > 0:
+            callbacks = [EarlyStopping(patience=patience)]
+
+        # some classes specified as string
+        if isinstance(optimizer, str):
+            optimizer = stdlib.import_from(optimizer)
+        if isinstance(criterion, str):
+            criterion = stdlib.import_from(criterion)
+
         self._lag = lag
         self._target = target
-        self._model_config = model
-        self._optimizer = optimizer
-        self._loss = loss
-        self._kwargs = kwargs
+        self._current = current
+        self._y_only = y_only
+        self._periodic = periodic
+        self._scale = scale
 
-        # it is not possible to create the NN now, because
-        # the structure of X and y are not known
-        self._target = target
-        self._X_history: Optional[np.ndarray] = None
-        self._y_history: Optional[np.ndarray] = None
-        self._cutoff: Optional[datetime] = None
+        self._flavour = flavour
+        self._steps = steps
+
+        #
+        # torchx.nn.LSTM configuration parameters
+        #
+        self._rnn_args = {}
+        self._rnn_args['hidden_size'] = hidden_size
+        self._rnn_args['num_layers'] = num_layers
+        self._rnn_args['bidirectional'] = bidirectional
+        self._rnn_args['dropout'] = dropout
+
+        #
+        # skorch.NeuralNetRegressor configuration parameters
+        #
+        self._skt_args = {} | kwargs
+        self._skt_args["criterion"] = criterion
+        self._skt_args["optimizer"] = optimizer
+        self._skt_args["lr"] = lr
+        self._skt_args["batch_size"] = batch_size
+        self._skt_args["max_epochs"] = max_epochs
+        self._skt_args["callbacks"] = callbacks
+
+        lags = sktx.resolve_lag(lag, current)
+
+        self._xlags = lags.input
+        self._ylags = lags.target
+        self._x_scaler = MinMaxScaler()
+        self._y_scaler = MinMaxScaler()
+        self._model = None
+
+        # index
+        self.Ih = None
+        self.Xh = None
+        self.yh = None
     # end
 
     # -----------------------------------------------------------------------
     # Properties
     # -----------------------------------------------------------------------
 
-    def get_params(self, deep=True):
-        params = {} | self._kwargs
+    def get_params(self, deep=True, **kwargs):
+        params = {} | self._skt_args | self._rnn_args
         params['lag'] = self._lag
         params['target'] = self._target
-        params['model'] = self._model_config
-        params['optimizer'] = self._optimizer
-        params['loss'] = self._loss
+        params['y_only'] = self._y_only
+        params['flavour'] = self._flavour
+        params['steps'] = self._steps
+
+        # convert 'criterion' and 'optimizer' in string
+        params['criterion'] = str(params['criterion'])
+        params['optimizer'] = str(params['optimizer'])
+
         return params
     # end
 
@@ -97,122 +183,159 @@ class DeepForecastRegressor(BaseForecaster):
     # fit
     # -----------------------------------------------------------------------
 
-    def fit(self, y, X=None, fh=None):
-        self._save_target(y)
-        return super().fit(y=y, X=X, fh=fh)
-    # end
-
-    def _fit(self, y, X=None, fh=None):
-        slots = resolve_lag(self._lag)
-        s = len(slots)
-
-        # DataFrame/Series -> np.ndarray
-        # save only the s last slots (used in prediction)
-        yf, Xf = self._validate_data_lfr(y, X)
-        self._y_history = yf[-s:] if yf is not None else None
-        self._X_history = Xf[-s:] if Xf is not None else None
-
-        ltt = LagTrainTransform(slots=slots)
-        Xt, yt = ltt.fit_transform(X=Xf, y=yf)
-
-        self._create_model(Xt, yt)
-        self._fit_model(Xt, yt)
-
-        return self
-    # end
-
-    # -----------------------------------------------------------------------
-    # Implementation
-    # -----------------------------------------------------------------------
-    # _validate_data is already defined in the superclass
-
-    def _save_target(self, y):
-        if isinstance(y, pd.Series):
-            self._target = [y.name]
-        elif isinstance(y, pd.DataFrame):
-            self._target = list(y.columns)
-        else:
-            self._target = [None]
-    # end
-
-    def _validate_data_lfr(self, y=None, X=None, predict: bool = False):
-        # validate the data and converts it:
-        #
-        #   y in a np.array with rank 1
-        #   X in a np.array with rank 2 OR None
-        #  fh in a ForecastingHorizon
-        #
-        # Prediction cases
-        #
-        #   params      past        future      pred len
-        #   fh          yh          -           |fh|
-        #   X           Xh, yh      X           |X|
-        #   fh, X       Xh, yh      X           |fh|
-        #   fh, y       y           -           |fh|
-        #   y, X        X[:y], y    X[y:]       |X|-|y|
-        #   fh, y, X    X[:y], y    X[y:]       |fh|
-        #
-
-        if predict and self._y_history is None:
-            raise ValueError(f'{self.__class__.__name__} not fitted yet')
-
-        # X to np.array
-        if X is not None:
-            if isinstance(X, pd.DataFrame):
-                X = X.to_numpy()
-            assert isinstance(X, np.ndarray)
-            assert len(X.shape) == 2
-
-        # y to np.array
+    def _to_dataframe(self, X: PD_TYPES, y: PD_TYPES = None, fh: FH_TYPES = None):
         if y is not None:
-            if isinstance(y, pd.Series):
-                y = y.to_numpy()
-            elif isinstance(y, pd.DataFrame):
-                assert y.shape[1] == 1
-                self._cutoff = y.index[-1]
-                y = y.to_numpy()
-            assert isinstance(y, np.ndarray)
-            if len(y.shape) == 2:
-                y = y.reshape(-1)
-            assert len(y.shape) == 1
+            self.Ih = y.index
 
-        if X is None and self._X_history is not None:
-            raise ValueError(f"predict needs X")
+        if X is None:
+            if y is not None:
+                X = pd.DataFrame({}, index=y.index)
+            elif fh.is_relative:
+                cutoff = self.Ih[-1]
+                fh = fh.to_absolute(cutoff)
+                X = pd.DataFrame({}, index=fh.to_pandas())
+            else:
+                X = pd.DataFrame({}, index=fh.to_pandas())
+        # end
 
-        # yf, Xf
-        if not predict:
-            return y, X
-
-        # Xf, yh, Xh
-        if y is None:
-            Xf = X
-            yh = self._y_history
-            Xh = self._X_history
-        else:
+        if isinstance(X, pd.Series):
+            X = pd.DataFrame({"X": X}, index=X.index)
+        if isinstance(y, pd.Series):
+            y = pd.DataFrame({"y": X}, index=y.index)
+        return X, y
+    
+    def _encode_periodic(self, X, y=None):
+        if X is None:
             n = len(y)
-            yh = y
-            Xh = X[:n]
-            Xf = X[n:]
-        return Xf, yh, Xh
+            X = np.zeros((n, 0), dtype=y.dtype)
+        if self._periodic:
+            X = pdx.periodic_encode(X)
+        return X
+
+    def _to_numpy(self, X, y=None):
+        Xs = X.to_numpy().astype(np.float32)
+        if y is not None:
+            ys = y.to_numpy().astype(np.float32)
+        else:
+            ys = None
+
+        if len(Xs.shape) == 1:
+            Xs = Xs.reshape((-1, 1))
+        if ys is not None and len(ys.shape) == 1:
+            ys = ys.reshape((-1, 1))
+
+        if not self._scale:
+            return Xs, ys
+
+        if ys is not None:
+            Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
+            ys = self._y_scaler.fit_transform(ys).astype(np.float32)
+            self.Xh = Xs
+            self.yh = ys
+        else:
+            Xs = self._x_scaler.transform(X).astype(np.float32)
+            ys = None
+
+        return Xs, ys
     # end
 
-    def _create_model(self, Xt: np.ndarray, yt: np.ndarray):
-        xsize = 0 if Xt is None else Xt.shape[1]
-        ysize = 1 if len(yt.shape) == 1 else yt.shape[1]
+    def _from_numpy(self, ys):
+        if self._scale:
+            ys = self._y_scaler.inverse_transform(ys).astype(self.yh.dtype)
 
-        self._model = torchx.ConfigurableModule(self._model_config, input_size=xsize, output_size=ysize)
+        # 1D array
+        ys = ys.reshape(-1)
+        n = len(ys)
+        cutoff = self.Ih[-1]
+        index = pd.period_range(cutoff+1, periods=n)
+        return pd.Series(ys, index=index)
     # end
 
-    def _fit_model(self, Xt: np.ndarray, yt: np.ndarray):
+    def _evaluate_input_output_sizes(self):
+        xlags = self._xlags
+        ylags = self._ylags
+        mx = self.Xh.shape[1]
+        my = self.yh.shape[1]
+        input_size = mx * len(xlags) + my * len(ylags)
+        return input_size, my
+
+    def fit(self, y: PD_TYPES, X: PD_TYPES=None):
+        if self._y_only:
+            X = None
+
+        # normalize X, y as 'pandas' objects
+        X, y = self._to_dataframe(X, y)
+        # encode periodic data
+        X = self._encode_periodic(X, y)
+        # normalize X, y as numpy objects
+        Xh, yh = self._to_numpy(X, y)
+        # evaluate the input_size/ouput_size
+        input_size, output_size = self._evaluate_input_output_sizes()
+
+        # create the torch model
+        #   input_size      this depends on lagx, |X[0]| and |y[0]|
+        #   hidden_size     2*input_size
+        #   output_size=1
+        #   num_layers=1
+        #   bias=True
+        #   batch_first=True
+        #   dropout=0
+        #   bidirectional=False
+        #   proj_size =0
+        rnn_constructor = RNN_FLAVOURS[self._flavour]
+        rnn = rnn_constructor(
+                    input_size=input_size,
+                    output_size=output_size,
+                    **self._rnn_args)
+
+        # create the skorch model
+        #   module: torch module
+        #   criterion:  loss function
+        #   optimizer: optimizer
+        #   lr
+        #
+        self._model = skorch.NeuralNetRegressor(
+            module=rnn,
+            **self._skt_args
+        )
+
+        #
+        # prepare the data to pass the the Recurrent NN
+        #
+        lu = npx.UnfoldLoop(self._steps, xlags=self._xlags, ylags=self._ylags)
+        Xt, yt = lu.fit_transform(Xh, yh)
+
+        self._model.fit(Xt, yt)
         pass
 
+    def predict(self, fh: FH_TYPES = None, X: PD_TYPES=None):
+        if self._y_only:
+            X = None
 
-    # -----------------------------------------------------------------------
-    # End
-    # -----------------------------------------------------------------------
+        if fh is None and X is not None:
+            n = len(X)
+            fh = ForecastingHorizon(np.arange(1, n+1), is_relative=True)
+        elif not isinstance(fh, ForecastingHorizon):
+            fh = ForecastingHorizon(fh)
+
+        # encode
+        X, _ = self._to_dataframe(X, fh=fh)
+        # encode periodic data
+        X = self._encode_periodic(X)
+        # convert
+        Xs, _ = self._to_numpy(X, None)
+        
+        nfh = len(fh)
+        up = npx.UnfoldPreparer(self._steps, xlags=self._xlags, ylags=self._ylags)
+        ys = up.fit(self.Xh, self.yh).transform(Xs, nfh)
+
+        for i in range(nfh):
+            Xt = up.step(i)
+            yt = self._model.predict(Xt)
+            ys[i] = yt[0, -1]
+        # end
+
+        yp = self._from_numpy(ys)
+        return yp
+    # end
 # end
-
-
-# ---------------------------------------------------------------------------
-# End
-# ---------------------------------------------------------------------------

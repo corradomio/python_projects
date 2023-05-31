@@ -12,8 +12,8 @@ from sktime.utils.plotting import plot_series
 
 
 class TSModel1(nnx.Module):
-    def __init__(self, *, slots, input_size, hidden_size, **kwargs):
-        self.slots = slots
+    def __init__(self, *, steps, input_size, hidden_size, **kwargs):
+        self.steps = steps
         super().__init__(
             model=[
                 nnx.LSTM(input_size=input_size,
@@ -40,15 +40,15 @@ class TSModel1(nnx.Module):
         self.Xh = Xs
         self.yh = ys
 
-        lu = npx.UnfoldLoop(self.slots, xlags=[1])
-        Xt, yt = lu.fit_transform(Xs, ys)
+        ul = npx.UnfoldLoop(self.steps, xlags=[1])
+        Xt, yt = ul.fit_transform(Xs, ys)
 
         if val is not None:
             Xv, yv = val
             # Xv = self.x_scaler.transform(Xv)
             # yv = self.y_scaler.transform(yv)
 
-            Xv, yv = lu.transform(Xv, yv)
+            Xv, yv = ul.transform(Xv, yv)
             val = (Xv, yv)
         # end
 
@@ -61,7 +61,7 @@ class TSModel1(nnx.Module):
         if fh == 0:
             fh = len(Xs)
 
-        lp = npx.UnfoldPreparer(self.slots, xlags=[1])
+        lp = npx.UnfoldPreparer(self.steps, xlags=[1])
         ys = lp.fit(self.Xh, self.yh).transform(Xs, fh)
 
         for i in range(fh):
@@ -116,7 +116,7 @@ def main():
 
     input_size = Xa_train.shape[1] + ya_train.shape[1]
 
-    model = TSModel1(slots=20, input_size=input_size, hidden_size=20,  batch_size=16, epochs=500, log_epochs=100)
+    model = TSModel1(steps=20, input_size=input_size, hidden_size=20, batch_size=16, epochs=500, log_epochs=100)
     model.fit(Xa_train, ya_train, val=(Xa_test, ya_test))
     ya_pred = model.predict(Xa_test)
     ya_pred = y_scaler.inverse_transform(ya_pred)
