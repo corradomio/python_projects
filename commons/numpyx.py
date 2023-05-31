@@ -47,12 +47,14 @@ class LagReshaper:
         ylags = self.ylags
         tlags = self.tlags
 
-        if len(y.shape) == 1:
-            y = y.reshape((-1, 1))
-
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
             xlags = []
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
 
         assert len(X) == len(y)
 
@@ -248,7 +250,7 @@ class UnfoldLoop:
         s = self.steps
         t = self.t
 
-        n = X.shape[0] - t - s + 1
+        n = X.shape[0] - t - (s - 1)
         mx = X.shape[1]
         my = y.shape[1]
 
