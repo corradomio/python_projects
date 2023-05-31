@@ -33,7 +33,7 @@ class ConfigurableModule(nn.Module):
         self.optimizer_config = optimizer
         self.data_config = data if data is not None else {}
 
-        self.model = None
+        self.module = None
 
         self._create_layers(kwargs)
         self._configure_data_loader()
@@ -49,7 +49,7 @@ class ConfigurableModule(nn.Module):
             layer = create_layer(layer_config, **kwargs)
             layers.append(layer)
 
-        self.model = nn.Sequential(*layers)
+        self.module = nn.Sequential(*layers)
     # end
 
     def _configure_data_loader(self):
@@ -62,7 +62,7 @@ class ConfigurableModule(nn.Module):
     # -----------------------------------------------------------------------
 
     def forward(self, input):
-        output = self.model.forward(input)
+        output = self.module.forward(input)
         return output
     # end
 
@@ -144,28 +144,29 @@ class Module(nn.Module):
     # -----------------------------------------------------------------------
 
     def __init__(self,
-                 model=None,
+                 module=None,
                  optimizer=None,
-                 loss=None,
-                 epochs=1,
+                 lr=0.001,
+                 criterion=None,
+                 max_epochs=1,
                  batch_size=1,
                  log_epochs=1):
         super().__init__()
-        if isinstance(model, list):
-            self.model = nn.Sequential(*model)
+        if isinstance(module, list):
+            self.module = nn.Sequential(*module)
         else:
-            self.model = model
+            self.module = module
 
-        if loss is None:
-            self.loss = nn.MSELoss()
+        if criterion is None:
+            self.criterion = nn.MSELoss()
         else:
-            self.loss = loss
+            self.criterion = criterion
         if optimizer is None:
-            self.optimizer = torch.optim.Adam(self.parameters(), lr=1e-3)
+            self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         else:
             self.optimizer = optimizer
         self.batch_size = batch_size
-        self.epochs = epochs
+        self.max_epochs = max_epochs
         self.log_epochs = log_epochs
         self.log = logging.getLogger(qualified_name(self.__class__))
     # end
@@ -175,14 +176,14 @@ class Module(nn.Module):
     # -----------------------------------------------------------------------
 
     def forward(self, input):
-        if isinstance(self.model, nn.Sequential):
-            models = list(iter(self.model))
+        if isinstance(self.module, nn.Sequential):
+            models = list(iter(self.module))
             t = input
             for model in models:
                 t = model(t)
             output = t
         else:
-            output = self.model.forward(input)
+            output = self.module.forward(input)
         return output
     # end
 
@@ -191,7 +192,7 @@ class Module(nn.Module):
     # -----------------------------------------------------------------------
 
     def fit(self, X: np.ndarray, y: np.ndarray, batch_size=None, epochs=None, val=None) -> "Module":
-        if epochs is None: epochs = self.epochs
+        if epochs is None: epochs = self.max_epochs
         if batch_size is None: batch_size = self.batch_size
 
         X = as_tensor(X)
@@ -210,7 +211,7 @@ class Module(nn.Module):
             train_losses = []
             for batch_idx, (X, y) in enumerate(dl):
                 y_pred = self(X)
-                loss = self.loss(y_pred, y)
+                loss = self.criterion(y_pred, y)
                 train_losses.append(loss)
 
                 self.optimizer.zero_grad()
@@ -227,14 +228,14 @@ class Module(nn.Module):
 
             if val is None:
                 epoch_metric = torch.mean(torch.stack(train_losses))
-                print(f"[{epoch}/{self.epochs}] loss: {epoch_metric.item():.5}")
+                print(f"[{epoch}/{self.max_epochs}] loss: {epoch_metric.item():.5}")
             else:
                 with torch.no_grad():
                     y_pred = self(X_val)
-                    val_loss = self.loss(y_pred, y_val)
+                    val_loss = self.criterion(y_pred, y_val)
 
                 epoch_metric = torch.mean(torch.stack(train_losses))
-                print(f"[{epoch}/{self.epochs}] train loss: {epoch_metric.item():.5}, val loss: {val_loss.item()}")
+                print(f"[{epoch}/{self.max_epochs}] train loss: {epoch_metric.item():.5}, val loss: {val_loss.item()}")
 
         # end
         return self

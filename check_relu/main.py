@@ -78,7 +78,7 @@ def main():
     x = np.sort(x, axis=0)
     y = (a1 + b1 * x) + (a2 + b2 * x) * np.sin(x)
     # y = np.sin(x)
-    parameters = list(model.parameters())
+    # parameters = list(model.parameters())
     p = net.predict(x)
 
     plt.plot(x, y)

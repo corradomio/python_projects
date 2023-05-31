@@ -10,24 +10,51 @@ import stdlib
 import torch.optim
 import torchx.nn as nnx
 from sklearn.preprocessing import MinMaxScaler
-from skorchx.callbacks import EarlyStopping
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.utils import PD_TYPES, FH_TYPES
+
 
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
+# It extends the default 'skorch.callbacks.EarlyStopping' in the following way:
+#
+#   if the loss increase, wait for patience time,
+#   BUT if the loss decrease, it continues
+#
+# This differs from the original behavior:
+#
+#   if the loss decrease, update the best loss
+#   if the loss increase or decrease BUT it is greater than the BEST loss
+#   wait for patience time
+#
 
-def fh_len(fh):
-    if isinstance(fh, int):
-        return fh
-    if isinstance(fh, (list, np.ndarray)):
-        return len(fh)
-    else:
-        return len(fh)
-# end
+class EarlyStopping(skorch.callbacks.EarlyStopping):
+
+    def __init__(self,
+                 monitor='valid_loss',
+                 patience=5,
+                 threshold=1e-4,
+                 threshold_mode='rel',
+                 lower_is_better=True,
+                 sink=print,
+                 load_best=False):
+        super().__init__(monitor, patience, threshold, threshold_mode, lower_is_better, sink, load_best)
+
+    # end
+
+    def on_epoch_end(self, net, **kwargs):
+        current_score = net.history[-1, self.monitor]
+        is_improved = self._is_score_improved(current_score)
+        super().on_epoch_end(net, **kwargs)
+        if not is_improved:
+            self.dynamic_threshold_ = self._calc_new_threshold(current_score)
 
 
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
+#
 # nnx.LSTM
 #   input_size      this depends on lagx, |X[0]| and |y[0]|
 #   hidden_size     2*input_size
@@ -54,7 +81,54 @@ RNN_FLAVOURS = {
 }
 
 
-class NeuralNetForecaster:
+class SimpleRNNForecaster(BaseForecaster):
+
+    _tags = {
+        # to list all valid tags with description, use sktime.registry.all_tags
+        #   all_tags(estimator_types="forecaster", as_dataframe=True)
+        #
+        # behavioural tags: internal type
+        # -------------------------------
+        #
+        # y_inner_mtype, X_inner_mtype control which format X/y appears in
+        # in the inner functions _fit, _predict, etc
+        "y_inner_mtype": "pd.Series",
+        "X_inner_mtype": "pd.DataFrame",
+        # valid values: str and list of str
+        # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
+        #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
+        #   in that case, all inputs are converted to that one type
+        # if list of str, must be a list of valid str specifiers
+        #   in that case, X/y are passed through without conversion if on the list
+        #   if not on the list, converted to the first entry of the same scitype
+        #
+        # scitype:y controls whether internal y can be univariate/multivariate
+        # if multivariate is not valid, applies vectorization over variables
+        "scitype:y": "univariate",
+        # valid values: "univariate", "multivariate", "both"
+        #   "univariate": inner _fit, _predict, etc, receive only univariate series
+        #   "multivariate": inner methods receive only series with 2 or more variables
+        #   "both": inner methods can see series with any number of variables
+        #
+        # capability tags: properties of the estimator
+        # --------------------------------------------
+        #
+        # ignores-exogeneous-X = does estimator ignore the exogeneous X?
+        "ignores-exogeneous-X": False,
+        # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
+        # CAVEAT: if tag is set to True, inner methods always see X=None
+        #
+        # requires-fh-in-fit = is forecasting horizon always required in fit?
+        "requires-fh-in-fit": False,
+        # valid values: boolean True (yes), False (no)
+        # if True, raises exception in fit if fh has not been passed
+    }
+
+    # -----------------------------------------------------------------------
+    # Constructor
+    # -----------------------------------------------------------------------
+    # 'target' is not necessary in 'theory', but it is useful to create a
+    # predictions dataframe where we need the name of the 'target' column
 
     def __init__(self, *,
                  lag: Union[int, list, tuple, dict] = (0, 1),
@@ -237,7 +311,6 @@ class NeuralNetForecaster:
             ys = None
 
         return Xs, ys
-    # end
 
     def _from_numpy(self, ys):
         if self._scale:
@@ -249,7 +322,6 @@ class NeuralNetForecaster:
         cutoff = self.Ih[-1]
         index = pd.period_range(cutoff+1, periods=n)
         return pd.Series(ys, index=index)
-    # end
 
     def _evaluate_input_output_sizes(self):
         xlags = self._xlags
@@ -259,7 +331,7 @@ class NeuralNetForecaster:
         input_size = mx * len(xlags) + my * len(ylags)
         return input_size, my
 
-    def fit(self, y: PD_TYPES, X: PD_TYPES=None):
+    def _fit(self, y: PD_TYPES, X: PD_TYPES=None):
         if self._y_only:
             X = None
 
@@ -308,7 +380,7 @@ class NeuralNetForecaster:
         self._model.fit(Xt, yt)
         pass
 
-    def predict(self, fh: FH_TYPES = None, X: PD_TYPES=None):
+    def _predict(self, fh: FH_TYPES = None, X: PD_TYPES=None):
         if self._y_only:
             X = None
 

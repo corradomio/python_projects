@@ -70,7 +70,7 @@ y_pred_all[-p:] = y_pred
 
 # --
 
-Xt, yt = npx.UnfoldLoop(steps=12, use_X=True, use_y=True).fit_transform(X, y)
+Xt, yt = npx.UnfoldLoop(steps=12, xlags=[1], ylags=[1]).fit_transform(X, y)
 
 
 pass

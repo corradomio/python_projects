@@ -62,39 +62,19 @@ class Model(nnx.Module):
 
     def __init__(self):
         super().__init__(
-            module=nnx.LSTM(
-                input_size=input_size,
-                hidden_size=8,
-                output_size=ouput_size,
-                num_layers=1,
-                bidirectional=False)
+            module=
+            nnx.LSTM(input_size=input_size,
+                     hidden_size=8,
+                     output_size=ouput_size,
+                     num_layers=1,
+                     bidirectional=False)
             ,
             batch_size=16,
             max_epochs=2000,
-            criterion=torch.nn.MSELoss,
-            optimizer=torch.optim.Adam,
-            lr=0.001,
-            log_epochs=100,
-        )
+            log_epochs=100)
 
 
 # --
-# module,
-# criterion,
-# optimizer=torch.optim.SGD,
-# lr=0.01,
-# max_epochs=10,
-# batch_size=128,
-# iterator_train=DataLoader,
-# iterator_valid=DataLoader,
-# dataset=Dataset,
-# train_split=ValidSplit(5),
-# callbacks=None,
-# predict_nonlinearity='auto',
-# warm_start=False,
-# verbose=1,
-# device='cpu',
-# compile=False,
 
 model = skorch.NeuralNetRegressor(
     module=nnx.LSTM(
@@ -102,19 +82,16 @@ model = skorch.NeuralNetRegressor(
         hidden_size=8,
         output_size=ouput_size,
         num_layers=1,
-        bidirectional=False)
-    ,
+        bidirectional=False),
     batch_size=16,
-    callbacks=[skorch.callbacks.EarlyStopping(patience=10, monitor="train_loss")],
+    callbacks=[skorch.callbacks.EarlyStopping(patience=10)],
     max_epochs=2000,
     criterion=torch.nn.MSELoss,
     optimizer=torch.optim.Adam,
-    lr=0.001,
-    train_split=None,
-    predict_nonlinearity=None
+    lr=0.001
 )
 
-# model = Model()
+model = Model()
 
 model.fit(Xtr, ytr)
 yp = model.predict(Xts)
