@@ -387,17 +387,30 @@ class UnfoldPreparer:
 
 
 # ---------------------------------------------------------------------------
-# start_at
+# ashuffle
 # ---------------------------------------------------------------------------
 
-# def start_at(data: np.ndarray, start:int = 0) -> np.ndarray:
-#     if data is None:
-#         return None
-#     elif start == 0:
-#         return data
-#     else:
-#         return data[start:]
-# # end
+def ashuffle(*arr_list):
+    """
+    Shuffle a list of vectors.
+    It uses the same order for vectors in sequence with the same length
+
+    :param arr_list: list of arrays
+    :return: list of shuffled arrays in the same input order
+    """
+    n = -1
+    idxs = None
+    res = []
+    for arr in arr_list:
+        if len(arr) != n:
+            n = len(arr)
+            idxs = np.arange(n)
+            np.random.shuffle(idxs)
+        arr = arr[idxs]
+        res.append(arr)
+    # end
+    return res
+# end
 
 
 # ---------------------------------------------------------------------------

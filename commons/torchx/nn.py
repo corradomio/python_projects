@@ -160,11 +160,11 @@ class Module(nn.Module):
         if criterion is None:
             self.criterion = nn.MSELoss()
         else:
-            self.criterion = criterion
+            self.criterion = criterion()
         if optimizer is None:
             self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         else:
-            self.optimizer = optimizer
+            self.optimizer = optimizer(self.parameters(), lr=lr)
         self.batch_size = batch_size
         self.max_epochs = max_epochs
         self.log_epochs = log_epochs

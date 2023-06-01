@@ -26,8 +26,8 @@ y = periodic_fn(t, (a1, b1), (a2, b2, c2, d2))
 
 # --
 
-plt.plot(t, y)
-plt.show()
+# plt.plot(t, y)
+# plt.show()
 
 # --
 
@@ -43,7 +43,8 @@ y = y.reshape((-1, 1))
 
 # --
 
-Xt, yt = npx.UnfoldLoop(steps=6, xlags=[1, 0], ylags=[1]).fit_transform(X, y)
+ul = npx.UnfoldLoop(steps=6, xlags=[1, 0], ylags=[1])
+Xt, yt = ul.fit_transform(X, y)
 input_size = Xt.shape[-1]
 ouput_size = yt.shape[-1]
 
@@ -111,12 +112,14 @@ model = skorch.NeuralNetRegressor(
     optimizer=torch.optim.Adam,
     lr=0.001,
     train_split=None,
-    predict_nonlinearity=None
+    # predict_nonlinearity=None
 )
 
 # model = Model()
 
-model.fit(Xtr, ytr)
+Xtr1, ytr1 = npx.ashuffle(Xtr, ytr)
+
+model.fit(Xtr1, ytr1)
 yp = model.predict(Xts)
 
 y_true = yts[:, -1, :].reshape(-1)
