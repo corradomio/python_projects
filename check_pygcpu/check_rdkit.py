@@ -1,3 +1,0 @@
-import rdkit
-
-print("ok")
