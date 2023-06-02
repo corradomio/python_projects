@@ -2,7 +2,6 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import transformers
 import torch
 
-# model = "tiiuae/falcon-7b"
 model = "tiiuae/falcon-40b"
 
 tokenizer = AutoTokenizer.from_pretrained(model)
@@ -15,10 +14,10 @@ pipeline = transformers.pipeline(
     device_map="auto",
 )
 sequences = pipeline(
-    "Girafatron is obsessed with giraffes, the most glorious animal on the face of this Earth. "
-    "Giraftron believes all other animals are irrelevant when compared to the glorious majesty of the giraffe.\n"
-    "Daniel: Hello, Girafatron!\n"
-    "Girafatron:",
+   "Girafatron is obsessed with giraffes, the most glorious animal on the face of this Earth. "
+   "Giraftron believes all other animals are irrelevant when compared to the glorious majesty of the giraffe.\n"
+   "Daniel: Hello, Girafatron!\n"
+   "Girafatron:",
     max_length=200,
     do_sample=True,
     top_k=10,
@@ -27,3 +26,4 @@ sequences = pipeline(
 )
 for seq in sequences:
     print(f"Result: {seq['generated_text']}")
+

@@ -1,3 +1,5 @@
 *.png
 *.json
 images
+stable-diffusion-v1-5
+ddpm-butterflies-128
