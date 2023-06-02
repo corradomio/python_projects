@@ -1,4 +1,4 @@
-# --
+requirements.txt# --
 
 import torch
 from transformers import pipeline
