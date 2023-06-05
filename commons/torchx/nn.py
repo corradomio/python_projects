@@ -444,6 +444,49 @@ class RNN(nn.RNN):
 
 
 # ---------------------------------------------------------------------------
+# CNN
+# ---------------------------------------------------------------------------
+# in_channels: int,
+#         out_channels: int,
+#         kernel_size: _size_1_t,
+#         stride: _size_1_t = 1,
+#         padding: Union[str, _size_1_t] = 0,
+#         dilation: _size_1_t = 1,
+#         groups: int = 1,
+#         bias: bool = True,
+#         padding_mode: str = 'zeros',  # TODO: refine this type
+#         device=None,
+#         dtype=None
+
+class Conv1d(nn.Module):
+    def __init__(self, *, input_size, output_size, hidden_size=1, relu=True,
+                 kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
+        super().__init__()
+        self._hidden_size = hidden_size
+
+        self.cnn = nn.Conv1d(in_channels=input_size,
+                             out_channels=hidden_size,
+                             kernel_size=kernel_size,
+                             stride=stride,
+                             padding=padding,
+                             dilation=dilation,
+                             groups=groups)
+
+        self.relu = nn.ReLU() if relu else None
+        self.lin = nn.Linear(in_features=hidden_size, out_features=output_size)
+    # end
+
+    def forward(self, input):
+        t = self.cnn(input)
+        t = self.relu(t) if self.relu else t
+        t = t.reshape((-1, self._hidden_size))
+        output = self.lin(t)
+        return output
+    # end
+# end
+
+
+# ---------------------------------------------------------------------------
 # DropDimension
 # ---------------------------------------------------------------------------
 

@@ -22,11 +22,11 @@ def prepare_data():
 
 def check_lag(X, y, Xp, yp, n):
 
-    lr = npx.LagReshaper(xlags=[0], ylags=[1])
+    lr = npx.LagTrainTransform(xlags=[0], ylags=[1])
     Xt, yt = lr.fit_transform(X, y)
 
 
-    lp = npx.LagPreparer(xlags=[0], ylags=[1])
+    lp = npx.LagPredictTransform(xlags=[0], ylags=[1])
     ys = lp.fit(X, y).transform(Xp, n)
 
     for i in range(n):

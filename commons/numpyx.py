@@ -8,7 +8,8 @@ from numpy.linalg import eig, eigvals
 
 
 # ---------------------------------------------------------------------------
-# LagReshaper
+# LagTrainTransform
+# LagPredictTransform
 # ---------------------------------------------------------------------------
 # (X, y, xslot, yslots) -> Xt, yt
 #
@@ -22,7 +23,7 @@ def _max(l):
     return 0 if len(l) == 0 else max(l)
 
 
-class LagReshaper:
+class LagTrainTransform:
     def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
         assert isinstance(xlags, list)
         assert isinstance(ylags, list)
@@ -94,19 +95,7 @@ class LagReshaper:
 # end
 
 
-# def reshape(X: np.ndarray, y: np.ndarray,
-#             xlags: list[int] = [0], ylags: list[int] = [],
-#             tlags: list[int] = [0]) -> tuple[np.ndarray, np.ndarray]:
-#     lr = LagReshaper(xlags, ylags, tlags)
-#     return lr.fit_transform(X, y)
-# # end
-
-
-# ---------------------------------------------------------------------------
-# LagPreparer
-# ---------------------------------------------------------------------------
-
-class LagPreparer:
+class LagPredictTransform:
     def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
         assert isinstance(xlags, list)
         assert isinstance(ylags, list)
@@ -278,14 +267,6 @@ class UnfoldLoop:
         return self.fit(X, y).transform(X, y)
 # end
 
-
-# def unfold_loop(X: Optional[np.ndarray], y: np.ndarray, steps:int = 1) -> np.ndarray:
-#     return UnfoldLoop(steps).fit_transform(X, y)
-# # end
-
-# ---------------------------------------------------------------------------
-# UnfoldPreparer
-# ---------------------------------------------------------------------------
 
 class UnfoldPreparer:
     def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):

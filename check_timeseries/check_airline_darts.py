@@ -10,7 +10,7 @@ import darts as dts
 import darts.models
 import torch.nn as nn
 import torchx.nn as nnx
-from sklearnx.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler
 from sktime.utils.plotting import plot_series
 
 

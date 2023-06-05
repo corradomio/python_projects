@@ -2,12 +2,13 @@ from datetime import datetime
 from typing import Union, Optional
 
 import numpy as np
+import numpyx as npx
 import pandas as pd
 from pandas import PeriodIndex
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 
-from .lag import resolve_lag, LagTrainTransform, LagPredictTransform
+from .lag import resolve_lag
 from .utils import *
 
 
@@ -177,7 +178,7 @@ class LinearForecastRegressor(BaseForecaster):
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
 
-        ltt = LagTrainTransform(slots=slots)
+        ltt = npx.LagTrainTransform(xlags=slots.input, ylags=slots.target)
         Xt, yt = ltt.fit_transform(X=Xf, y=yf)
 
         # with warnings.catch_warnings():
@@ -275,12 +276,12 @@ class LinearForecastRegressor(BaseForecaster):
         n = fh[-1]
         y_pred: np.ndarray = np.zeros(n)
 
-        lpt = LagPredictTransform(slots=slots)
+        lpt = npx.LagPredictTransform(xlags=slots.input, ylags=slots.target)
         lpt.fit(X=Xh, y=yh)             # save X,y history
         lpt.transform(X=Xp, y=y_pred)   # save X,y prediction
 
         for i in range(n):
-            Xt = lpt.prepare(i)
+            Xt = lpt.step(i)
             yp: np.ndarray = self._model.predict(Xt)
             y_pred[i] = yp[0]
 
