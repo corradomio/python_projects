@@ -126,33 +126,33 @@ class LagPredictTransform:
         self.yh = y
         return self
 
-    def transform(self, Xp: np.ndarray, fh: int) -> np.ndarray:
-        assert isinstance(Xp, (type(None), np.ndarray))
+    def transform(self, X: np.ndarray, fh: int) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
         assert isinstance(fh, int)
 
-        X = self.Xh
-        y = self.yh
+        Xh = self.Xh
+        yh = self.yh
         xlags = self.xlags
         ylags = self.ylags
         tlags = self.tlags
 
-        if Xp is None:
-            Xp = np.zeros((len(y), 0), dtype=X.dtype)
+        if X is None:
+            X = np.zeros((len(yh), 0), dtype=Xh.dtype)
 
         s = max(_max(xlags), _max(ylags))
         t = max(tlags)
 
-        mx = X.shape[1]
-        my = y.shape[1]
-        n = y.shape[0] - s - t
+        mx = Xh.shape[1]
+        my = yh.shape[1]
+        n = yh.shape[0] - s - t
 
         mt = len(xlags) * mx + len(ylags) * my
         mu = len(tlags) * my
 
-        yp = np.zeros((fh, mu), dtype=y.dtype)
-        Xt = np.zeros((1, mt), dtype=X.dtype)
+        yp = np.zeros((fh, mu), dtype=yh.dtype)
+        Xt = np.zeros((1, mt), dtype=Xh.dtype)
 
-        self.Xp = Xp
+        self.Xp = X
         self.yp = yp
         self.Xt = Xt
 

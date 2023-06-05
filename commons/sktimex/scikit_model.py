@@ -63,7 +63,7 @@ class ScikitForecastRegressor(BaseForecaster):
     def __init__(self,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
-                 # windows_length: int = 5,  in kwargs
+                 # window_length: int = 5,  in kwargs
                  **kwargs):
         super().__init__()
         
@@ -126,10 +126,16 @@ class ScikitForecastRegressor(BaseForecaster):
                 fh: ForecastingHorizon,
                 X: Optional[pd.DataFrame] = None,
                 y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
-        # fh = self._resolve_fh(y, X, fh)
 
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+
+        fhp = fh
+        if fhp.is_relative:
+            fh = fhp
+            fhp = fh.to_absolute(self.cutoff)
+        else:
+            fh = fhp.to_relative(self.cutoff)
 
         Xp, yh, Xh = self._prepare_predict(X, y)
 
@@ -137,34 +143,17 @@ class ScikitForecastRegressor(BaseForecaster):
         if yh is not None:
             self.fit(y=yh, X=Xh)
 
-        n = fh[-1]
-        fhp = ForecastingHorizon(np.arange(1, n + 1))
+        # n = fh[-1]
+        # fhp = ForecastingHorizon(np.arange(1, n + 1))
         
         if self._y_only:
-            y_pred = self.forecaster.predict(fh=fhp, X=None)
+            y_pred = self.forecaster.predict(fh=fh, X=None)
         else:
-            y_pred = self.forecaster.predict(fh=fhp, X=Xp)
+            y_pred = self.forecaster.predict(fh=fh, X=Xp)
 
         assert isinstance(y_pred, (pd.DataFrame, pd.Series))
-        return y_pred.iloc[fh-1]
-
-    # def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
-    #     # (_, _, fh)        -> fh
-    #     # (X, None, None)   -> |X|
-    #     # (None, y, None)   -> error
-    #     # (X, y, None)      -> |X| - |y|
-    # 
-    #     if fh is not None:
-    #         cutoff = self.cutoff if y is None else y.index[-1]
-    #         fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
-    #         return fh.to_relative(cutoff)
-    #     if y is None:
-    #         n = len(X)
-    #         return ForecastingHorizon(np.arange(1, n+1))
-    #     else:
-    #         n = len(X) - len(y)
-    #         return ForecastingHorizon(np.arange(1, n+1))
-    # # end
+        # return y_pred.iloc[fh.to_relative(self.cutoff)-1]
+        return y_pred
 
     def _prepare_predict(self, X, y):
 

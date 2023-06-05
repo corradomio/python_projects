@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.plotting import plot_series
-from sktimex import SimpleRNNForecaster, LinearForecastRegressor, SimpleCNNForecaster
+from sktimex import SimpleRNNForecaster, LinearForecastRegressor, SimpleCNNForecaster, ScikitForecastRegressor
 
 # dtype=None,
 # categorical=[],
@@ -71,25 +71,26 @@ def main():
         X_train, y_train, X_test, y_test = pdx.xy_split(train, test, target=TARGET)
         fh = ForecastingHorizon(y_test.index, is_relative=False)
 
-        model = SimpleRNNForecaster(
-            y_only=not features,
-            flavour='lstm',
-            periodic='M',
-            scale=True,
-            steps=12,
-            lr=0.001,
-            criterion="torch.nn.MSELoss",
-            optimizer="torch.optim.Adam",
-            hidden_size=20,
-            batch_size=16,
-            max_epochs=500,
-            patience=20,
-        )
+        # model = SimpleRNNForecaster(
+        #     y_only=not features,
+        #     flavour='lstm',
+        #     periodic='M',
+        #     scale=True,
+        #     steps=12,
+        #     lr=0.001,
+        #     criterion="torch.nn.MSELoss",
+        #     optimizer="torch.optim.Adam",
+        #     hidden_size=20,
+        #     batch_size=16,
+        #     max_epochs=500,
+        #     patience=20,
+        # )
         # model = LinearForecastRegressor(lag=(1, 12))
+        # model = ScikitForecastRegressor(window_length=1)
         # model = LinearForecastRegressor(lag=(0, 12))
         # model = LinearForecastRegressor(lag=(12, 12))
         # model = LinearForecastRegressor(lag=(0, 12), current=True)
-        # model = SimpleCNNForecaster(hidden_size=12)
+        model = SimpleCNNForecaster(hidden_size=12, scale=True)
 
         model.fit(X=X_train, y=y_train)
         # t_train = model.predict(fh=y_train.index, X=X_train)

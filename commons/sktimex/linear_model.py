@@ -255,17 +255,20 @@ class LinearForecastRegressor(BaseForecaster):
                 fh: Optional[ForecastingHorizon],
                 X: PD_TYPES = None,
                 y: PD_TYPES = None) -> pd.DataFrame:
-        fhp = fh
-        
+
         if self._y_only:
             X = None
 
-        # fh is not None and it is relative!
-        # normalize fh, y, X
-        if not fhp.is_relative:
-            fh = fhp.to_relative(self.cutoff)
-        else:
+        # [BUG]
+        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+
+        fhp = fh
+        if fhp.is_relative:
             fh = fhp
+            fhp = fh.to_absolute(self.cutoff)
+        else:
+            fh = fhp.to_relative(self.cutoff)
+
         assert fh.is_relative
         # slots = resolve_lag(self._lag)
         slots = self._slots
@@ -273,12 +276,11 @@ class LinearForecastRegressor(BaseForecaster):
         Xp, yh, Xh = self._validate_data_lfr(y, X, predict=True)
         """:type: np.ndarray, np.ndarray"""
         # n of slots to predict and populate y_pred
-        n = fh[-1]
+        n = int(fh[-1])
         y_pred: np.ndarray = np.zeros(n)
 
         lpt = npx.LagPredictTransform(xlags=slots.input, ylags=slots.target)
-        lpt.fit(X=Xh, y=yh)             # save X,y history
-        lpt.transform(X=Xp, y=y_pred)   # save X,y prediction
+        y_pred = lpt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
 
         for i in range(n):
             Xt = lpt.step(i)
@@ -286,11 +288,16 @@ class LinearForecastRegressor(BaseForecaster):
             y_pred[i] = yp[0]
 
         # add the index
-        cutoff = self.cutoff if y is None else y.index[-1]
-        y_pred = y_pred[fh-1]
-        index = fh.to_absolute(cutoff).to_pandas()
-        return pd.Series(data=y_pred, index=index)
+        y_pred = self._from_numpy(y_pred, fhp)
+        return y_pred
     # end
+
+    def _from_numpy(self, ys, fhp):
+        ys = ys.reshape(-1)
+        index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
+        yp = pd.Series(data=ys, index=index)
+        yp = yp.loc[fhp.to_pandas()]
+        return yp
 
     # -----------------------------------------------------------------------
     # score (not implemented yet)

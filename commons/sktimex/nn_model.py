@@ -130,7 +130,7 @@ class SimpleRNNForecaster(BaseForecaster):
                  current: Optional[bool] = None,
                  y_only: bool = False,
                  periodic: Union[None, str, tuple] = None,
-                 scale: bool = False,
+                 scale: bool = True,
 
                  # -- RNN
 
@@ -388,18 +388,6 @@ class SimpleRNNForecaster(BaseForecaster):
 
         return Xs, ys
 
-    def _from_numpy(self, ys):
-        if self._scale:
-            ys = self._y_scaler.inverse_transform(ys).astype(self.yh.dtype)
-
-        # 1D array
-        ys = ys.reshape(-1)
-        n = len(ys)
-        # cutoff = self.Ih[-1]
-        cutoff = self.cutoff[0]
-        index = pd.period_range(cutoff + 1, periods=n)
-        return pd.Series(ys, index=index)
-
     def _compute_input_output_sizes(self):
         xlags = self._slots.input
         ylags = self._slots.target
@@ -416,6 +404,16 @@ class SimpleRNNForecaster(BaseForecaster):
         if self._y_only:
             X = None
 
+        # [BUG]
+        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+
+        fhp = fh
+        if fhp.is_relative:
+            fh = fhp
+            fhp = fh.to_absolute(self.cutoff)
+        else:
+            fh = fhp.to_relative(self.cutoff)
+
         # encode
         X, _ = self._to_dataframe(X, fh=fh)
         # encode periodic data
@@ -423,7 +421,7 @@ class SimpleRNNForecaster(BaseForecaster):
         # convert
         Xs, _ = self._to_numpy(X, None)
 
-        nfh = len(fh)
+        nfh = int(fh[-1])
         up = npx.UnfoldPreparer(self._steps, xlags=self._slots.input, ylags=self._slots.target)
         ys = up.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
@@ -433,9 +431,19 @@ class SimpleRNNForecaster(BaseForecaster):
             ys[i] = yt[0, -1]
         # end
 
-        yp = self._from_numpy(ys)
+        yp = self._from_numpy(ys, fhp)
         return yp
     # end
+
+    def _from_numpy(self, ys, fhp):
+        if self._scale:
+            ys = self._y_scaler.inverse_transform(ys).astype(self.yh.dtype)
+        ys = ys.reshape(-1)
+
+        index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
+        yp = pd.Series(ys, index=index)
+        yp = yp.loc[fhp.to_pandas()]
+        return yp
 
     # -----------------------------------------------------------------------
     # end
@@ -499,7 +507,7 @@ class SimpleCNNForecaster(BaseForecaster):
                  current: Optional[bool] = None,
                  y_only: bool = False,
                  periodic: Union[None, str, tuple] = None,
-                 scale: bool = False,
+                 scale: bool = True,
 
                  # --
                  steps: int = 1,
@@ -749,17 +757,6 @@ class SimpleCNNForecaster(BaseForecaster):
 
         return Xs, ys
 
-    def _from_numpy(self, ys):
-        if self._scale:
-            ys = self._y_scaler.inverse_transform(ys).astype(self.yh.dtype)
-
-        # 1D array
-        ys = ys.reshape(-1)
-        n = len(ys)
-        cutoff = self.cutoff[0]
-        index = pd.period_range(cutoff + 1, periods=n)
-        return pd.Series(ys, index=index)
-
     def _compute_input_output_sizes(self):
         xlags = self._slots.input
         ylags = self._slots.target
@@ -776,6 +773,13 @@ class SimpleCNNForecaster(BaseForecaster):
         if self._y_only:
             X = None
 
+        fhp = fh
+        if not fhp.is_relative:
+            fh = fhp.to_relative(self.cutoff)
+        else:
+            fh = fhp
+            fhp = fh.to_absolute(self.cutoff)
+
         # encode
         X, _ = self._to_dataframe(X, fh=fh)
         # encode periodic data
@@ -783,8 +787,8 @@ class SimpleCNNForecaster(BaseForecaster):
         # convert
         Xs, _ = self._to_numpy(X, None)
 
-        nfh = len(fh)
-        lpt = LagPredictTransform(xlags=self._slots.input, ylags=self._slots.target)
+        nfh = int(fh[-1])
+        lpt = npx.LagPredictTransform(xlags=self._slots.input, ylags=self._slots.target)
         ys = lpt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):
@@ -795,9 +799,19 @@ class SimpleCNNForecaster(BaseForecaster):
             ys[i] = yt[0]
         # end
 
-        yp = self._from_numpy(ys)
+        yp = self._from_numpy(ys, fhp)
         return yp
     # end
+
+    def _from_numpy(self, ys, fhp):
+        if self._scale:
+            ys = self._y_scaler.inverse_transform(ys).astype(self.yh.dtype)
+        ys = ys.reshape(-1)
+
+        index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
+        yp = pd.Series(ys, index=index)
+        yp = yp.loc[fhp.to_pandas()]
+        return yp
 
     # -----------------------------------------------------------------------
     # end
