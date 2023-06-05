@@ -254,12 +254,17 @@ class LinearForecastRegressor(BaseForecaster):
                 fh: Optional[ForecastingHorizon],
                 X: PD_TYPES = None,
                 y: PD_TYPES = None) -> pd.DataFrame:
-
+        fhp = fh
+        
         if self._y_only:
             X = None
 
         # fh is not None and it is relative!
         # normalize fh, y, X
+        if not fhp.is_relative:
+            fh = fhp.to_relative(self.cutoff)
+        else:
+            fh = fhp
         assert fh.is_relative
         # slots = resolve_lag(self._lag)
         slots = self._slots
