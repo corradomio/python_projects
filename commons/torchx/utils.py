@@ -7,7 +7,7 @@ from torch.utils.data import TensorDataset
 
 
 # ---------------------------------------------------------------------------
-# Utilities
+# stdlib utilities
 # ---------------------------------------------------------------------------
 
 def kwval(d: dict, k: str, v):
@@ -36,12 +36,20 @@ def qualified_name(clazz: type) -> str:
     return f'{clazz.__module__}.{clazz.__name__}'
 
 
+# ---------------------------------------------------------------------------
+# torch Utilities
+# ---------------------------------------------------------------------------
+
 def as_tensor(v: np.ndarray, dtype=torch.float32) -> torch.Tensor:
     if len(v.shape) == 1:
         v = v.reshape((-1, 1))
     return torch.from_numpy(v).type(dtype)
 # end
 
+
+# ---------------------------------------------------------------------------
+# NumpyDataset
+# ---------------------------------------------------------------------------
 
 class NumpyDataset(TensorDataset):
 
@@ -98,6 +106,7 @@ class LossHistory:
 
 
 # ---------------------------------------------------------------------------
+# DataTrainer
 # compose_data
 # ---------------------------------------------------------------------------
 #
@@ -233,6 +242,7 @@ def compose_data(y: np.ndarray,
 
 
 # ---------------------------------------------------------------------------
+# DataPredictor
 # predict_recursive
 # ---------------------------------------------------------------------------
 # Note: to predict y[0], it is necessary to use

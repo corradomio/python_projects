@@ -275,7 +275,7 @@ def read_data(file: str,
 
     if periodic is not None:
         df = periodic_encode(df, *periodic)
-        
+
     if len(onehot) > 0:
         df = onehot_encode(df, onehot)
 
@@ -414,7 +414,7 @@ def periodic_encode(df,
         df = _daily_encoder(df, datetime, columns, year_scale)
     else:
         raise ValueError(f"'Unsupported periodic_encode method '{method}/{freq}'")
-    
+
     return df
 # end
 
@@ -435,10 +435,10 @@ def _scale_year(year, year_scaler):
         y0 = year[0]
     else:
         y0, s0, y1, s1 = year_scaler
-        
+
     dy = y1 - y0
     ds = s1 - s0
-    
+
     year = year.apply(lambda y: s0 + (y-y0)*ds/dy)
     return year
 
@@ -455,13 +455,13 @@ def _onehot_encode(df, datetime, columns, freq, year_scale):
         ["_y", "_01", "_02", "_03", "_04", "_05", "_06", "_07", "_08", "_09", "_10", "_11", "_12"]
         # "_y", "_jan", "_feb", "_mar", "_apr", "_may", "_jun", "_jul", "_aug", "_sep", "_oct", "_nov", "_dec"]
     )
-    
+
     # year == 0
     dty = dt.apply(lambda x: x.year)
     dty = _scale_year(dty, year_scale)
-    
+
     df[columns[0]] = dty
-    
+
     # month  in range [1, 12]
     for month in range(1, 13):
         dtm = dt.apply(lambda x: int(x.month == month))
@@ -482,10 +482,10 @@ def _order_month_encoder(df, datetime, columns, year_scale):
     dty = dt.apply(lambda x: x.year)
     dty = _scale_year(dty, year_scale)
     dtm = dt.apply(lambda x: x.month-1)
-    
+
     df[columns[0]] = dty
     df[columns[1]] = dtm
-    
+
     return df
 
 
@@ -590,7 +590,8 @@ def dataframe_split_column(df: pd.DataFrame,
                            column: str,
                            columns: Optional[list[str]] = None,
                            sep: str = '~',
-                           drop=False) -> pd.DataFrame:
+                           drop=False,
+                           inplace=False) -> pd.DataFrame:
     """
     Split the content (a string) of the selected 'col', based on the specified separator 'sep'.
     then, it created 2 or more columns with the specified names ('columns') or based on the
@@ -604,16 +605,17 @@ def dataframe_split_column(df: pd.DataFrame,
     """
     assert isinstance(df, pd.DataFrame)
     assert isinstance(column, str)
+    assert isinstance(columns, (type(None), list))
     assert isinstance(sep, str)
 
     data = df[column]
     n = len(data)
-    
+
     # analyze the first row:
     s = data.iloc[0]
     parts = s.split(sep)
     p = len(parts)
-    
+
     splits = [[] for p in parts]
 
     # analyze the data
@@ -623,20 +625,60 @@ def dataframe_split_column(df: pd.DataFrame,
         for j in range(p):
             splits[j].append(parts[j])
     # end
-    
+
     # create the columns if not specified
     if columns is None:
         columns = [f'{col}_{j+1}' for j in range(p)]
-        
+
     # populate the dataframe
-    df = df.copy()
-    for j in range(p):
-        df[columns[j]] = splits[j]
+    if not inplace:
+        df = df.copy()
 
     # drop the column if required
     if drop:
-        df.drop(col, inplace=True)
+        df.drop(column, inplace=True, axis=1)
 
+    for j in range(p):
+        df[columns[j]] = splits[j]
+
+    return df
+# end
+
+
+def dataframe_merge_columns(df: pd.DataFrame,
+                            columns: list[str],
+                            column: str,
+                            sep: str = '~',
+                            drop=False,
+                            inplace=False) -> pd.DataFrame:
+    """
+    Merge the content of 2 or more columns in a single one
+    :param df: 
+    :param columns: 
+    :param column: 
+    :param sep: 
+    :param drop: 
+    :return: 
+    """
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(column, str)
+    assert isinstance(columns, list)
+    assert isinstance(sep, str)
+
+    n = len(df)
+    slist: list[pd.Series] = [df[col] for col in columns]
+    text: list[str] = []
+
+    for i in range(n):
+        tlist = [str(s.iloc[i]) for s in slist]
+        text.append(sep.join(tlist))
+
+    if not inplace:
+        df = df.copy()
+    if drop:
+        df = df.drop(columns, axis=1)
+
+    df[column] = text
     return df
 # end
 
@@ -766,7 +808,7 @@ TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
 PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
 
 
-def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False) \
+def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False, keep=0) \
     -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list.
@@ -776,7 +818,8 @@ def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=Fal
 
     :param df: DataFrame to split
     :param groups: list of columns to use during the split. The columns must be categorical or string
-    :param ignore: if to remove the 'groups' columns
+    :param drop: if to remove the 'groups' columns
+    :param keep:  (debug), keep only some groups
 
     :return dict[tuple[str], DataFrame]: a dictionary
     """
@@ -798,11 +841,13 @@ def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=Fal
     if len(groups) == 1:
         for g, gdf in df.groupby(by=groups[0]):
             dfdict[(g,)] = gdf
+            if keep > 0 and len(dfdict) == keep: break
     else:
         for g, gdf in df.groupby(by=groups):
             dfdict[g] = gdf
+            if keep > 0 and len(dfdict) == keep: break
     # end
-    
+
     if drop:
         for g in dfdict:
             gdf = dfdict[g]
@@ -928,12 +973,12 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
 # end
 
 
-def dataframe_index(df: pd.DataFrame,
-                    index: Union[None, str, list[str]],
-                    inplace=False,
-                    drop=False) -> pd.DataFrame:
+def set_index(df: pd.DataFrame,
+              index: Union[None, str, list[str]],
+              inplace=False,
+              drop=False) -> pd.DataFrame:
     """
-    Create a multiindex based on the list of columns
+    Create a multiindex based on the columns list
 
     :param df: dataframe to process
     :param index: column or list of columns to use in the index
@@ -947,6 +992,8 @@ def dataframe_index(df: pd.DataFrame,
         df = df.set_index(index, inplace=inplace, drop=drop)
     return df
 # end
+
+dataframe_index = set_index
 
 
 def index_split(df: PANDAS_TYPE, levels: int = -1) -> dict[tuple, pd.DataFrame]:
@@ -1001,19 +1048,19 @@ dataframe_merge_on_index = index_merge
 # dataframe_clip_outliers
 # ---------------------------------------------------------------------------
 
-def dataframe_correlation(df: Union[DATAFRAME_OR_DICT], 
-                          columns: Union[str, list[str]], 
-                          target: Optional[str] = None, 
+def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
+                          columns: Union[str, list[str]],
+                          target: Optional[str] = None,
                           groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
 
     if isinstance(columns, str):
         columns = [columns]
-    
+
     if target is None:
         target = columns[0]
     else:
         columns = [target] + columns
-    
+
     if groups is not None:
         dfdict = dataframe_split_on_groups(df, groups=groups)
         corr_dict = {}
@@ -1025,10 +1072,10 @@ def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
         dfcorr.set_index(dfcorr[groups], inplace=True)
         return dfcorr
     # end
-    
+
     dftc = df[columns]
     corr = dftc.corr().loc[target]
-    
+
     dfcorr = pd.DataFrame(columns=corr.index)
     dfcorr = dfcorr.append(corr, ignore_index=True)
     return dfcorr
@@ -1052,16 +1099,16 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
         dfoutl = dataframe_merge_on_groups(outl_dict, groups=groups)
         return dfoutl
     # end
-    
+
     for col in columns:
         data = df[col].copy()
         mean = data.mean()
         std = data.std()
         median = data.median()
-        
+
         min = mean-outlier_std*std
         max = mean+outlier_std*std
-        
+
         data[data<min] = median
         data[data>max] = median
         df[col] = data
@@ -1138,7 +1185,7 @@ def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]
 
     for data in data_list:
         if type(data.index) == pd.MultiIndex:
-            d_data = dataframe_split_on_index(data, -1)
+            d_data = index_split(data, -1)
             d_trn = {}
             d_tst = {}
             for lv in d_data:
@@ -1147,8 +1194,8 @@ def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]
                 d_trn[lv] = trnlv
                 d_tst[lv] = tstlv
             # end
-            trn = dataframe_merge_on_index(d_trn)
-            tst = dataframe_merge_on_index(d_tst)
+            trn = index_merge(d_trn)
+            tst = index_merge(d_tst)
         else:
             trn, tst = _train_split(data)
         tt_list.append(trn)
@@ -1158,7 +1205,7 @@ def train_test_split(*data_list, train_size=0, test_size=0) -> list[PANDAS_TYPE]
 # end
 
 
-def nan_split(*data_list, 
+def nan_split(*data_list,
               excluding: Union[None, str, list[str]]=None,
               columns: Union[None, str, list[str]]=None) -> list[PANDAS_TYPE]:
     if isinstance(excluding, str):
@@ -1173,7 +1220,7 @@ def nan_split(*data_list,
             columns = data.columns.difference(excluding)
         if columns is None:
             columns = data.columns
-            
+
         invalid_rows = data[columns].isnull().any(axis=1)
         invalid = data.loc[invalid_rows]
         valid = data.loc[data.index.difference(invalid.index)]
@@ -1232,7 +1279,7 @@ def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
     # end
     return index, cvalues, lvalues
 # end
- 
+
 
 def cumulant(df: pd.DataFrame, select: list) -> pd.DataFrame:
     """

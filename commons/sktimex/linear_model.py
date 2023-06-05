@@ -6,7 +6,6 @@ import pandas as pd
 from pandas import PeriodIndex
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from stdlib import import_from
 
 from .lag import resolve_lag, LagTrainTransform, LagPredictTransform
 from .utils import *
@@ -92,15 +91,12 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
     # Constructor
     # -----------------------------------------------------------------------
-    # 'target' is not necessary in 'theory', but it is useful to create a
-    # predictions dataframe where we need the name of the 'target' column
 
     def __init__(self,
-                 lag: Union[int, list, tuple, dict],
+                 lag: Union[int, list, tuple, dict] = (0, 1),
                  current=None,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
-                 target: Optional[str] = None,
                  **kwargs):
         """
         
@@ -123,7 +119,6 @@ class LinearForecastRegressor(BaseForecaster):
                 }
                 
         :param class_name: 
-        :param target: 
         :param kwargs: 
         """
         super().__init__()
@@ -136,10 +131,9 @@ class LinearForecastRegressor(BaseForecaster):
         model_class = import_from(class_name)
         self._model = model_class(**kwargs)
 
-        self._target = target
         self._slots = resolve_lag(lag, current)
-        self._X_history: Optional[np.ndarray] = None
-        self._y_history: Optional[np.ndarray] = None
+        self.Xh: Optional[np.ndarray] = None
+        self.yh: Optional[np.ndarray] = None
         self._cutoff: Optional[datetime] = None
     # end
 
@@ -153,7 +147,6 @@ class LinearForecastRegressor(BaseForecaster):
         params['y_only'] = self._y_only
         params['lag'] = self._lag
         params['current'] = self._current
-        params['target'] = self._target
         return params
     # end
 
@@ -161,15 +154,18 @@ class LinearForecastRegressor(BaseForecaster):
     # fit
     # -----------------------------------------------------------------------
 
-    def fit(self, y, X=None, fh=None):
-        self._save_target(y)
-        if self._y_only:
-            return super().fit(y=y, X=None, fh=fh)
-        else:
-            return super().fit(y=y, X=X, fh=fh)
-    # end
+    # def fit(self, y, X=None, fh=None):
+    #     if self._y_only:
+    #         super().fit(y=y, X=None, fh=fh)
+    #     else:
+    #         super().fit(y=y, X=X, fh=fh)
+    #     return self
+    # # end
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
+        if self._y_only:
+            X = None
+
         # slots = resolve_lag(self._lag)
         slots = self._slots
         s = len(slots)
@@ -180,8 +176,6 @@ class LinearForecastRegressor(BaseForecaster):
         # DataFrame/Series -> np.ndarray
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
-        self._y_history = yf[-s:] if yf is not None else None
-        self._X_history = Xf[-s:] if Xf is not None else None
 
         ltt = LagTrainTransform(slots=slots)
         Xt, yt = ltt.fit_transform(X=Xf, y=yf)
@@ -190,9 +184,15 @@ class LinearForecastRegressor(BaseForecaster):
         #     warnings.filterwarnings("ignore", category=ConvergenceWarning)
         #     self._model.fit(Xt, yt)
         self._model.fit(Xt, yt)
-
+        self._save_history(yf, Xf)
         return self
     # end
+    
+    def _save_history(self, yf, Xf):
+        s = len(self._slots)
+        self.yh = yf[-s:] if yf is not None else None
+        self.Xh = Xf[-s:] if Xf is not None else None
+        pass
 
     # -----------------------------------------------------------------------
     # predict
@@ -202,58 +202,62 @@ class LinearForecastRegressor(BaseForecaster):
     #               predict(    X)  predict(    X, y)
     #
 
-    def predict(self,
-                fh: FH_TYPES = None,
-                X: PD_TYPES = None,
-                y: PD_TYPES = None):
-        if self._y_only:
-            X = None
+    # def predict(self,
+    #             fh: ForecastingHorizon,
+    #             X: PD_TYPES = None,
+    #             y: PD_TYPES = None):
+    #     if self._y_only:
+    #         X = None
+    #
+    #     # fh = self._resolve_fh(y, X, fh)
+    #     if y is None:
+    #         X = self._clip_on_cutoff(X)
+    #         return super().predict(fh=fh, X=X)
+    #     else:
+    #         return self._predict(fh=fh, X=X, y=y)
 
-        fh = self._resolve_fh(y, X, fh)
-        if y is None:
-            X = self._clip_on_cutoff(X)
-            return super().predict(fh=fh, X=X)
-        else:
-            return self._predict(fh=fh, X=X, y=y)
+    # def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
+    #     # (_, _, fh)        -> fh
+    #     # (X, None, None)   -> |X|
+    #     # (None, y, None)   -> error
+    #     # (X, y, None)      -> |X| - |y|
+    #
+    #     if isinstance(fh, PeriodIndex):
+    #         cutoff = self.cutoff if y is None else y.index[-1]
+    #         fh = ForecastingHorizon(fh, is_relative=False)
+    #         return fh.to_relative(cutoff)
+    #     if fh is not None:
+    #         cutoff = self.cutoff if y is None else y.index[-1]
+    #         fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
+    #         return fh.to_relative(cutoff)
+    #     if y is None:
+    #         n = len(X)
+    #         return ForecastingHorizon(np.arange(1, n+1))
+    #     # if X is None and y is not None:
+    #     #     n = len(y)
+    #     #     return ForecastingHorizon(np.arange(1, n+1))
+    #     else:
+    #         n = len(X) - len(y)
+    #         return ForecastingHorizon(np.arange(1, n+1))
+    # # end
 
-    def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
-        # (_, _, fh)        -> fh
-        # (X, None, None)   -> |X|
-        # (None, y, None)   -> error
-        # (X, y, None)      -> |X| - |y|
-
-        if isinstance(fh, PeriodIndex):
-            cutoff = self.cutoff if y is None else y.index[-1]
-            fh = ForecastingHorizon(fh, is_relative=False)
-            return fh.to_relative(cutoff)
-        if fh is not None:
-            cutoff = self.cutoff if y is None else y.index[-1]
-            fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
-            return fh.to_relative(cutoff)
-        if y is None:
-            n = len(X)
-            return ForecastingHorizon(np.arange(1, n+1))
-        # if X is None and y is not None:
-        #     n = len(y)
-        #     return ForecastingHorizon(np.arange(1, n+1))
-        else:
-            n = len(X) - len(y)
-            return ForecastingHorizon(np.arange(1, n+1))
-    # end
-
-    def _clip_on_cutoff(self, X):
-        if X is None:
-            return None
-        cutoff = self._cutoff[0] if isinstance(self._cutoff, PeriodIndex) else self._cutoff
-        if X.index[0] <= cutoff:
-            X = X.loc[X.index > cutoff]
-        return X
-    # end
+    # def _clip_on_cutoff(self, X):
+    #     if X is None:
+    #         return None
+    #     cutoff = self._cutoff[0] if isinstance(self._cutoff, PeriodIndex) else self._cutoff
+    #     if X.index[0] <= cutoff:
+    #         X = X.loc[X.index > cutoff]
+    #     return X
+    # # end
 
     def _predict(self,
                 fh: Optional[ForecastingHorizon],
                 X: PD_TYPES = None,
                 y: PD_TYPES = None) -> pd.DataFrame:
+
+        if self._y_only:
+            X = None
+
         # fh is not None and it is relative!
         # normalize fh, y, X
         assert fh.is_relative
@@ -279,7 +283,7 @@ class LinearForecastRegressor(BaseForecaster):
         cutoff = self.cutoff if y is None else y.index[-1]
         y_pred = y_pred[fh-1]
         index = fh.to_absolute(cutoff).to_pandas()
-        return pd.DataFrame(data=y_pred, columns=self._target, index=index)
+        return pd.Series(data=y_pred, index=index)
     # end
 
     # -----------------------------------------------------------------------
@@ -299,15 +303,6 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
     # _validate_data is already defined in the superclass
 
-    def _save_target(self, y):
-        if isinstance(y, pd.Series):
-            self._target = [y.name]
-        elif isinstance(y, pd.DataFrame):
-            self._target = list(y.columns)
-        else:
-            self._target = [None]
-    # end
-
     def _validate_data_lfr(self, y=None, X=None, predict: bool = False):
         # validate the data and converts it:
         #
@@ -326,7 +321,7 @@ class LinearForecastRegressor(BaseForecaster):
         #   fh, y, X    X[:y], y    X[y:]       |fh|
         #
 
-        if predict and self._y_history is None:
+        if predict and self.yh is None:
             raise ValueError(f'{self.__class__.__name__} not fitted yet')
 
         # X to np.array
@@ -349,7 +344,7 @@ class LinearForecastRegressor(BaseForecaster):
                 y = y.reshape(-1)
             assert len(y.shape) == 1
 
-        if X is None and self._X_history is not None:
+        if X is None and self.Xh is not None:
             raise ValueError(f"predict needs X")
 
         # yf, Xf
@@ -359,8 +354,8 @@ class LinearForecastRegressor(BaseForecaster):
         # Xf, yh, Xh
         if y is None:
             Xf = X
-            yh = self._y_history
-            Xh = self._X_history
+            yh = self.yh
+            Xh = self.Xh
         else:
             n = len(y)
             yh = y

@@ -6,7 +6,6 @@ from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktime.forecasting.compose import make_reduction
 
-from stdlib import import_from, dict_del, kwval
 from .utils import *
 
 
@@ -104,14 +103,6 @@ class ScikitForecastRegressor(BaseForecaster):
         return params
     # end
 
-    # @property
-    # def cutoff(self):
-    #     return self.forecaster.cutoff
-
-    # @property
-    # def fh(self):
-    #     return self.forecaster.fh
-
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
@@ -132,10 +123,10 @@ class ScikitForecastRegressor(BaseForecaster):
         return self
 
     def _predict(self,
-                fh: FH_TYPES = None,
+                fh: ForecastingHorizon,
                 X: Optional[pd.DataFrame] = None,
                 y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
-        fh = self._resolve_fh(y, X, fh)
+        # fh = self._resolve_fh(y, X, fh)
 
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
@@ -157,23 +148,23 @@ class ScikitForecastRegressor(BaseForecaster):
         assert isinstance(y_pred, (pd.DataFrame, pd.Series))
         return y_pred.iloc[fh-1]
 
-    def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
-        # (_, _, fh)        -> fh
-        # (X, None, None)   -> |X|
-        # (None, y, None)   -> error
-        # (X, y, None)      -> |X| - |y|
-
-        if fh is not None:
-            cutoff = self.cutoff if y is None else y.index[-1]
-            fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
-            return fh.to_relative(cutoff)
-        if y is None:
-            n = len(X)
-            return ForecastingHorizon(np.arange(1, n+1))
-        else:
-            n = len(X) - len(y)
-            return ForecastingHorizon(np.arange(1, n+1))
-    # end
+    # def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
+    #     # (_, _, fh)        -> fh
+    #     # (X, None, None)   -> |X|
+    #     # (None, y, None)   -> error
+    #     # (X, y, None)      -> |X| - |y|
+    # 
+    #     if fh is not None:
+    #         cutoff = self.cutoff if y is None else y.index[-1]
+    #         fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
+    #         return fh.to_relative(cutoff)
+    #     if y is None:
+    #         n = len(X)
+    #         return ForecastingHorizon(np.arange(1, n+1))
+    #     else:
+    #         n = len(X) - len(y)
+    #         return ForecastingHorizon(np.arange(1, n+1))
+    # # end
 
     def _prepare_predict(self, X, y):
 
@@ -273,4 +264,9 @@ class ScikitForecastRegressor(BaseForecaster):
     # end
     # -----------------------------------------------------------------------
 # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
 
