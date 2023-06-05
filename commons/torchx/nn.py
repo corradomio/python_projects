@@ -434,7 +434,6 @@ class RNN(nn.RNN):
 
         if L not in self.hidden:
             hidden_state = torch.zeros(D, L, N)
-            # cell_state = torch.zeros(D, L, N)
             self.hidden[L] = hidden_state
 
         hidden = self.hidden[L]
