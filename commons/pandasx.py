@@ -583,15 +583,16 @@ def _daily_encoder(df, datetime, columns, year_scale):
 
 
 # ---------------------------------------------------------------------------
-# dataframe_split_column
+# split_column
+# merge_columns
 # ---------------------------------------------------------------------------
 
-def dataframe_split_column(df: pd.DataFrame,
-                           column: str,
-                           columns: Optional[list[str]] = None,
-                           sep: str = '~',
-                           drop=False,
-                           inplace=False) -> pd.DataFrame:
+def split_column(df: pd.DataFrame,
+                 column: str,
+                 columns: Optional[list[str]] = None,
+                 sep: str = '~',
+                 drop=False,
+                 inplace=False) -> pd.DataFrame:
     """
     Split the content (a string) of the selected 'col', based on the specified separator 'sep'.
     then, it created 2 or more columns with the specified names ('columns') or based on the
@@ -645,12 +646,12 @@ def dataframe_split_column(df: pd.DataFrame,
 # end
 
 
-def dataframe_merge_columns(df: pd.DataFrame,
-                            columns: list[str],
-                            column: str,
-                            sep: str = '~',
-                            drop=False,
-                            inplace=False) -> pd.DataFrame:
+def merge_columns(df: pd.DataFrame,
+                  columns: list[str],
+                  column: str,
+                  sep: str = '~',
+                  drop=False,
+                  inplace=False) -> pd.DataFrame:
     """
     Merge the content of 2 or more columns in a single one
     :param df: 
@@ -681,6 +682,10 @@ def dataframe_merge_columns(df: pd.DataFrame,
     df[column] = text
     return df
 # end
+
+
+dataframe_split_column = split_column
+dataframe_merge_columns = merge_columns
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,6 @@
 from typing import List, Tuple, Union, Optional, Set, Dict
 import joblib
+import multiprocessing
 import random as rnd
 from typing import Iterable
 
@@ -42,6 +43,8 @@ class Parallel:
 
                 in this case, the list is subdivided in n_jobs*n_plits parts
                 and submitted to 'n_job' jobs
+
+                Ff it is a
         """
         n_splits = 1
         if isinstance(n_jobs, (tuple, list)):
@@ -51,7 +54,13 @@ class Parallel:
             elif len(n_jobs) == 1:
                 n_jobs = n_jobs[0]
             else:
-                self.n_jobs = 1
+                n_jobs = 1
+        # end
+        if isinstance(n_jobs, float):
+            n_job = int(n_jobs*multiprocessing.cpu_count())
+        elif isinstance(n_jobs, int) and n_jobs < 0:
+            n_jobs = multiprocessing.cpu_count() + n_jobs
+
         self.n_jobs = 1 if n_jobs is None or n_jobs == 0 else n_jobs
         self.n_splits = 1 if n_splits is None else n_splits
         pass
