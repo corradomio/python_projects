@@ -23,6 +23,6 @@ def weighted_absolute_percentage_error(y_true: Union[pd.DataFrame, pd.Series], y
         y_pred = y_pred.reshape(-1)
 
     total = np.abs(y_true).sum()
-    absdiff = np.abs(y_true - y_pred).sum()
-    return absdiff/total if total > 0 else absdiff
+    diff = np.abs(y_true - y_pred).sum()
+    return diff/total if total > 0 else diff
 # end

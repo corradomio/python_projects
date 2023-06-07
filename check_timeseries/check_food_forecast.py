@@ -1,11 +1,10 @@
 import logging.config
-import pandasx as pdx
-import sktimex as sktx
-import numpy as np
+
 import matplotlib.pyplot as plt
+import pandasx as pdx
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.plotting import plot_series
-from sktimex import SimpleRNNForecaster, LinearForecastRegressor, SimpleCNNForecaster, ScikitForecastRegressor
+from sktimex import SimpleCNNForecaster
 
 # dtype=None,
 # categorical=[],
@@ -38,7 +37,6 @@ def prepare_data():
                        numeric=['evaporation', 'mean_temperature', 'rainy_days', 'vap_pressure'],
                        # periodic=('imp_date', 'M'),
                        na_values=['(null)'])
-
     # df = pdx.dataframe_split_column(df, column=GROUP, columns=['item', 'country'], sep='~')
     # df = pdx.clip_outliers(df, columns=TARGET, groups=GROUP)
 
@@ -52,8 +50,6 @@ SELECTED = None
 
 def main():
     dfdict = prepare_data()
-
-    features = False
 
     for key in dfdict:
         item_country = key[0]

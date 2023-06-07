@@ -8,8 +8,8 @@ from numpy.linalg import eig, eigvals
 
 
 # ---------------------------------------------------------------------------
-# LagTrainTransform
-# LagPredictTransform
+# LinearTrainTransform
+# LinearPredictTransform
 # ---------------------------------------------------------------------------
 # (X, y, xslot, yslots) -> Xt, yt
 #
@@ -23,7 +23,7 @@ def _max(l):
     return 0 if len(l) == 0 else max(l)
 
 
-class LagTrainTransform:
+class LinearTrainTransform:
     def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
         assert isinstance(xlags, list)
         assert isinstance(ylags, list)
@@ -61,10 +61,11 @@ class LagTrainTransform:
 
         s = max(_max(xlags), _max(ylags))
         t = max(tlags)
+        r = s + t
 
         mx = X.shape[1]
         my = y.shape[1]
-        n = y.shape[0] - s - t
+        n = y.shape[0] - r
 
         mt = len(xlags) * mx + len(ylags) * my
         mu = len(tlags) * my
@@ -95,7 +96,7 @@ class LagTrainTransform:
 # end
 
 
-class LagPredictTransform:
+class LinearPredictTransform:
     def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
         assert isinstance(xlags, list)
         assert isinstance(ylags, list)
@@ -189,8 +190,13 @@ class LagPredictTransform:
 # end
 
 
+LagTrainTransform = LinearTrainTransform
+LagPredictTransform = LinearPredictTransform
+
+
 # ---------------------------------------------------------------------------
-# UnfoldLoop
+# RNNTrainTransform
+# RNNPredictTransform
 # ---------------------------------------------------------------------------
 # X[0]      -> (X[0],X[1],X[2],...)
 # X[1]      -> (X[1],X[2],X[3],...)
@@ -204,8 +210,7 @@ class LagPredictTransform:
 # xlags: [], [1], [0], [0,1]
 # ylags: [], [1]
 
-
-class UnfoldLoop:
+class RNNTrainTransform:
     def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
         self.steps = steps
         self.xlags = xlags
@@ -238,8 +243,9 @@ class UnfoldLoop:
 
         s = self.steps
         t = self.t
+        r = t + (s - 1)
 
-        n = X.shape[0] - t - (s - 1)
+        n = X.shape[0] - r
         mx = X.shape[1]
         my = y.shape[1]
 
@@ -268,7 +274,7 @@ class UnfoldLoop:
 # end
 
 
-class UnfoldPreparer:
+class RNNPredictTransform:
     def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
         self.steps = steps
         self.xlags = xlags
@@ -366,6 +372,179 @@ class UnfoldPreparer:
     # end
 # end
 
+
+UnfoldLoop = RNNTrainTransform
+UnfoldPreparer = RNNPredictTransform
+
+
+# ---------------------------------------------------------------------------
+# CNNTrainTransform
+# CNNPredictTransform
+# ---------------------------------------------------------------------------
+# N, Channels, Length
+
+class CNNTrainTransform:
+    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
+        self.steps = steps
+        self.xlags = xlags
+        self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
+
+    def __len__(self):
+        return self.steps + 1
+
+    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+    # end
+
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+        if y is None:
+            y = np.zeros((len(X), 0), dtype=y.dtype)
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        xlags = self.xlags
+        ylags = self.ylags
+
+        s = self.steps
+        t = self.t
+        r = max(self.t, self.steps)
+
+        n = X.shape[0] - r
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = mx*len(xlags) + my*len(ylags)
+        Xt = np.zeros((n, mt, s), dtype=X.dtype)
+        yt = np.zeros((n, my), dtype=y.dtype)
+
+        for i in range(n):
+            c = 0
+            for k in ylags:
+                for j in range(s):
+                    Xt[i, c:c + my, j] = y[i + j + t - k]
+                c += my
+            for k in xlags:
+                for j in range(s):
+                    Xt[i, c:c + mx, j] = X[i + j + t - k]
+                c += mx
+
+            yt[i] = y[i + t]
+        # end
+
+        return Xt, yt
+    # end
+
+    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return self.fit(X, y).transform(X, y)
+# end
+
+
+class CNNPredictTransform:
+    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
+        self.steps = steps
+        self.xlags = xlags
+        self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
+
+        self.Xh = None
+        self.yh = None
+        self.Xp = None
+        self.yp = None
+        self.Xt = None
+
+    def fit(self, X: np.ndarray, y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+        if y is None:
+            y = np.zeros((len(X), 0), dtype=y.dtype)
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        self.Xh = X
+        self.yh = y
+
+        assert len(X) == len(y)
+        return self
+
+
+    def transform(self, X: np.ndarray, fh: int = 0):
+        assert X is None and fh > 0 or X is not None and fh == 0 or len(X) == fh
+
+        xlags = self.xlags
+        ylags = self.ylags
+        y = self.yh
+
+        if fh == 0: fh = len(X)
+        if X is None:
+            X = np.zeros((fh, 0), dtype=y.dtype)
+
+        self.Xp = X
+
+        s = self.steps
+        t = self.t
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = mx*len(xlags) + my*len(ylags)
+        Xt = np.zeros((1, mt, s), dtype=X.dtype)
+        yp = np.zeros((fh, my), dtype=y.dtype)
+
+        self.Xt = Xt
+        self.yp = yp
+        return yp
+    # end
+
+    def _atx(self, i):
+        return self.Xh[i] if i < 0 else self.Xp[i]
+
+    def _aty(self, i):
+        return self.yh[i] if i < 0 else self.yp[i]
+
+    def step(self, i):
+        atx = self._atx
+        aty = self._aty
+
+        X = self.Xh
+        y = self.yh
+        xlags = self.xlags
+        ylags = self.ylags
+
+        s = self.steps
+        t = self.t
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        Xt = self.Xt
+
+        c = 0
+        for k in ylags:
+            for j in range(s):
+                Xt[0, c:c + my, j] = aty(i + j - k)
+            c += my
+        for k in xlags:
+            for j in range(s):
+                Xt[0, c:c + mx, j] = atx(i + j - k)
+            c += mx
+
+        return Xt
+    # end
+# end
 
 # ---------------------------------------------------------------------------
 # ashuffle
