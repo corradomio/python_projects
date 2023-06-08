@@ -126,7 +126,7 @@ class SimpleRNNForecaster(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self, *,
-                 lag: Union[int, list, tuple, dict] = (0, 1),
+                 lags: Union[int, list, tuple, dict] = (0, 1),
                  current: Optional[bool] = None,
                  y_only: bool = False,
                  periodic: Union[None, str, tuple] = None,
@@ -192,7 +192,7 @@ class SimpleRNNForecaster(BaseForecaster):
         if isinstance(criterion, str):
             criterion = import_from(criterion)
 
-        self._lag = lag
+        self._lags = lags
         self._current = current
         self._y_only = y_only
         self._periodic = periodic
@@ -243,7 +243,7 @@ class SimpleRNNForecaster(BaseForecaster):
 
     def get_params(self, deep=True, **kwargs):
         params = {} | self._skt_args | self._rnn_args
-        params['lag'] = self._lag
+        params['lags'] = self._lags
         params['current'] = self._current
         params['y_only'] = self._y_only
 
@@ -308,7 +308,7 @@ class SimpleRNNForecaster(BaseForecaster):
         #
         # prepare the data to pass the the Recurrent NN
         #
-        lu = npx.UnfoldLoop(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        lu = npx.RNNTrainTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
         Xt, yt = lu.fit_transform(Xh, yh)
 
         self._model.fit(Xt, yt)
@@ -422,7 +422,7 @@ class SimpleRNNForecaster(BaseForecaster):
         Xs, _ = self._to_numpy(X, None)
 
         nfh = int(fh[-1])
-        up = npx.UnfoldPreparer(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        up = npx.RNNPredictTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
         ys = up.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):
@@ -570,7 +570,7 @@ class SimpleCNNForecaster(BaseForecaster):
         if isinstance(criterion, str):
             criterion = import_from(criterion)
 
-        self._lag = lag
+        self._lags = lags
         self._current = current
         self._y_only = y_only
         self._periodic = periodic
@@ -616,7 +616,7 @@ class SimpleCNNForecaster(BaseForecaster):
 
     def get_params(self, deep=True, **kwargs):
         params = {} | self._skt_args | self._cnn_args
-        params['lag'] = self._lag
+        params['lags'] = self._lags
         params['current'] = self._current
         params['y_only'] = self._y_only
 

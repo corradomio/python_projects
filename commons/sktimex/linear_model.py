@@ -94,14 +94,14 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self,
-                 lag: Union[int, list, tuple, dict] = (0, 1),
+                 lags: Union[int, list, tuple, dict] = (0, 1),
                  current=None,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
                  **kwargs):
         """
         
-        :param lag:  
+        :param lag:
                 int             same for input and target
                 (ilag, tlag)    input lag, target lag
                 {
@@ -124,7 +124,7 @@ class LinearForecastRegressor(BaseForecaster):
         """
         super().__init__()
         self._class_name = class_name
-        self._lag = lag
+        self._lags = lags
         self._current = current
         self._y_only = y_only
         self._kwargs = kwargs
@@ -146,7 +146,7 @@ class LinearForecastRegressor(BaseForecaster):
         params = {} | self._kwargs
         params['class_name'] = self._class_name
         params['y_only'] = self._y_only
-        params['lag'] = self._lag
+        params['lags'] = self._lags
         params['current'] = self._current
         return params
     # end
@@ -155,19 +155,10 @@ class LinearForecastRegressor(BaseForecaster):
     # fit
     # -----------------------------------------------------------------------
 
-    # def fit(self, y, X=None, fh=None):
-    #     if self._y_only:
-    #         super().fit(y=y, X=None, fh=fh)
-    #     else:
-    #         super().fit(y=y, X=X, fh=fh)
-    #     return self
-    # # end
-
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
         if self._y_only:
             X = None
 
-        # slots = resolve_lag(self._lag)
         slots = self._slots
         s = len(slots)
 
@@ -270,7 +261,6 @@ class LinearForecastRegressor(BaseForecaster):
             fh = fhp.to_relative(self.cutoff)
 
         assert fh.is_relative
-        # slots = resolve_lag(self._lag)
         slots = self._slots
         # X, yh, Xh
         Xp, yh, Xh = self._validate_data_lfr(y, X, predict=True)

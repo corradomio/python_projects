@@ -417,7 +417,7 @@ class CNNTrainTransform:
 
         s = self.steps
         t = self.t
-        r = max(self.t, self.steps)
+        r = s + t - 1
 
         n = X.shape[0] - r
         mx = X.shape[1]
@@ -425,7 +425,7 @@ class CNNTrainTransform:
 
         mt = mx*len(xlags) + my*len(ylags)
         Xt = np.zeros((n, mt, s), dtype=X.dtype)
-        yt = np.zeros((n, my), dtype=y.dtype)
+        yt = np.zeros((n, my, s), dtype=y.dtype)
 
         for i in range(n):
             c = 0
@@ -438,7 +438,8 @@ class CNNTrainTransform:
                     Xt[i, c:c + mx, j] = X[i + j + t - k]
                 c += mx
 
-            yt[i] = y[i + t]
+            for j in range(s):
+                yt[i, :, j] = y[i + j + t]
         # end
 
         return Xt, yt
@@ -535,11 +536,11 @@ class CNNPredictTransform:
         c = 0
         for k in ylags:
             for j in range(s):
-                Xt[0, c:c + my, j] = aty(i + j - k)
+                Xt[0, c:c + my, j] = aty(i + j - k - s + 1)
             c += my
         for k in xlags:
             for j in range(s):
-                Xt[0, c:c + mx, j] = atx(i + j - k)
+                Xt[0, c:c + mx, j] = atx(i + j - k - s + 1)
             c += mx
 
         return Xt
