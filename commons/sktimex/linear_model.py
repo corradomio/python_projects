@@ -132,7 +132,7 @@ class LinearForecastRegressor(BaseForecaster):
         model_class = import_from(class_name)
         self._model = model_class(**kwargs)
 
-        self._slots = resolve_lag(lag, current)
+        self._slots = resolve_lag(lags, current)
         self.Xh: Optional[np.ndarray] = None
         self.yh: Optional[np.ndarray] = None
         self._cutoff: Optional[datetime] = None
@@ -169,8 +169,8 @@ class LinearForecastRegressor(BaseForecaster):
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
 
-        ltt = npx.LagTrainTransform(xlags=slots.input, ylags=slots.target)
-        Xt, yt = ltt.fit_transform(X=Xf, y=yf)
+        tt = npx.LinearTrainTransform(xlags=slots.input, ylags=slots.target)
+        Xt, yt = tt.fit_transform(X=Xf, y=yf)
 
         # with warnings.catch_warnings():
         #     warnings.filterwarnings("ignore", category=ConvergenceWarning)
@@ -269,11 +269,11 @@ class LinearForecastRegressor(BaseForecaster):
         n = int(fh[-1])
         y_pred: np.ndarray = np.zeros(n)
 
-        lpt = npx.LagPredictTransform(xlags=slots.input, ylags=slots.target)
-        y_pred = lpt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
+        pt = npx.LinearPredictTransform(xlags=slots.input, ylags=slots.target)
+        y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
 
         for i in range(n):
-            Xt = lpt.step(i)
+            Xt = pt.step(i)
             yp: np.ndarray = self._model.predict(Xt)
             y_pred[i] = yp[0]
 

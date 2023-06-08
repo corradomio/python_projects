@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import pandasx as pdx
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.plotting import plot_series
-from sktimex import SimpleCNNForecaster
+from sktimex import SimpleCNNForecaster, SimpleRNNForecaster
 
 # dtype=None,
 # categorical=[],
@@ -50,6 +50,8 @@ SELECTED = None
 
 def main():
     dfdict = prepare_data()
+    # ddf = pdx.groups_merge(dfdict, groups='item_country')
+    # ddf.to_csv('vw_food_import_train_test_newfeatures_stripped.csv', index=False)
 
     for key in dfdict:
         item_country = key[0]
@@ -84,7 +86,8 @@ def main():
         # model = LinearForecastRegressor(lag=(0, 12))
         # model = LinearForecastRegressor(lag=(12, 12))
         # model = LinearForecastRegressor(lag=(0, 12), current=True)
-        model = SimpleCNNForecaster(hidden_size=12, scale=True)
+        # model = SimpleCNNForecaster(steps=12, hidden_size=6, scale=True)
+        model = SimpleRNNForecaster(steps=12, hidden_size=6, scale=True)
 
         model.fit(X=X_train, y=y_train)
         # t_train = model.predict(fh=y_train.index, X=X_train)
@@ -92,6 +95,7 @@ def main():
 
         plot_series(y_train['import_kg'], y_test['import_kg'], y_pred['import_kg'], labels=['train', 'test', 'pred'])
         plt.show()
+        pass
 
     pass
 

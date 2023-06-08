@@ -378,6 +378,86 @@ UnfoldPreparer = RNNPredictTransform
 
 
 # ---------------------------------------------------------------------------
+# RNNFlatTrainTransform
+# RNNFlatPredictTransform
+# ---------------------------------------------------------------------------
+# X[0]      -> (X[0],X[1],X[2],...)
+# X[1]      -> (X[1],X[2],X[3],...)
+# X[2]      -> (X[2],X[3],X[4],...)
+#
+#   y[-1]            -> y[0]
+#   X[-1]            -> y[0]
+#   X[-1],y[-1]      -> y[0]
+#   X[-1],y[-1],X[0] -> y[0]
+#
+# xlags: [], [1], [0], [0,1]
+# ylags: [], [1]
+
+class RNNFlatTrainTransform:
+    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
+        self.steps = steps
+        self.xlags = xlags
+        self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
+
+    def __len__(self):
+        return self.steps + 1
+
+    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+        if y is None:
+            y = np.zeros((len(X), 0), dtype=y.dtype)
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        xlags = self.xlags
+        ylags = self.ylags
+
+        s = self.steps
+        t = self.t
+        r = t + (s - 1)
+
+        n = X.shape[0] - r
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = mx*len(xlags) + my*len(ylags)
+        Xt = np.zeros((n, s, mt), dtype=X.dtype)
+        yt = np.zeros((n, my), dtype=y.dtype)
+
+        for i in range(n):
+            for j in range(s):
+                c = 0
+                for k in ylags:
+                    Xt[i, j, c:c + my] = y[i + j + t - k]
+                    c += my
+                for k in xlags:
+                    Xt[i, j, c:c + mx] = X[i + j + t - k]
+                    c += mx
+
+            yt[i] = y[i + r]
+        # end
+
+        return Xt, yt
+    # end
+
+    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return self.fit(X, y).transform(X, y)
+# end
+
+
+# ---------------------------------------------------------------------------
 # CNNTrainTransform
 # CNNPredictTransform
 # ---------------------------------------------------------------------------
@@ -546,6 +626,73 @@ class CNNPredictTransform:
         return Xt
     # end
 # end
+
+
+class CNNFlatTrainTransform:
+    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
+        self.steps = steps
+        self.xlags = xlags
+        self.ylags = ylags
+        self.t = max(_max(xlags), _max(ylags))
+
+    def __len__(self):
+        return self.steps + 1
+
+    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        return self
+    # end
+
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(y, np.ndarray)
+        if X is None:
+            X = np.zeros((len(y), 0), dtype=y.dtype)
+        if y is None:
+            y = np.zeros((len(X), 0), dtype=y.dtype)
+
+        if len(X.shape) == 1:
+            X = X.reshape((-1, 1))
+        if len(y.shape) == 1:
+            y = y.reshape((-1, 1))
+
+        xlags = self.xlags
+        ylags = self.ylags
+
+        s = self.steps
+        t = self.t
+        r = s + t - 1
+
+        n = X.shape[0] - r
+        mx = X.shape[1]
+        my = y.shape[1]
+
+        mt = mx*len(xlags) + my*len(ylags)
+        Xt = np.zeros((n, mt, s), dtype=X.dtype)
+        yt = np.zeros((n, my), dtype=y.dtype)
+
+        for i in range(n):
+            c = 0
+            for k in ylags:
+                for j in range(s):
+                    Xt[i, c:c + my, j] = y[i + j + t - k]
+                c += my
+            for k in xlags:
+                for j in range(s):
+                    Xt[i, c:c + mx, j] = X[i + j + t - k]
+                c += mx
+
+            yt[i] = y[i + r]
+        # end
+
+        return Xt, yt
+    # end
+
+    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> np.ndarray:
+        return self.fit(X, y).transform(X, y)
+# end
+
 
 # ---------------------------------------------------------------------------
 # ashuffle

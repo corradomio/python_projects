@@ -308,20 +308,22 @@ class Module(nn.Module):
 
 class LSTM(nn.LSTM):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
+                 batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first= batch_first,
                          **kwargs)
+        self._steps = steps
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.num_layers = num_layers
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
-        self.D = f*self.num_layers 
-        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
+        self.D = f*self.num_layers
+        self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
 
     def forward(self, input, hx=None):
         L = input.shape[0 if self.batch_first else 1]
@@ -334,8 +336,9 @@ class LSTM(nn.LSTM):
             self.hidden[L] = (hidden_state, cell_state)
 
         hidden = self.hidden[L]
-        predict, h = super().forward(input, hidden)
-        output = self.V(predict)
+        t, h = super().forward(input, hidden)
+        t = torch.reshape(t, (len(input), -1))
+        output = self.V(t)
         return output
 # end
 
@@ -359,12 +362,14 @@ class LSTM(nn.LSTM):
 #         bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
 class GRU(nn.GRU):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
+                 batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first= batch_first,
                          **kwargs)
+        self._steps = steps
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -384,8 +389,9 @@ class GRU(nn.GRU):
             self.hidden[L] = hidden_state
 
         hidden = self.hidden[L]
-        predict, h = super().forward(input, hidden)
-        output = self.V(predict)
+        t, h = super().forward(input, hidden)
+        t = torch.reshape(t, (len(input), -1))
+        output = self.V(t)
         return output
 # end
 
@@ -412,12 +418,14 @@ class GRU(nn.GRU):
 
 class RNN(nn.RNN):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, batch_first=True, **kwargs):
+    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
+                 batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first= batch_first,
                          **kwargs)
+        self._steps = steps
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -437,8 +445,9 @@ class RNN(nn.RNN):
             self.hidden[L] = hidden_state
 
         hidden = self.hidden[L]
-        predict, h = super().forward(input, hidden)
-        output = self.V(predict)
+        t, h = super().forward(input, hidden)
+        t = torch.reshape(t, (len(input), -1))
+        output = self.V(t)
         return output
 # end
 
@@ -459,10 +468,9 @@ class RNN(nn.RNN):
 #         dtype=None
 
 class Conv1d(nn.Module):
-    def __init__(self, *, input_size, output_size, hidden_size=1, relu=True,
+    def __init__(self, *, input_size, output_size, hidden_size=1, steps=1, relu=True,
                  kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
         super().__init__()
-        self._hidden_size = hidden_size
 
         self.cnn = nn.Conv1d(in_channels=input_size,
                              out_channels=hidden_size,
@@ -473,15 +481,16 @@ class Conv1d(nn.Module):
                              groups=groups)
 
         self.relu = nn.ReLU() if relu else None
-        self.lin = nn.Linear(in_features=hidden_size, out_features=output_size)
+        self.lin = nn.Linear(in_features=hidden_size*steps, out_features=output_size)
+        # self.lin = nn.Linear(in_features=hidden_size*steps, out_features=output_size*steps)
     # end
 
     def forward(self, input):
         t = self.cnn(input)
         t = self.relu(t) if self.relu else t
-        t = t.reshape((-1, self._hidden_size))
-        output = self.lin(t)
-        return output
+        t = torch.reshape(t, (len(input), -1))
+        t = self.lin(t)
+        return t
     # end
 # end
 

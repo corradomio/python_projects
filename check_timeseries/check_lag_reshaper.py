@@ -22,11 +22,11 @@ def prepare_data():
 
 def check_lag(X, y, Xp, yp, n):
 
-    lr = npx.LagTrainTransform(xlags=[0], ylags=[1])
+    lr = npx.LinearTrainTransform(xlags=[0], ylags=[1])
     Xt, yt = lr.fit_transform(X, y)
 
 
-    lp = npx.LagPredictTransform(xlags=[0], ylags=[1])
+    lp = npx.LinearPredictTransform(xlags=[0], ylags=[1])
     ys = lp.fit(X, y).transform(Xp, n)
 
     for i in range(n):
@@ -42,10 +42,10 @@ def check_lag(X, y, Xp, yp, n):
 # OK
 
 def check_unfold(X, y, Xp, yp, n):
-    ul = npx.UnfoldLoop(steps=2, xlags=[0], ylags=[1])
+    ul = npx.RNNTrainTransform(steps=2, xlags=[0], ylags=[1])
     Xt, yt = ul.fit_transform(X, y)
 
-    up = npx.UnfoldPreparer(steps=4, xlags=[1], ylags=[1])
+    up = npx.RNNPredictTransform(steps=4, xlags=[1], ylags=[1])
     ys = up.fit(X, y).transform(Xp, n)
 
     for i in range(n):

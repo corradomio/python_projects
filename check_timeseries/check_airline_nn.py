@@ -40,7 +40,7 @@ class TSModel1(nnx.Module):
         self.Xh = Xs
         self.yh = ys
 
-        ul = npx.UnfoldLoop(self.steps, xlags=[1])
+        ul = npx.RNNTrainTransform(self.steps, xlags=[1])
         Xt, yt = ul.fit_transform(Xs, ys)
 
         if val is not None:
@@ -61,7 +61,7 @@ class TSModel1(nnx.Module):
         if fh == 0:
             fh = len(Xs)
 
-        lp = npx.UnfoldPreparer(self.steps, xlags=[1])
+        lp = npx.RNNPredictTransform(self.steps, xlags=[1])
         ys = lp.fit(self.Xh, self.yh).transform(Xs, fh)
 
         for i in range(fh):

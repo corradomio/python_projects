@@ -902,6 +902,10 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame],
     df = pd.concat(dfonly, axis=0)
     if sortby is not None:
         df.sort_values(*sortby, inplace=True)
+        
+    # put groups columns in first positions
+    df = df[list(groups) + list(df.columns.difference(groups))]
+    
     return df
 # end
 
