@@ -6,9 +6,17 @@ X = np.array([[r*100 + c for c in range(1, 5)] for r in range(1, 10)])
 y = np.array([[1000+r] for r in range(1, 10)])
 
 # ---------------------------------------------------------------------------
+tt = npx.RNNTrainTransform(steps=2)
+
+Xr, yr = tt.fit_transform(X, y)
+
+Xt = np.transpose(Xr, axes=(0, 2, 1))
+
+
+# ---------------------------------------------------------------------------
 tt = npx.CNNTrainTransform(steps=2)
 
-Xt, yt = tt.fit_transform(X, y)
+Xc, yc = tt.fit_transform(X, y)
 
 # ---------------------------------------------------------------------------
 pt = npx.CNNPredictTransform(steps=2)

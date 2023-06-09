@@ -467,12 +467,10 @@ class RNN(nn.RNN):
 #         device=None,
 #         dtype=None
 
-class Conv1d(nn.Module):
+class Conv1d(nn.Conv1d):
     def __init__(self, *, input_size, output_size, hidden_size=1, steps=1, relu=True,
                  kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
-        super().__init__()
-
-        self.cnn = nn.Conv1d(in_channels=input_size,
+        super().__init__(n_channels=input_size,
                              out_channels=hidden_size,
                              kernel_size=kernel_size,
                              stride=stride,
@@ -480,13 +478,20 @@ class Conv1d(nn.Module):
                              dilation=dilation,
                              groups=groups)
 
+        # self.cnn = nn.Conv1d(in_channels=input_size,
+        #                      out_channels=hidden_size,
+        #                      kernel_size=kernel_size,
+        #                      stride=stride,
+        #                      padding=padding,
+        #                      dilation=dilation,
+        #                      groups=groups)
+
         self.relu = nn.ReLU() if relu else None
         self.lin = nn.Linear(in_features=hidden_size*steps, out_features=output_size)
-        # self.lin = nn.Linear(in_features=hidden_size*steps, out_features=output_size*steps)
     # end
 
     def forward(self, input):
-        t = self.cnn(input)
+        t = super().forward(input)
         t = self.relu(t) if self.relu else t
         t = torch.reshape(t, (len(input), -1))
         t = self.lin(t)
