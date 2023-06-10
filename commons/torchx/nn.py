@@ -470,13 +470,13 @@ class RNN(nn.RNN):
 class Conv1d(nn.Conv1d):
     def __init__(self, *, input_size, output_size, hidden_size=1, steps=1, relu=True,
                  kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
-        super().__init__(n_channels=input_size,
-                             out_channels=hidden_size,
-                             kernel_size=kernel_size,
-                             stride=stride,
-                             padding=padding,
-                             dilation=dilation,
-                             groups=groups)
+        super().__init__(in_channels=input_size,
+                         out_channels=hidden_size,
+                         kernel_size=kernel_size,
+                         stride=stride,
+                         padding=padding,
+                         dilation=dilation,
+                         groups=groups)
 
         # self.cnn = nn.Conv1d(in_channels=input_size,
         #                      out_channels=hidden_size,

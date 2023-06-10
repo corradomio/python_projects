@@ -2,8 +2,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import transformers
 import torch
 
-# model = "tiiuae/falcon-7b"
-model = "tiiuae/falcon-40b"
+model = "tiiuae/falcon-7b"
+# model = "tiiuae/falcon-40b"     # 90GB GPU!
 
 tokenizer = AutoTokenizer.from_pretrained(model)
 pipeline = transformers.pipeline(

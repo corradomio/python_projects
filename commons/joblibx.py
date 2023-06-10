@@ -56,10 +56,8 @@ class Parallel:
             else:
                 n_jobs = 1
         # end
-        if isinstance(n_jobs, float):
-            n_job = int(n_jobs*multiprocessing.cpu_count())
-        elif isinstance(n_jobs, int) and n_jobs < 0:
-            n_jobs = multiprocessing.cpu_count() + n_jobs
+        assert n_jobs is None or isinstance(n_jobs, int) and n_jobs >= 0
+        assert n_splits is None or isinstance(n_splits, int) and n_splits > 0
 
         self.n_jobs = 1 if n_jobs is None or n_jobs == 0 else n_jobs
         self.n_splits = 1 if n_splits is None else n_splits

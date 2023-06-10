@@ -29,6 +29,9 @@ from .utils import import_from, periodic_encode
 #   wait for patience time
 #
 
+def _nolog(*args, **kwargs):
+    pass
+
 class EarlyStopping(skorch.callbacks.EarlyStopping):
 
     def __init__(self,
@@ -37,7 +40,7 @@ class EarlyStopping(skorch.callbacks.EarlyStopping):
                  threshold=1e-4,
                  threshold_mode='rel',
                  lower_is_better=True,
-                 sink=lambda x: None,
+                 sink=_nolog,
                  load_best=False):
         super().__init__(monitor, patience, threshold, threshold_mode, lower_is_better, sink, load_best)
     # end
