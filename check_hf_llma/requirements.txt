@@ -9,7 +9,7 @@ scikit-learn
 
 --extra-index-url https://download.pytorch.org/whl/cu116
 torch
-pytorch-lightning
+lightning
 torchvision
 torchaudio
 
