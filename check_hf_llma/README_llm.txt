@@ -17,6 +17,9 @@ bitsandbytes
     bitsandbytes-windows
     https://github.com/TimDettmers/bitsandbytes
     https://pypi.org/project/bitsandbytes/
+    https://github.com/jllllll/bitsandbytes-windows-webui
+
+    python -m pip install https://github.com/jllllll/bitsandbytes-windows-webui/raw/main/bitsandbytes-0.39.0-py3-none-any.whl
 
 State-of-the-art Parameter-Efficient Fine-Tuning (PEFT) methods
     peft
