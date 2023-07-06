@@ -2,7 +2,7 @@ import transformers
 from transformers import BloomForCausalLM
 from transformers import BloomTokenizerFast
 import torch
-print(torch.cuda.is_available())
+print("CUDA available:", torch.cuda.is_available())
 
 HF_TOKEN = "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"
 
@@ -13,6 +13,8 @@ model_id = "bigscience/bloom-3b"
 print("Load model")
 tokenizer = BloomTokenizerFast.from_pretrained(model_id, use_auth_token=HF_TOKEN)
 model = BloomForCausalLM.from_pretrained(model_id, use_auth_token=HF_TOKEN)
+
+print(model)
 
 print("To cuda")
 model.to('cuda:0')
