@@ -70,6 +70,7 @@ class ScikitForecastRegressor(BaseForecaster):
         self._class_name = class_name
         self._kwargs = kwargs
         self._y_only = y_only
+        self._fh_relative = None
 
         model_class = import_from(class_name)
 
@@ -95,6 +96,15 @@ class ScikitForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
     # Properties
     # -----------------------------------------------------------------------
+    
+    def _make_fh_relative(self, fh: ForecastingHorizon):
+        if not fh.is_relative:
+            fh = fh.to_relative(self.cutoff)
+        return fh
+    
+    @property
+    def fh_relative(self):
+        return self._make_fh_relative(self.fh)
 
     def get_params(self, deep=True):
         params = {} | self._kwargs
@@ -116,6 +126,9 @@ class ScikitForecastRegressor(BaseForecaster):
     #
 
     def _fit(self, y, X=None, fh: FH_TYPES = None):
+        # ensure fh relative
+        fh = self._make_fh_relative(fh)
+        
         if self._y_only:
             self.forecaster.fit(y=y, fh=fh)
         else:
@@ -129,14 +142,10 @@ class ScikitForecastRegressor(BaseForecaster):
 
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-
-        fhp = fh
-        if fhp.is_relative:
-            fh = fhp
-            fhp = fh.to_absolute(self.cutoff)
-        else:
-            fh = fhp.to_relative(self.cutoff)
-
+        # ensure fh relative
+        fh_pre = self._make_fh_relative(fh)
+        fh_fit = self.fh_relative
+        
         Xp, yh, Xh = self._prepare_predict(X, y)
 
         # retrain if yh (and Xh) are available
