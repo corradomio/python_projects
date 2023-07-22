@@ -1,9 +1,8 @@
-from types import FunctionType
 from typing import Optional, Union
 
-import numpy
 import numpy as np
-from numpy import ndarray, zeros, dot, mean, asarray, all, abs
+import pandas
+from numpy import ndarray, zeros, ones, dot, mean, all, abs
 from numpy.linalg import eig, eigvals
 
 
@@ -465,7 +464,7 @@ class CNNTrainTransform:
         return self
     # end
 
-    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
+    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         assert isinstance(X, (type(None), np.ndarray))
         assert isinstance(y, np.ndarray)
         if X is None:
@@ -983,7 +982,12 @@ def filter_outliers(array: np.ndarray, outlier_std: float) -> np.ndarray:
 # end
 
 
-def weighted_absolute_percentage_error(v_true: np.ndarray, v_pred: np.ndarray):
+def weighted_absolute_percentage_error(v_true: Union[np.ndarray, pandas.Series, pandas.DataFrame],
+                                       v_pred: Union[np.ndarray, pandas.Series, pandas.DataFrame]):
+    if isinstance(v_true, (pandas.DataFrame, pandas.Series)):
+        v_true = v_true.to_numpy()
+    if isinstance(v_pred, (pandas.DataFrame, pandas.Series)):
+        v_pred = v_pred.to_numpy()
     if is_vector(v_true):
         v_true = v_true.reshape(len(v_true))
         v_pred = v_pred.reshape(len(v_pred))
@@ -1014,17 +1018,17 @@ def _wape_score(v_true: np.ndarray, v_pred: np.ndarray):
 # end
 
 
-def multi_r2_score(v_true: np.ndarray, v_pred: np.ndarray):
-    if is_vector(v_true):
-        v_true = v_true.reshape(len(v_true))
-        v_pred = v_pred.reshape(len(v_pred))
-        return r2_score(v_true, v_pred)
-
-    r2 = 0
-    for i in range(v_true.shape[-1]):
-        r2 += r2_score(v_true[:, i], v_pred[:, i])
-    return r2
-# end
+# def multi_r2_score(v_true: np.ndarray, v_pred: np.ndarray):
+#     if is_vector(v_true):
+#         v_true = v_true.reshape(len(v_true))
+#         v_pred = v_pred.reshape(len(v_pred))
+#         return r2_score(v_true, v_pred)
+#
+#     r2 = 0
+#     for i in range(v_true.shape[-1]):
+#         r2 += r2_score(v_true[:, i], v_pred[:, i])
+#     return r2
+# # end
 
 
 # ---------------------------------------------------------------------------

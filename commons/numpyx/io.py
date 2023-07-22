@@ -1,10 +1,8 @@
-from types import FunctionType
-from typing import Optional, Union
-import numpy as np
-from numpy import ndarray, zeros, dot, mean, asarray, all, abs
-from numpy.linalg import eig, eigvals
+from typing import Optional
+from typing import Optional
+
 import csvx
-from multimethod import multimethod
+from numpy import asarray
 
 
 # ---------------------------------------------------------------------------

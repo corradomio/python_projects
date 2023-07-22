@@ -1,15 +1,15 @@
 from typing import Union, Optional
 
 import numpy as np
-import numpyx as npx
 import pandas as pd
 import skorch
 import torch.optim
-import torchx.nn as nnx
 from sklearn.preprocessing import MinMaxScaler
 from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from sktimex.utils import PD_TYPES, FH_TYPES
 
+from sktimex.utils import PD_TYPES, FH_TYPES
+from torchx import nn as nnx
+from .numpyx import RNNFlatTrainTransform, RNNPredictTransform, CNNFlatTrainTransform, CNNPredictTransform
 from .lag import resolve_lag
 from .utils import import_from, periodic_encode
 
@@ -31,6 +31,7 @@ from .utils import import_from, periodic_encode
 
 def _nolog(*args, **kwargs):
     pass
+
 
 class EarlyStopping(skorch.callbacks.EarlyStopping):
 
@@ -237,6 +238,8 @@ class SimpleRNNForecaster(BaseForecaster):
         # index
         self.Xh = None
         self.yh = None
+
+        # self._scores = None
     # end
 
     # -----------------------------------------------------------------------
@@ -244,59 +247,76 @@ class SimpleRNNForecaster(BaseForecaster):
     # -----------------------------------------------------------------------
 
     @property
-    def lag(self):
-        return self._lag
+    def lags(self):
+        return self._lags
+
     @property
     def current(self):
         return self._current
+
     @property
     def y_only(self):
         return self._y_only
+
     @property
     def periodic(self):
         return self._periodic
+
     @property
     def scale(self):
         return self._scale
+
     @property
     def flavour(self):
         return self._flavour
+
     @property
     def steps(self):
         return self._rnn_args['steps']
+
     @property
     def hidden_size(self):
         return self._rnn_args['hidden_size']
+
     @property
     def num_layers(self):
         return self._rnn_args['num_layers']
+
     @property
     def bidirectional(self):
         return self._rnn_args['bidirectional']
+
     @property
     def dropout(self):
         return self._rnn_args['dropout']
+
     @property
     def criterion(self):
         return self._criterion
+
     @property
     def optimizer(self):
         return self._optimizer
+
     @property
     def lr(self):
         return self._skt_args["lr"]
+
     @property
     def batch_size(self):
         return self._skt_args["batch_size"]
+
     @property
     def max_epochs(self):
         return self._skt_args["max_epochs"]
+
     @property
     def callbacks(self):
         return self._callbacks
+
     @property
     def patience(self):
-        return self._patience
+        return self._skt_args["patience"]
 
 
     def get_params(self, deep=True, **kwargs):
@@ -313,7 +333,7 @@ class SimpleRNNForecaster(BaseForecaster):
         # convert 'criterion' and 'optimizer' in string
         params['criterion'] = self._criterion
         params['optimizer'] = self._optimizer
-        params['callbacks'] = self._callbacks
+        params["callbacks"] = self._callbacks
 
         return params
     # end
@@ -367,7 +387,7 @@ class SimpleRNNForecaster(BaseForecaster):
         #
         # prepare the data to pass the the Recurrent NN
         #
-        tt = npx.RNNFlatTrainTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        tt = RNNFlatTrainTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
         Xt, yt = tt.fit_transform(Xh, yh)
 
         self._model.fit(Xt, yt)
@@ -481,7 +501,7 @@ class SimpleRNNForecaster(BaseForecaster):
         Xs, _ = self._to_numpy(X, None)
 
         nfh = int(fh[-1])
-        pt = npx.RNNPredictTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        pt = RNNPredictTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
         ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):
@@ -502,13 +522,25 @@ class SimpleRNNForecaster(BaseForecaster):
         index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
         yp = pd.Series(ys, index=index)
         yp = yp.loc[fhp.to_pandas()]
-        return yp
+        return yp.astype(float)
     # end
-    
+
     # -----------------------------------------------------------------------
-    # end
+    # Support
     # -----------------------------------------------------------------------
 
+    def get_state(self) -> bytes:
+        import pickle
+        state: bytes = pickle.dumps(self)
+        return state
+    # end
+    
+    def __repr__(self):
+        return f"SimpleRNNForecaster[]"
+
+    # -----------------------------------------------------------------------
+    # end
+    # -----------------------------------------------------------------------
 # end
 
 
@@ -598,12 +630,12 @@ class SimpleCNNForecaster(BaseForecaster):
         :param lag: input/target lags
         :param current: if to use the current slot (used when lag is an integer)
         :param y_only: if to use target only
-        :param period: if to add periodic information
+        :param periodic: if to add periodic information
         :param steps: length of the sequence length
-        :param flavour: type of RNN ('lstm', 'gru', 'rnn')
+        :param flavour: type of CNN ('cnn')
         :param optimizer: class of the optimizer to use (default: Adam)
         :param criterion: class of the loss to use (default: MSLoss)
-        :param batch_size: back size (default 16)
+        :param batch_size: batch size (default 16)
         :param max_epochs: EPOCHS (default 300)
         :param hidden_size: number of RNN hidden layers
         :param num_layers: number of RNN layers
@@ -673,6 +705,8 @@ class SimpleCNNForecaster(BaseForecaster):
         # index
         self.Xh = None
         self.yh = None
+
+        # self._scores = None
     # end
 
     # -----------------------------------------------------------------------
@@ -680,72 +714,89 @@ class SimpleCNNForecaster(BaseForecaster):
     # -----------------------------------------------------------------------
 
     @property
-    def lag(self):
-        return self._lag
+    def lags(self):
+        return self._lags
+
     @property
     def current(self):
         return self._current
+
     @property
     def y_only(self):
         return self._y_only
+
     @property
     def flavour(self):
         return self._flavour
+
     @property
     def periodic(self):
         return self._periodic
+
     @property
     def scale(self):
         return self._scale
+
     @property
     def steps(self):
         return self._steps
-    @property
-    def lag(self):
-        return self._lag
+
     @property
     def hidden_size(self):
         # return self._cnn_args['hidden_size']
         return self._hidden_size
+
     @property
     def relu(self):
         return self._cnn_args['relu']
+
     @property
     def kernel_size(self):
         return self._cnn_args['kernel_size']
+
     @property
     def stride(self):
         return self._cnn_args['stride']
+
     @property
     def padding(self):
         return self._cnn_args['padding']
+
     @property
     def dilation(self):
         return self._cnn_args['dilation']
+
     @property
     def groups(self):
         return self._cnn_args['groups']
+
     @property
     def criterion(self):
         return self._criterion
+
     @property
     def optimizer(self):
         return self._optimizer
+
     @property
     def lr(self):
         return self._skt_args["lr"]
+
     @property
     def batch_size(self):
         return self._skt_args["batch_size"]
+
     @property
     def max_epochs(self):
         return self._skt_args["max_epochs"]
+
     @property
     def callbacks(self):
         return self._callbacks
+
     @property
     def patience(self):
-        return self._patience
+        return self._skt_args["patience"]
 
     def get_params(self, deep=True, **kwargs):
         params = {} | self._skt_args | self._cnn_args
@@ -763,7 +814,7 @@ class SimpleCNNForecaster(BaseForecaster):
         # convert 'criterion', 'optimizer', 'callbacks' in the original configuration
         params['criterion'] = self._criterion
         params['optimizer'] = self._optimizer
-        params['callbacks'] = self._callbacks
+        params["callbacks"] = self._callbacks
 
         return params
     # end
@@ -814,7 +865,7 @@ class SimpleCNNForecaster(BaseForecaster):
         #
         # prepare the data to pass the the Convolutional NN
         #
-        tt = npx.CNNFlatTrainTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        tt = CNNFlatTrainTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
         Xt, yt = tt.fit_transform(X=Xs, y=ys)
 
         self._model.fit(Xt, yt)
@@ -922,7 +973,7 @@ class SimpleCNNForecaster(BaseForecaster):
         Xs, _ = self._to_numpy(X, None)
 
         nfh = int(fh[-1])
-        pt = npx.CNNPredictTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        pt = CNNPredictTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
         ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):
@@ -944,13 +995,25 @@ class SimpleCNNForecaster(BaseForecaster):
         index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
         yp = pd.Series(ys, index=index)
         yp = yp.loc[fhp.to_pandas()]
-        return yp
+        return yp.astype(float)
     # end
+
+    # -----------------------------------------------------------------------
+    # Support
+    # -----------------------------------------------------------------------
+
+    def get_state(self) -> bytes:
+        import pickle
+        state: bytes = pickle.dumps(self)
+        return state
+    # end
+
+    def __repr__(self):
+        return f"SimpleCNNForecaster[]"
 
     # -----------------------------------------------------------------------
     # end
     # -----------------------------------------------------------------------
-
 # end
 
 

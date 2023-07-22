@@ -1,7 +1,18 @@
-from typing import Any, Union, Optional
-from path import Path as path
 from datetime import datetime
 from typing import Any, Union, Optional
+
+from path import Path as path
+
+
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+true = True
+false = False
+none = None
+nil = None
+null = None
 
 NoneType = type(None)
 
@@ -33,6 +44,7 @@ def module_path():
     this_path = path(sys.modules[__name__].__file__)
     return this_path.parent
 
+
 def to_name(ts) -> str:
     if len(ts) == 0:
         return "root"
@@ -54,14 +66,6 @@ def tobool(s: str) -> bool:
         return True
     else:
         raise ValueError(f"Unsupported boolean value '{s}'")
-
-
-def qualified_name(klass: Any):
-    module = klass.__module__
-    if module == 'builtins':
-        return klass.__qualname__   # avoid outputs like 'builtins.str'
-    return module + '.' + klass.__qualname__
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +90,12 @@ def import_from(qname: str) -> Any:
 # end
 
 
-def qualified_name(clazz: type) -> str:
-    return f'{clazz.__module__}.{clazz.__name__}'
+def qualified_name(klass: Any):
+    module = klass.__module__
+    if module == 'builtins':
+        return klass.__qualname__   # avoid outputs like 'builtins.str'
+    return f'{module}.{klass.__qualname__}'
+# end
 
 
 # ---------------------------------------------------------------------------

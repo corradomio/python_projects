@@ -1,17 +1,37 @@
-from typing import Union, Optional
-
-import numpy as np
-import pandas as pd
+import logging
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from sktime.forecasting.compose import make_reduction
+from sktime.forecasting.base import BaseForecaster
+from .forecasting.compose import make_reduction
 
 from .utils import *
+from .lag import LagSlots, resolve_lag
 
 
 # ---------------------------------------------------------------------------
 # ScikitForecastRegressor
 # ---------------------------------------------------------------------------
+
+def _replace_lags(kwargs: dict) -> dict:
+    if "lags" in kwargs:
+        lags = kwargs["lags"]
+        del kwargs["lags"]
+    else:
+        lags = None
+
+    if "current" in kwargs:
+        current = kwargs["current"]
+        del kwargs["current"]
+    else:
+        current = False
+
+    if lags is not None:
+        rlags: LagSlots = resolve_lag(lags, current)
+        window_length = len(rlags)
+        kwargs["window_length"] = window_length
+    # end
+    return kwargs
+# end
+
 
 class ScikitForecastRegressor(BaseForecaster):
 
@@ -63,14 +83,15 @@ class ScikitForecastRegressor(BaseForecaster):
     def __init__(self,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
-                 # window_length: int = 5,  in kwargs
                  **kwargs):
         super().__init__()
-        
+
+        kwargs = _replace_lags(kwargs)
+
         self._class_name = class_name
         self._kwargs = kwargs
         self._y_only = y_only
-        self._fh_relative = None
+        self._fh_fit = None
 
         model_class = import_from(class_name)
 
@@ -78,10 +99,10 @@ class ScikitForecastRegressor(BaseForecaster):
         p = class_name.find('.')
         ns = class_name[:p]
         if ns in SCIKIT_NAMESPACES:
-            window_length = kwval(kwargs, 'window_length', 5)
-            strategy = kwval(kwargs, 'strategy', 'recursive')
+            window_length = kwval(kwargs, "window_length", 5)
+            strategy = kwval(kwargs, "strategy", "recursive")
 
-            kwargs = dict_del(kwargs, ['window_length', 'strategy'])
+            kwargs = dict_del(kwargs, ["window_length", "strategy"])
             # create the regressor
             regressor = model_class(**kwargs)
             # create the forecaster
@@ -90,21 +111,20 @@ class ScikitForecastRegressor(BaseForecaster):
             # create the forecaster
             self.forecaster = model_class(**kwargs)
         else:
-            raise ValueError(f"Unsupported class_name '{class_name}'")
+            # raise ValueError(f"Unsupported class_name '{class_name}'")
+            pass
+
+        p = class_name.rfind('.')
+        self._log = logging.getLogger(f"ScikitForecastRegressor.{class_name[p+1:]}")
     # end
 
     # -----------------------------------------------------------------------
     # Properties
     # -----------------------------------------------------------------------
     
-    def _make_fh_relative(self, fh: ForecastingHorizon):
-        if not fh.is_relative:
-            fh = fh.to_relative(self.cutoff)
-        return fh
-    
     @property
-    def fh_relative(self):
-        return self._make_fh_relative(self.fh)
+    def strategy(self):
+        return kwval(self._kwargs, "strategy", "recursive")
 
     def get_params(self, deep=True):
         params = {} | self._kwargs
@@ -114,139 +134,189 @@ class ScikitForecastRegressor(BaseForecaster):
     # end
 
     # -----------------------------------------------------------------------
-    # Operations
+    # fit
     # -----------------------------------------------------------------------
     # fit(y)        fit(y, X)
     #
     # predict(fh)
     # predict(fh, X)        == predict(X)
-    # predict(fh, X, y)     == predict(X, y)
-    #                       == fit(y, X[:y]
+    # predict(fh, X, y)     == predict(X, y)        <== piu' NO che SI
+    #                       == fit(y, X[:y])
     #                          predict(fh, X[y:]
     #
 
     def _fit(self, y, X=None, fh: FH_TYPES = None):
         # ensure fh relative
-        fh = self._make_fh_relative(fh)
-        
-        if self._y_only:
-            self.forecaster.fit(y=y, fh=fh)
-        else:
-            self.forecaster.fit(y=y, X=X, fh=fh)
-        return self
+        fh = fh.to_relative(self.cutoff) if fh is not None else None
+        self._fh_fit = fh
 
-    def _predict(self,
-                fh: ForecastingHorizon,
-                X: Optional[pd.DataFrame] = None,
-                y: Union[None, pd.DataFrame, pd.Series] = None) -> pd.DataFrame:
+        if self._y_only: X = None
+        
+        self.forecaster.fit(y=y, X=X, fh=fh)
+        return self
+    # end
+
+    # -----------------------------------------------------------------------
+    # predict
+    # -----------------------------------------------------------------------
+
+    def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None) -> pd.DataFrame:
+        # WARN: fh must be a ForecastingHorizon
+        assert isinstance(fh, ForecastingHorizon)
+
+        if self._y_only: X = None
 
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
         # ensure fh relative
-        fh_pre = self._make_fh_relative(fh)
-        fh_fit = self.fh_relative
-        
-        Xp, yh, Xh = self._prepare_predict(X, y)
+        fh = fh.to_relative(self.cutoff)
 
-        # retrain if yh (and Xh) are available
-        if yh is not None:
-            self.fit(y=yh, X=Xh)
+        # using 'sktimex.forecasting.compose.make_reduction'
+        # it is resolved ithe problems with predict horizon larger than the train horizon
 
-        # n = fh[-1]
-        # fhp = ForecastingHorizon(np.arange(1, n + 1))
-        
-        if self._y_only:
-            y_pred = self.forecaster.predict(fh=fh, X=None)
-        else:
-            y_pred = self.forecaster.predict(fh=fh, X=Xp)
+        y_pred = self.forecaster.predict(fh=fh, X=X)
+
+        # strategy = self.strategy
+        # if strategy == 'recursive':
+        #     y_pred = self.forecaster.predict(fh=fh, X=X)
+        # elif strategy == 'direct':
+        #     # y_pred = self._predict_direct(fh=fh, X=X)
+        #     y_pred = self.forecaster.predict(fh=fh, X=X)
+        # elif strategy == 'dirrec':
+        #     # y_pred = self._predict_dirrec(fh=fh, X=X)
+        #     y_pred = self.forecaster.predict(fh=fh, X=X)
+        # else:
+        #     y_pred = self.forecaster.predict(fh=fh, X=X)
 
         assert isinstance(y_pred, (pd.DataFrame, pd.Series))
-        # return y_pred.iloc[fh.to_relative(self.cutoff)-1]
         return y_pred
-
-    def _prepare_predict(self, X, y):
-
-        if y is None:
-            return X, None, None
-        if X is None:
-            return None, y, None
-
-        n = len(y)
-        Xh = X[:n]
-        yh = y
-        Xp = X[n:]
-        return Xp, yh, Xh
     # end
 
-    # def _update_fit(self, y, X):
-    #     if X is None or y is None or len(X) == len(y):
-    #         return
+    # -----------------------------------------------------------------------
+
+    # def _predict_direct(self, fh: ForecastingHorizon, X):
+    #     if len(fh) == len(self._fh_fit):
+    #         return self._predict_single_window(fh, X)
+    #     else:
+    #         return self._predict_multiple_windows(fh, X)
+    # # end
     #
-    #     y_upd = y[y.index > self.cutoff]
-    #     X_upd = X[y.index]
-    #     self.forecaster.update(y=y_upd, X=X_upd)
+    # def _predict_single_window(self, fh: ForecastingHorizon, X):
+    #     if (fh == self._fh_fit).all():
+    #         return self.forecaster.predict(fh=fh, X=X)
+    #     else:
+    #         raise ValueError("A different forecasting horizon `fh` has been provided from the one seen in `fit`")
+    # # end
+    #
+    # def _predict_multiple_windows(self, fh: ForecastingHorizon, X):
+    #     fh_fit = self._fh_fit
+    #     cutoff = self.cutoff
+    #
+    #     # nw: n of windows
+    #     # wl: window length
+    #     # nr: n of remaining records to process
+    #     # ws: window start
+    #     wl = len(fh_fit)
+    #     nw = len(fh)//wl
+    #     nr = len(fh) - nw*wl
+    #     ws = 0
+    #
+    #     # initialize y_pred
+    #     y_pred = np.zeros(len(fh))
+    #     # scan all windows
+    #     for w in range(nw):
+    #         Xw = self._compose_Xw(X, ws, wl)
+    #         y_pred_w = self._predict_single_window(fh_fit, Xw)
+    #         y_pred[ws:ws + wl] = y_pred_w
+    #         ws += wl
+    #
+    #         self.forecaster.update(y=y_pred_w, X=Xw)
+    #     # end
+    #
+    #     if nr > 0:
+    #         Xw = self._compose_Xw(X, ws, wl)
+    #         y_pred_w = self._predict_single_window(fh_fit, Xw)
+    #
+    #         Xw = Xw[:nr]
+    #         y_pred_w = y_pred_w[:nr]
+    #         y_pred[ws:ws + nr] = y_pred_w
+    #
+    #         self.forecaster.update(y=y_pred_w, X=Xw)
+    #     # end
+    #
+    #     y_index = fh.to_absolute_index(cutoff)
+    #     return pd.Series(y_pred, index=y_index)
+    # # end
+    #
+    # def _compose_Xw(self, X, ws: int, wl: int):
+    #     if X is None:
+    #         return None
+    #
+    #     nr, nc = X.shape
+    #     if ws+wl <= nr:
+    #         return X[ws:ws+wl]
+    #
+    #     Xw = np.zeros((wl, nc))
+    #     Xw[:nr-ws] = X[ws:]
+    #
+    #     Xw_index = pd.period_range(X.index[ws], periods=wl)
+    #     Xw = pd.DataFrame(Xw, columns=X.columns, index=Xw_index)
+    #     return Xw
     # # end
 
+    # -----------------------------------------------------------------------
+    # 
+    # -----------------------------------------------------------------------
+
+    # def _update_fit(self, y, X):
+    #     ...
+
     # def fit_predict(self, y, X=None, fh=None):
-    #     return self.forecaster.fit_predict(y=y, X=X, fh=fh)
-    #
+    #     ...
+
     # def score(self, y, X=None, fh=None):
-    #     return self.forecaster.score(y=y, X=X, fh=fh)
+    #     ...
 
     # -----------------------------------------------------------------------
 
     # def predict_quantiles(self, fh=None, X=None, alpha=None):
-    #     return self.forecaster.predict_quantiles(fh=fh, X=X, alpha=alpha)
-    #
+    #     ...
+
     # def predict_interval(self, fh=None, X=None, coverage=0.90):
-    #     return self.forecaster.predict_interval(fh=fh, X=X, coverage=coverage)
-    #
+    #     ...
+
     # def predict_var(self, fh=None, X=None, cov=False):
-    #     return self.forecaster.predict_var(fh=fh, X=X, cov=cov)
-    #
+    #     ...
+
     # def predict_proba(self, fh=None, X=None, marginal=True):
-    #     return self.forecaster.predict_proba(fh=fh, X=X, marginal=marginal)
-    #
+    #     ...
+
     # def predict_residuals(self, y=None, X=None):
-    #     return self.forecaster.predict_residuals(y=y, X=X)
+    #     ...
 
     # -----------------------------------------------------------------------
 
     # def update(self, y, X=None, update_params=True):
-    #     self.forecaster.update(y=y, X=X, update_params=update_params)
-    #     return self
-    #
+    #     ...
+
     # def update_predict(self, y, cv=None, X=None, update_params=True, reset_forecaster=True):
-    #     self.forecaster.update_predict(y=y, cv=cv, X=X, update_params=update_params,
-    #                                    reset_forecaster=reset_forecaster)
-    #     return self
-    #
+    #     ...
+
     # def update_predict_single(self, y=None, fh=None, X=None, update_params=True):
-    #     self.forecaster.update_predict_single(y=y, fh=fh, X=X, update_params=update_params)
-    #     return self
+    #     ...
 
     # -----------------------------------------------------------------------
     # score
     # -----------------------------------------------------------------------
 
-    def score(self, y_true, X=None, fh=None) -> dict[str, float]:
-        y_pred = self.predict(fh=fh, X=X)
-        return {
-            'mape': mean_absolute_percentage_error(y_true, y_pred),
-            'r2': r2_score(y_true, y_pred)
-        }
-    # end
+    def predict(self, fh=None, X=None, y=None):
+        return super().predict(fh=fh, X=X)
+
+    def score(self, y, X=None, fh=None) -> float:
+        return super().score(y=y, X=X, fh=fh)
 
     # -----------------------------------------------------------------------
     # Support
-    # -----------------------------------------------------------------------
-
-    def set_scores(self, scores):
-        self._scores = scores
-
-    def get_scores(self):
-        return self._scores
-
     # -----------------------------------------------------------------------
 
     def get_state(self) -> bytes:

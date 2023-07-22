@@ -2,16 +2,14 @@
 # Pandas reader
 # Some simple data set loaders: from csv and .arff data files
 #
-import arff
-import pandas as pd
-import numpy as np
-import warnings
-import random
 import math
-
-from typing import List, AnyStr, Union, Optional
+import warnings
 from math import isnan, sqrt
-from random import random
+from typing import List, Union, Optional
+
+import arff
+import numpy as np
+import pandas as pd
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +284,7 @@ def read_data(file: str,
         df = dataframe_ignore(df, ignore)
 
     if reindex:
-        df = dataframe_datetime_reindex(df)
+        df = datetime_reindex(df)
 
     print(f"... done ({df.shape})")
     return df
@@ -629,7 +627,7 @@ def split_column(df: pd.DataFrame,
 
     # create the columns if not specified
     if columns is None:
-        columns = [f'{col}_{j+1}' for j in range(p)]
+        columns = [f'col_{j+1}' for j in range(p)]
 
     # populate the dataframe
     if not inplace:
@@ -1142,15 +1140,13 @@ def xy_split(*data_list, target: Union[str, list[str]]) -> list[PANDAS_TYPE]:
     :param target: target column name
     :return: list of splitte df
     """
-    if isinstance(target, str):
-        target = [target]
-
-    assert isinstance(target, list)
+    tset = [target] if isinstance(target, str) else target
+    # assert isinstance(target, list)
 
     xy_list = []
     for data in data_list:
         assert isinstance(data, pd.DataFrame)
-        X = data[data.columns.difference(target)]
+        X = data[data.columns.difference(tset)]
         y = data[target]
         xy_list += [X, y]
     # end

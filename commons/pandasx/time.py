@@ -1,13 +1,4 @@
-#
-# Pandas reader
-# Some simple data set loaders: from csv and .arff data files
-#
-import datetime
-import math
 import random
-from typing import Optional
-
-import numpy as np
 import pandas as pd
 
 
@@ -128,12 +119,12 @@ def infer_freq(index, steps=5, ntries=3) -> str:
     if isinstance(index, pd.Series):
         return infer_freq(index.iloc[0], steps, ntries)
 
-    n = len(index) - steps
+    n = len(index)-steps
     freq = None
     itry = 0
     while itry < ntries:
         i = random.randrange(n)
-        tfreq = pd.infer_freq(index[i:i + steps])
+        tfreq = pd.infer_freq(index[i:i+steps])
         if tfreq is None:
             itry += 1
         elif tfreq != freq:

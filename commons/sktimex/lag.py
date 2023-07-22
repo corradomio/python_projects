@@ -1,9 +1,6 @@
-from typing import Union, Optional
-import numpy as np
+from typing import Union
 
 __all__ = ['LagSlots', 'LagResolver', 'resolve_lag']
-
-from numpy import ndarray
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -40,6 +37,7 @@ LAG_TYPES: list[str] = list(LAG_FACTORS)
 
 def _max(l: list[int]) -> int:
     return 0 if len(l) == 0 else max(l)
+
 
 class LagSlots:
     def __init__(self, islots: set[int], tslots: set[int]):
@@ -101,7 +99,9 @@ class LagResolver:
                 input=lag,
                 target=lag
             )
-        elif isinstance(lag, tuple):
+        elif isinstance(lag, (tuple, list)):
+            if len(lag) == 1:
+                lag = (0, lag[0])
             assert len(lag) == 2
             lag = dict(
                 period_type=LAG_DAY,
@@ -190,10 +190,12 @@ class LagResolver:
 
         # trick to be sure that the ORDER of the lag types is from 'smaller' to 'larger'
         for lag_type in LAG_TYPES:
-            if lag_type not in lag: continue
+            if lag_type not in lag:
+                continue
 
             lag_factor = LAG_FACTORS[lag_type]
-            assert base_factor <= lag_factor, f"Lag {lag_type} in {entry} must be a multiple of period_type {period_type}"
+            assert base_factor <= lag_factor, \
+                f"Lag {lag_type} in {entry} must be a multiple of period_type {period_type}"
 
             lag_size = lag_factor // base_factor
             lag_repl = lag[lag_type]
@@ -224,7 +226,7 @@ class LagResolver:
 # resolve_lag
 # ---------------------------------------------------------------------------
 
-def resolve_lag(lag: Union[int, tuple, dict], current=None) -> LagSlots:
+def resolve_lag(lag: Union[int, tuple, list, dict], current=None) -> LagSlots:
     """
     Resolve the 'lag' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
     is a record.
@@ -299,6 +301,7 @@ def resolve_lag(lag: Union[int, tuple, dict], current=None) -> LagSlots:
         1. a single integer value
         2. two integer values
         3. a dictionary
+    :param current: if to consider the current time slot
     :return LagSlots: an object containing the time slots to select for the input and target features.
     """
     lr = LagResolver(lag, current)

@@ -2,6 +2,7 @@ from typing import Union
 import pandas as pd
 import numpy as np
 
+
 #
 # https://www.baeldung.com/cs/mape-vs-wape-vs-wmape
 # A: actuale   y_true
@@ -10,7 +11,7 @@ import numpy as np
 #   MAPE = 1/n SUM(t, ABS((At - Ft)/At)
 #
 #   WAPE = SUM(t, ABS(At - Ft))/SUM(t, ABS(At))
-
+#
 def weighted_absolute_percentage_error(y_true: Union[pd.DataFrame, pd.Series], y_pred: Union[pd.DataFrame, pd.Series]):
     # normalize
     if isinstance(y_true, (pd.DataFrame, pd.Series)):

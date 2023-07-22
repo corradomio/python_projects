@@ -7,14 +7,10 @@ from torch.utils.data import TensorDataset
 
 
 # ---------------------------------------------------------------------------
-# stdlib utilities
+# torch Utilities
 # ---------------------------------------------------------------------------
 
-def kwval(d: dict, k: str, v):
-    return d[k] if k in d else v
-
-
-def import_from(qname: str) -> Any:
+def _import_from(qname: str) -> Any:
     """
     Import a class specified by the fully qualified name string
 
@@ -32,15 +28,7 @@ def import_from(qname: str) -> Any:
 # end
 
 
-def qualified_name(clazz: type) -> str:
-    return f'{clazz.__module__}.{clazz.__name__}'
-
-
-# ---------------------------------------------------------------------------
-# torch Utilities
-# ---------------------------------------------------------------------------
-
-def as_tensor(v: np.ndarray, dtype=torch.float32) -> torch.Tensor:
+def _as_tensor(v: np.ndarray, dtype=torch.float32) -> torch.Tensor:
     if len(v.shape) == 1:
         v = v.reshape((-1, 1))
     return torch.from_numpy(v).type(dtype)
@@ -57,8 +45,8 @@ class NumpyDataset(TensorDataset):
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
         super().__init__(
-            as_tensor(X, dtype=dtype),
-            as_tensor(y, dtype=dtype)
+            _as_tensor(X, dtype=dtype),
+            _as_tensor(y, dtype=dtype)
         )
 # end
 
@@ -427,7 +415,7 @@ def create_layer(layer_config: Union[str, list, tuple, dict], **kwargs) -> nn.Mo
     layer_class_name = _normalize_class_name(layer_config, LAYER, NS="nn")
     layer_params = _class_params(layer_config, LAYER, **kwargs)
 
-    layer_class = import_from(layer_class_name)
+    layer_class = _import_from(layer_class_name)
     layer = layer_class(**layer_params)
     assert isinstance(layer, nn.Module)
     return layer
@@ -444,7 +432,7 @@ def create_optimizer(module: nn.Module, optimizer_config: Union[None, str, list,
     optimizer_class_name = _normalize_class_name(optimizer_config, OPTIMIZER, NS="optim")
     optimizer_params = _class_params(optimizer_config, OPTIMIZER)
 
-    optimizer_class = import_from(optimizer_class_name)
+    optimizer_class = _import_from(optimizer_class_name)
     optimizer = optimizer_class(module.parameters(), **optimizer_params)
     assert isinstance(optimizer,  torch.optim.Optimizer)
     return optimizer
@@ -461,7 +449,7 @@ def create_loss_function(module: nn.Module, loss_config: Union[None, str, list, 
     loss_class_name = _normalize_class_name(loss_config, LOSS, NS="nn")
     loss_params = _class_params(loss_config, LOSS)
 
-    loss_class = import_from(loss_class_name)
+    loss_class = _import_from(loss_class_name)
     loss = loss_class(**loss_params)
     assert isinstance(loss,  torch.nn.modules.loss._Loss)
     return loss

@@ -43,8 +43,6 @@ class Parallel:
 
                 in this case, the list is subdivided in n_jobs*n_plits parts
                 and submitted to 'n_job' jobs
-
-                Ff it is a
         """
         n_splits = 1
         if isinstance(n_jobs, (tuple, list)):

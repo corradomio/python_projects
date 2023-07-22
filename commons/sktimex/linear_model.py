@@ -1,13 +1,10 @@
 from datetime import datetime
-from typing import Union, Optional
 
-import numpy as np
-import numpyx as npx
-import pandas as pd
-from pandas import PeriodIndex
+import logging
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from sktime.forecasting.base import BaseForecaster
 
+from .numpyx import LinearTrainTransform, LinearPredictTransform
 from .lag import resolve_lag
 from .utils import *
 
@@ -136,6 +133,11 @@ class LinearForecastRegressor(BaseForecaster):
         self.Xh: Optional[np.ndarray] = None
         self.yh: Optional[np.ndarray] = None
         self._cutoff: Optional[datetime] = None
+
+        p = class_name.rfind('.')
+        self._log = logging.getLogger(f"LinearForecastRegressor.{class_name[p+1:]}")
+
+        # self._scores: dict[str, float] = {}
     # end
 
     # -----------------------------------------------------------------------
@@ -160,16 +162,13 @@ class LinearForecastRegressor(BaseForecaster):
             X = None
 
         slots = self._slots
-        s = len(slots)
-
-        if self._y_only:
-            X = None
+        # s = len(slots)
 
         # DataFrame/Series -> np.ndarray
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
 
-        tt = npx.LinearTrainTransform(xlags=slots.input, ylags=slots.target)
+        tt = LinearTrainTransform(xlags=slots.input, ylags=slots.target)
         Xt, yt = tt.fit_transform(X=Xf, y=yf)
 
         # with warnings.catch_warnings():
@@ -194,82 +193,26 @@ class LinearForecastRegressor(BaseForecaster):
     #               predict(    X)  predict(    X, y)
     #
 
-    # def predict(self,
-    #             fh: ForecastingHorizon,
-    #             X: PD_TYPES = None,
-    #             y: PD_TYPES = None):
-    #     if self._y_only:
-    #         X = None
-    #
-    #     # fh = self._resolve_fh(y, X, fh)
-    #     if y is None:
-    #         X = self._clip_on_cutoff(X)
-    #         return super().predict(fh=fh, X=X)
-    #     else:
-    #         return self._predict(fh=fh, X=X, y=y)
-
-    # def _resolve_fh(self, y, X, fh: FH_TYPES) -> ForecastingHorizon:
-    #     # (_, _, fh)        -> fh
-    #     # (X, None, None)   -> |X|
-    #     # (None, y, None)   -> error
-    #     # (X, y, None)      -> |X| - |y|
-    #
-    #     if isinstance(fh, PeriodIndex):
-    #         cutoff = self.cutoff if y is None else y.index[-1]
-    #         fh = ForecastingHorizon(fh, is_relative=False)
-    #         return fh.to_relative(cutoff)
-    #     if fh is not None:
-    #         cutoff = self.cutoff if y is None else y.index[-1]
-    #         fh = fh if isinstance(fh, ForecastingHorizon) else ForecastingHorizon(fh)
-    #         return fh.to_relative(cutoff)
-    #     if y is None:
-    #         n = len(X)
-    #         return ForecastingHorizon(np.arange(1, n+1))
-    #     # if X is None and y is not None:
-    #     #     n = len(y)
-    #     #     return ForecastingHorizon(np.arange(1, n+1))
-    #     else:
-    #         n = len(X) - len(y)
-    #         return ForecastingHorizon(np.arange(1, n+1))
-    # # end
-
-    # def _clip_on_cutoff(self, X):
-    #     if X is None:
-    #         return None
-    #     cutoff = self._cutoff[0] if isinstance(self._cutoff, PeriodIndex) else self._cutoff
-    #     if X.index[0] <= cutoff:
-    #         X = X.loc[X.index > cutoff]
-    #     return X
-    # # end
-
-    def _predict(self,
-                fh: Optional[ForecastingHorizon],
-                X: PD_TYPES = None,
-                y: PD_TYPES = None) -> pd.DataFrame:
+    def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None) -> pd.DataFrame:
 
         if self._y_only:
             X = None
 
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+        # ensure fh relative
+        fh = self._make_fh_relative(fh)
 
-        fhp = fh
-        if fhp.is_relative:
-            fh = fhp
-            fhp = fh.to_absolute(self.cutoff)
-        else:
-            fh = fhp.to_relative(self.cutoff)
-
-        assert fh.is_relative
         slots = self._slots
+
         # X, yh, Xh
-        Xp, yh, Xh = self._validate_data_lfr(y, X, predict=True)
+        Xp, yh, Xh = self._validate_data_lfr(None, X, predict=True)
         """:type: np.ndarray, np.ndarray"""
         # n of slots to predict and populate y_pred
         n = int(fh[-1])
         y_pred: np.ndarray = np.zeros(n)
 
-        pt = npx.LinearPredictTransform(xlags=slots.input, ylags=slots.target)
+        pt = LinearPredictTransform(xlags=slots.input, ylags=slots.target)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
 
         for i in range(n):
@@ -278,16 +221,24 @@ class LinearForecastRegressor(BaseForecaster):
             y_pred[i] = yp[0]
 
         # add the index
-        y_pred = self._from_numpy(y_pred, fhp)
+        y_pred = self._from_numpy(y_pred, fh)
         return y_pred
     # end
 
-    def _from_numpy(self, ys, fhp):
+    def _from_numpy(self, ys: np.ndarray, fh: ForecastingHorizon) -> pd.Series:
         ys = ys.reshape(-1)
-        index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
-        yp = pd.Series(data=ys, index=index)
-        yp = yp.loc[fhp.to_pandas()]
+        # y_index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
+        y_index = fh.to_absolute(self.cutoff)
+        yp = pd.Series(data=ys, index=y_index)
+        # yp = yp.loc[fhp.to_pandas()]
         return yp
+
+    def _make_fh_relative(self, fh: ForecastingHorizon):
+        if fh is None:
+            return None
+        if not fh.is_relative:
+            fh = fh.to_relative(self.cutoff)
+        return fh
 
     # -----------------------------------------------------------------------
     # score (not implemented yet)
@@ -369,14 +320,6 @@ class LinearForecastRegressor(BaseForecaster):
 
     # -----------------------------------------------------------------------
     # Support
-    # -----------------------------------------------------------------------
-
-    def set_scores(self, scores):
-        self._scores = scores
-
-    def get_scores(self):
-        return self._scores
-
     # -----------------------------------------------------------------------
 
     def get_state(self) -> bytes:
