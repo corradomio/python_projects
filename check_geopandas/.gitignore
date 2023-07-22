@@ -1,0 +1,6 @@
+*.gpkg
+*.ipynb
+*.zip
+.ipynb_checkpoints
+.jupyter
+cache
