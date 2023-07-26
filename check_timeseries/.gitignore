@@ -1,4 +1,7 @@
 sktime*
 sklearn*
 *.log
+*.pdf
+*.zip
+Commons
 

@@ -92,7 +92,7 @@ class LinearForecastRegressor(BaseForecaster):
 
     def __init__(self,
                  lags: Union[int, list, tuple, dict] = (0, 1),
-                 current=None,
+                 current=False,
                  class_name: str = "sklearn.linear_model.LinearRegression",
                  y_only: bool = False,
                  **kwargs):

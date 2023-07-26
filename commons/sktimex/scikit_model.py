@@ -146,14 +146,26 @@ class ScikitForecastRegressor(BaseForecaster):
     #
 
     def _fit(self, y, X=None, fh: FH_TYPES = None):
-        # ensure fh relative
-        fh = fh.to_relative(self.cutoff) if fh is not None else None
+        # ensure fh relative AND not None for tabular models
+        fh = self._make_fh_relative(fh)
         self._fh_fit = fh
 
         if self._y_only: X = None
         
         self.forecaster.fit(y=y, X=X, fh=fh)
         return self
+    # end
+
+    def _make_fh_relative(self, fh):
+        # if is_tabular and gh is not defined, compose it based on 'window_length'
+        is_tabular = 'window_length' in self._kwargs and 'strategy' in self._kwargs
+        if fh is None and is_tabular:
+            window_length = self._kwargs['window_length']
+            fh = ForecastingHorizon(list(range(1, window_length+1)))
+        if fh is None or fh.is_relative:
+            return fh
+        else:
+            return fh.to_relative(self.cutoff)
     # end
 
     # -----------------------------------------------------------------------

@@ -4,7 +4,7 @@ import pandas as pd
 from numpy import issubdtype, integer, datetime64
 from pandas import DataFrame, Period, PeriodIndex
 
-from .base2 import dataframe_filter_outliers
+from .base import dataframe_filter_outliers
 from .time import infer_freq
 
 
@@ -91,7 +91,7 @@ class DatetimeEncoder(DataFrameTransformer):
 
         # STUPID Pandas if 'df' has index a PeriodIndex, df.to_period() raise an exception!
         if type(df.index) != PeriodIndex:
-            df = df.to_period()
+            df = df.to_period(freq=self._freq)
         return df
 
     def _infer_freq(self, df: DataFrame) -> DataFrame:

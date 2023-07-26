@@ -13,7 +13,6 @@
 #  Copyright (c) 2008 Tilburg University. All rights reserved.
 
 import numpy as np
-import pylab
 
 
 def Hbeta(D=np.array([]), beta=1.0):

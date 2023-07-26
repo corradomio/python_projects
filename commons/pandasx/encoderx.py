@@ -19,6 +19,7 @@ class _Encoder:
 
     def fit_transform(self, X: DataFrame, y: Union[None, DataFrame, Series]=None) -> DataFrame:
         ...
+# end
 
 
 # ---------------------------------------------------------------------------

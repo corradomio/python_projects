@@ -1,18 +1,6 @@
+from path import Path as path
 from datetime import datetime
 from typing import Any, Union, Optional
-
-from path import Path as path
-
-
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-
-true = True
-false = False
-none = None
-nil = None
-null = None
 
 NoneType = type(None)
 
@@ -284,7 +272,7 @@ def is_filesystem(datasource: str) -> bool:
 #
 
 def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
-    assert (dt, (type(None), str))
+    # assert (dt, (NoneType, str))
 
     if dt is None:
         return None
@@ -317,16 +305,6 @@ def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
 
     else:
         return datetime.strptime(dt, '%Y')
-# end
-
-
-def autoparse_bool(b: Union[None, bool, str]) -> bool:
-    if b in [None, 0, False, "false", "False", "FALSE", "f", "F", "off", "close"]:
-        return False
-    if b in [1, True, "true", "True", "TRUE", "t", "T", "on", "open"]:
-        return True
-    else:
-        raise ValueError(f"Unsuported boolean value '{b}'")
 # end
 
 

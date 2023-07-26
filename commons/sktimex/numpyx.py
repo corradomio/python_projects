@@ -119,8 +119,8 @@ class LinearPredictTransform:
 
         if len(y.shape) == 1:
             y = y.reshape((-1, 1))
-        if X is None:
-            X = np.zeros((len(y), 0), dtype=y.dtype)
+        # if X is None:
+        #     X = np.zeros((len(y), 0), dtype=y.dtype)
 
         self.Xh = X
         self.yh = y
@@ -132,25 +132,25 @@ class LinearPredictTransform:
 
         Xh = self.Xh
         yh = self.yh
-        xlags = self.xlags
+        xlags = self.xlags if Xh is not None else []
         ylags = self.ylags
         tlags = self.tlags
 
-        if X is None:
-            X = np.zeros((len(yh), 0), dtype=Xh.dtype)
+        # if X is None:
+        #     X = np.zeros((len(yh), 0), dtype=Xh.dtype)
+        #
+        # s = max(_max(xlags), _max(ylags))
+        # t = max(tlags)
 
-        s = max(_max(xlags), _max(ylags))
-        t = max(tlags)
-
-        mx = Xh.shape[1]
+        mx = Xh.shape[1] if Xh is not None else 0
         my = yh.shape[1]
-        n = yh.shape[0] - s - t
+        # n = yh.shape[0] - s - t
 
         mt = len(xlags) * mx + len(ylags) * my
         mu = len(tlags) * my
 
         yp = np.zeros((fh, mu), dtype=yh.dtype)
-        Xt = np.zeros((1, mt), dtype=Xh.dtype)
+        Xt = np.zeros((1, mt), dtype=yh.dtype)
 
         self.Xp = X
         self.yp = yp
@@ -165,12 +165,14 @@ class LinearPredictTransform:
         return self.yh[i,0] if i < 0 else self.yp[i,0]
 
     def step(self, i) -> np.ndarray:
+        Xh = self.Xh
+        yh = self.yh
         xat = self._xat
         yat = self._yat
-        xlags = self.xlags
+        xlags = self.xlags if Xh is not None else []
         ylags = self.ylags
-        mx = self.Xh.shape[1]
-        my = self.yh.shape[1]
+        mx = Xh.shape[1] if Xh is not None else 0
+        my = yh.shape[1]
         Xt = self.Xt
 
         c = 0
