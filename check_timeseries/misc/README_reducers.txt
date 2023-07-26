@@ -1,0 +1,15 @@
+
+
+_Reducer(_BaseWindowForecaster) (sktime.forecasting.compose._reduce)
+    _DirectReducer(_Reducer) (sktime.forecasting.compose._reduce)
+        DirectTabularRegressionForecaster(_DirectReducer) (sktime.forecasting.compose._reduce)
+        DirectTimeSeriesRegressionForecaster(_DirectReducer) (sktime.forecasting.compose._reduce)
+    _MultioutputReducer(_Reducer) (sktime.forecasting.compose._reduce)
+        MultioutputTabularRegressionForecaster(_MultioutputReducer) (sktime.forecasting.compose._reduce)
+        MultioutputTimeSeriesRegressionForecaster(_MultioutputReducer) (sktime.forecasting.compose._reduce)
+    _RecursiveReducer(_Reducer) (sktime.forecasting.compose._reduce)
+        RecursiveTabularRegressionForecaster(_RecursiveReducer) (sktime.forecasting.compose._reduce)
+        RecursiveTimeSeriesRegressionForecaster(_RecursiveReducer) (sktime.forecasting.compose._reduce)
+    _DirRecReducer(_Reducer) (sktime.forecasting.compose._reduce)
+        DirRecTabularRegressionForecaster(_DirRecReducer) (sktime.forecasting.compose._reduce)
+        DirRecTimeSeriesRegressionForecaster(_DirRecReducer) (sktime.forecasting.compose._reduce)
