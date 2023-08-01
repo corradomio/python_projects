@@ -1,5 +1,6 @@
 import logging
 
+import numpy as np
 import pandas as pd
 from numpy import issubdtype, integer, datetime64
 from pandas import DataFrame, Period, PeriodIndex
@@ -86,6 +87,10 @@ class DatetimeEncoder(DataFrameTransformer):
 
     def _copy_to_index(self, df: DataFrame) -> DataFrame:
         col = self._col
+        # ONLY if the index is NOT jet a PeriodIndex]
+        if isinstance(df.index, PeriodIndex):
+            return df
+
         df = df.set_index(df[col])
         # df = df[df.columns.difference([col])]
 
@@ -240,57 +245,70 @@ class StandardScalerEncoder(DataFrameTransformer):
 
     def __init__(self, col):
         super().__init__(col)
-        self._mean = 0.
-        self._sdev = 0.
+        self._cols = [col] if isinstance(col, str) else col
+        self._mean = {}
+        self._sdev = {}
 
     def fit(self, X: DataFrame, y=None) -> "StandardScalerEncoder":
         assert isinstance(X, DataFrame)
-        col = self._col
 
-        values = X[col].to_numpy(dtype=float)
-        vmin, vmax = min(values), max(values)
+        for col in self._cols:
+
+            x = X[col].to_numpy(dtype=float)
+            vmin, vmax = min(x), max(x)
 
         # if the values are already in a reasonable small range, don't scale
         if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
             return self
+
         if (vmax - vmin) <= NO_SCALE_EPS:
-            self._mean = values.mean()
+                self._mean[col] = x.mean()
+                self._sdev[col] = 0.
         else:
-            self._mean = values.mean()
-            self._sdev = values.std()
+                self._mean[col] = x.mean()
+                self._sdev[col] = x.std()
         # end
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
         assert isinstance(X, DataFrame)
 
-        if self._sdev <= NO_SCALE_EPS and self._mean == 0.:
+        if len(self._sdev) == 0:
             return X
 
-        col = self._col
-        values = X[col].to_numpy(dtype=float)
-        if self._sdev <= NO_SCALE_EPS:
-            values = values - self._mean
-        else:
-            values = (values - self._mean) / self._sdev
+        for col in self._cols:
+            if col not in self._mean:
+                continue
 
-        X[col] = values
+            x = X[col].to_numpy(dtype=float)
+            mean = self._mean[col]
+            sdev = self._sdev[col]
+
+            if sdev <= NO_SCALE_EPS:
+                x = (x - mean)
+            else:
+                x = (x - mean) / sdev
+
+            X[col] = x
         return X
 
     def inverse_transform(self, X: DataFrame):
         assert isinstance(X, DataFrame)
 
-        if self._sdev <= NO_SCALE_EPS and self._mean == 0.:
+        if len(self._sdev) == 0:
             return X
 
-        col = self._col
-        values = X[col].to_numpy(dtype=float)
-        if self._sdev <= NO_SCALE_EPS:
-            values = values + self._mean
-        else:
-            values = values*self._sdev + self._mean
+        for col in self._cols:
+            x = X[col].to_numpy(dtype=float)
+            mean = self._mean[col]
+            sdev = self._sdev[col]
 
-        X[col] = values
+            if sdev <= NO_SCALE_EPS:
+                x = x + mean
+            else:
+                x = x*sdev + mean
+
+            X[col] = x
         return X
 # end
 
@@ -380,23 +398,35 @@ class OutlierTransformer(DataFrameTransformer):
 
     def __init__(self, col, outlier_std=4):
         super().__init__(col)
+        # support for multiple columns
+        self._cols = [col] if isinstance(col, str) else col
         self._outlier_std = outlier_std
-        self._mean = 0.
-        self._sdev = 0.
+        self._mean = {}
+        self._sdev = {}
+        self._median = {}
 
     def fit(self, X: DataFrame, y=None) -> "OutlierTransformer":
         assert isinstance(X, DataFrame)
-        col = self._col
-        # values = X[col].to_numpy(dtype=float)
-        # self._mean = values.mean()
-        # self._sdev = values.std()
+        for col in self._cols:
+            x: pd.Series = X[col]
+            self._mean[col] = x.mean()
+            self._sdev[col] = x.std()
+            self._median[col] = x.median()
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
         assert isinstance(X, DataFrame)
+        for col in self._cols:
+            x: pd.Series = X[col]
+            mean = self._mean[col]
+            sdev = self._sdev[col]
 
-        X = dataframe_filter_outliers(X, self._col, self._outlier_std)
+            min_value = mean - sdev
+            max_value = mean + sdev
+            median_value = self._median[col]
 
+            x[(x <= min_value) | (x >= max_value)] = median_value
+            X[col] = x
         return X
     # end
 # end

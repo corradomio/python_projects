@@ -3,24 +3,7 @@ from datetime import datetime
 from typing import Any, Union, Optional
 
 NoneType = type(None)
-
-
-# ---------------------------------------------------------------------------
-# Assertions
-# ---------------------------------------------------------------------------
-
-def assert_isinstance_list(l, etype):
-    assert isinstance(l, (list, tuple))
-    for e in l:
-        assert isinstance(e, etype)
-
-
-def assert_isinstance_dict(d, ktype, vtype):
-    assert isinstance(d, dict)
-    for k in d.keys():
-        v = d[k]
-        assert isinstance(k, ktype)
-        assert isinstance(v, vtype)
+CollectionType = (list, tuple)
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +27,19 @@ def from_name(tsname) -> tuple[str]:
     if tsname == 'root':
         return tuple()
     else:
-        return tuple(tsname.split('~'))
+        return tuple(tsname.split('/'))
+
+
+def qualified_name(klass: Any):
+    module = klass.__module__
+    if module == 'builtins':
+        return klass.__qualname__   # avoid outputs like 'builtins.str'
+    return f'{module}.{klass.__qualname__}'
+# end
+
+
+def list_map(f, l):
+    return list(map(f, l))
 
 
 def tobool(s: str) -> bool:
@@ -54,6 +49,15 @@ def tobool(s: str) -> bool:
         return True
     else:
         raise ValueError(f"Unsupported boolean value '{s}'")
+
+
+def lrange(start, stop=None, step=None):
+    if stop is None:
+        return list(range(start))
+    elif step is None:
+        return list(range(start, stop))
+    else:
+        return list(range(start, stop, step))
 
 
 # ---------------------------------------------------------------------------
@@ -78,14 +82,6 @@ def import_from(qname: str) -> Any:
 # end
 
 
-def qualified_name(klass: Any):
-    module = klass.__module__
-    if module == 'builtins':
-        return klass.__qualname__   # avoid outputs like 'builtins.str'
-    return f'{module}.{klass.__qualname__}'
-# end
-
-
 # ---------------------------------------------------------------------------
 # generic utilities
 # ---------------------------------------------------------------------------
@@ -99,12 +95,14 @@ def as_kwargs(locals):
 # end
 
 
-def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[str, tuple], defval: Any = None) -> Any:
+def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None,
+          keys=None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
     :param kwargs: dictionary containing pairs (key, value)
-    :param key: key to read
+    :param key: key (or alternate names) to read
+    :param keys: list of keys used to navigate the dictionary
     :param defval: value to return is the key is not in the dictionary
     :return: the value in the dictionary or the default value
     """

@@ -9,10 +9,10 @@ from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 
 from sktimex.utils import PD_TYPES, FH_TYPES
 from torchx import nn as nnx
-
+from pandasx.time import periodic_encode
 from .numpyx import RNNFlatTrainTransform, RNNPredictTransform, CNNFlatTrainTransform, CNNPredictTransform
 from .lag import resolve_lag
-from .utils import import_from, periodic_encode
+from .utils import import_from
 
 
 # ---------------------------------------------------------------------------

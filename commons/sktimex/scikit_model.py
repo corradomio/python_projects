@@ -1,10 +1,10 @@
 import logging
-from sklearn.metrics import mean_absolute_percentage_error, r2_score
-from sktime.forecasting.base import BaseForecaster
-from .forecasting.compose import make_reduction
 
-from .utils import *
+from sktime.forecasting.base import BaseForecaster
+
+from .forecasting.compose import make_reduction
 from .lag import LagSlots, resolve_lag
+from .utils import *
 
 
 # ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ class ScikitForecastRegressor(BaseForecaster):
         #
         # y_inner_mtype, X_inner_mtype control which format X/y appears in
         # in the inner functions _fit, _predict, etc
-        "y_inner_mtype": "pd.Series",
+        "y_inner_mtype": "pd.DataFrame",
         "X_inner_mtype": "pd.DataFrame",
         # valid values: str and list of str
         # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
@@ -56,7 +56,7 @@ class ScikitForecastRegressor(BaseForecaster):
         #
         # scitype:y controls whether internal y can be univariate/multivariate
         # if multivariate is not valid, applies vectorization over variables
-        "scitype:y": "univariate",
+        "scitype:y": "both",
         # valid values: "univariate", "multivariate", "both"
         #   "univariate": inner _fit, _predict, etc, receive only univariate series
         #   "multivariate": inner methods receive only series with 2 or more variables
@@ -184,97 +184,19 @@ class ScikitForecastRegressor(BaseForecaster):
         fh = fh.to_relative(self.cutoff)
 
         # using 'sktimex.forecasting.compose.make_reduction'
-        # it is resolved ithe problems with predict horizon larger than the train horizon
+        # it is resolved the problems with predict horizon larger than the train horizon
 
         y_pred = self.forecaster.predict(fh=fh, X=X)
-
-        # strategy = self.strategy
-        # if strategy == 'recursive':
-        #     y_pred = self.forecaster.predict(fh=fh, X=X)
-        # elif strategy == 'direct':
-        #     # y_pred = self._predict_direct(fh=fh, X=X)
-        #     y_pred = self.forecaster.predict(fh=fh, X=X)
-        # elif strategy == 'dirrec':
-        #     # y_pred = self._predict_dirrec(fh=fh, X=X)
-        #     y_pred = self.forecaster.predict(fh=fh, X=X)
-        # else:
-        #     y_pred = self.forecaster.predict(fh=fh, X=X)
 
         assert isinstance(y_pred, (pd.DataFrame, pd.Series))
         return y_pred
     # end
 
-    # -----------------------------------------------------------------------
+    def _update(self, y, X=None, update_params=True):
+        if self._y_only: X = None
 
-    # def _predict_direct(self, fh: ForecastingHorizon, X):
-    #     if len(fh) == len(self._fh_fit):
-    #         return self._predict_single_window(fh, X)
-    #     else:
-    #         return self._predict_multiple_windows(fh, X)
-    # # end
-    #
-    # def _predict_single_window(self, fh: ForecastingHorizon, X):
-    #     if (fh == self._fh_fit).all():
-    #         return self.forecaster.predict(fh=fh, X=X)
-    #     else:
-    #         raise ValueError("A different forecasting horizon `fh` has been provided from the one seen in `fit`")
-    # # end
-    #
-    # def _predict_multiple_windows(self, fh: ForecastingHorizon, X):
-    #     fh_fit = self._fh_fit
-    #     cutoff = self.cutoff
-    #
-    #     # nw: n of windows
-    #     # wl: window length
-    #     # nr: n of remaining records to process
-    #     # ws: window start
-    #     wl = len(fh_fit)
-    #     nw = len(fh)//wl
-    #     nr = len(fh) - nw*wl
-    #     ws = 0
-    #
-    #     # initialize y_pred
-    #     y_pred = np.zeros(len(fh))
-    #     # scan all windows
-    #     for w in range(nw):
-    #         Xw = self._compose_Xw(X, ws, wl)
-    #         y_pred_w = self._predict_single_window(fh_fit, Xw)
-    #         y_pred[ws:ws + wl] = y_pred_w
-    #         ws += wl
-    #
-    #         self.forecaster.update(y=y_pred_w, X=Xw)
-    #     # end
-    #
-    #     if nr > 0:
-    #         Xw = self._compose_Xw(X, ws, wl)
-    #         y_pred_w = self._predict_single_window(fh_fit, Xw)
-    #
-    #         Xw = Xw[:nr]
-    #         y_pred_w = y_pred_w[:nr]
-    #         y_pred[ws:ws + nr] = y_pred_w
-    #
-    #         self.forecaster.update(y=y_pred_w, X=Xw)
-    #     # end
-    #
-    #     y_index = fh.to_absolute_index(cutoff)
-    #     return pd.Series(y_pred, index=y_index)
-    # # end
-    #
-    # def _compose_Xw(self, X, ws: int, wl: int):
-    #     if X is None:
-    #         return None
-    #
-    #     nr, nc = X.shape
-    #     if ws+wl <= nr:
-    #         return X[ws:ws+wl]
-    #
-    #     Xw = np.zeros((wl, nc))
-    #     Xw[:nr-ws] = X[ws:]
-    #
-    #     Xw_index = pd.period_range(X.index[ws], periods=wl)
-    #     Xw = pd.DataFrame(Xw, columns=X.columns, index=Xw_index)
-    #     return Xw
-    # # end
+        return super()._update(y=y, X=X, update_params=update_params)
+    # end
 
     # -----------------------------------------------------------------------
     # 

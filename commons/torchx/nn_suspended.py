@@ -105,7 +105,6 @@ class ConfigurableModule(nn.Module):
                 print(f"[{epoch}/{self.epochs}] loss: {epoch_metric.item():.5}")
         # end
         return self
-
     # end
 
     # -----------------------------------------------------------------------
@@ -126,7 +125,6 @@ class ConfigurableModule(nn.Module):
                 errors.append(error)
         score_metric = torch.mean(torch.stack(errors))
         return score_metric
-
     # end
 
     # -----------------------------------------------------------------------
@@ -185,7 +183,6 @@ class Module(nn.Module):
         self.max_epochs = max_epochs
         self.log_epochs = log_epochs
         self.log = logging.getLogger(qualified_name(self.__class__))
-
     # end
 
     # -----------------------------------------------------------------------
@@ -202,7 +199,6 @@ class Module(nn.Module):
         else:
             output = self.module.forward(input)
         return output
-
     # end
 
     # -----------------------------------------------------------------------
@@ -238,7 +234,6 @@ class Module(nn.Module):
 
                 if val is None:
                     continue
-
             # end
 
             if epoch % self.log_epochs != 0:
@@ -254,10 +249,8 @@ class Module(nn.Module):
 
                 epoch_metric = torch.mean(torch.stack(train_losses))
                 print(f"[{epoch}/{self.max_epochs}] train loss: {epoch_metric.item():.5}, val loss: {val_loss.item()}")
-
         # end
         return self
-
     # end
 
     # -----------------------------------------------------------------------
@@ -279,7 +272,6 @@ class Module(nn.Module):
                 errors.append(error)
         score_metric = torch.mean(torch.stack(errors))
         return score_metric
-
     # end
 
     # -----------------------------------------------------------------------
@@ -362,9 +354,8 @@ class LSTM(nn.LSTM):
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
-
-
 # end
+
 
 #
 #     Args:
@@ -417,8 +408,6 @@ class GRU(nn.GRU):
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
-
-
 # end
 
 
@@ -475,8 +464,6 @@ class RNN(nn.RNN):
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
-
-
 # end
 
 
@@ -516,7 +503,6 @@ class Conv1d(nn.Conv1d):
 
         self.relu = nn.ReLU() if relu else None
         self.lin = nn.Linear(in_features=hidden_size * steps, out_features=output_size)
-
     # end
 
     def forward(self, input):
@@ -526,8 +512,6 @@ class Conv1d(nn.Conv1d):
         t = self.lin(t)
         return t
     # end
-
-
 # end
 
 
@@ -548,8 +532,6 @@ class DropDimensions(nn.Module):
             raise ValueError("Unsupported index")
         input = input.reshape(shape)
         return input
-
-
 # end
 
 

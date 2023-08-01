@@ -4,6 +4,7 @@ import numpy as np
 import pandas
 from numpy import ndarray, zeros, ones, dot, mean, all, abs
 from numpy.linalg import eig, eigvals
+from stdlib import NoneType
 
 
 # ---------------------------------------------------------------------------
@@ -35,12 +36,12 @@ class LinearTrainTransform:
         return max(_max(self.xlags), _max(self.ylags))
 
     def fit(self, X: np.ndarray, y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         return self
 
     def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
 
         xlags = self.xlags
@@ -114,7 +115,7 @@ class LinearPredictTransform:
         return max(_max(self.xlags), _max(self.ylags))
 
     def fit(self, X: np.ndarray, y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
 
         if len(y.shape) == 1:
@@ -127,7 +128,7 @@ class LinearPredictTransform:
         return self
 
     def transform(self, X: np.ndarray, fh: int) -> np.ndarray:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(fh, int)
 
         Xh = self.Xh
@@ -223,12 +224,12 @@ class RNNTrainTransform:
         return self.steps + 1
 
     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         return self
 
     def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
@@ -287,12 +288,12 @@ class RNNFlatTrainTransform:
         return self.steps + 1
 
     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         return self
 
     def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
@@ -355,7 +356,7 @@ class RNNPredictTransform:
     # end
 
     def fit(self, X: np.ndarray, y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
 
         if X is None:
@@ -461,13 +462,13 @@ class CNNTrainTransform:
         return self.steps + 1
 
     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         return self
     # end
 
     def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
@@ -528,13 +529,13 @@ class CNNFlatTrainTransform:
         return self.steps + 1
 
     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         return self
     # end
 
     def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> np.ndarray:
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
         if X is None:
             X = np.zeros((len(y), 0), dtype=y.dtype)
@@ -597,7 +598,7 @@ class CNNPredictTransform:
         self.Xt = None
 
     def fit(self, X: np.ndarray, y: np.ndarray):
-        assert isinstance(X, (type(None), np.ndarray))
+        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, np.ndarray)
 
         if X is None:

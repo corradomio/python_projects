@@ -1,5 +1,3 @@
-sktime*
-sklearn*
 *.log
 *.pdf
 *.zip

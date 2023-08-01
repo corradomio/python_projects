@@ -32,7 +32,7 @@ import torch.nn as nn
 class LSTM(nn.LSTM):
 
     def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 batch_first=True, **kwargs):
+                 relu=True, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -46,6 +46,8 @@ class LSTM(nn.LSTM):
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
+
+        self.relu = nn.ReLU() if relu else None
         self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
 
     def forward(self, input, hx=None):
@@ -60,6 +62,7 @@ class LSTM(nn.LSTM):
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
+        t = self.relu(t) if self.relu else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
@@ -88,7 +91,7 @@ class LSTM(nn.LSTM):
 class GRU(nn.GRU):
 
     def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 batch_first=True, **kwargs):
+                 relu=True, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -101,7 +104,9 @@ class GRU(nn.GRU):
         self.num_layers = num_layers
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
-        self.D = f*self.num_layers 
+        self.D = f*self.num_layers
+
+        self.relu = nn.ReLU() if relu else None
         self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
 
     def forward(self, input, hx=None):
@@ -115,6 +120,7 @@ class GRU(nn.GRU):
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
+        t = self.relu(t) if self.relu else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
@@ -144,7 +150,7 @@ class GRU(nn.GRU):
 class RNN(nn.RNN):
 
     def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 batch_first=True, **kwargs):
+                 relu=True, batch_first=True, **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
@@ -157,7 +163,9 @@ class RNN(nn.RNN):
         self.num_layers = num_layers
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
-        self.D = f*self.num_layers 
+        self.D = f*self.num_layers
+
+        self.relu = nn.ReLU() if relu else None
         self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
 
     def forward(self, input, hx=None):
@@ -171,6 +179,7 @@ class RNN(nn.RNN):
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
+        t = self.relu(t) if self.relu else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t)
         return output
@@ -193,8 +202,8 @@ class RNN(nn.RNN):
 #         dtype=None
 #
 class Conv1d(nn.Conv1d):
-    def __init__(self, *, input_size, output_size, hidden_size=1, steps=1, relu=True,
-                 kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
+    def __init__(self, *, input_size, output_size, hidden_size=1, steps=1,
+                 relu=True, kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
         super().__init__(in_channels=input_size,
                          out_channels=hidden_size,
                          kernel_size=kernel_size,

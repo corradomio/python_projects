@@ -1,14 +1,34 @@
 from typing import *
-from typing import _UnionGenericAlias, _SpecialForm, _type_check, _remove_dups_flatten
+from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _type_check, _remove_dups_flatten
 from types import *
 from collections import *
 
 __all__ = [
     'is_instance'
+    'All',
+    'Const'     # equivalent to 'Final'
 ]
 
+# unsupported
+# -----------
+# NoReturn
+# ClassVar
+# TypeAlias
+# Concatenate
+# TypeGuard
+# ForwardRef
+# TypeVar.
 
-#
+
+# supported
+# ---------
+# Final
+# Literal
+
+
+# ---------------------------------------------------------------------------
+# from collections.abc, and available in typing
+# ---------------------------------------------------------------------------
 #   Container   __contains__(
 #   Iterable    __iter__
 #   Hashable    __hash__
@@ -23,6 +43,33 @@ __all__ = [
 #   AsyncIterator   __aiter__, __anext__
 #   .
 
+
+# ---------------------------------------------------------------------------
+# from types
+# ---------------------------------------------------------------------------
+# FunctionType
+# LambdaType
+# CodeType
+# MappingProxyType
+# SimpleNamespace
+# CellType
+# GeneratorType
+# CoroutineType
+# AsyncGeneratorType
+# MethodType
+# BuiltinMethodType
+# WrapperDescriptorType
+# MethodWrapperType
+# MethodDescriptorType
+# ClassMethodDescriptorType
+# ModuleType
+# GetSetDescriptorType
+# MemberDescriptorType
+# .
+
+# ---------------------------------------------------------------------------
+# from typing
+# ---------------------------------------------------------------------------
 #     # Super-special typing primitives.
 #     'Annotated',
 #     'Any',
@@ -112,6 +159,23 @@ __all__ = [
 #     'Text',
 #     'TYPE_CHECKING',.
 
+# ---------------------------------------------------------------------------
+# from 'collections'
+# ---------------------------------------------------------------------------
+#     'ChainMap',
+#     'Counter',
+#     'OrderedDict',
+#     'UserDict',
+#     'UserList',
+#     'UserString',
+#     'defaultdict',
+#     'deque',
+#     'namedtuple',
+#   
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------
+
 
 @_SpecialForm
 def All(self, parameters):
@@ -129,6 +193,56 @@ def All(self, parameters):
     uga = _UnionGenericAlias(self, parameters)
     uga._name = "All"
     return uga
+
+
+@_SpecialForm
+def Immutable(self, parameters=()):
+    # """Immutable type
+    # """
+    # # if parameters == ():
+    # #     raise TypeError("Cannot take a Immutable of no types.")
+    # if not isinstance(parameters, tuple):
+    #     parameters = (parameters,)
+    # msg = "Immutable[arg, ...]: each arg must be a type."
+    # parameters = tuple(_type_check(p, msg) for p in parameters)
+    # parameters = _remove_dups_flatten(parameters)
+    # if len(parameters) == 1:
+    #     return parameters[0]
+    # uga = _UnionGenericAlias(self, parameters)
+    # uga._name = "Immutable"
+    # return uga
+    """Special typing construct to indicate  immutable to type checkers.
+
+        A immutable object must be composed by only immutable objects
+    """
+    item = _type_check(parameters, f'{self} accepts only single type.')
+    return _GenericAlias(self, (item,))
+
+
+@_SpecialForm
+def Const(self, parameters):
+    # """Immutable type
+    # """
+    # if parameter != None:
+    #     msg = "Const[arg]: arg must be a type."
+    #     _type_check(parameter, "Const[arg]: arg must be a type.")
+    #     uga = _UnionGenericAlias(self, (parameter,))
+    # else:
+    #     uga = _UnionGenericAlias(self, ())
+    # uga._name = "Const"
+    # return uga
+    """Special typing construct to indicate const names to type checkers.
+
+        A const name cannot be re-assigned.
+        For example:
+
+          MAX_SIZE: Const[int] = 9000
+          MAX_SIZE += 1  # Error reported by type checker
+
+        """
+    item = _type_check(parameters, f'{self} accepts only single type.')
+    return _GenericAlias(self, (item,))
+
 
 # ---------------------------------------------------------------------------
 #
@@ -158,6 +272,23 @@ class IsNone(IsInstance):
         return obj is None
 
 
+class IsLiteral(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.targs = [type(arg) for arg in self.args]
+        self.nargs = len(self.args)
+
+    def is_instance(self, obj) -> bool:
+        # Problem:  1 == True and 0 == False
+        # BUT, for type consistency, this is not a good idea
+        # both values must have the same type
+        tobj = type(obj)
+        for i in range(self.nargs):
+            if obj == self.args[i] and tobj == self.targs[i]:
+                return True
+        return False
+
+
 # ---------------------------------------------------------------------------
 
 def _len(obj):
@@ -168,9 +299,9 @@ def _len(obj):
 
 
 class IsCollection(IsInstance):
-    def __init__(self, tp):
+    def __init__(self, tp, collection_type=Collection):
         super().__init__(tp)
-        self.collection_type = Collection
+        self.collection_type = collection_type
 
     def is_instance(self, obj) -> bool:
         if not isinstance(obj, self.collection_type):
@@ -198,41 +329,50 @@ class IsCollection(IsInstance):
                     return False
         return True
 
-
 class IsList(IsCollection):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.collection_type = list
+        super().__init__(tp, list)
 
 
 class IsTuple(IsCollection):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.collection_type = tuple
+        super().__init__(tp, tuple)
+
+
+class IsNamedTuple(IsCollection):
+    def __init__(self, tp):
+        super().__init__(tp, namedtuple)
 
 
 class IsSet(IsCollection):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.collection_type = set
+        super().__init__(tp, set)
+
+
+class IsFrozenSet(IsCollection):
+    def __init__(self, tp):
+        super().__init__(tp, frozenset)
 
 
 class IsDeque(IsCollection):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.collection_type = deque
+        super().__init__(tp, deque)
 
 
 # ---------------------------------------------------------------------------
 
 class IsMapping(IsInstance):
-    def __init__(self, tp):
+    def __init__(self, tp, dictionary_type=Mapping):
         super().__init__(tp)
-        self.dictionary_type = Mapping
+        self.dictionary_type = dictionary_type
 
     def is_instance(self, obj) -> bool:
         if not isinstance(obj, self.dictionary_type):
             return False
+        
+        # no type parameters passed: true for ALL types
+        if len(self.args) == 0:
+            return True
 
         key_type = self.args[0]
         value_type = self.args[1]
@@ -242,18 +382,21 @@ class IsMapping(IsInstance):
             if not is_instance(key, key_type) or not is_instance(value, value_type):
                 return False
         return True
-# end
-
+    
+    
 class IsDict(IsMapping):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.dictionary_type = dict
+        super().__init__(tp, dict)
 
 
 class IsDefaultDict(IsMapping):
     def __init__(self, tp):
-        super().__init__(tp)
-        self.dictionary_type = defaultdict
+        super().__init__(tp, defaultdict)
+
+
+class IsOrderedDict(IsMapping):
+    def __init__(self, tp):
+        super().__init__(tp, OrderedDict)
 
 
 # ---------------------------------------------------------------------------
@@ -267,19 +410,7 @@ class IsUnion(IsInstance):
             if is_instance(obj, a_type):
                 return True
         return False
-# end
-
-class IsAll(IsInstance):
-    def __init__(self, tp):
-        super().__init__(tp)
-
-    def is_instance(self, obj) -> bool:
-        for a_type in self.args:
-            if not is_instance(obj, a_type):
-                return False
-        return True
-# end
-
+    
 
 class IsOptional(IsInstance):
     def __init__(self, tp):
@@ -290,7 +421,6 @@ class IsOptional(IsInstance):
             return True
         else:
             return is_instance(obj, self.args[0])
-# end
 
 
 class IsNewType(IsInstance):
@@ -301,6 +431,43 @@ class IsNewType(IsInstance):
         return is_instance(obj, self.type.__supertype__)
 
 
+# ---------------------------------------------------------------------------
+
+class IsAll(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        for a_type in self.args:
+            if not is_instance(obj, a_type):
+                return False
+        return True
+
+
+class IsImmutable(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        
+    def is_instance(self, obj) -> bool:
+        o_type = type(obj)
+        if o_type in [None, int, float, bool, str, bytes, float]:
+            return True
+        if o_type not in [tuple, frozenset]:
+            return False
+        for e in obj:
+            if not self.is_instance(e):
+                return False
+        return True
+    
+    
+class IsConst(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+    def is_instance(self, obj) -> bool:
+        if len(self.args) == 0:
+            return True
+        else:
+            return is_instance(obj, self.args[0])
 
 # ---------------------------------------------------------------------------
 
@@ -315,8 +482,13 @@ class HasAttribute(IsInstance):
         for attr in self.attrs:
             if not hasattr(obj, attr):
                 return False
+            av = getattr(obj, attr)
+            if av is None:
+                return False
         return True
-# end
+
+
+# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -329,20 +501,34 @@ IS_INSTANCE_OF = {
     'builtins.tuple': IsTuple,
     'builtins.set': IsSet,
     'builtins.dict': IsDict,
+    'builtins.frozenset': IsFrozenSet,
+
+    'collections.deque': IsDeque,
+    'collections.defaultdict': IsDefaultDict,
+    'collections.namedtuple': IsNamedTuple,
+    'collections.OrderedDict': IsOrderedDict,
 
     'typing.None': IsNone,
     'typing.Union': IsUnion,
-    'typing.All': IsAll,
     'typing.Any': IsAny,
     'typing.Optional': IsOptional,
+    'typing.Literal': IsLiteral,
+
     'typing.List': IsList,
     'typing.Tuple': IsTuple,
+    'typing.NamedTuple': IsNamedTuple,
     'typing.Set': IsSet,
-    'typing.Dict': IsDict,
+    'typing.FrozenSet': IsFrozenSet,
     'typing.Deque': IsDeque,
+
+    'typing.Dict': IsDict,
     'typing.DefaultDict': IsDefaultDict,
     'typing.NewType': IsNewType,
     'typing.Collection': IsCollection,
+
+    'typing.All': IsAll,
+    'typing.Immutable': IsImmutable,
+    'typing.Const': IsConst,
 
     'typing.Container': HasAttribute('__contains__'),
     'typing.Iterable': HasAttribute('__iter__'),
@@ -377,7 +563,7 @@ def type_name(a_type: type) -> str:
     return t_name
 
 
-def is_instance(obj, a_type: Union[type, Collection[type]]) -> bool:
+def is_instance(obj, a_type) -> bool:
     # if hasattr(a_type, '__supertype__'):
     #     return is_instance(obj, a_type.__supertype__)
     if isinstance(a_type, tuple):
@@ -394,10 +580,6 @@ def is_instance(obj, a_type: Union[type, Collection[type]]) -> bool:
         return IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
     else:
         return isinstance(obj, a_type)
-# end
-
-
-isinstance = is_instance
 
 
 # ---------------------------------------------------------------------------

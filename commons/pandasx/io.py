@@ -2,7 +2,8 @@ from typing import List
 import pandas as pd
 import arff
 from .base import datetime_encode, onehot_encode, \
-    dataframe_index, dataframe_ignore, datetime_reindex, _as_list
+    dataframe_index, dataframe_ignore, datetime_reindex, _as_list, \
+    unnamed_columns
 from .time import periodic_encode
 
 
@@ -158,6 +159,7 @@ def read_data(file: str,
               numeric=None,
               index=None,
               ignore=None,
+              ignore_unnamed=False,
               onehot=None,
               datetime=None,
               periodic=None,
@@ -194,6 +196,7 @@ def read_data(file: str,
     :param index: column or list of columns to use as index. With multiple columns, it is created
                 a MultiIndex following the columns order
     :param ignore: column or list of columns to ignore
+    :param ignore_unnamed: if to ignore 'Unnamed: *' columns
     :param onehot: columns to convert using onehot encoding
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
@@ -202,8 +205,6 @@ def read_data(file: str,
     :param dict kwargs: extra parameters passed to pd.read_xxx()
     :return pd.DataFrame: a Pandas DataFrame
     """
-    # if file is None:
-    #     raise TypeError("expected str, bytes or os.Path like object, not NoneType")
     assert isinstance(file, str), "'file' must be a str"
     assert isinstance(datetime, (type(None), str, list, tuple)), \
         "'datetime' must be (None, str, (str, str), (str, str, str))"
@@ -278,6 +279,9 @@ def read_data(file: str,
 
     if len(index) > 0:
         df = dataframe_index(df, index)
+
+    if ignore_unnamed:
+        ignore += unnamed_columns(df)
 
     if len(ignore) > 0:
         df = dataframe_ignore(df, ignore)

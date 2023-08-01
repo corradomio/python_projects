@@ -4,15 +4,18 @@
 #
 import warnings
 from typing import List, Union, Optional
-from stdlib import NoneType
+from stdlib import NoneType, CollectionType
 
 import numpy as np
 import pandas as pd
 
 
-def _as_list(l, param="param", msg="not of type None, str, list[str]"):
-    assert isinstance(l, (NoneType, str, list, tuple)), f"'{param}' {msg}"
-    return [] if l is None else [l] if isinstance(l, str) else l
+def _as_list(l, param="param"):
+    tl = type(l)
+    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
+    return [] if l is None else \
+            [l] if tl == str else \
+            list(l) if tl == tuple else l
 
 
 # ---------------------------------------------------------------------------
@@ -468,7 +471,7 @@ dataframe_merge_on_index = index_merge
 # nan_split
 # ---------------------------------------------------------------------------
 
-def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, str, list[str]]) \
+def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, str, list[str]] = None) \
     -> list[PANDAS_TYPE]:
     """
     Split the df in 'data_list' in X, y
@@ -493,24 +496,24 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, 
 
 
 def nan_split(*data_list,
-              excluding: Union[None, str, list[str]]=None,
+              ignore: Union[None, str, list[str]]=None,
               columns: Union[None, str, list[str]]=None) -> list[PANDAS_TYPE]:
     """
     Remove the columns of the dataframe containing nans
 
     :param data_list: list of dataframe to analyze
-    :param excluding: list of columns to exclude from the analysis (alternative to 'columns')
-    :param columns: list of columns to analyze (alternative to 'excluding')
+    :param ignore: list of columns to ignore from the analysis (alternative to 'columns')
+    :param columns: list of columns to analyze (alternative to 'ignore')
     :return:
     """
 
-    excluding = _as_list(excluding, 'excluding')
+    ignore = _as_list(ignore, 'ignore')
     columns = _as_list(columns, 'columns')
 
     vi_list = []
     for data in data_list:
-        if len(excluding) > 0:
-            columns = data.columns.difference(excluding)
+        if len(ignore) > 0:
+            columns = data.columns.difference(ignore)
         if len(columns) == 0:
             columns = data.columns
 
@@ -640,7 +643,7 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
     assert isinstance(target, (str, list))
 
     n, c = data.shape
-    if isinstance(target, (tuple, list)):
+    if isinstance(target, CollectionType):
         pass
     elif c == 1:
         columns = [target]
@@ -861,6 +864,20 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 # ---------------------------------------------------------------------------
 # dataframe_ignore
 # ---------------------------------------------------------------------------
+
+def unnamed_columns(df: pd.DataFrame) -> list[str]:
+    """
+    List of columns with name 'Unnamed: nn'
+    :param df: dataframe to analyze
+    :return: list of columns (can be empty)
+    """
+    return [
+        col
+        for col in df.columns
+        if col.startswith('Unnamed:')
+    ]
+# end
+
 
 def ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     """

@@ -1,4 +1,5 @@
 from typing import Union
+from stdlib import CollectionType
 
 __all__ = ['LagSlots', 'LagResolver', 'resolve_lag']
 
@@ -99,7 +100,7 @@ class LagResolver:
                 input=lag,
                 target=lag
             )
-        elif isinstance(lag, (tuple, list)):
+        elif isinstance(lag, CollectionType):
             if len(lag) == 1:
                 lag = (0, lag[0])
             assert len(lag) == 2
@@ -184,7 +185,7 @@ class LagResolver:
             slots = set()
 
         # lag is already a list of integers
-        if isinstance(lag, (tuple, list)):
+        if isinstance(lag, CollectionType):
             slots.update(lag)
             return slots
 
@@ -308,177 +309,6 @@ def resolve_lag(lag: Union[int, tuple, list, dict], current=None) -> LagSlots:
     res: LagSlots = lr.resolve()
     return res
 # end
-
-
-# ---------------------------------------------------------------------------
-# LagTrainTransformer
-# LagPredictTransform
-# ---------------------------------------------------------------------------
-# X can be None or X[n, 0]
-
-# class LagTrainTransform:
-#
-#     def __init__(self, slots: LagSlots):
-#         assert isinstance(slots, LagSlots)
-#         self._slots: LagSlots = slots
-#
-#     def fit(self, X: Optional[ndarray], y: np.ndarray):
-#         assert isinstance(y, np.ndarray)
-#         assert isinstance(X, (type(None), np.ndarray))
-#         if X is not None: assert len(y) == len(X)
-#         return self
-#
-#     def transform(self, X: Optional[ndarray], y: np.ndarray):
-#         assert isinstance(y, np.ndarray)
-#         assert isinstance(X, (type(None), np.ndarray))
-#
-#         slots: LagSlots = self._slots
-#
-#         islots = list(reversed(slots.input))
-#         tslots = list(reversed(slots.target))
-#         s = len(slots)
-#
-#         if len(y.shape) == 1:
-#             y = y.reshape((-1, 1))
-#
-#         # create a X[n,0] if X is None
-#         # and uses an empty list as islots
-#         if X is None:
-#             n = len(y)
-#             X = np.zeros((n, 0), dtype=y.dtype)
-#             islots = []
-#
-#         assert len(y) == len(X)
-#
-#         sx = len(islots)
-#         sy = len(tslots)
-#         n = y.shape[0]
-#         my = y.shape[1]
-#         mx = X.shape[1]
-#
-#         nt = n - s
-#         mt = sx * mx + sy
-#         Xt = np.zeros((nt, mt), dtype=y.dtype)
-#         yt = np.zeros((nt, my), dtype=y.dtype)
-#
-#         for i in range(nt):
-#             c = 0
-#             for j in tslots:
-#                 Xt[i, c:c + my] = y[s + i - j]
-#                 c += my
-#             for j in islots:
-#                 Xt[i, c:c + mx] = X[s + i - j]
-#                 c += mx
-#             yt[i] = y[s + i]
-#         # end
-#
-#         return Xt, yt
-#
-#     def fit_transform(self, X: Optional[ndarray], y: np.ndarray):
-#         return self.fit(X=X, y=y).transform(X=X, y=y)
-# # end
-
-
-# class LagPredictTransform:
-#
-#     def __init__(self, slots: LagSlots):
-#         assert isinstance(slots, LagSlots)
-#
-#         # Xh, yh: history (past)
-#         #   Xh can be None
-#         # Xp, yp: prediction (future)
-#         #   yp is created if not already passed
-#         #   Xp can be None
-#         # Xt: temporary input matrix used to generate yt (a SINGLE value)
-#         #   yt MUST be saved in yp ad the correct index
-#
-#         self._slots: LagSlots = slots
-#         self._yh: Optional[ndarray] = None
-#         self._Xh: Optional[ndarray] = None
-#         # --
-#         self._Xp: Optional[ndarray] = None
-#         self._yp: Optional[ndarray] = None
-#         # --
-#         self._Xt: Optional[ndarray] = None
-#         # --
-#         self._m = 0
-#     # end
-#
-#     def fit(self, X: Optional[ndarray], y: Optional[ndarray]):
-#         assert isinstance(y, np.ndarray)
-#         assert isinstance(X, (type(None), np.ndarray))
-#
-#         if len(y.shape) == 1:
-#             y = y.reshape((-1, 1))
-#
-#         # X_history, y_history
-#         self._Xh = X
-#         self._yh = y
-#
-#         slots = self._slots
-#         sx = len(slots.input)
-#         sy = len(slots.target)
-#         m = 0 if X is None else X.shape[1]
-#
-#         nt = 1
-#         mt = sx*m + sy
-#
-#         self._m = m
-#         self._Xt = np.zeros((nt, mt), dtype=y.dtype)
-#         return self
-#
-#     def transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, fh: int = 0):
-#         assert isinstance(fh, int)
-#         assert y is not None or fh > 0
-#
-#         if y is None:
-#             my = self._yh.shape[1]
-#             y = np.zeros((fh, my), dtype=self._yh.dtype)
-#
-#         # X_pred, y_pred
-#         self._Xp = X
-#         self._yp = y
-#
-#         return y
-#     # end
-#
-#     def fit_transform(self, X: Optional[ndarray] = None, y: Optional[ndarray] = None, fh: int = 0):
-#         return self.fit(X=X, y=y).transform(X=X, y=y, fh=fh)
-#
-#     # -----------------------------------------------------------------------
-#     # Implementation
-#     # -----------------------------------------------------------------------
-#
-#     def _atx(self, index):
-#         return self._Xh[index] if index < 0 else self._Xp[index]
-#
-#     def _aty(self, index):
-#         return self._yh[index] if index < 0 else self._yp[index]
-#
-#     def step(self, i: int):
-#         atx = self._atx
-#         aty = self._aty
-#
-#         slots = self._slots
-#         m = self._m
-#         Xt = self._Xt
-#
-#         if m == 0:
-#             c = 0
-#             for j in reversed(slots.target):
-#                 Xt[0, c] = aty(i - j)
-#                 c += 1
-#         else:
-#             c = 0
-#             for j in reversed(slots.target):
-#                 Xt[0, c] = aty(i - j)
-#                 c += 1
-#             for j in reversed(slots.input):
-#                 Xt[0, c:c + m] = atx(i - j)
-#                 c += m
-#         # end
-#         return Xt
-# # end
 
 
 # ---------------------------------------------------------------------------

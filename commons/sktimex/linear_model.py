@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 import logging
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
@@ -210,7 +211,7 @@ class LinearForecastRegressor(BaseForecaster):
         """:type: np.ndarray, np.ndarray"""
         # n of slots to predict and populate y_pred
         n = int(fh[-1])
-        y_pred: np.ndarray = np.zeros(n)
+        # y_pred: np.ndarray = np.zeros(n)
 
         pt = LinearPredictTransform(xlags=slots.input, ylags=slots.target)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction

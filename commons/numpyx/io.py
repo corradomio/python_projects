@@ -1,8 +1,8 @@
 from typing import Optional
-from typing import Optional
+
+from numpy import asarray
 
 import csvx
-from numpy import asarray
 
 
 # ---------------------------------------------------------------------------
