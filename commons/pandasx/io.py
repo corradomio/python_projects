@@ -1,7 +1,7 @@
 from typing import List
 import pandas as pd
 import arff
-from .base import datetime_encode, onehot_encode, \
+from .base import datetime_encode, onehot_encode, binary_encode, \
     dataframe_index, dataframe_ignore, datetime_reindex, _as_list, \
     unnamed_columns
 from .time import periodic_encode
@@ -62,6 +62,7 @@ def read_arff(file, **args):
     return df
 # end
 
+
 def _parse_dtype(columns, dtype):
     categorical = []
     boolean = []
@@ -77,6 +78,7 @@ def _parse_dtype(columns, dtype):
     return categorical, boolean
 # end
 
+
 def _read_header(file: str, comment="#", sep=",") -> List[str]:
     def trim(s: str) -> str:
         return s.strip(" '\"")
@@ -87,6 +89,7 @@ def _read_header(file: str, comment="#", sep=",") -> List[str]:
         return list(map(trim, line.split(sep)))
     # end
 # end
+
 
 def _pandas_dtype(columns, dtype) -> dict:
     assert len(columns) == len(dtype)
@@ -161,6 +164,7 @@ def read_data(file: str,
               ignore=None,
               ignore_unnamed=False,
               onehot=None,
+              binary=None,
               datetime=None,
               periodic=None,
               count=False,
@@ -173,6 +177,33 @@ def read_data(file: str,
     It uses the correct 'read' function based on the file extensions.
 
     Added support for '.arff' file format
+
+    Note: parameters for '.csv' files:
+
+        sep             str, default ','
+        delimiter       alias for sep
+        header          int, list[int], None, default 'infer'
+        names           array-like, optional
+        index_col       int, str, sequence of int / str, or False, optional, default None
+        usecol          list-like or callable, optional
+        dtype           Type name or dict of column -> type, optional
+        true_values     list, optional
+        false_values    list, optional
+        skipinitialspace    bool, default False
+        skiprows        list-like, int or callable, optional
+        skipfooter      int, default 0
+        nrows           int, optional
+        na_vales        scalar, str, list-like, or dict, optional
+        keep_default_na bool, default True
+        na_filter       bool, default True
+        skip_blank_lines    bool, default True
+        parse_dates     bool or list of int or names or list of lists or dict, default False
+        keep_date_col   bool, default False
+        date_format     str or dict of column -> format, default None
+        dayfirst        bool, default False
+        ...
+
+    for other parameters, see 'pandas.read_csv()' documentation
 
     :param file: file to read
     :param dtype: list of column types. A column type can be:
@@ -218,6 +249,7 @@ def read_data(file: str,
     index = _as_list(index, 'index')
     ignore = _as_list(ignore, 'ignore')
     onehot = _as_list(onehot, 'onehot')
+    binary = _as_list(binary, 'binary')
 
     # move 'na_values' in kwargs
     if na_values is not None:
@@ -243,8 +275,8 @@ def read_data(file: str,
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
         df = pd.read_hdf(file, dtype=dt, **kwargs)
-    # elif file.endswith(".arff"):
-    #     df = read_arff(file, dtype=dt, **kwargs)
+    elif file.endswith(".arff"):
+        df = read_arff(file, dtype=dt, **kwargs)
     elif "://" in file:
         df = read_database(file, dtype=dt, **kwargs)
     else:
@@ -276,6 +308,9 @@ def read_data(file: str,
 
     if len(onehot) > 0:
         df = onehot_encode(df, onehot)
+
+    if len(binary) > 0:
+        df = binary_encode(df, binary)
 
     if len(index) > 0:
         df = dataframe_index(df, index)

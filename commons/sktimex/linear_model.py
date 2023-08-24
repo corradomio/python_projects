@@ -202,7 +202,7 @@ class LinearForecastRegressor(BaseForecaster):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
         # ensure fh relative
-        fh = self._make_fh_relative(fh)
+        fh = fh.to_relative(self.cutoff)
 
         slots = self._slots
 
@@ -211,7 +211,7 @@ class LinearForecastRegressor(BaseForecaster):
         """:type: np.ndarray, np.ndarray"""
         # n of slots to predict and populate y_pred
         n = int(fh[-1])
-        # y_pred: np.ndarray = np.zeros(n)
+        y_pred: np.ndarray = np.zeros(n)
 
         pt = LinearPredictTransform(xlags=slots.input, ylags=slots.target)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
@@ -234,12 +234,12 @@ class LinearForecastRegressor(BaseForecaster):
         # yp = yp.loc[fhp.to_pandas()]
         return yp
 
-    def _make_fh_relative(self, fh: ForecastingHorizon):
-        if fh is None:
-            return None
-        if not fh.is_relative:
-            fh = fh.to_relative(self.cutoff)
-        return fh
+    # def _make_fh_relative(self, fh: ForecastingHorizon):
+    #     if fh is None:
+    #         return None
+    #     if not fh.is_relative:
+    #         fh = fh.to_relative(self.cutoff)
+    #     return fh
 
     # -----------------------------------------------------------------------
     # score (not implemented yet)

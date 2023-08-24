@@ -3,7 +3,8 @@ import pandasx as pdx
 import matplotlib.pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 # from sktime.forecasting.compose import make_reduction, DirRecTabularRegressionForecaster
-from sktimex.forecasting.compose import make_reduction, DirRecTabularRegressionForecaster
+from sktimex.forecasting.compose import make_reduction
+from sktimex.forecasting.compose._reduce import DirRecTabularRegressionForecaster
 from sklearn.linear_model import LinearRegression
 from sktime.utils.plotting import plot_series
 

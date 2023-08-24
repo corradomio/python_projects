@@ -1,11 +1,9 @@
 import logging
 
-import numpy as np
 import pandas as pd
 from numpy import issubdtype, integer, datetime64
 from pandas import DataFrame, Period, PeriodIndex
 
-from .base import dataframe_filter_outliers
 from .time import infer_freq
 
 

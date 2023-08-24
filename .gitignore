@@ -24,4 +24,5 @@ __pycache__
 venv
 lightning_logs
 *.pdf
+*.log
 

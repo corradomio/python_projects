@@ -4,13 +4,26 @@
 #
 import warnings
 from typing import List, Union, Optional
-from stdlib import NoneType, CollectionType
 
 import numpy as np
 import pandas as pd
+from numpy import issubdtype, integer
+
+from stdlib import NoneType, CollectionType
 
 
-def _as_list(l, param="param"):
+# ---------------------------------------------------------------------------
+# _as_list
+# ---------------------------------------------------------------------------
+
+def _as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
+    """
+    Convert parameter 'l' in a list.
+    If 'l' is None, the empty list, if a string, in a singleton list
+    :param l: value to convert
+    :param param: parameter's name, used in the error message
+    :return: a list
+    """
     tl = type(l)
     assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
     return [] if l is None else \
@@ -24,7 +37,46 @@ def _as_list(l, param="param"):
 # datetime_reindex
 # ---------------------------------------------------------------------------
 
-def onehot_encode(df: pd.DataFrame, columns: List[Union[str, int]] = []) -> pd.DataFrame:
+def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) \
+    -> pd.DataFrame:
+    """
+    Encode the columns values as {0,1}, if not already encoded.
+    It is possible to encode only 1 or 2 distinct values.
+    The values are ordered
+
+    :param df: dataframe
+    :param columns: columns to convert
+    :return: the dataframe with the encoded columns
+    """
+    assert isinstance(df, pd.DataFrame)
+    columns = _as_list(columns, 'columns')
+
+    for col in columns:
+        s = df[col]
+        if issubdtype(s.dtype.type, integer):
+            continue
+
+        values = sorted(s.unique())
+        assert len(values) <= 2
+
+        if len(values) == 1 and values[0] in [0, 1]:
+            continue
+        elif values[0] in [0, 1] and values[1] in [0, 1]:
+            continue
+        elif len(values) == 1:
+            v = list(values)[0]
+            map = {v: 0}
+        else:
+            map = {values[0]: 0, values[1]: 1}
+
+        s = s.replace({col: map})
+        df[col] = s
+    # end
+    return df
+# end
+
+
+def onehot_encode(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFrame:
     """
     Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
 

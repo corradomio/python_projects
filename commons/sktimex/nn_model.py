@@ -56,35 +56,10 @@ class EarlyStopping(skorch.callbacks.EarlyStopping):
 
 
 # ---------------------------------------------------------------------------
-# SimpleRNNForecaster
+# SimpleNNForecaster
 # ---------------------------------------------------------------------------
-#
-# nnx.LSTM
-#   input_size      this depends on lagx, |X[0]| and |y[0]|
-#   hidden_size     2*input_size
-#   output_size=1
-#   num_layers=1
-#   bias=True
-#   batch_first=True
-#   dropout=0
-#   bidirectional=False
-#   proj_size =0
-#
-# Note: the neural netword can be created ONLY during 'fit', because the NN structure
-# depends on the configuration AND X, y dimensions/ranks
-#
 
-RNN_FLAVOURS = {
-    'lstm': nnx.LSTM,
-    'gru': nnx.GRU,
-    'rnn': nnx.RNN,
-    'LSTM': nnx.LSTM,
-    'GRU': nnx.GRU,
-    'RNN': nnx.RNN
-}
-
-
-class SimpleRNNForecaster(BaseForecaster):
+class SimpleNNForecaster(BaseForecaster):
     _tags = {
         # to list all valid tags with description, use sktime.registry.all_tags
         #   all_tags(estimator_types="forecaster", as_dataframe=True)
@@ -125,6 +100,137 @@ class SimpleRNNForecaster(BaseForecaster):
         # valid values: boolean True (yes), False (no)
         # if True, raises exception in fit if fh has not been passed
     }
+
+    def __init__(self, *,
+                 lags: Union[int, list, tuple, dict] = (0, 1),
+                 current: Optional[bool] = None,
+                 y_only: bool = False,
+                 periodic: Union[None, str, tuple] = None,
+                 scale: bool = True,
+                 steps: int = 1,
+
+                 # --
+
+                 criterion=None,
+                 optimizer=None,
+                 lr=0.01,
+
+                 batch_size: int = 16,
+                 max_epochs: int = 300,
+                 callbacks=None,
+                 patience=20,
+                 **kwargs):
+
+        super().__init__()
+
+        self._optimizer = criterion
+        self._criterion = optimizer
+        self._callbacks = callbacks
+
+        self._lags = lags
+        self._current = current
+        self._y_only = y_only
+        self._periodic = periodic
+        self._scale = scale
+        self._steps = steps
+
+        #
+        # skorch.NeuralNetRegressor configuration parameters
+        #
+
+        self._skt_args = {} | kwargs
+        self._skt_args["criterion"] = criterion  # replace!
+        self._skt_args["optimizer"] = optimizer  # replace!
+        self._skt_args["lr"] = lr
+        self._skt_args["batch_size"] = batch_size
+        self._skt_args["max_epochs"] = max_epochs
+        self._skt_args["callbacks"] = callbacks  # replace!
+
+        #
+        #
+        #
+
+        self._slots = resolve_lag(lags, current)
+        self._x_scaler = MinMaxScaler()
+        self._y_scaler = MinMaxScaler()
+        self._model = None
+
+        # index
+        self.Xh = None
+        self.yh = None
+    # end
+
+
+# ---------------------------------------------------------------------------
+# SimpleRNNForecaster
+# ---------------------------------------------------------------------------
+#
+# nnx.LSTM
+#   input_size      this depends on lagx, |X[0]| and |y[0]|
+#   hidden_size     2*input_size
+#   output_size=1
+#   num_layers=1
+#   bias=True
+#   batch_first=True
+#   dropout=0
+#   bidirectional=False
+#   proj_size =0
+#
+# Note: the neural netword can be created ONLY during 'fit', because the NN structure
+# depends on the configuration AND X, y dimensions/ranks
+#
+
+RNN_FLAVOURS = {
+    'lstm': nnx.LSTM,
+    'gru': nnx.GRU,
+    'rnn': nnx.RNN,
+    'LSTM': nnx.LSTM,
+    'GRU': nnx.GRU,
+    'RNN': nnx.RNN
+}
+
+
+class SimpleRNNForecaster(SimpleNNForecaster):
+    # _tags = {
+    #     # to list all valid tags with description, use sktime.registry.all_tags
+    #     #   all_tags(estimator_types="forecaster", as_dataframe=True)
+    #     #
+    #     # behavioural tags: internal type
+    #     # -------------------------------
+    #     #
+    #     # y_inner_mtype, X_inner_mtype control which format X/y appears in
+    #     # in the inner functions _fit, _predict, etc
+    #     "y_inner_mtype": "pd.Series",
+    #     "X_inner_mtype": "pd.DataFrame",
+    #     # valid values: str and list of str
+    #     # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
+    #     #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
+    #     #   in that case, all inputs are converted to that one type
+    #     # if list of str, must be a list of valid str specifiers
+    #     #   in that case, X/y are passed through without conversion if on the list
+    #     #   if not on the list, converted to the first entry of the same scitype
+    #     #
+    #     # scitype:y controls whether internal y can be univariate/multivariate
+    #     # if multivariate is not valid, applies vectorization over variables
+    #     "scitype:y": "univariate",
+    #     # valid values: "univariate", "multivariate", "both"
+    #     #   "univariate": inner _fit, _predict, etc, receive only univariate series
+    #     #   "multivariate": inner methods receive only series with 2 or more variables
+    #     #   "both": inner methods can see series with any number of variables
+    #     #
+    #     # capability tags: properties of the estimator
+    #     # --------------------------------------------
+    #     #
+    #     # ignores-exogeneous-X = does estimator ignore the exogeneous X?
+    #     "ignores-exogeneous-X": False,
+    #     # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
+    #     # CAVEAT: if tag is set to True, inner methods always see X=None
+    #     #
+    #     # requires-fh-in-fit = is forecasting horizon always required in fit?
+    #     "requires-fh-in-fit": False,
+    #     # valid values: boolean True (yes), False (no)
+    #     # if True, raises exception in fit if fh has not been passed
+    # }
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -177,7 +283,20 @@ class SimpleRNNForecaster(BaseForecaster):
         :param dropout: if to apply a dropout
         :param kwargs: other parameters
         """
-        super().__init__()
+        super().__init__(
+            lags=lags,
+            current=current,
+            y_only=y_only,
+            periodic=periodic,
+            scale=scale,
+            steps=steps,
+            criterion=criterion,
+            optimizer=optimizer,
+            lr=lr,
+            batch_size=batch_size,
+            max_epochs=max_epochs,
+            callbacks=callbacks
+        )
 
         self._optimizer = optimizer
         self._criterion = criterion
@@ -239,8 +358,6 @@ class SimpleRNNForecaster(BaseForecaster):
         # index
         self.Xh = None
         self.yh = None
-
-        # self._scores = None
     # end
 
     # -----------------------------------------------------------------------
@@ -455,18 +572,33 @@ class SimpleRNNForecaster(BaseForecaster):
         if not self._scale:
             return Xs, ys
 
-        if ys is not None:
-            Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
-            ys = self._y_scaler.fit_transform(ys).astype(np.float32)
-            # y is NOT None in TRAINING
-            self.Xh = Xs
-            self.yh = ys
-        else:
-            Xs = self._x_scaler.transform(Xs).astype(np.float32)
-            ys = None
-            # y is None IN PREDICTION
+        Xs = self._scale_x(Xs)
+        ys = self._scale_y(ys)
+
+        # if ys is not None:
+        #     Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
+        #     ys = self._y_scaler.fit_transform(ys).astype(np.float32)
+        #     # y is NOT None in TRAINING
+        #     self.Xh = Xs
+        #     self.yh = ys
+        # else:
+        #     Xs = self._x_scaler.transform(Xs).astype(np.float32)
+        #     ys = None
+        #     # y is None IN PREDICTION
 
         return Xs, ys
+
+    def _scale_y(self, ys):
+        if ys is not None:
+            ys = self._y_scaler.fit_transform(ys).astype(np.float32)
+            self.yh = ys
+        return ys
+
+    def _scale_x(self, Xs):
+        if Xs is not None and Xs.shape[1] > 0:
+            Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
+            self.Xh = Xs
+        return Xs
 
     def _compute_input_output_sizes(self):
         xlags = self._slots.input
@@ -549,47 +681,47 @@ class SimpleRNNForecaster(BaseForecaster):
 # SimpleCNNForecaster
 # ---------------------------------------------------------------------------
 
-class SimpleCNNForecaster(BaseForecaster):
-    _tags = {
-        # to list all valid tags with description, use sktime.registry.all_tags
-        #   all_tags(estimator_types="forecaster", as_dataframe=True)
-        #
-        # behavioural tags: internal type
-        # -------------------------------
-        #
-        # y_inner_mtype, X_inner_mtype control which format X/y appears in
-        # in the inner functions _fit, _predict, etc
-        "y_inner_mtype": "pd.Series",
-        "X_inner_mtype": "pd.DataFrame",
-        # valid values: str and list of str
-        # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
-        #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
-        #   in that case, all inputs are converted to that one type
-        # if list of str, must be a list of valid str specifiers
-        #   in that case, X/y are passed through without conversion if on the list
-        #   if not on the list, converted to the first entry of the same scitype
-        #
-        # scitype:y controls whether internal y can be univariate/multivariate
-        # if multivariate is not valid, applies vectorization over variables
-        "scitype:y": "univariate",
-        # valid values: "univariate", "multivariate", "both"
-        #   "univariate": inner _fit, _predict, etc, receive only univariate series
-        #   "multivariate": inner methods receive only series with 2 or more variables
-        #   "both": inner methods can see series with any number of variables
-        #
-        # capability tags: properties of the estimator
-        # --------------------------------------------
-        #
-        # ignores-exogeneous-X = does estimator ignore the exogeneous X?
-        "ignores-exogeneous-X": False,
-        # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
-        # CAVEAT: if tag is set to True, inner methods always see X=None
-        #
-        # requires-fh-in-fit = is forecasting horizon always required in fit?
-        "requires-fh-in-fit": False,
-        # valid values: boolean True (yes), False (no)
-        # if True, raises exception in fit if fh has not been passed
-    }
+class SimpleCNNForecaster(SimpleNNForecaster):
+    # _tags = {
+    #     # to list all valid tags with description, use sktime.registry.all_tags
+    #     #   all_tags(estimator_types="forecaster", as_dataframe=True)
+    #     #
+    #     # behavioural tags: internal type
+    #     # -------------------------------
+    #     #
+    #     # y_inner_mtype, X_inner_mtype control which format X/y appears in
+    #     # in the inner functions _fit, _predict, etc
+    #     "y_inner_mtype": "pd.Series",
+    #     "X_inner_mtype": "pd.DataFrame",
+    #     # valid values: str and list of str
+    #     # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
+    #     #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
+    #     #   in that case, all inputs are converted to that one type
+    #     # if list of str, must be a list of valid str specifiers
+    #     #   in that case, X/y are passed through without conversion if on the list
+    #     #   if not on the list, converted to the first entry of the same scitype
+    #     #
+    #     # scitype:y controls whether internal y can be univariate/multivariate
+    #     # if multivariate is not valid, applies vectorization over variables
+    #     "scitype:y": "univariate",
+    #     # valid values: "univariate", "multivariate", "both"
+    #     #   "univariate": inner _fit, _predict, etc, receive only univariate series
+    #     #   "multivariate": inner methods receive only series with 2 or more variables
+    #     #   "both": inner methods can see series with any number of variables
+    #     #
+    #     # capability tags: properties of the estimator
+    #     # --------------------------------------------
+    #     #
+    #     # ignores-exogeneous-X = does estimator ignore the exogeneous X?
+    #     "ignores-exogeneous-X": False,
+    #     # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
+    #     # CAVEAT: if tag is set to True, inner methods always see X=None
+    #     #
+    #     # requires-fh-in-fit = is forecasting horizon always required in fit?
+    #     "requires-fh-in-fit": False,
+    #     # valid values: boolean True (yes), False (no)
+    #     # if True, raises exception in fit if fh has not been passed
+    # }
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -644,7 +776,20 @@ class SimpleCNNForecaster(BaseForecaster):
         :param dropout: if to apply a dropout
         :param kwargs: other parameters
         """
-        super().__init__()
+        super().__init__(
+            lags=lags,
+            current=current,
+            y_only=y_only,
+            periodic=periodic,
+            scale=scale,
+            steps=steps,
+            criterion=criterion,
+            optimizer=optimizer,
+            lr=lr,
+            batch_size=batch_size,
+            max_epochs=max_epochs,
+            callbacks=callbacks
+        )
 
         self._optimizer = optimizer
         self._criterion = criterion
@@ -669,13 +814,13 @@ class SimpleCNNForecaster(BaseForecaster):
         self._y_only = y_only
         self._periodic = periodic
         self._scale = scale
-        self._flavour = flavour
+        self._steps = steps
 
         #
         # torchx.nn.LSTM configuration parameters
         #
+        self._flavour = flavour
         self._hidden_size = hidden_size
-        self._steps = steps
 
         self._cnn_args = {}
         self._cnn_args['steps'] = steps
@@ -698,6 +843,10 @@ class SimpleCNNForecaster(BaseForecaster):
         self._skt_args["max_epochs"] = max_epochs
         self._skt_args["callbacks"] = callbacks     # replace!
 
+        #
+        #
+        #
+
         self._slots =  resolve_lag(lags, current)
         self._x_scaler = MinMaxScaler()
         self._y_scaler = MinMaxScaler()
@@ -706,8 +855,6 @@ class SimpleCNNForecaster(BaseForecaster):
         # index
         self.Xh = None
         self.yh = None
-
-        # self._scores = None
     # end
 
     # -----------------------------------------------------------------------
@@ -930,18 +1077,33 @@ class SimpleCNNForecaster(BaseForecaster):
         if not self._scale:
             return Xs, ys
 
-        if ys is not None:
-            Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
-            ys = self._y_scaler.fit_transform(ys).astype(np.float32)
-            # y is NOT None in TRAINING
-            self.Xh = Xs
-            self.yh = ys
-        else:
-            Xs = self._x_scaler.transform(Xs).astype(np.float32)
-            ys = None
-            # y is None IN PREDICTION
+        Xs = self._scale_x(Xs)
+        ys = self._scale_y(ys)
+
+        # if ys is not None:
+        #     Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
+        #     ys = self._y_scaler.fit_transform(ys).astype(np.float32)
+        #     # y is NOT None in TRAINING
+        #     self.Xh = Xs
+        #     self.yh = ys
+        # else:
+        #     Xs = self._x_scaler.transform(Xs).astype(np.float32)
+        #     ys = None
+        #     # y is None IN PREDICTION
 
         return Xs, ys
+
+    def _scale_y(self, ys):
+        if ys is not None:
+            ys = self._y_scaler.fit_transform(ys).astype(np.float32)
+            self.yh = ys
+        return ys
+
+    def _scale_x(self, Xs):
+        if Xs is not None and Xs.shape[1] > 0:
+            Xs = self._x_scaler.fit_transform(Xs).astype(np.float32)
+            self.Xh = Xs
+        return Xs
 
     def _compute_input_output_sizes(self):
         xlags = self._slots.input
