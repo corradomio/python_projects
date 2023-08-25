@@ -1,30 +1,15 @@
-class Tokenizer(object):
-    """The root class for tokenizers.
+class Tokenizer:
 
-    Args:
-        return_set (boolean): A flag to indicate whether to return a set of
-                              tokens instead of a bag of tokens (defaults to False). 
-                              
-    Attributes: 
-        return_set (boolean): An attribute to store the flag return_set. 
-    """
-    
-    def __init__(self, return_set=False):
-        self.return_set = return_set
+    def __init__(self, unique=False):
+        self.unique = unique
 
-    def get_return_set(self):
-        """Gets the value of the return_set flag.
+    def tokenize(self, s: str) -> list[str]:
+        ...
 
-        Returns:
-            The boolean value of the return_set flag. 
-        """
-        return self.return_set
-
-    def set_return_set(self, return_set):
-        """Sets the value of the return_set flag.
-
-        Args:
-            return_set (boolean): a flag to indicate whether to return a set of tokens instead of a bag of tokens.
-        """
-        self.return_set = return_set
-        return True
+    def _as_set(self, parts):
+        if self.unique:
+            parts = list(set(parts))
+        else:
+            # parts = sorted(parts)
+            pass
+        return parts
