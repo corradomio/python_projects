@@ -1,6 +1,3 @@
-from builtins import set
-
-
 class bag(object):
     """
     bag() -> new empty bag object
