@@ -43,9 +43,7 @@ class bag(object):
     def get(self, e):
         return self._bag.get(e, 0)
 
-    def count(self, e=None):
-        if e is not None:
-            return self._bag.get(e)
+    def count(self):
         c = 0
         for e in self._bag:
             c += self._bag[e]
@@ -118,12 +116,7 @@ class bag(object):
 
     def issuperbag(self, other):  
         """ Report whether this bag contains another bag. """
-        for e in self._bag:
-            if e not in other:
-                return False
-            if self._bag[e] < other.get(e):
-                return False
-        return True
+        return other.issubbag(self)
 
     def issamebag(self, other):
         if len(self) != len(other):
@@ -231,14 +224,17 @@ class bag(object):
     def __iand__(self, other):  
         """ Return self&=value. """
         self.intersection_update(other)
+        return self
 
     def __ior__(self, other):  
         """ Return self|=value. """
         self.update(other)
+        return self
 
     def __isub__(self, other):  
         """ Return self-=value. """
         self.difference_update(other)
+        return self
 
     def __iter__(self):  
         """ Implement iter(self). """
