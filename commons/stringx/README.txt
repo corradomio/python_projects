@@ -58,3 +58,36 @@ ShingleBased:I
     OverlapCoefficient
     SorensenDice
     QGram
+
+
+py-stringmatching
+-----------------
+
+    https://pypi.org/project/py-stringmatching/
+
+    affine
+    bag_distance
+    cosine
+    dice
+    editx
+    generalized jaccard
+    hamming
+    hybrid similarity measure
+    jaccard
+    jaro
+    jaro winkler
+    levenshtein
+    monge elkan
+    needleman wunsch
+    overlap coefficient
+    partial ratio
+    partial token sort
+    phonetic similarity measure
+    similarity measure
+    wmith waterman
+    soft tfidf
+    soundex
+    tfidf
+    token similarity measure
+    token sort
+    tversky index

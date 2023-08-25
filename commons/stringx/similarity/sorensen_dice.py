@@ -37,6 +37,7 @@ class SorensenDice(ShingleBased, NormalizedStringDistance, NormalizedStringSimil
 
         if s0 == s1:
             return 1.0
+
         union = set()
         profile0, profile1 = self.get_profile(s0), self.get_profile(s1)
         for k in profile0.keys():

@@ -27,8 +27,7 @@ class Damerau(MetricStringDistance):
     def distance(self, s0, s1):
         check_params(s0, s1)
 
-        if s0 == s1:
-            return 0
+        if s0 == s1: return 0
 
         inf = int(len(s0) + len(s1))
         da = dict()

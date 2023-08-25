@@ -38,6 +38,7 @@ class JaroWinkler(NormalizedStringSimilarity, NormalizedStringDistance):
 
         if s0 == s1:
             return 1.0
+
         mtp = self.matches(s0, s1)
         m = mtp[0]
         if m == 0:

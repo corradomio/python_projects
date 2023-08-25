@@ -86,7 +86,7 @@ class bag(object):
         i = bag()
         for e in self._bag:
             if e in other:
-                i.add(e, min(self._bag[e], other.get(e)))
+            i.add(e, min(self._bag[e], other.get(e)))
         return i
 
     def intersection_update(self, other):  
@@ -100,7 +100,7 @@ class bag(object):
         for e in self._bag:
             if e in other:
                 return False
-        return True
+        return  True
 
     def issubbag(self, other):  
         """ Report whether another bag contains this bag. """
@@ -180,8 +180,15 @@ class bag(object):
 
     def update(self, other):  
         """ Update a bag with the union of itself and others. """
+        if isinstance(other, bag):
         for e in other:
             self.add(e, count=other.get(e))
+        else:
+            for e in other:
+                self.add(e)
+
+    def keys(self):
+        return self._bag.keys()
 
     def __and__(self, other):  
         """ Return self&value. """
@@ -300,3 +307,63 @@ class bag(object):
 
     def __hash__(self):
         return hash(self._bag)
+
+    # --------------------------------------------------
+    # operations
+    #
+    # __add__   bag + b
+    # __radd__  b + bag
+    # __iadd__  bag += b
+    #
+
+    def __add__(self, other):
+        that = bag(self)
+        if isinstance(other, (int, float)):
+            v = other
+            for e in self._bag:
+                that._bag[e] += v
+        elif isinstance(other, bag):
+            for e in self._bag:
+                that._bag[e] += other.get(e)
+        else:
+            raise ValueError()
+        return that
+
+    def __radd__(self, other):
+        that = bag(self)
+        if isinstance(other, (int, float)):
+            v = other
+            for e in self._bag:
+                that._bag[e] += v
+        elif isinstance(other, bag):
+            for e in self._bag:
+                that._bag[e] += other.get(e)
+        else:
+            raise ValueError()
+        return that
+
+    def __mul__(self, other):
+        that = bag(self)
+        if isinstance(other, (int, float)):
+            v = other
+            for e in self._bag:
+                that._bag[e] *= v
+        elif isinstance(other, bag):
+            for e in self._bag:
+                that._bag[e] *= other.get(e)
+        else:
+            raise ValueError()
+        return that
+
+    def __rmul__(self, other):
+        that = bag(self)
+        if isinstance(other, (int, float)):
+            v = other
+            for e in self._bag:
+                that._bag[e] *= v
+        elif isinstance(other, bag):
+            for e in self._bag:
+                that._bag[e] *= other.get(e)
+        else:
+            raise ValueError()
+        return that

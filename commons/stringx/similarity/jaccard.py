@@ -34,14 +34,17 @@ class Jaccard(ShingleBased, MetricStringDistance, NormalizedStringDistance, Norm
 
     def similarity(self, s0, s1):
         check_params(s0, s1)
+        k = self.get_k()
 
         if s0 == s1:
             return 1.0
-        if len(s0) < self.get_k() or len(s1) < self.get_k():
+        if len(s0) < k or len(s1) < k:
             return 0.0
+
         profile0 = self.get_profile(s0)
         profile1 = self.get_profile(s1)
         union = set()
+
         for ite in profile0.keys():
             union.add(ite)
         for ite in profile1.keys():

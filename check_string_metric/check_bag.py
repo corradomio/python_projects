@@ -294,3 +294,10 @@ def test_remove():
 
     assert len(b1) == 2
     assert b1.get('c') == 0
+
+
+def test_multiply():
+    b1 = bag('ciccio')
+    b2 = 2 + b1
+    b3 = b1 + 2
+    b1 += 2

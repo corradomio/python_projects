@@ -37,6 +37,12 @@ from .weighted_levenshtein import WeightedLevenshtein
 from .sift4 import SIFT4Options, SIFT4
 
 from .hamming import Hamming
+from .affine_gap import AffineGap
+from .needleman_wunsch import NeedlemanWunsch
+from .wagner_fischer import WagnerFischer
+from .smith_waterman import SmithWaterman
+from .tfidf import TfIdf
+
 
 __name__ = 'strsimpy'
-__version__ = '0.2.1'
+__version__ = '0.3.0'

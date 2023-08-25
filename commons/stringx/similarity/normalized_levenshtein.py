@@ -34,6 +34,7 @@ class NormalizedLevenshtein(NormalizedStringDistance, NormalizedStringSimilarity
 
         if s0 == s1:
             return 0.0
+
         m_len = max(len(s0), len(s1))
         if m_len == 0:
             return 0.0

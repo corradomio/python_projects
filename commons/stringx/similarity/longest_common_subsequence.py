@@ -28,6 +28,7 @@ class LongestCommonSubsequence(StringDistance):
 
         if s0 == s1:
             return 0.0
+
         return len(s0) + len(s1) - 2 * self.length(s0, s1)
 
     @staticmethod

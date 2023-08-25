@@ -35,3 +35,10 @@ class MetricStringDistance(StringDistance):
 
     def distance(self, s0, s1):
         raise NotImplementedError()
+
+
+class GapBasedDistance(StringDistance):
+
+    def distance(self, s0, s1):
+        raise NotImplementedError()
+
