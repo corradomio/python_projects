@@ -1,22 +1,25 @@
+from builtins import set
+
+
 class bag(object):
     """
     bag() -> new empty bag object
     bag(iterable) -> new bag object
 
-    Build an unordered collection of unique elements.
+    Build a counted collection of unique elements.
     """
 
     def __init__(self, seq=()):
         self._bag = dict()
 
-        if isinstance(seq, dict):
+        if isinstance(seq, bag):
             for e in seq:
-                self.add(e, count=seq[e])
+                self.add(e, count=seq.get(e))
         else:
             for e in seq:
                 self.add(e, count=1)
 
-    def add(self, e, count=1):  # real signature unknown
+    def add(self, e, count=1):  
         """
         Add an element to a bag.
 
@@ -29,27 +32,26 @@ class bag(object):
         else:
             self._bag[e] = count
 
+    def clear(self):  
+        """ Remove all elements from this bag. """
+        self._bag.clear()
 
-    # def clear(self, *args, **kwargs):  # real signature unknown
-    #     """ Remove all elements from this bag. """
-    #     pass
-
-    def copy(self):  # real signature unknown
+    def copy(self):  
         """ Return a shallow copy of a bag. """
         return bag(self)
 
-    def get(self, e, defval=0):
-        return self._bag.get(e, defval)
+    def get(self, e):
+        return self._bag.get(e, 0)
 
     def count(self, e=None):
         if e is not None:
-            return  self._bag.get(e, 0)
+            return self._bag.get(e)
         c = 0
         for e in self._bag:
-            c += self.count(e)
+            c += self._bag[e]
         return c
 
-    def difference(self, other):  # real signature unknown
+    def difference(self, other):  
         """
         Return the difference of two or more bags as a new bag.
 
@@ -57,17 +59,17 @@ class bag(object):
         """
         diff = bag()
         for e in self._bag:
-            diff.add(e, count=self.count(e))
+            diff.add(e, count=self._bag[e])
         for e in other:
-            diff.discard(e, count=other.count(e))
+            diff.discard(e, count=other.get(e))
         return diff
 
-    def difference_update(self, other):  # real signature unknown
+    def difference_update(self, other):  
         """ Remove all elements of another bag from this bag. """
         for e in other:
-            self.discard(e, count=other.count(e))
+            self.discard(e, count=other.get(e))
 
-    def discard(self, e, count=1):  # real signature unknown
+    def discard(self, e, count=1):  
         """
         Remove an element from a bag if it is a member.
 
@@ -75,12 +77,12 @@ class bag(object):
         """
         if e not in self._bag:
             pass
-        elif count >= self.count(e):
+        elif count >= self._bag[e]:
             del self._bag[e]
         else:
-            self._bag[e] = self.count(e) - count
+            self._bag[e] -= count
 
-    def intersection(self, other):  # real signature unknown
+    def intersection(self, other):  
         """
         Return the intersection of two bags as a new bag.
 
@@ -88,49 +90,52 @@ class bag(object):
         """
         i = bag()
         for e in self._bag:
-            count = min(self.count(e), other.get(e, 0))
-            i.add(e, count)
+            if e in other:
+                i.add(e, min(self._bag[e], other.get(e)))
         return i
 
-    def intersection_update(self, other):  # real signature unknown
+    def intersection_update(self, other):  
         """ Update a bag with the intersection of itself and another. """
-        for e in other:
-            self.discard(e, other.count(e))
+        i = self.intersection(other)
+        self.clear()
+        self.update(i)
 
-    def isdisjoint(self, other):  # real signature unknown
+    def isdisjoint(self, other):  
         """ Return True if two bags have a null intersection. """
         for e in self._bag:
             if e in other:
                 return False
-        return  True
+        return True
 
-    def issubbag(self, other):  # real signature unknown
+    def issubbag(self, other):  
         """ Report whether another bag contains this bag. """
         for e in self._bag:
             if e not in other:
                 return  False
-            if self.count(e) > other.count(e):
+            if self._bag[e] > other.get(e):
                 return False
         return True
 
-    def issuperbag(self, other):  # real signature unknown
+    def issuperbag(self, other):  
         """ Report whether this bag contains another bag. """
         for e in self._bag:
             if e not in other:
                 return False
-            if self.count(e) < other.count(e):
+            if self._bag[e] < other.get(e):
                 return False
         return True
 
     def issamebag(self, other):
+        if len(self) != len(other):
+            return False
         for e in self._bag:
             if e not in other:
                 return False
-            if self.count(e) != other.count(e):
+            if self._bag[e] != other.get(e):
                 return False
         return True
 
-    def pop(self):  # real signature unknown
+    def pop(self):  
         """
         Remove and return an arbitrary bag element.
         Raises KeyError if the bag is empty.
@@ -138,9 +143,9 @@ class bag(object):
         for e in self._bag:
             del self._bag[e]
             return e
-        raise KeyError("empty")
+        raise KeyError("pop from an empty bag")
 
-    def remove(self, e, count=1):  # real signature unknown
+    def remove(self, e, count=1):  
         """
         Remove an element from a bag; it must be a member.
 
@@ -148,9 +153,10 @@ class bag(object):
         """
         if e not in self._bag:
             raise KeyError(e)
-        self.discard(e, count=count)
+        else:
+            self.discard(e, count=count)
 
-    def symmetric_difference(self, other):  # real signature unknown
+    def symmetric_difference(self, other):  
         """
         Return the symmetric difference of two bags as a new bag.
 
@@ -158,18 +164,18 @@ class bag(object):
         """
         sd = bag()
         for e in self._bag:
-            sd.add(e, self.count(e)-other.get(e, 0))
+            sd.add(e, self.get(e) - other.get(e))
         for e in other:
-            sd.add(e, other.count(e) - self.get(e, 0))
+            sd.add(e, other.get(e) - self.get(e))
         return sd
 
-    def symmetric_difference_update(self, other):  # real signature unknown
+    def symmetric_difference_update(self, other):  
         """ Update a bag with the symmetric difference of itself and another. """
         sdiff = self.symmetric_difference(other)
         self.clear()
-        self.union(sdiff)
+        self.update(sdiff)
 
-    def union(self, other):  # real signature unknown
+    def union(self, other):  
         """
         Return the union of bags as a new bag.
 
@@ -177,145 +183,127 @@ class bag(object):
         """
         u = bag()
         for e in self._bag:
-            u.add(e, count=self.count(e))
-
-        if isinstance(other, bag):
-            for e in other:
-                u.add(e, count=other.count(e))
-        else:
-            for e in other:
-                u.add(e)
+            u.add(e, count=self.get(e))
+        for e in other:
+            u.add(e, count=other.get(e))
         return u
 
-    def update(self, other):  # real signature unknown
+    def update(self, other):  
         """ Update a bag with the union of itself and others. """
-        if isinstance(other, bag):
-            for e in other:
-                self.add(e, count=other.count(e))
-        else:
-            for e in other:
-                self.add(e)
+        for e in other:
+            self.add(e, count=other.get(e))
 
-    def __and__(self, other):  # real signature unknown
+    def __and__(self, other):  
         """ Return self&value. """
         return self.intersection(other)
 
-    # def __class_getitem__(self, *args, **kwargs):  # real signature unknown
+    def __rand__(self, other):
+        """ Return value&self. """
+        return self.intersection(other)
+
+    # def __class_getitem__(self, *args, **kwargs):  
     #     """ See PEP 585 """
     #     pass
 
     def __getitem__(self, e):
         return self._bag[e]
 
-    def __contains__(self, e):  # real signature unknown; restored from __doc__
+    def __contains__(self, e):
         """ x.__contains__(e) <==> e in x. """
         return e in self._bag
 
-    def __eq__(self, other):  # real signature unknown
+    def __eq__(self, other):  
         """ Return self==value. """
         return self.issamebag(other)
 
-    # def __getattribute__(self, *args, **kwargs):  # real signature unknown
+    # def __getattribute__(self, *args, **kwargs):  
     #     """ Return getattr(self, name). """
     #     pass
 
-    def __ge__(self, other):  # real signature unknown
+    def __ge__(self, other):  
         """ Return self>=value. """
         return self.issuperbag(other)
 
-    def __gt__(self, other):  # real signature unknown
+    def __gt__(self, other):  
         """ Return self>value. """
         return self.issuperbag(other) and not self.issamebag(other)
 
-    def __iand__(self, other):  # real signature unknown
+    def __iand__(self, other):  
         """ Return self&=value. """
         self.intersection_update(other)
 
-    # def __init__(self, seq=()):  # known special case of bag.__init__
-    #     """
-    #     bag() -> new empty bag object
-    #     bag(iterable) -> new bag object
-    #
-    #     Build an unordered collection of unique elements.
-    #     # (copied from class doc)
-    #     """
-    #     pass
-
-    def __ior__(self, other):  # real signature unknown
+    def __ior__(self, other):  
         """ Return self|=value. """
         self.update(other)
 
-    def __isub__(self, other):  # real signature unknown
+    def __isub__(self, other):  
         """ Return self-=value. """
         self.difference_update(other)
 
-    def __iter__(self):  # real signature unknown
+    def __iter__(self):  
         """ Implement iter(self). """
         return self._bag.__iter__()
 
-    def __ixor__(self, *args, **kwargs):  # real signature unknown
-        """ Return self^=value. """
-        pass
+    # def __ixor__(self, *args, **kwargs):
+    #     """ Return self^=value. """
+    #     pass
 
-    def __len__(self, *args, **kwargs):  # real signature unknown
+    def __len__(self, *args, **kwargs):  
         """ Return len(self). """
         return self._bag.__len__()
 
-    def __le__(self, other):  # real signature unknown
+    def __le__(self, other):  
         """ Return self<=value. """
         return self.issubbag(other)
 
-    def __lt__(self, *args, **kwargs):  # real signature unknown
+    def __lt__(self, other):
         """ Return self<value. """
         return self.issubbag(other) and not self.issamebag(other)
 
     # @staticmethod  # known case of __new__
-    # def __new__(*args, **kwargs):  # real signature unknown
+    # def __new__(*args, **kwargs):  
     #     """ Create and return a new object.  See help(type) for accurate signature. """
     #     pass
 
-    def __ne__(self, other):  # real signature unknown
+    def __ne__(self, other):  
         """ Return self!=value. """
         return not self.issamebag(other)
 
-    def __or__(self, other):  # real signature unknown
+    def __or__(self, other):  
         """ Return self|value. """
         return self.union(other)
 
-    def __rand__(self, other):  # real signature unknown
-        """ Return value&self. """
-        return self.intersection(other)
-
-    # def __reduce__(self, *args, **kwargs):  # real signature unknown
-    #     """ Return state information for pickling. """
-    #     pass
-
-    def __repr__(self):  # real signature unknown
-        """ Return repr(self). """
-        return self._bag.__repr__()
-
-    def __ror__(self, other):  # real signature unknown
+    def __ror__(self, other):
         """ Return value|self. """
         return self.union(other)
 
-    def __rsub__(self, other):  # real signature unknown
-        """ Return value-self. """
-        return  other.difference(self)
-
-    # def __rxor__(self, *args, **kwargs):  # real signature unknown
-    #     """ Return value^self. """
+    # def __reduce__(self, *args, **kwargs):  
+    #     """ Return state information for pickling. """
     #     pass
 
-    # def __sizeof__(self):  # real signature unknown; restored from __doc__
-    #     """ S.__sizeof__() -> size of S in memory, in bytes """
-    #     pass
+    def __repr__(self):  
+        """ Return repr(self). """
+        return self._bag.__repr__()
 
-    def __sub__(self, other):  # real signature unknown
+    def __sub__(self, other):
         """ Return self-value. """
         return self.difference(other)
 
-    # def __xor__(self, *args, **kwargs):  # real signature unknown
+    def __rsub__(self, other):
+        """ Return value-self. """
+        return other.difference(self)
+
+    # def __rxor__(self, *args, **kwargs):  
+    #     """ Return value^self. """
+    #     pass
+
+    # def __sizeof__(self):  ; restored from __doc__
+    #     """ S.__sizeof__() -> size of S in memory, in bytes """
+    #     pass
+
+    # def __xor__(self, *args, **kwargs):  
     #     """ Return self^value. """
     #     pass
 
-    __hash__ = None
+    def __hash__(self):
+        return hash(self._bag)
