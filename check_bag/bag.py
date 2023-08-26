@@ -1,87 +1,40 @@
 from builtins import dict
 
 
-# class set(object):
-#     def add(self, *args, **kwargs):
-#     def clear(self, *args, **kwargs):
-#     def copy(self, *args, **kwargs):
-#     def difference(self, *args, **kwargs):
-#     def difference_update(self, *args, **kwargs):
-#     def discard(self, *args, **kwargs):
-#     def intersection(self, *args, **kwargs):
-#     def intersection_update(self, *args, **kwargs):
-#     def isdisjoint(self, *args, **kwargs):
-#     def issubset(self, *args, **kwargs):
-#     def issuperset(self, *args, **kwargs):
-#     def pop(self, *args, **kwargs):
-#     def remove(self, *args, **kwargs):
-#     def symmetric_difference(self, *args, **kwargs):
-#     def symmetric_difference_update(self, *args, **kwargs):
-#     def union(self, *args, **kwargs):
-#     def update(self, *args, **kwargs):
-#
-#     def __and__(self, *args, **kwargs):
-#     def __class_getitem__(self, *args, **kwargs):
-#     def __contains__(self, y):
-#     def __eq__(self, *args, **kwargs):
-#     def __getattribute__(self, *args, **kwargs):
-#     def __ge__(self, *args, **kwargs):
-#     def __gt__(self, *args, **kwargs):
-#     def __iand__(self, *args, **kwargs):
-#     def __init__(self, seq=()):
-#     def __ior__(self, *args, **kwargs):
-#     def __isub__(self, *args, **kwargs):
-#     def __iter__(self, *args, **kwargs):
-#     def __ixor__(self, *args, **kwargs):
-#     def __len__(self, *args, **kwargs):
-#     def __le__(self, *args, **kwargs):
-#     def __lt__(self, *args, **kwargs):
-#     def __ne__(self, *args, **kwargs):
-#     def __or__(self, *args, **kwargs):
-#     def __rand__(self, *args, **kwargs):
-#     def __reduce__(self, *args, **kwargs):
-#     def __repr__(self, *args, **kwargs):
-#     def __ror__(self, *args, **kwargs):
-#     def __rsub__(self, *args, **kwargs):
-#     def __rxor__(self, *args, **kwargs):
-#     def __sizeof__(self):
-#     def __sub__(self, *args, **kwargs):
-#     def __xor__(self, *args, **kwargs):
- 
-
 # class dict(object):
-#     def clear(self):
-#     def copy(self):
-#     def get(self, *args, **kwargs):
-#     def items(self):
-#     def keys(self):
-#     def pop(self, k, d=None):
-#     def popitem(self, *args, **kwargs):
-#     def setdefault(self, *args, **kwargs):
-#     def update(self, E=None, **F):
-#     def values(self):
+#     def clear(self):  # real signature unknown; restored from __doc__
+#     def copy(self):  # real signature unknown; restored from __doc__
+#     def get(self, *args, **kwargs):  # real signature unknown
+#     def items(self):  # real signature unknown; restored from __doc__
+#     def keys(self):  # real signature unknown; restored from __doc__
+#     def pop(self, k, d=None):  # real signature unknown; restored from __doc__
+#     def popitem(self, *args, **kwargs):  # real signature unknown
+#     def setdefault(self, *args, **kwargs):  # real signature unknown
+#     def update(self, E=None, **F):  # known special case of dict.update
+#     def values(self):  # real signature unknown; restored from __doc__
 #
-#     def __class_getitem__(self, *args, **kwargs):
-#     def __contains__(self, *args, **kwargs):
-#     def __delitem__(self, *args, **kwargs):
-#     def __eq__(self, *args, **kwargs):
-#     def __getattribute__(self, *args, **kwargs):
-#     def __getitem__(self, y):
-#     def __ge__(self, *args, **kwargs):
-#     def __gt__(self, *args, **kwargs):
-#     def __init__(self, seq=None, **kwargs):
-#     def __ior__(self, *args, **kwargs):
-#     def __iter__(self, *args, **kwargs):
-#     def __len__(self, *args, **kwargs):
-#     def __le__(self, *args, **kwargs):
-#     def __lt__(self, *args, **kwargs):
-#     def __ne__(self, *args, **kwargs):
-#     def __or__(self, *args, **kwargs):
-#     def __repr__(self, *args, **kwargs):
-#     def __reversed__(self, *args, **kwargs):
-#     def __ror__(self, *args, **kwargs):
-#     def __setitem__(self, *args, **kwargs):
-#     def __sizeof__(self):
+#     def __class_getitem__(self, *args, **kwargs):  # real signature unknown
+#     def __contains__(self, *args, **kwargs):  # real signature unknown
+#     def __delitem__(self, *args, **kwargs):  # real signature unknown
+#     def __eq__(self, *args, **kwargs):  # real signature unknown
+#     def __getattribute__(self, *args, **kwargs):  # real signature unknown
+#     def __getitem__(self, y):  # real signature unknown; restored from __doc__
+#     def __ge__(self, *args, **kwargs):  # real signature unknown
+#     def __gt__(self, *args, **kwargs):  # real signature unknown
+#     def __init__(self, seq=None, **kwargs):  # known special case of dict.__init__
+#     def __ior__(self, *args, **kwargs):  # real signature unknown
+#     def __iter__(self, *args, **kwargs):  # real signature unknown
+#     def __len__(self, *args, **kwargs):  # real signature unknown
+#     def __le__(self, *args, **kwargs):  # real signature unknown
+#     def __lt__(self, *args, **kwargs):  # real signature unknown
+#     def __ne__(self, *args, **kwargs):  # real signature unknown
+#     def __or__(self, *args, **kwargs):  # real signature unknown
+#     def __repr__(self, *args, **kwargs):  # real signature unknown
+#     def __reversed__(self, *args, **kwargs):  # real signature unknown
+#     def __ror__(self, *args, **kwargs):  # real signature unknown
+#     def __setitem__(self, *args, **kwargs):  # real signature unknown
+#     def __sizeof__(self):  # real signature unknown; restored from __doc__
+#     __hash__ = None
 
 
 class bag(dict):
@@ -124,32 +77,32 @@ class bag(dict):
         for e in self:
             c += self[e]
         return c
-
-    def union_update(self, that) -> "bag":
+    
+    def union_update(self, that):
         assert isinstance(that, bag)
-
+        
         for e in that:
             self.set(e, self.get(e) + that[e])
         return self
 
     def update(self, that):
         self.union_update(that)
-
-    def intersection_update(self, that) -> "bag":
+    
+    def intersection_update(self, that):
         assert isinstance(that, bag)
 
         for e in that:
             self.set(e, min(self.get(e), that[e]))
         return self
-
-    def difference_update(self, that) -> "bag":
+    
+    def difference_update(self, that):
         assert isinstance(that, bag)
-
+        
         for e in that:
             self.set(e, self.get(e) - that[e])
         return self
-
-    def symmetric_difference_update(self, that) -> "bag":
+            
+    def symmetric_difference_update(self, that):
         assert isinstance(that, bag)
         this = bag(self)
 
@@ -162,12 +115,12 @@ class bag(dict):
         u = bag(self)
         u.union_update(that)
         return u
-
+    
     def intersection(self, that) -> "bag":
         i = bag(self)
         i.intersection_update(that)
         return i
-
+    
     def difference(self, that) -> "bag":
         d = bag(self)
         d.difference_update(that)
