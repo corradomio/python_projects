@@ -2,6 +2,7 @@ from .regexp_tokenizer import RegExpTokenizer
 
 RE_SPECIAL_CHARS = ".^$*+?\\[]|(){}"
 
+
 def _escape_char(chars):
     n = len(chars)
     for i in range(n):
@@ -24,4 +25,4 @@ class DelimTokenizer(RegExpTokenizer):
         # remove empty string
         parts = list(filter(lambda s: len(s) > 0, parts))
 
-        return self._as_set(parts)
+        return self.as_set(parts)

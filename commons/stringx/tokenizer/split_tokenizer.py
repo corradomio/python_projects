@@ -12,4 +12,4 @@ class SplitTokenizer(Tokenizer):
     def tokenize(self, s: str) -> list[str]:
         parts = s.split(self.sep)
 
-        return self._as_set(parts)
+        return self.as_set(parts)

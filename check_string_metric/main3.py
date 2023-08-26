@@ -4,10 +4,12 @@ from stringx.similarity.affine_gap import AffineGap
 from stringx.similarity.smith_waterman import SmithWaterman
 from stringx.similarity.jaccard import Jaccard
 from stringx.similarity.tfidf import TfIdf
+from stringx.similarity.jaro import Jaro
+from stringx.similarity.jaro_winkler import JaroWinkler
 
 
 
-def test1():
+def check1():
     print("-- WagnerFischer")
     dist = WagnerFischer()
 
@@ -22,7 +24,7 @@ def test1():
     pass
 
 
-def test2():
+def check2():
     print("-- NeedlemanWunsch")
 
     print(NeedlemanWunsch(match_cost=2, mismatch_cost=-1).distance("dva", "deeve"))
@@ -40,7 +42,7 @@ def test2():
     pass
 
 
-def test3():
+def check3():
     print("-- AffineGap")
 
     print(AffineGap(gap_cost=-1, gap_continuation_cost=.5, match_cost=1, mismatch_cost=0)
@@ -59,7 +61,7 @@ def test3():
     pass
 
 
-def test4():
+def check4():
     print("-- SmithWaterman")
 
     diff = SmithWaterman(gap_cost=-1, match_cost=2, mismatch_cost=0)
@@ -68,7 +70,7 @@ def test4():
     pass
 
 
-def test5():
+def check5():
     print("-- Jaccard")
     diff = Jaccard(2)
 
@@ -77,7 +79,7 @@ def test5():
     pass
 
 
-def test6():
+def check6():
     print("-- TfIdf")
     diff = TfIdf()
 
@@ -88,14 +90,26 @@ def test6():
     pass
 
 
+def check7():
+    print("-- Jaro")
+    diff = Jaro()
+
+    print(diff.distance("dave", "dav"))
+
+    diff = JaroWinkler()
+    print(diff.distance("dave", "dav"))
+
+
 def main():
-    # test1()
-    # test2()
-    # test3()
-    # test4()
-    # test5()
-    test6()
+    # check1()
+    # check2()
+    # check3()
+    # check4()
+    # check5()
+    # check6()
+    check7()
     pass
+
 
 if __name__ == "__main__":
     main()

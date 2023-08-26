@@ -19,7 +19,7 @@ class QGramTokenizer(Tokenizer):
             part = s[i:i+k]
             parts.append(part)
 
-        return self._as_set(parts)
+        return self.as_set(parts)
 
     def _apply_pad(self, s):
         if self.pad:

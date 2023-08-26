@@ -6,7 +6,7 @@ class Tokenizer:
     def tokenize(self, s: str) -> list[str]:
         ...
 
-    def _as_set(self, parts):
+    def as_set(self, parts):
         if self.unique:
             parts = list(set(parts))
         else:

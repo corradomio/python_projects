@@ -9,4 +9,4 @@ class RESplitTokenizer(RegExpTokenizer):
     def tokenize(self, s: str) -> list[str]:
         parts = self._re.split(s)
 
-        return self._as_set(parts)
+        return self.as_set(parts)

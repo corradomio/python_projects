@@ -30,7 +30,7 @@ class RegExpTokenizer(Tokenizer):
     def tokenize(self, s: str) -> list[str]:
         parts = list(filter(None, self._re.findall(s)))
 
-        return self._as_set(parts)
+        return self.as_set(parts)
 
 
 class AlphabeticTokenizer(RegExpTokenizer):
