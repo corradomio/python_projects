@@ -123,18 +123,19 @@ class bag(dict):
             del self[e]
 
     def add(self, e, count=1):
-        self.set(e, count + self.get(e))
+        self.set(e, self.get(e) + count)
 
     def discard(self, e, count=1):
-        self.add(e, -count)
+        self.set(e, self.get(e) - count)
 
     def remove(self, e):
-        if e not in self:
-            raise KeyError(e)
-        else:
-            del self[e]
+        del self[e]
 
     def count(self) -> int:
+        """
+        Count the number of elements in the bag, considering their multiplicities
+        :return: n of elements in the bag
+        """
         c = 0
         for e in self:
             c += self[e]
