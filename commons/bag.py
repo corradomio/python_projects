@@ -1,4 +1,22 @@
 from builtins import dict
+from collections import Counter
+
+# Note:
+#   Counter(dict) has similar behavior
+#       __init__
+#       __missing__
+#       most_common
+#       elements
+#       update
+#       subtract
+#       copy
+#       __add__     __iadd__
+#       __sub__     __isub__
+#       __or__      __ior__
+#       __and__     __iand__
+#       __pos__
+#       __neg__
+#
 
 
 # class set(object):
@@ -141,6 +159,10 @@ class bag(dict):
             c += self[e]
         return c
 
+    #
+    # operations
+    #
+
     def union_update(self, that) -> "bag":
         assert isinstance(that, bag)
 
@@ -174,6 +196,10 @@ class bag(dict):
         self.union_update(that.difference(this))
         return self
 
+    #
+    # operations
+    #
+
     def union(self, that) -> "bag":
         u = bag(self)
         u.union_update(that)
@@ -195,6 +221,10 @@ class bag(dict):
         s.union_update(this.difference(that))
         s.union_update(that.difference(this))
         return s
+
+    #
+    # predicates
+    #
 
     def isdisjoint(self, that) -> bool:
         for e in self:
@@ -221,6 +251,10 @@ class bag(dict):
                 return False
         return True
 
+    #
+    # predicates
+    #
+
     def __eq__(self, that):
         return self.issamebag(that)
 
@@ -239,30 +273,60 @@ class bag(dict):
     def __gt__(self, that):
         return self.issuperbag(that) and not self.issamebag(that)
 
+    #
+    # operations:
+    #   a & b, a | b
+    #   a ^ b (symmetric difference)
+    #   a + b, a - b
+
+    # a & b, a &= b
     def __and__(self, that) -> "bag":
         return self.intersection(that)
 
-    def __rand__(self, that) -> "bag":
-        return that.intersection(self)
+    # def __rand__(self, that) -> "bag":
+    #     return that.intersection(self)
 
     def __iand__(self, that) -> "bag":
         return self.intersection_update(that)
 
+    # a | b, a |= b
     def __or__(self, that) -> "bag":
         return self.union(that)
 
-    def __ror__(self, that) -> "bag":
-        return that.union(self)
+    # def __ror__(self, that) -> "bag":
+    #     return that.union(self)
 
     def __ior__(self, that) -> "bag":
         return self.union_update(that)
 
+    # a ^ b, a ^= b
+    def __xor__(self, that):
+        return self.symmetric_difference(that)
+
+    # def __rxor__(self, that):
+    #     return that.symmetric_difference(self)
+
+    def __ixor__(self, that):
+        return self.symmetric_difference_update(that)
+
+    # a + b, a += b
+    def __add__(self, that) -> "bag":
+        return self.union(that)
+
+    # def __radd__(self, that) -> "bag":
+    #     return that.union(self)
+
+    def __iadd__(self, that) -> "bag":
+        return self.union_update(that)
+
+    # a - b, a -= b
     def __sub__(self, that) -> "bag":
         return self.difference(that)
 
-    def __rsub__(self, that) -> "bag":
-        return that.difference(self)
+    # def __rsub__(self, that) -> "bag":
+    #     return that.difference(self)
 
     def __isub__(self, that) -> "bag":
         return self.difference_update(that)
 
+# end

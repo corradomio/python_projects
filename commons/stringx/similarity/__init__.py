@@ -36,12 +36,17 @@ from .string_similarity import StringSimilarity
 from .weighted_levenshtein import WeightedLevenshtein
 from .sift4 import SIFT4Options, SIFT4
 
-from .hamming import Hamming
 from .affine_gap import AffineGap
+from .hamming import Hamming
+from .jaro import Jaro
+from .jaro_winkler import JaroWinkler
 from .needleman_wunsch import NeedlemanWunsch
-from .wagner_fischer import WagnerFischer
+from .overlap_coefficient import OverlapCoefficient
 from .smith_waterman import SmithWaterman
 from .tfidf import TfIdf
+from .tversky import Tversky
+from .wagner_fischer import WagnerFischer
+
 
 
 __name__ = 'strsimpy'

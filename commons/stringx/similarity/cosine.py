@@ -29,7 +29,7 @@ from .utils import check_params
 class Cosine(ShingleBased, NormalizedStringDistance,
              NormalizedStringSimilarity):
 
-    def __init__(self, k):
+    def __init__(self, k=2):
         super().__init__(k)
 
     def distance(self, s0, s1):

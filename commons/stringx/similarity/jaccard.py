@@ -26,7 +26,7 @@ from .utils import check_params
 
 class Jaccard(ShingleBased, MetricStringDistance, NormalizedStringDistance, NormalizedStringSimilarity):
 
-    def __init__(self, k):
+    def __init__(self, k=2):
         super().__init__(k)
 
     def distance(self, s0, s1):
@@ -43,11 +43,12 @@ class Jaccard(ShingleBased, MetricStringDistance, NormalizedStringDistance, Norm
 
         profile0 = self.get_profile(s0)
         profile1 = self.get_profile(s1)
-        union = set()
 
-        for ite in profile0.keys():
-            union.add(ite)
-        for ite in profile1.keys():
-            union.add(ite)
-        inter = int(len(profile0.keys()) + len(profile1.keys()) - len(union))
+        keys0 = profile0.keys()
+        keys1 = profile1.keys()
+        union = set(keys0).union(keys1)
+        # union.update(keys0)
+        # union.update(keys1)
+
+        inter = len(keys0) + len(keys1) - len(union)
         return 1.0 * inter / len(union)
