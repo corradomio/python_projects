@@ -2,6 +2,7 @@ from typing import Optional
 
 import numpy as np
 from stdlib import NoneType
+from .lag import LagSlots
 
 
 # ---------------------------------------------------------------------------
@@ -22,20 +23,17 @@ class ModelTransform:
 
 class ModelTrainTransform(ModelTransform):
 
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1], tlags=[0]):
+    def __init__(self, steps: int = 1, slots=None):
         assert isinstance(steps, int)
-        assert isinstance(xlags, list)
-        assert isinstance(ylags, list)
-        assert isinstance(tlags, list)
+        assert isinstance(slots, LagSlots)
         pass
 
 
 class ModePredictTransform(ModelTransform):
 
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1], tlags=[0]):
+    def __init__(self, steps: int = 1, slots=None, tlags=[0]):
         assert isinstance(steps, int)
-        assert isinstance(xlags, list)
-        assert isinstance(ylags, list)
+        assert isinstance(slots, LagSlots)
         assert isinstance(tlags, list)
         pass
 
@@ -53,13 +51,12 @@ class ModePredictTransform(ModelTransform):
 #
 
 class LinearTrainTransform(ModelTrainTransform):
-    def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
-        super().__init__(1, xlags, ylags, tlags)
+    def __init__(self, slots=None, tlags=[0]):
+        super().__init__(1, slots, tlags)
 
-        self.xlags = xlags
-        self.ylags = ylags
-        self.tlags = tlags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
     def __len__(self):
         return self.t
@@ -86,8 +83,8 @@ class LinearTrainTransform(ModelTrainTransform):
         if len(y.shape) == 1:
             y = y.reshape((-1, 1))
 
-        s = lags_max(xlags, ylags)
-        t = max(tlags)
+        t = self.t
+        s = max(tlags)
         r = s + t
 
         mx = X.shape[1] if X is not None else 0
@@ -124,13 +121,12 @@ class LinearTrainTransform(ModelTrainTransform):
 
 class LinearPredictTransform(ModePredictTransform):
 
-    def __init__(self, xlags: list[int] = [0], ylags: list[int] = [], tlags=[0]):
-        super().__init__(1, xlags, ylags, tlags)
+    def __init__(self, slots=None, tlags=[0]):
+        super().__init__(1, slots, tlags)
 
-        self.xlags = xlags
-        self.ylags = ylags
-        self.tlags = tlags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
         self.Xh = None
         self.yh = None
@@ -167,9 +163,6 @@ class LinearPredictTransform(ModePredictTransform):
         xlags = self.xlags
         ylags = self.ylags
         tlags = self.tlags
-
-        s = lags_max(xlags, ylags)
-        t = max(tlags)
 
         mx = Xh.shape[1] if Xh is not None else 0
         my = yh.shape[1]
@@ -219,8 +212,8 @@ class LinearPredictTransform(ModePredictTransform):
 
 # ---------------------------------------------------------------------------
 # RNNTrainTransform
-# RNNFlatTrainTransform
 # RNNPredictTransform
+# RNNFlatTrainTransform
 # ---------------------------------------------------------------------------
 # N, Sequence_Length, Data
 #
@@ -235,15 +228,21 @@ class LinearPredictTransform(ModePredictTransform):
 #
 # xlags: [], [1], [0], [0,1]
 # ylags: [], [1]
+#
+
+# Difference between RNNTrainTransform AND RNNFlatTrainTransform
+# --------------------------------------------------------------
+# The only difference is in y:  y[n, s, my]  vs  y[n, my]
+# and how y is initialized
 
 class RNNTrainTransform(ModelTrainTransform):
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+    def __init__(self, steps: int = 1, slots=LagSlots()):
+        super().__init__(steps, slots)
 
         self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
     def __len__(self):
         return self.steps + 1
@@ -303,13 +302,13 @@ class RNNTrainTransform(ModelTrainTransform):
 
 
 class RNNFlatTrainTransform(ModelTrainTransform):
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+    def __init__(self, steps: int = 1, slots=None):
+        super().__init__(steps, slots)
 
         self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
     def __len__(self):
         return self.steps + 1
@@ -370,13 +369,13 @@ class RNNFlatTrainTransform(ModelTrainTransform):
 
 class RNNPredictTransform(ModePredictTransform):
 
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+    def __init__(self, steps: int = 1, slots=None):
+        super().__init__(steps, slots)
 
         self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
         self.Xh = None
         self.yh = None
@@ -465,19 +464,25 @@ class RNNPredictTransform(ModePredictTransform):
 
 # ---------------------------------------------------------------------------
 # CNNTrainTransform
-# CNNFlatTrainTransform
 # CNNPredictTransform
+# CNNFlatTrainTransform
 # ---------------------------------------------------------------------------
 # N, Channels, Channel_Length
 
+# Difference between CNNTrainTransform AND CNNFlatTrainTransform
+# --------------------------------------------------------------
+# The only difference is in y:  y[n, my, s]  vs  y[n, my]
+# and how y is initialized
+
 class CNNTrainTransform(ModelTrainTransform):
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+
+    def __init__(self, steps: int = 1, slots=None):
+        super().__init__(steps, slots)
 
         self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
     def __len__(self):
         return self.steps + 1
@@ -540,13 +545,12 @@ class CNNTrainTransform(ModelTrainTransform):
 
 class CNNFlatTrainTransform(ModelTrainTransform):
 
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+    def __init__(self, steps: int = 1, slots=None):
+        super().__init__(steps, slots)
 
-        self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
     def __len__(self):
         return self.steps + 1
@@ -608,13 +612,13 @@ class CNNFlatTrainTransform(ModelTrainTransform):
 
 class CNNPredictTransform(ModePredictTransform):
 
-    def __init__(self, steps: int = 1, xlags: list[int] = [1], ylags: list[int] = [1]):
-        super().__init__(steps, xlags, ylags)
+    def __init__(self, steps: int = 1, slots=None):
+        super().__init__(steps, slots)
 
         self.steps = steps
-        self.xlags = xlags
-        self.ylags = ylags
-        self.t = lags_max(xlags, ylags)
+        self.xlags = slots.input
+        self.ylags = slots.target
+        self.t = len(slots)
 
         self.Xh = None
         self.yh = None
@@ -698,6 +702,23 @@ class CNNPredictTransform(ModePredictTransform):
         return Xt
     # end
 # end
+
+
+# ---------------------------------------------------------------------------
+# RNNListTrainTransform
+# RNNListPredictTransform
+# ---------------------------------------------------------------------------
+# These transformers differ from RNN(Train|Predict))Transform because,
+# instead to replicate 'slots.input' and 'slots.target',
+# they replicate 'slots.input_list' and 'slots.target_list',
+#
+# The difference is, for example:
+#
+#       input_list = [[0], [1,2,3,4,5,6], [2,4,6,8]]
+#       input = [0,1,2,3,4,5,6,8]
+#
+# that is, in the first case, [2,4,6] are replicated 2 times, because present
+# in two sub-lists, instead in the second case, they are present a single time
 
 
 # ---------------------------------------------------------------------------

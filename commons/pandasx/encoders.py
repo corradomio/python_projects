@@ -255,17 +255,17 @@ class StandardScalerEncoder(DataFrameTransformer):
             x = X[col].to_numpy(dtype=float)
             vmin, vmax = min(x), max(x)
 
-        # if the values are already in a reasonable small range, don't scale
-        if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
-            return self
+            # if the values are already in a reasonable small range, don't scale
+            if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
+                return self
 
-        if (vmax - vmin) <= NO_SCALE_EPS:
+            if (vmax - vmin) <= NO_SCALE_EPS:
                 self._mean[col] = x.mean()
                 self._sdev[col] = 0.
-        else:
+            else:
                 self._mean[col] = x.mean()
                 self._sdev[col] = x.std()
-        # end
+            # end
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:

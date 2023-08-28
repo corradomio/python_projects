@@ -10,8 +10,8 @@ from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
 from sktimex.utils import PD_TYPES, FH_TYPES
 from torchx import nn as nnx
 from pandasx.time import periodic_encode
-from .numpyx import RNNFlatTrainTransform, RNNPredictTransform, CNNFlatTrainTransform, CNNPredictTransform
-from .lag import resolve_lag
+from .model_transform import RNNFlatTrainTransform, RNNPredictTransform, CNNFlatTrainTransform, CNNPredictTransform
+from .lag import resolve_lag, LagSlots
 from .utils import import_from
 
 
@@ -505,7 +505,7 @@ class SimpleRNNForecaster(SimpleNNForecaster):
         #
         # prepare the data to pass the the Recurrent NN
         #
-        tt = RNNFlatTrainTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        tt = RNNFlatTrainTransform(steps=self._steps, slots=self._slots)
         Xt, yt = tt.fit_transform(Xh, yh)
 
         self._model.fit(Xt, yt)
@@ -634,7 +634,7 @@ class SimpleRNNForecaster(SimpleNNForecaster):
         Xs, _ = self._to_numpy(X, None)
 
         nfh = int(fh[-1])
-        pt = RNNPredictTransform(self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        pt = RNNPredictTransform(steps=self._steps, slots=self._slots)
         ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):
@@ -847,7 +847,7 @@ class SimpleCNNForecaster(SimpleNNForecaster):
         #
         #
 
-        self._slots =  resolve_lag(lags, current)
+        self._slots = resolve_lag(lags, current)
         self._x_scaler = MinMaxScaler()
         self._y_scaler = MinMaxScaler()
         self._model = None
@@ -1013,7 +1013,7 @@ class SimpleCNNForecaster(SimpleNNForecaster):
         #
         # prepare the data to pass the the Convolutional NN
         #
-        tt = CNNFlatTrainTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        tt = CNNFlatTrainTransform(steps=self._steps, slots=self._slots)
         Xt, yt = tt.fit_transform(X=Xs, y=ys)
 
         self._model.fit(Xt, yt)
@@ -1136,7 +1136,7 @@ class SimpleCNNForecaster(SimpleNNForecaster):
         Xs, _ = self._to_numpy(X, None)
 
         nfh = int(fh[-1])
-        pt = CNNPredictTransform(steps=self._steps, xlags=self._slots.input, ylags=self._slots.target)
+        pt = CNNPredictTransform(steps=self._steps, slots=self._slots)
         ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
 
         for i in range(nfh):

@@ -5,7 +5,7 @@ import logging
 from sklearn.metrics import mean_absolute_percentage_error, r2_score
 from sktime.forecasting.base import BaseForecaster
 
-from .numpyx import LinearTrainTransform, LinearPredictTransform
+from .model_transform import LinearTrainTransform, LinearPredictTransform
 from .lag import resolve_lag
 from .utils import *
 
@@ -169,7 +169,7 @@ class LinearForecastRegressor(BaseForecaster):
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
 
-        tt = LinearTrainTransform(xlags=slots.input, ylags=slots.target)
+        tt = LinearTrainTransform(slots=self._slots)
         Xt, yt = tt.fit_transform(X=Xf, y=yf)
 
         # with warnings.catch_warnings():
@@ -194,7 +194,7 @@ class LinearForecastRegressor(BaseForecaster):
     #               predict(    X)  predict(    X, y)
     #
 
-    def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None) -> pd.DataFrame:
+    def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None) -> Union[pd.DataFrame, pd.Series]:
 
         if self._y_only:
             X = None
@@ -213,7 +213,7 @@ class LinearForecastRegressor(BaseForecaster):
         n = int(fh[-1])
         y_pred: np.ndarray = np.zeros(n)
 
-        pt = LinearPredictTransform(xlags=slots.input, ylags=slots.target)
+        pt = LinearPredictTransform(slots=self._slots)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
 
         for i in range(n):
@@ -222,7 +222,7 @@ class LinearForecastRegressor(BaseForecaster):
             y_pred[i] = yp[0]
 
         # add the index
-        y_pred = self._from_numpy(y_pred, fh)
+        y_pred: pd.Series = self._from_numpy(y_pred, fh)
         return y_pred
     # end
 

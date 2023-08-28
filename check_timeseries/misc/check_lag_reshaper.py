@@ -1,5 +1,6 @@
 import numpy as np
 import numpyx as npx
+import sktimex.model_transform as sktx
 
 # ---------------------------------------------------------
 # data
@@ -22,11 +23,11 @@ def prepare_data():
 
 def check_lag(X, y, Xp, yp, n):
 
-    lr = npx.LinearTrainTransform(xlags=[0], ylags=[1])
+    lr = sktx.LinearTrainTransform(xlags=[0], ylags=[1])
     Xt, yt = lr.fit_transform(X, y)
 
 
-    lp = npx.LinearPredictTransform(xlags=[0], ylags=[1])
+    lp = sktx.LinearPredictTransform(xlags=[0], ylags=[1])
     ys = lp.fit(X, y).transform(Xp, n)
 
     for i in range(n):

@@ -2,6 +2,7 @@
 #
 from sktimex.lag import resolve_lag
 
+
 def atest1():
     print(resolve_lag(5, current=False))
     print(resolve_lag((3, 5), current=False))
@@ -101,9 +102,38 @@ def atest2():
     pass
 
 
+def atest3():
+    print(resolve_lag({
+        'input': {
+            0: 1
+        },
+    }))
+    print(resolve_lag({
+        'input': {
+            0: 0
+        },
+    }))
+
+    l = resolve_lag({
+        'input': {
+            0: 1,
+            1: 10,
+            7: 5
+        },
+    })
+
+    print(l)
+    print(l.lags)
+    print(l.input)
+    print(l.target)
+    print(l.input_lists)
+    print(l.target_lists)
+
+
 def main():
-    # atest1()
+    atest1()
     atest2()
+    atest3()
 
 
 if __name__ == "__main__":

@@ -6,7 +6,7 @@ from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose._reduce import _Reducer
 
-from numpyx import LinearTrainTransform, LinearPredictTransform
+from ...model_transform import LinearTrainTransform, LinearPredictTransform
 
 
 # ---------------------------------------------------------------------------

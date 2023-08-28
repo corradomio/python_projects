@@ -1,5 +1,12 @@
 from typing import Union, Optional
 
+__all__ = [
+    'LagSlots',
+    'LagsResolver',
+    'resolve_lag',
+    'resolve_lags'
+]
+
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -44,20 +51,80 @@ LAG_FACTORS: dict[str, int] = {
 LAG_TYPES: list[str] = list(LAG_FACTORS)
 
 
+def lmax(l):
+    return 0 if len(l) == 0 else max(l)
+
+
+def _resolve_lags(entry, lags):
+    assert isinstance(lags, dict)
+
+    def _check_current():
+        return 0 not in lags or 0 < lags[0]
+
+    slots = []
+    current = _check_current()
+    if entry == LAGS_INPUT and current:
+        slots.append([0])
+
+    for lag_size in lags:
+        # skip lag_size == 0, used as 'current')
+        if lag_size == 0:
+            continue
+
+        lag_repl = lags[lag_size]
+        if isinstance(lag_repl, list):
+            slots.append(lag_repl)
+        elif isinstance(lag_repl, tuple):
+            slots.append(list(lag_repl))
+        elif lag_repl > 0:
+            slots.append([i * lag_size for i in range(1, lag_repl + 1)])
+    # end
+    return slots
+
+
+def _flatten(ll):
+    f = set()
+    for l in ll:
+        f.update(l)
+    return sorted(f)
+
+
 # ---------------------------------------------------------------------------
 # LagSlots
 # ---------------------------------------------------------------------------
 
 class LagSlots:
-    def __init__(self, islots: list[int], tslots: list[int], lags=None):
-        assert isinstance(islots, list)
-        assert isinstance(tslots, list)
+
+    def __init__(self, lags=None):
+        if lags is None:
+            # X[0] -> y[0]
+            lags = {
+                'input': {0: 1},
+                'target': {}
+            }
+        assert isinstance(lags, dict)
+        assert LAGS_INPUT in lags
+        assert isinstance(lags[LAGS_INPUT], dict)
+        assert LAGS_TARGET in lags
+        assert isinstance(lags[LAGS_TARGET], dict)
+        assert LAGS_CURRENT not in lags
 
         self._lags = lags
-        self._islots: list[int] = islots
-        self._tslots: list[int] = tslots
+        self._islots_lists = []
+        self._tslots_lists = []
+        self._islots = []
+        self._tslots = []
 
-        self._len = max(tslots) if len(islots) == 0 else max(max(islots), max(tslots))
+        self._islots_lists = _resolve_lags(LAGS_INPUT, lags[LAGS_INPUT])
+        self._tslots_lists = _resolve_lags(LAGS_TARGET, lags[LAGS_TARGET])
+        self._islots = _flatten(self._islots_lists)
+        self._tslots = _flatten(self._tslots_lists)
+
+        self._len = max(lmax(self._islots), lmax(self._tslots))
+
+    # -----------------------------------------------------------------------
+    # Properties
+    # -----------------------------------------------------------------------
 
     @property
     def lags(self):
@@ -71,23 +138,49 @@ class LagSlots:
     def target(self) -> list[int]:
         return self._tslots
 
-    def __getitem__(self, item):
-        if item == 0:
-            return self._islots
-        else:
-            return self._tslots
+    @property
+    def input_lists(self):
+        return self._islots_lists
+
+    @property
+    def target_lists(self):
+        return self._tslots_lists
 
     def __len__(self) -> int:
         return self._len
 
+    def __getitem__(self, item):
+        # self[0] -> input
+        # self[1] -> target
+        if item == 0:
+            return self.input
+        else:
+            return self.target
+
     def __repr__(self):
-        return f"slots[input={self._islots}, target={self._tslots}, len={len(self)}]"
+        return f"slots[input={self.input}, target={self.target}, len={len(self)}]"
 # end
 
 
 # ---------------------------------------------------------------------------
 # LagsResolver
 # ---------------------------------------------------------------------------
+# Resolve the lags definition in the standard format composed by a dictionary
+#
+#       {
+#           'input': {
+#           },
+#           'target': {
+#           }
+#       }
+#
+# The parameter 'current' is encodes as:
+#
+#       {
+#           'input': {
+#               0: 0|1,
+#           }
+#       }
 
 class LagsResolver:
     def __init__(self, lags, current: Optional[bool] = None):
@@ -158,12 +251,18 @@ class LagsResolver:
         # if only 'target', set 'input: 0'
         if LAGS_INPUT not in lags:
             lags[LAGS_INPUT] = {1: 0}
+
+        if LAGS_CURRENT in lags:
+            current = lags[LAGS_CURRENT]
+            if current is not None:
+                lags[LAGS_INPUT][0] = 1 if current else 0
+            del lags[LAGS_CURRENT]
     # end
 
     def _normalize_entry(self, entry: str):
         lags = self._lags
         if isinstance(lags[entry], int):
-            lags[entry] = { 1: entry }
+            lags[entry] = {1: entry}
 
         lags_entry: dict = lags[entry]
         keys = list(lags_entry.keys())
@@ -185,6 +284,7 @@ class LagsResolver:
         lags = self._lags
         assert LAGS_INPUT in lags
         assert LAGS_TARGET in lags
+        assert LAGS_CURRENT not in lags
 
         for lag_type in lags[LAGS_INPUT]:
             assert isinstance(lag_type, int), f"'{lag_type}' is not a valid period type"
@@ -192,40 +292,8 @@ class LagsResolver:
             assert isinstance(lag_type, int), f"'{lag_type}' is not a valid period type"
     # end
 
-    def resolve(self) -> LagSlots:
-        lags = self._lags
-        islots = self._resolve_entry(LAGS_INPUT)
-        tslots = self._resolve_entry(LAGS_TARGET)
-        return LagSlots(islots, tslots, lags)
-    # end
-
-    def _resolve_entry(self, entry):
-        current = True if LAGS_CURRENT not in self._lags else self._lags[LAGS_CURRENT]
-        lags: dict = self._lags[entry]
-        assert isinstance(lags, dict)
-
-        if entry == LAGS_INPUT and current:
-            slots = {0}
-        else:
-            slots = set()
-
-        # lag is already a list of integers
-        if isinstance(lags, (tuple, list)):
-            slots.update(lags)
-            return slots
-
-        # resolve the lag_type of integer type
-        for lag_type in lags:
-            lag_size = lag_type
-            lag_repl = lags[lag_type]
-            if lag_repl >= 0:
-                slots.update([i * lag_size for i in range(1, lag_repl + 1)])
-            else:
-                slots = set()
-        # end
-
-        return sorted(slots)
-    # end
+    def resolve(self):
+        return LagSlots(self._lags)
 # end
 
 
@@ -385,10 +453,17 @@ def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
         }
 
 
-
     Note 1: there is no check on the reference 'period type' and the period used in the datetime column.
 
     Note 2: parameter 'current', if not None, overrides the entry 'current' in the dictionary
+
+    Note 3: parameter 'current' can be configured also as:
+
+        {
+            'input': {
+                0: 0|1
+            }
+        }
 
     :param lag: the lag configuration
         1. a single integer value
@@ -403,6 +478,7 @@ def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
 # end
 
 
+# compatibility with the previous implementation
 resolve_lag = resolve_lags
 
 # ---------------------------------------------------------------------------

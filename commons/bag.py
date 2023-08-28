@@ -116,13 +116,26 @@ from collections import Counter
 #     def __class_getitem__(self, *args, **kwargs):
 #     def __sizeof__(self):
 
+# Note: in theory:
+#
+#       a & b  ::=  for e in b: r[e] = min(a[e], b[e])
+#
+#       a | b  ::=  for e in a: r[e] = max(a[e], b[e])
+#                   for e in b: r[e] = max(a[e], b[e])
+#
+#       a + b  :=   for e in a: r[e] = a[e] + b[e]
+#                   for e in b: r[e] = a[e] + b[e]
+#
+#       a - b  :=   for e in a: r[e] = a[e] - b[e]
+#                   for e in b: r[e] = a[e] - b[e]
+
 
 class bag(dict):
 
     def __init__(self, seq=()):
         super().__init__()
 
-        if isinstance(seq, bag):
+        if isinstance(seq, dict):
             for e in seq:
                 self.add(e, count=seq[e])
         else:
@@ -163,21 +176,34 @@ class bag(dict):
     # operations
     #
 
+    def update(self, that):
+        self.union_update(that)
+
     def union_update(self, that) -> "bag":
         assert isinstance(that, bag)
 
         for e in that:
-            self.set(e, self.get(e) + that[e])
+            self.set(e, max(self.get(e), that[e]))
         return self
-
-    def update(self, that):
-        self.union_update(that)
 
     def intersection_update(self, that) -> "bag":
         assert isinstance(that, bag)
 
+        elts = list(self.keys())
+        for e in elts:
+            if e not in that:
+                del self[e]
+
         for e in that:
             self.set(e, min(self.get(e), that[e]))
+
+        return self
+
+    def sum_update(self, that) -> "bag":
+        assert isinstance(that, bag)
+
+        for e in that:
+            self.set(e, self.get(e) + that[e])
         return self
 
     def difference_update(self, that) -> "bag":
@@ -209,6 +235,11 @@ class bag(dict):
         i = bag(self)
         i.intersection_update(that)
         return i
+
+    def sum(self, that) -> "bag":
+        d = bag(self)
+        d.sum_update(that)
+        return d
 
     def difference(self, that) -> "bag":
         d = bag(self)
@@ -252,6 +283,13 @@ class bag(dict):
         return True
 
     #
+    #
+    #
+
+    def __missing__(self, e):
+        return 0
+
+    #
     # predicates
     #
 
@@ -278,55 +316,56 @@ class bag(dict):
     #   a & b, a | b
     #   a ^ b (symmetric difference)
     #   a + b, a - b
+    #
 
     # a & b, a &= b
     def __and__(self, that) -> "bag":
         return self.intersection(that)
 
-    # def __rand__(self, that) -> "bag":
-    #     return that.intersection(self)
-
     def __iand__(self, that) -> "bag":
         return self.intersection_update(that)
+
+    # def __rand__(self, that) -> "bag":
+    #     return that.intersection(self)
 
     # a | b, a |= b
     def __or__(self, that) -> "bag":
         return self.union(that)
 
-    # def __ror__(self, that) -> "bag":
-    #     return that.union(self)
-
     def __ior__(self, that) -> "bag":
         return self.union_update(that)
+
+    # def __ror__(self, that) -> "bag":
+    #     return that.union(self)
 
     # a ^ b, a ^= b
     def __xor__(self, that):
         return self.symmetric_difference(that)
 
-    # def __rxor__(self, that):
-    #     return that.symmetric_difference(self)
-
     def __ixor__(self, that):
         return self.symmetric_difference_update(that)
 
+    # def __rxor__(self, that):
+    #     return that.symmetric_difference(self)
+
     # a + b, a += b
     def __add__(self, that) -> "bag":
-        return self.union(that)
+        return self.sum(that)
+
+    def __iadd__(self, that) -> "bag":
+        return self.sum_update(that)
 
     # def __radd__(self, that) -> "bag":
     #     return that.union(self)
-
-    def __iadd__(self, that) -> "bag":
-        return self.union_update(that)
 
     # a - b, a -= b
     def __sub__(self, that) -> "bag":
         return self.difference(that)
 
-    # def __rsub__(self, that) -> "bag":
-    #     return that.difference(self)
-
     def __isub__(self, that) -> "bag":
         return self.difference_update(that)
+
+    # def __rsub__(self, that) -> "bag":
+    #     return that.difference(self)
 
 # end
