@@ -64,7 +64,7 @@ def nan_replace(df: pd.DataFrame,
 
         0) it is used 'dropna' if enabled
         1) it is used 'interpolate' if specified
-        2) is is used 'fillna' if specified
+        2) it is used 'fillna' if specified
 
     If 'fillna' method is 'mean' or 'median', it is used the mean or median computed before
     to apply the interpolation

@@ -2,6 +2,63 @@ import torch
 import torch.nn as nn
 
 
+NNX_ACTIVATION = {
+    None: None,
+    True: nn.ReLU,
+    "relu": nn.ReLU,
+    "elu": nn.ELU,
+    "hardshrink": nn.Hardshrink,
+    "hardsigmoid": nn.Hardsigmoid,
+    "hardtanh": nn.Hardtanh,
+    "hardswish": nn.Hardswish,
+    "leakyrelu": nn.LeakyReLU,
+    "logsigmoid": nn.LogSigmoid,
+    "multiheadattention": nn.MultiheadAttention,
+    "prelu": nn.PReLU,
+    "relu6": nn.ReLU6,
+    "rrelu": nn.RReLU,
+    "selu": nn.SELU,
+    "celu": nn.CELU,
+    "gelu": nn.GELU,
+    "sigmoid": nn.Sigmoid,
+    "silu": nn.SiLU,
+    "mish": nn.Mish,
+    "softplus": nn.Softplus,
+    "softshrink": nn.Softshrink,
+    "softsign": nn.Softsign,
+    "tanh": nn.Tanh,
+    "tanhshrink": nn.Tanhshrink,
+    "threshold": nn.Threshold,
+    "glu": nn.GLU,
+
+    "softmin": nn.Softmin,
+    "softmax": nn.Softmax,
+    "softmax2d": nn.Softmax2d,
+    "logsoftmax": nn.LogSoftmax,
+    "adaptivelogsoftmaxwithloss": nn.AdaptiveLogSoftmaxWithLoss
+}
+
+
+def activation_function(activation, activation_params):
+    if activation is None:
+        return None
+
+    if isinstance(activation, bool):
+        if activation:
+            return nn.ReLU()
+        else:
+            return None
+
+    if isinstance(activation, str):
+        name = activation.lower()
+        activation = NNX_ACTIVATION[name]
+
+    if type(activation_params) != dict:
+        activation_params = {}
+
+    return activation(**activation_params)
+
+
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
 # ---------------------------------------------------------------------------
@@ -31,40 +88,49 @@ import torch.nn as nn
 #
 class LSTM(nn.LSTM):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 relu=True, batch_first=True, **kwargs):
+    def __init__(self, *,
+                 input_size,
+                 hidden_size,
+                 num_layers=1,
+                 output_size=1,
+                 steps=1,
+                 activation=None,
+                 activation_params=None,
+                 batch_first=True,
+                 **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
-                         batch_first= batch_first,
+                         batch_first=batch_first,
                          **kwargs)
-        self._steps = steps
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
+        self.steps = steps
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        self.relu = nn.ReLU() if relu else None
-        self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
+        self.activation = activation_function(activation, activation_params)
+        if output_size > 0:
+            self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+        else:
+            self.V = None
+            self.output_size = f * hidden_size * steps
 
     def forward(self, input, hx=None):
         L = input.shape[0 if self.batch_first else 1]
-        D = self.D
-        N = self.hidden_size
 
         if L not in self.hidden:
-            hidden_state = torch.zeros(D, L, N, dtype=input.dtype)
-            cell_state = torch.zeros(D, L, N, dtype=input.dtype)
-            self.hidden[L] = (hidden_state, cell_state)
+            # D = self.D
+            # N = self.hidden_size
+            # hidden_state = torch.zeros(D, L, N, dtype=input.dtype)
+            # cell_state = torch.zeros(D, L, N, dtype=input.dtype)
+            # self.hidden[L] = (hidden_state, cell_state)
+            self.hidden[L] = None
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
-        t = self.relu(t) if self.relu else t
+        t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
-        output = self.V(t)
+        output = self.V(t) if self.V else t
         return output
 # end
 
@@ -90,39 +156,51 @@ class LSTM(nn.LSTM):
 #
 class GRU(nn.GRU):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 relu=True, batch_first=True, **kwargs):
+    def __init__(self, *,
+                 input_size,
+                 hidden_size,
+                 num_layers=1,
+                 output_size=1,
+                 steps=1,
+                 activation=None,
+                 activation_params=None,
+                 batch_first=True,
+                 **kwargs):
+        #
+        # Note: if output_size is <=0, no nn.Linear is created
+        #
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
-                         batch_first= batch_first,
+                         batch_first=batch_first,
                          **kwargs)
-        self._steps = steps
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
+        self.steps = steps
         self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        self.relu = nn.ReLU() if relu else None
-        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
+        self.activation = activation_function(activation, activation_params)
+        if output_size > 0:
+            self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+        else:
+            self.V = None
+            self.output_size = f * hidden_size * steps
 
     def forward(self, input, hx=None):
         L = input.shape[0 if self.batch_first else 1]
-        D = self.D
-        N = self.hidden_size
 
         if L not in self.hidden:
-            hidden_state = torch.zeros(D, L, N)
-            self.hidden[L] = hidden_state
+            # D = self.D
+            # N = self.hidden_size
+            # hidden_state = torch.zeros(D, L, N)
+            # self.hidden[L] = hidden_state
+            self.hidden[L] = None
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
-        t = self.relu(t) if self.relu else t
+        t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
-        output = self.V(t)
+        output = self.V(t) if self.V else t
         return output
 # end
 
@@ -149,12 +227,20 @@ class GRU(nn.GRU):
 #
 class RNN(nn.RNN):
 
-    def __init__(self, *, input_size, hidden_size, num_layers=1, output_size=1, steps=1, 
-                 relu=True, batch_first=True, **kwargs):
+    def __init__(self, *,
+                 input_size,
+                 hidden_size,
+                 num_layers=1,
+                 output_size=1,
+                 steps=1,
+                 activation=None,
+                 activation_params=None,
+                 batch_first=True,
+                 **kwargs):
         super().__init__(input_size=input_size,
                          hidden_size=hidden_size,
                          num_layers=num_layers,
-                         batch_first= batch_first,
+                         batch_first=batch_first,
                          **kwargs)
         self._steps = steps
         self.input_size = input_size
@@ -165,23 +251,28 @@ class RNN(nn.RNN):
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        self.relu = nn.ReLU() if relu else None
-        self.V = nn.Linear(in_features=f*hidden_size, out_features=output_size)
+        self.activation = activation_function(activation, activation_params)
+        if output_size > 0:
+            self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
+        else:
+            self.V = None
+            self.output_size = f*hidden_size*steps
 
     def forward(self, input, hx=None):
         L = input.shape[0 if self.batch_first else 1]
-        D = self.D
-        N = self.hidden_size
 
         if L not in self.hidden:
-            hidden_state = torch.zeros(D, L, N)
-            self.hidden[L] = hidden_state
+            # D = self.D
+            # N = self.hidden_size
+            # hidden_state = torch.zeros(D, L, N)
+            # self.hidden[L] = hidden_state
+            self.hidden[L] = None
 
         hidden = self.hidden[L]
         t, h = super().forward(input, hidden)
-        t = self.relu(t) if self.relu else t
+        t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
-        output = self.V(t)
+        output = self.V(t) if self.V else t
         return output
 # end
 
@@ -202,8 +293,18 @@ class RNN(nn.RNN):
 #         dtype=None
 #
 class Conv1d(nn.Conv1d):
-    def __init__(self, *, input_size, output_size, hidden_size=1, steps=1,
-                 relu=True, kernel_size=1, stride=1, padding=0, dilation=1, groups=1):
+    def __init__(self, *,
+                 input_size,
+                 output_size,
+                 hidden_size=1,
+                 steps=1,
+                 activation=None,
+                 activation_params=None,
+                 kernel_size=1,
+                 stride=1,
+                 padding=0,
+                 dilation=1,
+                 groups=1):
         super().__init__(in_channels=input_size,
                          out_channels=hidden_size,
                          kernel_size=kernel_size,
@@ -212,18 +313,52 @@ class Conv1d(nn.Conv1d):
                          dilation=dilation,
                          groups=groups)
 
-        self.relu = nn.ReLU() if relu else None
+        self.activation = activation_function(activation, activation_params)
         self.lin = nn.Linear(in_features=hidden_size*steps, out_features=output_size)
     # end
 
     def forward(self, input):
         t = super().forward(input)
-        t = self.relu(t) if self.relu else t
+        t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
         t = self.lin(t)
         return t
     # end
 # end
+
+
+# ---------------------------------------------------------------------------
+# MultiInputs
+# ---------------------------------------------------------------------------
+
+class MultiInputs(nn.Module):
+
+    def __init__(self, input_models, output_model):
+        super().__init__()
+
+        self.input_models = input_models
+        self.output_model = output_model
+        self.n_inputs = len(input_models)
+
+    def forward(self, input_list):
+        assert len(input_list) == self.n_inputs
+        n = self.n_inputs
+        inner_results = []
+
+        # for each input, call the related model
+        for i in range(n):
+            input = input_list[i]
+            model = self.input_models[i]
+
+            inner_result = model.forward(input)
+            inner_results.append(inner_result)
+
+        # concatenate the inner results
+        inner = torch.concatenate(inner_results, dim=1)
+
+        result = self.output_model.forward(inner)
+        return result
+    # end
 
 
 # ---------------------------------------------------------------------------

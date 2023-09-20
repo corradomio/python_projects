@@ -227,9 +227,9 @@ def _onehot_encode(df, datetime, columns, freq, year_scale):
 
     # year == 0
     dty = dt.apply(lambda x: x.year)
-    dty = _scale_year(dty, year_scale)
 
-    df[columns[0]] = dty
+    # dty = _scale_year(dty, year_scale)
+    # df[columns[0]] = dty
 
     # month  in range [1, 12]
     for month in range(1, 13):

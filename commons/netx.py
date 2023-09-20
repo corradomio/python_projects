@@ -1,4 +1,4 @@
-from typing import List, Dict, Set
+from typing import List, Dict, Set, Tuple
 from collections import defaultdict
 
 import networkx as nx
@@ -6,12 +6,40 @@ import networkx as nx
 __version__ = "1.0.0"
 
 
-class uedges(dict):
+class IEdges:
+
+    @property
+    def adj(self) -> Dict[int, List[int]]: pass
+
+    @property
+    def succ(self) -> Dict[int, List[int]]: pass
+
+    @property
+    def prec(self) -> Dict[int, List[int]]: pass
+
+    def __getitem__(self, item: Tuple[int, int]) -> List[int]: pass
+    def __setitem__(self, item: Tuple[int, int], value: List[int]): pass
+
+
+class uedges(dict, IEdges):
     """Undirected edges dictionary"""
 
     def __init__(self, loops=False):
+        super().__init__()
         self.loops = loops
-        self.adj: Dict[int, List[int]] = defaultdict(lambda: list())
+        self._adj: Dict[int, List[int]] = defaultdict(lambda: list())
+
+    @property
+    def adj(self):
+        return self._adj
+
+    @property
+    def succ(self):
+        return self._adj
+
+    @property
+    def prec(self):
+        return self._adj
 
     def __getitem__(self, item):
         u, v = item
@@ -28,26 +56,35 @@ class uedges(dict):
         elif super().__contains__((u,v)):
             return super().__setitem__((u, v), value)
         else:
-            if u not in self.adj or v not in self.adj[u]:
-                self.adj[u].append(v)
-                self.adj[v].append(u)
+            if u not in self._adj or v not in self._adj[u]:
+                self._adj[u].append(v)
+                self._adj[v].append(u)
             # end
             return super().__setitem__((u,v), value)
     # end
 # end
 
 
-class dedges(dict):
+class dedges(dict, IEdges):
     """Directed edges dictionary"""
 
     def __init__(self, loops=False):
+        super().__init__()
         self.loops = loops
-        self.succ: Dict[int, List[int]] = defaultdict(lambda: list())
-        self.prec: Dict[int, List[int]] = defaultdict(lambda: list())
+        self._succ: Dict[int, List[int]] = defaultdict(lambda: list())
+        self._prec: Dict[int, List[int]] = defaultdict(lambda: list())
 
     @property
-    def adj(self):
-        return self.succ
+    def adj(self) -> Dict[int, List[int]]:
+        return self._succ
+
+    @property
+    def succ(self) -> Dict[int, List[int]]:
+        return self._succ
+
+    @property
+    def prec(self) -> Dict[int, List[int]]:
+        return self._prec
 
     def __getitem__(self, item):
         u, v = item
@@ -60,8 +97,8 @@ class dedges(dict):
         elif super().__contains__((u,v)):
             return super().__setitem__((u, v), value)
         else:
-            self.succ[u].append(v)
-            self.prec[v].append(u)
+            self._succ[u].append(v)
+            self._prec[v].append(u)
             return super().__setitem__((u,v), value)
     # end
 # end
@@ -76,6 +113,7 @@ class dedges(dict):
 #   for nbr in G[n]: iterates through neighbors.
 #   for e in list(G.edges): iterates through edges
 #   for v in G.adj[u] | for v in G.succ[u] | for v in G.prec[u]
+#
 
 class Graph:
 
@@ -85,9 +123,9 @@ class Graph:
         self._graph = kwargs
         self._nodes: Dict[int, dict] = dict()
         if direct:
-            self._edges: Dict[Tuple[int, int], dict] = dedges(loops)
+            self._edges: IEdges = dedges(loops)
         else:
-            self._edges: Dict[Tuple[int, int], dict] = uedges(loops)
+            self._edges: IEdges = uedges(loops)
         # end
         if "name" not in self._graph:
             self._graph["name"] = "G"
@@ -172,7 +210,7 @@ class Graph:
 
 def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, direct=False, **kwargs) -> Graph:
     """
-    Create a coarsed graph using the partitions as 'super' nodes and edges between
+    Create a coarse graph using the partitions as 'super' nodes and edges between
     partitions i and j if there exist a node in partition i connected to a node in partition j
 
     :param g: original graph
@@ -220,7 +258,7 @@ def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, d
 
 def closure_coarsening_graph(g: nx.DiGraph, create_using=None, direct=True, **kwargs) -> nx.Graph:
     """
-    Create a coarsed graph using the following protocol
+    Create a coarse graph using the following protocol
 
         1) for each node creates the transitive closure
         2) create an edge from closure i and closure j if closure i is a proper subset of closure j

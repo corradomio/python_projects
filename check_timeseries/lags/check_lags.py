@@ -4,38 +4,36 @@ from sktimex.lag import resolve_lag
 
 
 def atest1():
-    print(resolve_lag(5, current=False))
-    print(resolve_lag((3, 5), current=False))
+    print(resolve_lag(5))
+    print(resolve_lag((3, 5)))
+    print(resolve_lag((3, 5, True)))
     print(resolve_lag({
         'input': {
             1: 3
         },
-    }, current=False))
+        'current': False
+    }))
     print(resolve_lag({
         'target': {
             1: 3
         },
-    }, current=False))
-    print(resolve_lag({
-        'target': {
-            1: 3
-        },
-    }, current=True))
-    print(resolve_lag({
-        'current': True,
-        'target': {
-            1: 3
-        },
-    }, current=False))
-    print(resolve_lag({
-        'current': True,
-        'target': {
-            1: 3
-        },
-    }, current=None))
+        'current': True
+    }))
 
     print(resolve_lag({
         'current': False,
+        'input': {
+            1: 3,
+            7: 5
+        },
+        'target': {
+            1: 5,
+            7: 2
+        }
+    }))
+
+    print(resolve_lag({
+        'input_current': False,
         'input': {
             1: 3,
             7: 5
@@ -63,14 +61,15 @@ def atest2():
         'target': {
             'H': 3
         },
-    }, current=False))
+    }))
 
     print(resolve_lag({
         'type': 'M',
         'target': {
             'H': 3
         },
-    }, current=True))
+        'current': True
+    }))
 
     print(resolve_lag({
         'type': 'm',
@@ -78,7 +77,7 @@ def atest2():
         'target': {
             'q': 3
         },
-    }, current=False))
+    }))
 
     print(resolve_lag({
         'type': 'S',
@@ -86,7 +85,7 @@ def atest2():
         'target': {
             'M': 3
         },
-    }, current=None))
+    }))
 
     print(resolve_lag({
         'current': False,
@@ -130,10 +129,15 @@ def atest3():
     print(l.target_lists)
 
 
+def atest4():
+    print(resolve_lag([12, 12]))
+
+
 def main():
     atest1()
     atest2()
     atest3()
+    atest4()
 
 
 if __name__ == "__main__":

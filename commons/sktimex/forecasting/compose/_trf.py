@@ -5,6 +5,7 @@ import pandas as pd
 from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose._reduce import _Reducer
+from ...lag import resolve_lag
 
 from ...model_transform import LinearTrainTransform, LinearPredictTransform
 
@@ -163,12 +164,15 @@ class TabularRegressorForecaster(_Reducer):
         X = _to_numpy(X)
         y = _to_numpy(y)
 
-        fh = self.fh
+        fh: ForecastingHorizon = self.fh
+        if not fh.is_relative:
+            fh = fh.to_relative(self.cutoff)
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
+        slots = resolve_lag([xlags, ylags])
         tlags = list(fh - 1)
-        lt = LinearTrainTransform(xlags, ylags, tlags)
+        lt = LinearTrainTransform(slots=slots, tlags=tlags)
 
         Xt, yt = lt.fit_transform(X, y)
         return yt, Xt
@@ -204,8 +208,9 @@ class TabularRegressorForecaster(_Reducer):
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
+        slots = resolve_lag([xlags, ylags])
 
-        pt = LinearPredictTransform(xlags=xlags, ylags=ylags)
+        pt = LinearPredictTransform(slots=slots)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)
 
         i = 0
@@ -252,6 +257,6 @@ class TabularRegressorForecaster(_Reducer):
     def _from_numpy(self, ys: np.ndarray, fh: ForecastingHorizon) -> pd.Series:
         ys = ys.reshape(-1)
         y_index = fh.to_absolute(self.cutoff)
-        yp = pd.Series(data=ys, index=y_index)
+        yp = pd.Series(data=ys, index=y_index.to_pandas())
         return yp
 # end

@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
+from sktimex import SimpleRNNForecaster, SimpleCNNForecaster, SlotsRNNForecaster
 from jsonx import *
-from sktimex import SimpleRNNForecaster, SlotsRNNForecaster
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
     data = pdx.read_data('stallion_all.csv',
                          datetime=('date', "%Y-%m-%d", 'M'),
                          ignore=["timeseries", "avg_population_2017", "avg_yearly_household_income_2017", "date"],
-                         onehot=[
+                         categorical=[
                              "easter_day",
                              "good_friday",
                              "new_year",
@@ -29,7 +29,7 @@ def main():
                              "beer_capital",
                              "music_fest"
                          ],
-                         binary="auto",
+                         # binary="auto",
                          index="date")
 
     # split the dataset in separated time series
@@ -45,7 +45,11 @@ def main():
     # -----------------------------------------------------------------------
 
     forecaster = SlotsRNNForecaster(
+        # lags=[1, 1],
+        # steps=12,
         lags=[12, 12],
+        # lags={'input': {2: 5}},
+        # lags=[2, 3],
         y_only=false,
         flavour="lstm",
         periodic="M",
@@ -83,8 +87,8 @@ def main():
         periodic="M",
         scale=true,
         lr=0.001,
-        # criterion="torch.nn.MSELoss",
-        # optimizer="torch.optim.Adam",
+        criterion="torch.nn.MSELoss",
+        optimizer="torch.optim.Adam",
         hidden_size=20,
         batch_size=16,
         max_epochs=500,
@@ -101,6 +105,38 @@ def main():
     plot_series(y, y_test, y_pred, labels=["y", "y_test", "y_pred"], title="stallion")
     plt.show()
     # plt.savefig("./plots/stallion-rnn.png", dpi=300)
+
+    # -----------------------------------------------------------------------
+
+    forecaster = SimpleCNNForecaster(
+        # lags=[1, 1],
+        # steps=12,
+        lags=[12, 12],
+        # lags={'input': {2: 5}},
+        # lags=[2, 2],
+        y_only=false,
+        flavour="cnn",
+        periodic="M",
+        scale=true,
+        lr=0.001,
+        criterion="torch.nn.MSELoss",
+        optimizer="torch.optim.Adam",
+        hidden_size=20,
+        batch_size=16,
+        max_epochs=500,
+        patience=20
+    )
+
+    forecaster.fit(y=y_train, X=X_train)
+    pred = forecaster.predict(fh=y_test.index, X=X_test)
+
+    y = train['volume']
+    y_test = test['volume']
+    y_pred = pred['volume']
+
+    plot_series(y, y_test, y_pred, labels=["y", "y_test", "y_pred"], title="stallion")
+    plt.show()
+    # plt.savefig("./plots/stallion-cnn.png", dpi=300)
 
     pass
 

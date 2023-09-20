@@ -4,38 +4,38 @@
 #
 import warnings
 from typing import List, Union, Optional
+from stdlib import NoneType, CollectionType, _as_list
 
 import numpy as np
 import pandas as pd
 from numpy import issubdtype, integer
 
-from stdlib import NoneType, CollectionType
-
 
 # ---------------------------------------------------------------------------
-# _as_list
-# ---------------------------------------------------------------------------
-
-def _as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
-    """
-    Convert parameter 'l' in a list.
-    If 'l' is None, the empty list, if a string, in a singleton list
-    :param l: value to convert
-    :param param: parameter's name, used in the error message
-    :return: a list
-    """
-    tl = type(l)
-    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
-    return [] if l is None else \
-            [l] if tl == str else \
-            list(l) if tl == tuple else l
-
-
-# ---------------------------------------------------------------------------
+# find_binary
 # onehot_encode
 # datetime_encode
 # datetime_reindex
 # ---------------------------------------------------------------------------
+
+def find_binary(df: pd.DataFrame, columns: Optional[list[str]] = None) -> list[str]:
+    """
+    Select the columns in 'columns' that can be considered 'binary'
+
+    :param df: dataframe
+    :param columns: columns to analyze. If None, all columns
+    :return: list of binary columns
+    """
+    if columns is None:
+        columns = df.columns
+
+    binary_columns = []
+    for col in columns:
+        nuv = len(df[col].unique())
+        if nuv <= 2:
+            binary_columns.append(col)
+    return binary_columns
+
 
 def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) \
     -> pd.DataFrame:
@@ -917,7 +917,7 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 # dataframe_ignore
 # ---------------------------------------------------------------------------
 
-def unnamed_columns(df: pd.DataFrame) -> list[str]:
+def find_unnamed_columns(df: pd.DataFrame) -> list[str]:
     """
     List of columns with name 'Unnamed: nn'
     :param df: dataframe to analyze

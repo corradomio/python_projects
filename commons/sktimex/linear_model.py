@@ -93,13 +93,12 @@ class LinearForecastRegressor(BaseForecaster):
 
     def __init__(self,
                  lags: Union[int, list, tuple, dict] = (0, 1),
-                 current=False,
-                 class_name: str = "sklearn.linear_model.LinearRegression",
-                 y_only: bool = False,
+                 tlags=(0,),
+                 estimator="sklearn.linear_model.LinearRegression",
                  **kwargs):
         """
         
-        :param lag:
+        :param lags:
                 int             same for input and target
                 (ilag, tlag)    input lag, target lag
                 {
@@ -117,26 +116,24 @@ class LinearForecastRegressor(BaseForecaster):
                     'current': True
                 }
                 
-        :param class_name: 
+        :param estimator:
         :param kwargs: 
         """
         super().__init__()
-        self._class_name = class_name
+        self._class_name = estimator
         self._lags = lags
-        self._current = current
-        self._y_only = y_only
         self._kwargs = kwargs
 
-        model_class = import_from(class_name)
+        model_class = import_from(estimator)
         self._model = model_class(**kwargs)
 
-        self._slots = resolve_lag(lags, current)
+        self._slots = resolve_lag(lags)
         self.Xh: Optional[np.ndarray] = None
         self.yh: Optional[np.ndarray] = None
         self._cutoff: Optional[datetime] = None
 
-        p = class_name.rfind('.')
-        self._log = logging.getLogger(f"LinearForecastRegressor.{class_name[p+1:]}")
+        p = estimator.rfind('.')
+        self._log = logging.getLogger(f"LinearForecastRegressor.{estimator[p+1:]}")
 
         # self._scores: dict[str, float] = {}
     # end
@@ -147,10 +144,8 @@ class LinearForecastRegressor(BaseForecaster):
 
     def get_params(self, deep=True):
         params = {} | self._kwargs
-        params['class_name'] = self._class_name
-        params['y_only'] = self._y_only
+        params['estimator'] = self._class_name
         params['lags'] = self._lags
-        params['current'] = self._current
         return params
     # end
 
@@ -159,12 +154,6 @@ class LinearForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
-        if self._y_only:
-            X = None
-
-        slots = self._slots
-        # s = len(slots)
-
         # DataFrame/Series -> np.ndarray
         # save only the s last slots (used in prediction)
         yf, Xf = self._validate_data_lfr(y, X)
@@ -195,23 +184,16 @@ class LinearForecastRegressor(BaseForecaster):
     #
 
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None) -> Union[pd.DataFrame, pd.Series]:
-
-        if self._y_only:
-            X = None
-
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
         # ensure fh relative
         fh = fh.to_relative(self.cutoff)
-
-        slots = self._slots
 
         # X, yh, Xh
         Xp, yh, Xh = self._validate_data_lfr(None, X, predict=True)
         """:type: np.ndarray, np.ndarray"""
         # n of slots to predict and populate y_pred
         n = int(fh[-1])
-        y_pred: np.ndarray = np.zeros(n)
 
         pt = LinearPredictTransform(slots=self._slots)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)   # save X,y prediction
@@ -228,10 +210,8 @@ class LinearForecastRegressor(BaseForecaster):
 
     def _from_numpy(self, ys: np.ndarray, fh: ForecastingHorizon) -> pd.Series:
         ys = ys.reshape(-1)
-        # y_index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
         y_index = fh.to_absolute(self.cutoff)
-        yp = pd.Series(data=ys, index=y_index)
-        # yp = yp.loc[fhp.to_pandas()]
+        yp = pd.Series(data=ys, index=y_index.to_pandas())
         return yp
 
     # def _make_fh_relative(self, fh: ForecastingHorizon):
@@ -240,6 +220,14 @@ class LinearForecastRegressor(BaseForecaster):
     #     if not fh.is_relative:
     #         fh = fh.to_relative(self.cutoff)
     #     return fh
+
+    # -----------------------------------------------------------------------
+    # update
+    # -----------------------------------------------------------------------
+
+    def update(self, y, X=None, update_params=True):
+        # Not necessary
+        return self
 
     # -----------------------------------------------------------------------
     # score (not implemented yet)
@@ -329,7 +317,7 @@ class LinearForecastRegressor(BaseForecaster):
         return state
     # end
 
-    def __repr__(self):
+    def __repr__(self, **kwargs):
         return f"LinearForecastRegressor[{self._model}]"
 
     # -----------------------------------------------------------------------

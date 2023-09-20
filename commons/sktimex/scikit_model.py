@@ -18,14 +18,8 @@ def _replace_lags(kwargs: dict) -> dict:
     else:
         lags = None
 
-    if "current" in kwargs:
-        current = kwargs["current"]
-        del kwargs["current"]
-    else:
-        current = False
-
     if lags is not None:
-        rlags: LagSlots = resolve_lag(lags, current)
+        rlags: LagSlots = resolve_lag(lags)
         window_length = len(rlags)
         kwargs["window_length"] = window_length
     # end
@@ -81,22 +75,20 @@ class ScikitForecastRegressor(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self,
-                 class_name: str = "sklearn.linear_model.LinearRegression",
-                 y_only: bool = False,
+                 estimator: str = "sklearn.linear_model.LinearRegression",
                  **kwargs):
         super().__init__()
 
         kwargs = _replace_lags(kwargs)
 
-        self._class_name = class_name
+        self._class_name = estimator
         self._kwargs = kwargs
-        self._y_only = y_only
 
-        model_class = import_from(class_name)
+        model_class = import_from(estimator)
 
         # extract the top namespace
-        p = class_name.find('.')
-        ns = class_name[:p]
+        p = estimator.find('.')
+        ns = estimator[:p]
         if ns in SCIKIT_NAMESPACES:
             window_length = kwval(kwargs, "window_length", 5)
             strategy = kwval(kwargs, "strategy", "recursive")
@@ -113,8 +105,8 @@ class ScikitForecastRegressor(BaseForecaster):
             # raise ValueError(f"Unsupported class_name '{class_name}'")
             pass
 
-        p = class_name.rfind('.')
-        self._log = logging.getLogger(f"ScikitForecastRegressor.{class_name[p+1:]}")
+        p = estimator.rfind('.')
+        self._log = logging.getLogger(f"ScikitForecastRegressor.{estimator[p+1:]}")
     # end
 
     # -----------------------------------------------------------------------
@@ -127,8 +119,7 @@ class ScikitForecastRegressor(BaseForecaster):
 
     def get_params(self, deep=True):
         params = {} | self._kwargs
-        params['class_name'] = self._class_name
-        params['y_only'] = self._y_only
+        params['estimator'] = self._class_name
         return params
     # end
 
@@ -148,8 +139,6 @@ class ScikitForecastRegressor(BaseForecaster):
         # ensure fh relative AND not None for tabular models
         fh = self._make_fh_relative(fh)
 
-        if self._y_only: X = None
-        
         self.forecaster.fit(y=y, X=X, fh=fh)
         return self
     # end
@@ -174,8 +163,6 @@ class ScikitForecastRegressor(BaseForecaster):
         # WARN: fh must be a ForecastingHorizon
         assert isinstance(fh, ForecastingHorizon)
 
-        if self._y_only: X = None
-
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
         # ensure fh relative
@@ -191,8 +178,6 @@ class ScikitForecastRegressor(BaseForecaster):
     # end
 
     def _update(self, y, X=None, update_params=True):
-        if self._y_only: X = None
-
         return super()._update(y=y, X=X, update_params=update_params)
     # end
 

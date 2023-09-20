@@ -105,7 +105,7 @@ print(y_pred)
 # ---------------------------------------------------------
 print("\n-- LinearForecastRegressor (X,y) --\n")
 lm = LinearForecastRegressor(
-    class_name=qualified_name(LinearRegression),
+    estimator=qualified_name(LinearRegression),
     lag=1
 )
 

@@ -4,7 +4,7 @@ import zipfile
 import gzip
 from path import Path
 from datetime import datetime, time
-from collectionx import bag
+from bag import bag
 
 #
 # We suppose that:

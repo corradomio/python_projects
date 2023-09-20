@@ -4,7 +4,7 @@ __all__ = [
     'LagSlots',
     'LagsResolver',
     'resolve_lag',
-    'resolve_lags'
+    'flatten_max'
 ]
 
 
@@ -18,7 +18,8 @@ LAGS_DAY = 'day'
 TYPE = 'type'
 PERIOD_TYPE = 'period_type'
 LAGS_LENGTH = 'length'
-LAGS_CURRENT = 'current'
+LAGS_CURRENT = 'input_current'
+LAGS_CURRENT_OLD = 'current'
 DAY_SECONDS = 3600 * 24
 
 LAG_FACTORS: dict[str, int] = {
@@ -51,17 +52,39 @@ LAG_FACTORS: dict[str, int] = {
 LAG_TYPES: list[str] = list(LAG_FACTORS)
 
 
-def lmax(l):
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def lmax(l: list[int]) -> int:
     return 0 if len(l) == 0 else max(l)
 
 
-def _resolve_lags(entry, lags):
+def flatten_max(ll: list[list[int]]) -> int:
+    m = 0
+    for l in ll:
+        if len(ll) == 0:
+            continue
+        m = max(m, max(l))
+    return m
+
+
+# ---------------------------------------------------------------------------
+
+def _flatten(ll: list[list]) -> list:
+    f = set()
+    for l in ll:
+        f.update(l)
+    return sorted(f)
+
+
+def _resolve_lags(entry, lags) -> list[list[int]]:
     assert isinstance(lags, dict)
 
     def _check_current():
-        return 0 not in lags or 0 < lags[0]
+        return 0 in lags and 0 < lags[0]
 
-    slots = []
+    slots: list[list[int]] = []
     current = _check_current()
     if entry == LAGS_INPUT and current:
         slots.append([0])
@@ -80,13 +103,6 @@ def _resolve_lags(entry, lags):
             slots.append([i * lag_size for i in range(1, lag_repl + 1)])
     # end
     return slots
-
-
-def _flatten(ll):
-    f = set()
-    for l in ll:
-        f.update(l)
-    return sorted(f)
 
 
 # ---------------------------------------------------------------------------
@@ -128,25 +144,31 @@ class LagSlots:
 
     @property
     def lags(self):
+        """Lags as normalized dictionary"""
         return self._lags
 
     @property
     def input(self) -> list[int]:
+        """Flatten list of input lags"""
         return self._islots
 
     @property
     def target(self) -> list[int]:
+        """Flatten list of target lags"""
         return self._tslots
 
     @property
     def input_lists(self):
+        """List of input lags organized by multiplier"""
         return self._islots_lists
 
     @property
     def target_lists(self):
+        """List of target lags organized by multiplier"""
         return self._tslots_lists
 
     def __len__(self) -> int:
+        """Window length containing all lags"""
         return self._len
 
     def __getitem__(self, item):
@@ -183,17 +205,13 @@ class LagSlots:
 #       }
 
 class LagsResolver:
-    def __init__(self, lags, current: Optional[bool] = None):
-        assert isinstance(lags, (int, tuple, list, dict)), "'lag' is not int, (int, int), or dict"
-        assert isinstance(current, (type(None), bool))
+    def __init__(self, lags):
+        assert isinstance(lags, (int, tuple, list, dict)), "'lags' is not int | (int, int) | (int,int,bool) | dict"
 
         if isinstance(lags, (int, tuple, list)):
             lags = {
-                'length': lags,
-                'current': current
+                'length': lags
             }
-        elif current is not None:
-            lags['current'] = current
 
         # create a copy because 'lags' is modified'
         self._lags = {} | lags
@@ -209,9 +227,17 @@ class LagsResolver:
     # end
 
     def _normalize(self):
+        self._normalize_current()
         self._normalize_lags()
         self._normalize_entry(LAGS_INPUT)
         self._normalize_entry(LAGS_TARGET)
+    # end
+
+    def _normalize_current(self):
+        lags = self._lags
+        if LAGS_CURRENT_OLD in lags:
+            lags[LAGS_CURRENT] = lags[LAGS_CURRENT_OLD]
+            del lags[LAGS_CURRENT_OLD]
     # end
 
     def _normalize_lags(self):
@@ -236,8 +262,12 @@ class LagsResolver:
             elif len(lags_length) == 2:
                 lags[LAGS_INPUT] = {1: lags_length[0]}
                 lags[LAGS_TARGET] = {1: lags_length[1]}
+            elif len(lags_length) == 3:
+                lags[LAGS_INPUT] = {1: lags_length[0]}
+                lags[LAGS_TARGET] = {1: lags_length[1]}
+                lags[LAGS_CURRENT] = lags_length[2]
             else:
-                raise f"'{lags}': invalid configuration, 'length' must be int or (int, int)"
+                raise f"'{lags}': invalid configuration, 'lags' must be: int | (int, int) | (int, int, bool) | dict(...)"
         # end
 
         # check if it is present 'input' and or 'target'
@@ -251,6 +281,14 @@ class LagsResolver:
         # if only 'target', set 'input: 0'
         if LAGS_INPUT not in lags:
             lags[LAGS_INPUT] = {1: 0}
+
+        if LAGS_INPUT in lags and isinstance(lags[LAGS_INPUT], int):
+            repl = lags[LAGS_INPUT]
+            lags[LAGS_INPUT] = {1: repl}
+
+        if LAGS_TARGET in lags and isinstance(lags[LAGS_TARGET], int):
+            repl = lags[LAGS_TARGET]
+            lags[LAGS_TARGET] = {1: repl}
 
         if LAGS_CURRENT in lags:
             current = lags[LAGS_CURRENT]
@@ -301,9 +339,9 @@ class LagsResolver:
 # resolve_lag
 # ---------------------------------------------------------------------------
 
-def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
+def resolve_lag(lags: Union[int, tuple, list, dict]) -> LagSlots:
     """
-    Resolve the 'lag' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
+    Resolve the 'lags' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
     is a record.
 
     The complete configuration is a dictionary having the following structure:
@@ -362,7 +400,7 @@ def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
     It is possible to specify only 'input', in this case the configuration is replicated to the 'target'.
     Instead, if it is specified only 'target' entry, the 'input' entry will be empty ([] or [0], based on 'current')
 
-    If 'lag=<value>' it is equivalent to:
+    If 'lags=<value>' it is equivalent to:
 
         <value> ::=
 
@@ -389,7 +427,7 @@ def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
             'current': True
         }
 
-    If 'lag=(<value0>, <value1>)' it is equivalent to:
+    If 'lags=(<value0>, <value1>)' it is equivalent to:
 
         (<value0>, <value1>) ::=
 
@@ -465,21 +503,21 @@ def resolve_lags(lags: Union[int, tuple, list, dict], current=None) -> LagSlots:
             }
         }
 
-    :param lag: the lag configuration
+    :param lags: the lag configuration
         1. a single integer value
         2. two integer values
         3. a dictionary
     :param current: if to consider the current time slot
     :return LagSlots: an object containing the time slots to select for the input and target features.
     """
-    lr = LagsResolver(lags, current)
+    lr = LagsResolver(lags)
     res: LagSlots = lr.resolve()
     return res
 # end
 
 
 # compatibility with the previous implementation
-resolve_lag = resolve_lags
+resolve_lags = resolve_lag
 
 # ---------------------------------------------------------------------------
 # end

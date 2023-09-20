@@ -1,67 +1,14 @@
 from typing import List
 import pandas as pd
-import arff
 from .base import datetime_encode, onehot_encode, binary_encode, \
     dataframe_index, dataframe_ignore, datetime_reindex, _as_list, \
-    unnamed_columns
+    find_unnamed_columns, find_binary
 from .time import periodic_encode
 
 
 # ---------------------------------------------------------------------------
-# read_arff
+# Utilities
 # ---------------------------------------------------------------------------
-
-def read_arff(file, **args):
-    """
-    Read an ARFF file, a CSV like text file with format specified in
-
-        https://www.cs.waikato.ac.nz/~ml/weka/arff.html
-
-    based on the library
-
-        https://pythonhosted.org/liac-arff/
-        https://pypi.org/project/liac-arff/2.2.1/
-
-
-    :param file: file to load
-    :param args: arguments passed to 'liac-arff' library
-    :return:
-    """
-    def _tobool(s, default=False):
-        if s is None:
-            return default
-        if type(s) == str:
-            s = s.lower()
-        assert isinstance(s, (bool, str, int))
-        if s in [1, True, "true", "on", "open", "1"]:
-            return True
-        if s in [0, False, "false", "off", "close", "0", ""]:
-            return False
-        return default
-
-    fdict = arff.load_file(file, **args)
-    alist = fdict['attributes']
-    """:type: list[tuple[str, list|str]]"""
-    data = fdict['data']
-    """:type: list[list]"""
-    names = list(map(lambda a: a[0], alist))
-    """:type: list[str]"""
-    df = pd.DataFrame(data, columns=names)
-    """:type: pd.DataFrame"""
-
-    category = True if "category" not in args \
-        else _tobool(args.get("category"))
-    """:type: bool"""
-
-    if category:
-        for attr in alist:
-            aname = attr[0]
-            atype = type(attr[1])
-            if atype == list:
-                df[aname] = df[aname].astype('category')
-    return df
-# end
-
 
 def _parse_dtype(columns, dtype):
     categorical = []
@@ -160,16 +107,18 @@ def read_data(file: str,
               categorical=None,
               boolean=None,
               numeric=None,
+              onehot=None,
+              binary=None,
+
               index=None,
               ignore=None,
               ignore_unnamed=False,
-              onehot=None,
-              binary=None,
+
               datetime=None,
               periodic=None,
               count=False,
-              dropna=False,
               reindex=False,
+              dropna=False,
               na_values=None,
               **kwargs) -> pd.DataFrame:
     """
@@ -246,15 +195,16 @@ def read_data(file: str,
     categorical = _as_list(categorical, 'categorical')
     boolean = _as_list(boolean, 'boolean')
     numeric = _as_list(numeric, 'numeric')
-    index = _as_list(index, 'index')
-    ignore = _as_list(ignore, 'ignore')
     onehot = _as_list(onehot, 'onehot')
     binary = _as_list(binary, 'binary')
+    ignore = _as_list(ignore, 'ignore')
+    index = _as_list(index, 'index')
 
     # move 'na_values' in kwargs
     if na_values is not None:
         kwargs['na_values'] = na_values
 
+    # if dtype is defined, compose the dictionary {col:dtype}
     if dtype is not None:
         h = _read_header(file)
         dt = _pandas_dtype(h, dtype)
@@ -268,15 +218,15 @@ def read_data(file: str,
     elif file.endswith(".json"):
         df = pd.read_json(file, dtype=dt, **kwargs)
     elif file.endswith(".html"):
-        df = pd.read_html(file, dtype=dt, **kwargs)
+        df = pd.read_html(file, **kwargs)
     elif file.endswith(".xls"):
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".xlsx"):
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
         df = pd.read_hdf(file, dtype=dt, **kwargs)
-    elif file.endswith(".arff"):
-        df = read_arff(file, dtype=dt, **kwargs)
+    # elif file.endswith(".arff"):
+    #     df = read_arff(file, dtype=dt, **kwargs)
     elif "://" in file:
         df = read_database(file, dtype=dt, **kwargs)
     else:
@@ -288,39 +238,55 @@ def read_data(file: str,
     if dtype is not None:
         categorical, boolean = _parse_dtype(list(df.columns), dtype)
 
+    if binary == ['auto']:
+        binary = find_binary(df, onehot)
+        onehot = set(onehot).difference(binary)
+
+    # pandas categorical
     for col in categorical:
         df[col] = df[col].astype('category')
 
+    # pandas boolean
     for col in boolean:
         df[col] = df[col].astype(bool)
 
+    # pandas float
     for col in numeric:
         df[col] = df[col].astype(float)
 
+    # add the 'count' column
     if count and 'count' not in df.columns:
         df['count'] = 1.
 
+    # convert the datetime column
     if datetime is not None:
         df = datetime_encode(df, datetime)
 
+    # encode the periodic column
     if periodic is not None:
         df = periodic_encode(df, *periodic)
 
+    # onehot encoding
     if len(onehot) > 0:
         df = onehot_encode(df, onehot)
 
+    # binary/{0,1} encoding
     if len(binary) > 0:
         df = binary_encode(df, binary)
 
+    # compose the index
     if len(index) > 0:
         df = dataframe_index(df, index)
 
+    # add 'Unnamed: ...' columns to the list of columns to remove
     if ignore_unnamed:
-        ignore += unnamed_columns(df)
+        ignore += find_unnamed_columns(df)
 
+    # remove the 'ignore' columne
     if len(ignore) > 0:
         df = dataframe_ignore(df, ignore)
 
+    # force the reindex
     if reindex:
         df = datetime_reindex(df)
 

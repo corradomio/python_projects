@@ -61,6 +61,25 @@ def lrange(start, stop=None, step=None):
 
 
 # ---------------------------------------------------------------------------
+# _as_list
+# ---------------------------------------------------------------------------
+
+def _as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
+    """
+    Convert parameter 'l' in a list.
+    If 'l' is None, the empty list, if a string, in a singleton list
+    :param l: value to convert
+    :param param: parameter's name, used in the error message
+    :return: a list
+    """
+    tl = type(l)
+    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
+    return [] if l is None else \
+            [l] if tl == str else \
+            list(l) if tl == tuple else l
+
+
+# ---------------------------------------------------------------------------
 # import_from
 # ---------------------------------------------------------------------------
 

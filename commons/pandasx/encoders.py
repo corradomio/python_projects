@@ -5,6 +5,7 @@ from numpy import issubdtype, integer, datetime64
 from pandas import DataFrame, Period, PeriodIndex
 
 from .time import infer_freq
+from stdlib import _as_list
 
 
 # ---------------------------------------------------------------------------
@@ -257,7 +258,7 @@ class StandardScalerEncoder(DataFrameTransformer):
 
             # if the values are already in a reasonable small range, don't scale
             if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
-                return self
+                continue
 
             if (vmax - vmin) <= NO_SCALE_EPS:
                 self._mean[col] = x.mean()
@@ -313,37 +314,60 @@ class StandardScalerEncoder(DataFrameTransformer):
 
 class MinMaxEncoder(DataFrameTransformer):
 
-    def __init__(self, col):
+    def __init__(self, col, feature_range=(0, 1), *, copy=True):
         super().__init__(col)
-        self._min = -float('inf')
-        self._delta = +float('inf')
+        self._min_value = feature_range[0],
+        self._delta_values = feature_range[1] - feature_range[0]
+        self._copy = copy
+        self._min = {}
+        self._delta = {}
 
     def fit(self, X: DataFrame, y=None) -> "MinMaxEncoder":
         assert isinstance(X, DataFrame)
-        col = self._col
+        columns = _as_list(self._col)
 
+        for col in columns:
         values = X[col].to_numpy(dtype=float)
-        self._min = min(values)
-        self._delta = max(values) - self._min
+            minval = min(values)
+            deltaval = max(values) - minval
+
+            self._min[col] = minval
+            self._delta[col] = deltaval
 
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
         assert isinstance(X, DataFrame)
+        if self._copy: X = X.copy()
 
-        col = self._col
+        minv = self._min_value
+        deltav = self._delta_values
+
+        columns = _as_list(self._col)
+        for col in columns:
+            minval = self._min[col]
+            deltaval = self._delta[col]
+
         values = X[col].to_numpy(dtype=float)
-        values = (values-self._min)/self._delta
+            values = minv + deltav*(values-minval)/deltaval
 
         X[col] = values
         return X
 
     def inverse_transform(self, X: DataFrame):
         assert isinstance(X, DataFrame)
+        if self._copy: X = X.copy()
 
-        col = self._col
-        values = X[col].to_numpy(dtype=float)
-        values = self._min = self._delta*values
+        minv = self._min_value
+        deltav = self._delta_values
+
+        columns = _as_list(self._col)
+        for col in columns:
+            minval = self._min[col]
+            deltaval = self._delta[col]
+
+        values = (X[col].to_numpy(dtype=float) - minv)/deltav
+            values = minval + deltaval*values
 
         X[col] = values
         return X
@@ -394,11 +418,12 @@ class MeanStdEncoder(DataFrameTransformer):
 
 class OutlierTransformer(DataFrameTransformer):
 
-    def __init__(self, col, outlier_std=4):
+    def __init__(self, col, outlier_std=4, strategy='median'):
         super().__init__(col)
         # support for multiple columns
         self._cols = [col] if isinstance(col, str) else col
         self._outlier_std = outlier_std
+        self._strategy = strategy
         self._mean = {}
         self._sdev = {}
         self._median = {}
@@ -414,16 +439,28 @@ class OutlierTransformer(DataFrameTransformer):
 
     def transform(self, X: DataFrame) -> DataFrame:
         assert isinstance(X, DataFrame)
+        if self._outlier_std in [None, 0]:
+            return X
         for col in self._cols:
-            x: pd.Series = X[col]
+            x: pd.Series = X[col].copy()
             mean = self._mean[col]
             sdev = self._sdev[col]
 
             min_value = mean - sdev
             max_value = mean + sdev
+            mean_value = mean
             median_value = self._median[col]
 
-            x[(x <= min_value) | (x >= max_value)] = median_value
+            if self._strategy == 'median':
+                x[(x <= min_value) | (x >= max_value)] = median_value
+            elif self._strategy == 'mean':
+                x[(x <= min_value) | (x >= max_value)] = mean_value
+            elif self._strategy == 'min':
+                x[(x <= min_value) | (x >= max_value)] = min_value
+            elif self._strategy == 'max':
+                x[(x <= min_value) | (x >= max_value)] = max_value
+            else:
+                raise ValueError(f'Unsupported strategy {self._strategy}')
             X[col] = x
         return X
     # end
