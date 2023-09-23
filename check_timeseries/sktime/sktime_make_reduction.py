@@ -16,6 +16,7 @@ tst = df[80:]
 f: RecursiveTabularRegressionForecaster = make_reduction(LinearRegression(), window_length=2)
 
 f.fit(X=trn[['x', 'y']], y=trn['z'])
+f.predict()
 
 #
 # content of Xt and yt in '_reduce.py' line 562

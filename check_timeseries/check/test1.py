@@ -6,8 +6,8 @@ from sktime.performance_metrics.forecasting import mean_absolute_percentage_erro
 from pandas import Series
 from numpy import arange
 
-from etime.linear_model import LinearForecastRegressor
-from etime.skl_model import SklearnForecasterRegressor
+from sktimex.linear_model import LinearForecastRegressor
+from sktimex.scikit_model import ScikitForecastRegressor
 
 # y = load_airline()
 y = Series(arange(100))
@@ -30,7 +30,7 @@ fh = ForecastingHorizon(y_test.index, is_relative=False)
 # 3
 #
 
-forecaster = SklearnForecasterRegressor(
+forecaster = ScikitForecastRegressor(
     class_name='sklearn.linear_model.LinearRegression',
     window_length=1)
 

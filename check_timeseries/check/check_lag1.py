@@ -1,4 +1,4 @@
-from etime.lag import resolve_lag
+from sktimex.lag import resolve_lag
 
 print(resolve_lag({
     'input': [0, 2, 4, 6],

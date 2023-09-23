@@ -116,10 +116,12 @@ def read_data(file: str,
 
               datetime=None,
               periodic=None,
+
               count=False,
               reindex=False,
-              dropna=False,
+
               na_values=None,
+              dropna=False,
               **kwargs) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.

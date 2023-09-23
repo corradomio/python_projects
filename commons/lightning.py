@@ -61,7 +61,7 @@ class LightningModule(pl.LightningModule):
         # is_cuda = next(self.parameters()).is_cuda
         trainer = pl.Trainer(**kwargs)
         train_dataloaders = NumpyDataloader(X, y, batch_size=batch_size)
-        val_dataloaders = NumpyDataloader(*val, batch_size) if isinstance(val, (list, tuple)) else None
+        val_dataloaders = NumpyDataloader(*val, batch_size=batch_size) if isinstance(val, (list, tuple)) else None
         trainer.fit(self, train_dataloaders, val_dataloaders)
         return self
 

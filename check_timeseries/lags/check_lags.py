@@ -133,11 +133,38 @@ def atest4():
     print(resolve_lag([12, 12]))
 
 
+def atest5():
+    print(resolve_lag({
+        'input_current': False,
+        'input': {
+            1: 3,
+            7: 5
+        },
+        'target': {
+            1: 5,
+            7: 2
+        }
+    }))
+
+    print(resolve_lag({
+        'input_current': False,
+        'input': {
+            '1': 3,
+            '7': 5
+        },
+        'target': {
+            '1': 5,
+            '7': 2
+        }
+    }))
+
+
 def main():
-    atest1()
-    atest2()
-    atest3()
-    atest4()
+    # atest1()
+    # atest2()
+    # atest3()
+    # atest4()
+    atest5()
 
 
 if __name__ == "__main__":

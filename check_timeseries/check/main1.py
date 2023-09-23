@@ -1,4 +1,4 @@
-from etime.linear_model import LinearForecastRegressor
+from sktimex.linear_model import LinearForecastRegressor
 from pandas import DataFrame
 from sklearn.linear_model import LinearRegression
 from sktime.forecasting.base import ForecastingHorizon

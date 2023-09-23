@@ -20,6 +20,17 @@ PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]
 # utilities
 # ---------------------------------------------------------------------------
 
+def to_matrix(data):
+    if data is None:
+        return None
+    if isinstance(data, (pd.Series, pd.DataFrame)):
+        data = data.to_numpy().astype(np.float32)
+    assert isinstance(data, np.ndarray)
+    if len(data.shape) == 1:
+        data = data.reshape(-1, 1)
+    return data
+
+
 def fh_range(n: int) -> ForecastingHorizon:
     return ForecastingHorizon(list(range(1, n+1)))
 

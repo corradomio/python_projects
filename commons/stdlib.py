@@ -7,7 +7,7 @@ CollectionType = (list, tuple)
 
 
 # ---------------------------------------------------------------------------
-# Generic utilities
+# Class names
 # ---------------------------------------------------------------------------
 
 def module_path():
@@ -15,6 +15,23 @@ def module_path():
     this_path = path(sys.modules[__name__].__file__)
     return this_path.parent
 
+
+def qualified_name(klass: Any):
+    module = klass.__module__
+    if module == 'builtins':
+        return klass.__qualname__   # avoid outputs like 'builtins.str'
+    return f'{module}.{klass.__qualname__}'
+# end
+
+
+def type_of(obj: object):
+    return str(type(obj))
+
+# ---------------------------------------------------------------------------
+# Generic utilities
+# ---------------------------------------------------------------------------
+# tuple, sep -> str
+# str, sep -> tuple
 
 def to_name(ts) -> str:
     if len(ts) == 0:
@@ -30,25 +47,12 @@ def from_name(tsname) -> tuple[str]:
         return tuple(tsname.split('/'))
 
 
-def qualified_name(klass: Any):
-    module = klass.__module__
-    if module == 'builtins':
-        return klass.__qualname__   # avoid outputs like 'builtins.str'
-    return f'{module}.{klass.__qualname__}'
-# end
-
+# ---------------------------------------------------------------------------
+# Generic utilities
+# ---------------------------------------------------------------------------
 
 def list_map(f, l):
     return list(map(f, l))
-
-
-def tobool(s: str) -> bool:
-    if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
-        return False
-    if s in [1, True, 't', 'true', 'T', 'True', 'TRUE', 'on', 'yes', 'open']:
-        return True
-    else:
-        raise ValueError(f"Unsupported boolean value '{s}'")
 
 
 def lrange(start, stop=None, step=None):
@@ -58,6 +62,15 @@ def lrange(start, stop=None, step=None):
         return list(range(start, stop))
     else:
         return list(range(start, stop, step))
+
+
+def tobool(s: str) -> bool:
+    if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
+        return False
+    if s in [1, True, 't', 'true', 'T', 'True', 'TRUE', 'on', 'yes', 'open']:
+        return True
+    else:
+        raise ValueError(f"Unsupported boolean value '{s}'")
 
 
 # ---------------------------------------------------------------------------

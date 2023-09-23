@@ -327,7 +327,7 @@ class MinMaxEncoder(DataFrameTransformer):
         columns = _as_list(self._col)
 
         for col in columns:
-        values = X[col].to_numpy(dtype=float)
+            values = X[col].to_numpy(dtype=float)
             minval = min(values)
             deltaval = max(values) - minval
 
@@ -348,10 +348,10 @@ class MinMaxEncoder(DataFrameTransformer):
             minval = self._min[col]
             deltaval = self._delta[col]
 
-        values = X[col].to_numpy(dtype=float)
+            values = X[col].to_numpy(dtype=float)
             values = minv + deltav*(values-minval)/deltaval
 
-        X[col] = values
+            X[col] = values
         return X
 
     def inverse_transform(self, X: DataFrame):
@@ -366,10 +366,10 @@ class MinMaxEncoder(DataFrameTransformer):
             minval = self._min[col]
             deltaval = self._delta[col]
 
-        values = (X[col].to_numpy(dtype=float) - minv)/deltav
+            values = (X[col].to_numpy(dtype=float) - minv)/deltav
             values = minval + deltaval*values
 
-        X[col] = values
+            X[col] = values
         return X
 # end
 

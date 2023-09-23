@@ -1,6 +1,6 @@
 import numpy as np
 
-from etime.lag import resolve_lag
+from sktimex.lag import resolve_lag
 
 
 def gen(size):

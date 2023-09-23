@@ -5,9 +5,9 @@ import pandas as pd
 from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose._reduce import _Reducer
-from ...lag import resolve_lag
 
-from ...model_transform import LinearTrainTransform, LinearPredictTransform
+from ...lag import resolve_lag
+from ...transform import LinearTrainTransform, LinearPredictTransform
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +72,7 @@ class WindowLength:
 
         # m : None
         if input_lags is None:
-            input_lags   = []
+            input_lags = []
         # m, b: int, bool
         elif isinstance(input_lags, int):
             start = 0 if current else 1
@@ -149,9 +149,10 @@ class TabularRegressorForecaster(_Reducer):
         self.window_length_ = WindowLength(window_length)
 
     def get_params(self, deep=True):
-        params = {}
-        params['estimator'] = self.estimator
-        params['window_length'] = self.window_length
+        params = {
+            'estimator': self.estimator,
+            'window_length': self.window_length
+        }
         return params
     # end
 

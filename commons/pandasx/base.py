@@ -159,6 +159,35 @@ TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
 PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
 
 
+def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[tuple]:
+    """
+    Compose the list of tuples that represent the groups
+
+    :param df: DataFrame to split
+    :param groups: list of columns to use during the split. The columns must be categorical or string
+
+    :return list[tuple[str]: the list of tuples
+    """
+    groups = _as_list(groups, 'groups')
+
+    tlist = [tuple()]
+    if len(groups) == 0:
+        return tlist
+
+    for g in groups:
+        values = list(df[g].unique())
+
+        tvlist = []
+        for t in tlist:
+            for v in values:
+                tvlist.append(t + (v,))
+
+        tlist = tvlist
+    # end
+    return tlist
+# end
+
+
 def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False, keep=0) \
     -> dict[tuple[str], pd.DataFrame]:
     """
@@ -270,6 +299,7 @@ def groups_select(df: pd.DataFrame, groups: Union[str, list[str]], values: Union
         selected_df = selected_df[selected_df[g] == v]
     # end
 
+    selected_df = selected_df.copy()
     if drop:
         selected_df.drop(groups, inplace=True, axis=1)
     return selected_df

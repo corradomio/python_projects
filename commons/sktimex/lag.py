@@ -105,6 +105,14 @@ def _resolve_lags(entry, lags) -> list[list[int]]:
     return slots
 
 
+def _is_integer(sval):
+    try:
+        ival = int(sval)
+        return True
+    except:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # LagSlots
 # ---------------------------------------------------------------------------
@@ -309,12 +317,19 @@ class LagsResolver:
             if isinstance(lag_type, int):
                 continue
 
-            lag_value = lags_entry[lag_type]
-            del lags_entry[lag_type]
+            elif _is_integer(lag_type):
+                ilag_type = int(lag_type)
+                lag_value = lags_entry[lag_type]
+                del lags_entry[lag_type]
+                lags_entry[ilag_type] = lag_value
 
-            lag_factor = LAG_FACTORS[lag_type]//base_factor
-            lags_entry[lag_factor] = lag_value
+            else:
+                lag_value = lags_entry[lag_type]
+                del lags_entry[lag_type]
 
+                lag_factor = LAG_FACTORS[lag_type]//base_factor
+                lags_entry[lag_factor] = lag_value
+        # end
         lags[entry] = lags_entry
     # end
 

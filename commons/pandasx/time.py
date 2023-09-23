@@ -1,6 +1,6 @@
 import math
 import random
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -64,6 +64,40 @@ FREQUENCIES = {
     # 'U': 1, 'us': 1,    # microseconds
     # 'N': 1              # nanoseconds
 }
+
+
+# ---------------------------------------------------------------------------
+# set_datetime_index
+# ---------------------------------------------------------------------------
+
+def set_datetime_index(df: pd.DataFrame, datetime: Union[str, list[str]]) -> pd.DataFrame:
+    """
+    Assign to df the index extracted from the column 'datetime'
+
+    :param df: dataframe
+    :datetime: the formats are:
+            str:            the column
+            str, str:       the column, the format
+            str, str, str:  the column, the format, the frequency
+    """
+    format = None
+    freq = None
+    if isinstance(datetime, str):
+        pass
+    elif len(datetime) == 2:
+        datetime, format = datetime
+    elif len(datetime) == 3:
+        datetime, format, freq = datetime
+
+    dt = df[datetime]
+    if format is not None:
+        dt = pd.to_datetime(dt, format=format)
+    if freq is not None:
+        dt = dt.dt.to_period(freq)
+
+    df = df.set_index(dt)
+    return df
+# end
 
 
 # ---------------------------------------------------------------------------

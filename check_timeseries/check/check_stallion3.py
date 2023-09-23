@@ -3,8 +3,8 @@ from sklearn.linear_model import LinearRegression
 from sktime.forecasting.base import ForecastingHorizon
 from stdlib import qualified_name
 
-from etime import LinearForecastRegressor
-from etime.scikit_model import ScikitForecastRegressor
+from sktimex import LinearForecastRegressor
+from sktimex.scikit_model import ScikitForecastRegressor
 
 
 def main():
