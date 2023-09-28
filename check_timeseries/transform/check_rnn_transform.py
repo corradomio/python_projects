@@ -1,6 +1,6 @@
 import logging.config
 from numpyx.utils import ij_matrix, zo_matrix
-from sktimex.model_transform import RNNTrainTransform, RNNPredictTransform
+from sktimex.transform import RNNTrainTransform, RNNPredictTransform
 from sktimex import resolve_lags
 
 

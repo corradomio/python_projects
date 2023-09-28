@@ -1,4 +1,8 @@
-from .base import *
+import numpy as np
+from typing import Optional
+
+from .base import ModelTrainTransform, ModelPredictTransform
+from ..lag import resolve_lags
 
 
 # ---------------------------------------------------------------------------
@@ -19,8 +23,10 @@ from .base import *
 
 class RNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots, tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
         #
         # override the initialization of self.xlags, self.ylags
@@ -100,8 +106,10 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
 
 class RNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots, tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
         #
         # override the initialization of self.xlags, self.ylags

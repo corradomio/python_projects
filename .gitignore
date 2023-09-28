@@ -26,4 +26,6 @@ lightning_logs
 *.pdf
 *.log
 check_causal_inference
+Hands*
+
 

@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 
-from ..lag import LagSlots, flatten_max
+from ..lag import LagSlots, flatten_max, resolve_lags
 from stdlib import NoneType
 
 
@@ -13,12 +13,21 @@ from stdlib import NoneType
 # ---------------------------------------------------------------------------
 
 class ModelTransform:
-    pass
+
+    def _check_X_y(self, X, y=None):
+        assert isinstance(X, (NoneType, np.ndarray))
+        assert isinstance(y, (NoneType, np.ndarray))
+# end
 
 
 class ModelTrainTransform(ModelTransform):
 
     def __init__(self, slots, tlags=(0,)):
+        if isinstance(slots, (list, tuple, dict)):
+            slots = resolve_lags(slots)
+        if isinstance(tlags, int):
+            tlags = list(range(tlags))
+
         assert isinstance(slots, LagSlots)
         assert isinstance(tlags, (tuple, list))
 
@@ -29,15 +38,12 @@ class ModelTrainTransform(ModelTransform):
     # end
 
     def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        assert isinstance(X, (NoneType, np.ndarray))
-        assert isinstance(y, np.ndarray)
-
+        self._check_X_y(X, y)
         return self
     # end
 
     def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        assert isinstance(X, (NoneType, np.ndarray))
-        assert isinstance(y, np.ndarray)
+        self._check_X_y(X, y)
 
         if X is not None and len(X.shape) == 1:
             X = X.reshape((-1, 1))
@@ -46,12 +52,18 @@ class ModelTrainTransform(ModelTransform):
 
         return X, y
     # end
+
 # end
 
 
 class ModelPredictTransform(ModelTransform):
 
     def __init__(self, slots, tlags=(0,)):
+        if isinstance(slots, (list, tuple, dict)):
+            slots = resolve_lags(slots)
+        if isinstance(tlags, int):
+            tlags = list(range(tlags))
+
         assert isinstance(slots, LagSlots)
         assert isinstance(tlags, (tuple, list))
 

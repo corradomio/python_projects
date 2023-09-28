@@ -171,13 +171,14 @@ def infer_freq(index, steps=5, ntries=3) -> str:
     # end
 
     return freq
+# end
 
 
 # ---------------------------------------------------------------------------
 # periodic_encode
 # ---------------------------------------------------------------------------
 
-def periodic_encode(df,
+def periodic_encode(df: pd.DataFrame,
                     datetime: Optional[str] = None,
                     method: str = 'onehot',
                     columns: Optional[list[str]] = None,
@@ -199,6 +200,17 @@ def periodic_encode(df,
     :param datetime: if to use a datetime column. If None, it is used the index
     :param method: method to use
     :param columns: column names to use. The n of columns depends on the method
+    :param year_scale: values used to scale the years
+            It can be:
+                1. None
+                    no scale is applied
+                2. (y0, y1)
+                    the year y0 is scaled to correspond to 0
+                    the year y1 is scaled to correspond to 1
+                3. (y0, s0, y1, s1)
+                    the year y0 is scaled to correspond to s0
+                    the year y1 is scaled to correspond to s1
+
     :param freq: frequency ('H', 'D', 'W', 'M')
     :return:
     """
@@ -228,16 +240,14 @@ def _columns_name(columns, datetime, suffixes):
     return columns
 
 
-def _scale_year(year, year_scaler):
-    if year_scaler is None:
+def _scale_year(year, year_scale):
+    if year_scale is None:
         return year
-
-    if len(year_scaler) == 2:
-        y1, s1 = year_scaler
-        s0 = 0.
-        y0 = year[0]
+    if len(year_scale) == 2:
+        y0, y1 = year_scale
+        s0, s1 = 0, 1
     else:
-        y0, s0, y1, s1 = year_scaler
+        y0, s0, y1, s1 = year_scale
 
     dy = y1 - y0
     ds = s1 - s0

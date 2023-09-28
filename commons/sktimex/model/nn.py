@@ -4,7 +4,7 @@ import pandas as pd
 import skorch
 import torch
 
-from numpyx.scaler import MinMaxScaler
+from numpyx.transformers import MinMaxScaler
 from torchx import nn as nnx
 from .base import ExtendedBaseForecaster
 from ..lag import resolve_lag, LagSlots

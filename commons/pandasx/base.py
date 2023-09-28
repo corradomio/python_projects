@@ -35,10 +35,10 @@ def find_binary(df: pd.DataFrame, columns: Optional[list[str]] = None) -> list[s
         if nuv <= 2:
             binary_columns.append(col)
     return binary_columns
+# end
 
 
-def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) \
-    -> pd.DataFrame:
+def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) -> pd.DataFrame:
     """
     Encode the columns values as {0,1}, if not already encoded.
     It is possible to encode only 1 or 2 distinct values.
@@ -189,7 +189,7 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[t
 
 
 def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False, keep=0) \
-    -> dict[tuple[str], pd.DataFrame]:
+        -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list.
 
@@ -448,7 +448,7 @@ dataframe_merge_columns = columns_merge
 # ---------------------------------------------------------------------------
 
 def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) \
-    -> list[tuple]:
+        -> list[tuple]:
     """
     Retrieve the multi level values
     :param mi: multi index or a DataFrame/Series with multi index

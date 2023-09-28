@@ -4,7 +4,7 @@ import numpy as np
 
 from numpyx.utils import ij_matrix
 from sktimex import resolve_lags
-from sktimex.model_transform import RNNTrainTransform, RNNPredictTransform
+from sktimex.transform import RNNTrainTransform, RNNPredictTransform
 
 
 def main():

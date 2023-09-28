@@ -54,7 +54,7 @@ class BaseCNNForecaster(SimpleNNForecaster):
         """
 
         :param lags: input/target lags
-        :param flavour: type of RNN ('lstm', 'gru', 'rnn')
+        :param flavour: type of CNN ('cnn')
         :param optimizer: class of the optimizer to use (default: Adam)
         :param criterion: class of the loss to use (default: MSLoss)
         :param batch_size: batch size (default 16)

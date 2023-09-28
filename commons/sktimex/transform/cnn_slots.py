@@ -1,4 +1,8 @@
-from .base import *
+import numpy as np
+from typing import Optional
+
+from .base import ModelTrainTransform, ModelPredictTransform
+from ..lag import resolve_lags, flatten_max
 
 
 # ---------------------------------------------------------------------------
@@ -8,8 +12,10 @@ from .base import *
 
 class CNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=LagSlots(), tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags
@@ -80,8 +86,10 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
 
 class CNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots, tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags

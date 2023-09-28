@@ -27,6 +27,7 @@ def qualified_name(klass: Any):
 def type_of(obj: object):
     return str(type(obj))
 
+
 # ---------------------------------------------------------------------------
 # Generic utilities
 # ---------------------------------------------------------------------------
@@ -74,10 +75,10 @@ def tobool(s: str) -> bool:
 
 
 # ---------------------------------------------------------------------------
-# _as_list
+# as_list
 # ---------------------------------------------------------------------------
 
-def _as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
+def as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
     """
     Convert parameter 'l' in a list.
     If 'l' is None, the empty list, if a string, in a singleton list
@@ -90,6 +91,9 @@ def _as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
     return [] if l is None else \
             [l] if tl == str else \
             list(l) if tl == tuple else l
+
+
+_as_list = as_list
 
 
 # ---------------------------------------------------------------------------

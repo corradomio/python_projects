@@ -1,6 +1,7 @@
 import numpy as np
 
-from .base import *
+from .base import ModelTrainTransform, ModelPredictTransform
+from ..lag import resolve_lags
 
 
 # ---------------------------------------------------------------------------
@@ -17,8 +18,10 @@ from .base import *
 
 class LinearTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots, tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
     def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         X, y = super().transform(X, y)
@@ -69,8 +72,10 @@ class LinearTrainTransform(ModelTrainTransform):
 
 class LinearPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots, tlags=(0,)):
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, slots=None, tlags=(0,), lags=None):
+        super().__init__(
+            slots=slots if slots is not None else resolve_lags(lags),
+            tlags=tlags)
 
     def transform(self, X: np.ndarray, fh: int):
         Xp, fh = super().transform(X, fh)

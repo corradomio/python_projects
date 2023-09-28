@@ -152,19 +152,6 @@ class SimpleRNNForecaster(BaseRNNForecaster):
     # fit
     # -----------------------------------------------------------------------
 
-    def fit(self, y, X=None, fh=None):
-        super().fit(y=y, X=X, fh=fh)
-        # self._check_y_X(y, X}
-        #       check the validity of X and y
-        #
-        # self._update_y_X(y, X)
-        #       initialize or update _y, _X, _cutoff
-        #
-        # self._check_fh(fh)
-        #       check & initialize _fh
-        #
-        # self._fit(y, X, fh)
-
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = (1,)):
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))

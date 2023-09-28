@@ -4,6 +4,8 @@ from .transform.cnn import CNNTrainTransform, CNNPredictTransform
 from .transform.rnn import RNNTrainTransform, RNNPredictTransform
 from .transform.cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
 from .transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
+from .transform.rnn_3d import RNNTrainTransform3D, RNNPredictTransform3D
+from .transform.cnn_3d import CNNTrainTransform3D, CNNPredictTransform3D
 
 from .model.linear import LinearForecastRegressor
 from .model.scikit import ScikitForecastRegressor

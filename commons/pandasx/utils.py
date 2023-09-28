@@ -145,6 +145,7 @@ def _partition_split(data: pd.DataFrame, partitions: Union[int, list[int]], inde
     return parts
 # end
 
+
 # ---------------------------------------------------------------------------
 # classification_quality
 # ---------------------------------------------------------------------------

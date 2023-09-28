@@ -7,6 +7,21 @@ from torch.utils.data import TensorDataset
 
 
 # ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def ranked(dim: Union[int, list[int]]) -> list[int]:
+    return [dim] if isinstance(dim, int) else dim
+
+
+def mul(dim: list[int]) -> int:
+    d = 1
+    for l in dim:
+        d *= l
+    return d
+
+
+# ---------------------------------------------------------------------------
 # torch Utilities
 # ---------------------------------------------------------------------------
 

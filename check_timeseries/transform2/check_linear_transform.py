@@ -1,6 +1,6 @@
 import logging.config
 from numpyx.utils import zo_matrix
-from sktimex.model_transform import LinearTrainTransform, LinearPredictTransform
+from sktimex.transform import LinearTrainTransform, LinearPredictTransform
 from sktimex import resolve_lags
 
 
