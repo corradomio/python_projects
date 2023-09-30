@@ -6,7 +6,7 @@ import torch.nn as nn
 # ---------------------------------------------------------------------------
 
 NNX_ACTIVATION = {
-    None: nn.Identity,
+    None: None,
     False: nn.Identity,
     True: nn.ReLU,
 

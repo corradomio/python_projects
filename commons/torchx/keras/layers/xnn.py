@@ -26,7 +26,7 @@ class RepeatVector(nn.Module):
 # ---------------------------------------------------------------------------
 # As TF TimeDistributed
 #
-#   LSTM:           (batch, seq, 1    )   ->  (batch, seq, units)
+#   RNN:            (batch, seq, input)   ->  (batch, seq, units)
 #   Distributed:    (batch, seq, units)   ->  (batch, seq,     1)
 #
 
@@ -38,11 +38,44 @@ class TimeDistributed(nn.Module):
 
     def forward(self, input):
         n_repeat = input.shape[1]
+        dim2 = input.shape[-1]
 
         y_list = []
         for i in range(n_repeat):
-            y = self.model.forward(input[:, i])
+            y = self.model.forward(input[:, i, :])
             y_list.append(y)
 
-        return torch.cat(y_list, dim=1)
+        out = torch.cat(y_list, dim=1)
+        out = torch.reshape(out, shape=(-1, out.shape[1]//dim2, dim2))
+        return out
+# end
+
+
+# ---------------------------------------------------------------------------
+# ChannelDistributed
+# ---------------------------------------------------------------------------
+# As TF ChannelDistributed
+#
+#   CNN:            (batch, input, seq)   ->  (batch, units, seq)
+#   Distributed:    (batch, seq, units)   ->  (batch, 1,     seq)
+#
+
+class ChannelDistributed(nn.Module):
+
+    def __init__(self, model):
+        super().__init__()
+        self.model = model
+
+    def forward(self, input):
+        n_repeat = input.shape[2]
+        dim2 = input.shape[-1]
+
+        y_list = []
+        for i in range(n_repeat):
+            y = self.model.forward(input[:, :, i])
+            y_list.append(y)
+
+        out = torch.cat(y_list, dim=1)
+        out = torch.reshape(out, shape=(-1, dim2, out.shape[1]//dim2))
+        return out
 # end

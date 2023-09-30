@@ -11,17 +11,18 @@ def main():
         datetime=('DATE', '%Y-%m-%d', 'M'),
         index=['DATE'],
         ignore_unnamed=True,
-        ignore=['DATE'],
+        # ignore=['DATE'],
 
         sep=';'
     )
-    pe = ppx.PeriodicEncoder(periodic=ppx.PERIODIC_MONTH | ppx.PERIODIC_QUARTER,
-                             target=TARGET)
+    pe = ppx.PeriodicEncoder(TARGET, datetime='DATE',
+                             periodic=ppx.PERIODIC_MONTH | ppx.PERIODIC_QUARTER,
+                             periods="onehot",
+                             means=True)
     dfx = pe.fit_transform(df)
 
-    lt = ppx.LagsTransformer(target='EASY', lags=[1, 1])
-
-    dfl = lt.fit_transform(dfx)
+    lt = ppx.LagsTransformer(target='EASY', xlags=[0], ylags=[0])
+    X, y = lt.fit_transform(dfx)
     pass
 
 

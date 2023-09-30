@@ -22,7 +22,7 @@ class OutlierTransformer(BaseEncoder):
         assert isinstance(X, DataFrame)
 
         columns = self._get_columns(X)
-        for col in self.columns:
+        for col in columns:
             x: Series = X[col]
             self._mean[col] = x.mean()
             self._sdev[col] = x.std()
@@ -31,11 +31,10 @@ class OutlierTransformer(BaseEncoder):
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
-        assert isinstance(X, DataFrame)
+        X = self._check_X(X)
+
         if self.outlier_std in [None, 0]:
             return X
-
-        if self.copy: X = X.copy()
 
         columns = self._get_columns(X)
         for col in columns:
@@ -71,12 +70,23 @@ class OutlierTransformer(BaseEncoder):
 class IgnoreTransformer(BaseEncoder):
     # Remove the specified columns
 
-    def __init__(self, columns, copy=True):
+    def __init__(self, columns, keep=None, copy=True):
+        """
+
+        :param columns: columns to remove of None
+        :param keep: columns to keep (as alternative to columns)
+        """
         super().__init__(columns, copy)
+        self.keep = as_list(keep)
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
-        X = X[X.columns.difference(self.columns)]
+        columns = self._get_columns(X)
+        keep = self.keep
+        if keep:
+            columns = set(columns).difference(keep)
+
+        X.drop(columns, axis=1, inplace=True)
         return X
 # end

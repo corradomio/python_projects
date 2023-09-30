@@ -47,13 +47,12 @@ class Dense(nn.Sequential):
             ),
             nn.Unflatten(1, unflattened_size=out_features)
         )
-        self.activation = activation
-        self._af = activation_function(activation)
+        self.activation = activation_function(activation)
 
     def forward(self, input: Tensor) -> Tensor:
         t = super().forward(input)
-        if self._af:
-            t = self._af.forward(t)
+        if self.activation:
+            t = self.activation.forward(t)
         return t
 
 # end

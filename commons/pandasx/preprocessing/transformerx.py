@@ -13,7 +13,7 @@ class DTypeEncoder(BaseEncoder):
         self.dtype = dtype
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
         for col in self.columns:
             X[col] = X[col].astype(self.dtype)
@@ -43,7 +43,8 @@ class OrderedLabelEncoder(BaseEncoder):
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
+
         for col in self.columns:
             if len(self.mapping) <= 2:
                 X = self._map_single_column(X, col)
@@ -91,7 +92,7 @@ class PandasCategoricalEncoder(BaseEncoder):
         super().__init__(columns, copy)
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
         for col in self.columns:
             X[col] = X[col].astype('category')

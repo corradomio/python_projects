@@ -89,15 +89,15 @@ class LSTM(nn.LSTM):
         super().__init__(input_size=input, hidden_size=units, **kwargs)
         self.return_sequence = return_sequence
         self.return_state = return_state
-        self.activation = activation
-        self._af = activation_function(activation)
+        self.activation = activation_function(activation)
 
     def forward(self,
                 input: Tensor,
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Tuple]]:
         seq, state = super().forward(input, hx)
-        if self._af:
-            seq = self._af.forward(seq)
+
+        if self.activation:
+            seq = self.activation.forward(seq)
 
         if self.return_sequence and self.return_state:
             return seq, state

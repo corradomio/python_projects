@@ -32,12 +32,14 @@ def load_data():
 
     # pe = ppx.PeriodicEncoder(periodic=ppx.PERIODIC_MONTH, datetime=('DATE', 'M'), target='EASY')
     pe = ppx.PeriodicEncoder(periodic=ppx.PERIODIC_MONTH | ppx.PERIODIC_QUARTER, datetime=None, target=TARGET,
-                             add_periods=False)
-
+                             periods=False)
     dfx = pe.fit_transform(df)
 
+    lt = ppx.LagsTransformer(target='EASY', lags=[1, 16])
+    dfl = lt.fit_transform(dfx)
+
     ss = pdx.preprocessing.StandardScaler(columns=None)
-    dfs = ss.fit_transform(dfx)
+    dfs = ss.fit_transform(dfl)
 
     ix = df.index
 

@@ -1,7 +1,7 @@
 from typing import List
 import pandas as pd
 from .base import datetime_encode, onehot_encode, binary_encode, \
-    dataframe_index, dataframe_ignore, datetime_reindex, _as_list, \
+    set_index, dataframe_ignore, datetime_reindex, as_list, \
     find_unnamed_columns, find_binary
 from .time import periodic_encode
 
@@ -194,13 +194,13 @@ def read_data(file: str,
         "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
 
-    categorical = _as_list(categorical, 'categorical')
-    boolean = _as_list(boolean, 'boolean')
-    numeric = _as_list(numeric, 'numeric')
-    onehot = _as_list(onehot, 'onehot')
-    binary = _as_list(binary, 'binary')
-    ignore = _as_list(ignore, 'ignore')
-    index = _as_list(index, 'index')
+    categorical = as_list(categorical, 'categorical')
+    boolean = as_list(boolean, 'boolean')
+    numeric = as_list(numeric, 'numeric')
+    onehot = as_list(onehot, 'onehot')
+    binary = as_list(binary, 'binary')
+    ignore = as_list(ignore, 'ignore')
+    index = as_list(index, 'index')
 
     # move 'na_values' in kwargs
     if na_values is not None:
@@ -278,7 +278,7 @@ def read_data(file: str,
 
     # compose the index
     if len(index) > 0:
-        df = dataframe_index(df, index)
+        df = set_index(df, index)
 
     # add 'Unnamed: ...' columns to the list of columns to remove
     if ignore_unnamed:

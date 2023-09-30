@@ -45,7 +45,7 @@
 #
 from typing import Union
 import pandas as pd
-from .base import _as_list
+from .base import as_list
 
 
 def nan_replace(df: pd.DataFrame,
@@ -86,8 +86,8 @@ def nan_replace(df: pd.DataFrame,
     :param ignore: list of columns to exclude (alternative to 'columns')
     :return: 
     """
-    ignore = _as_list(ignore, 'ignore')
-    columns = _as_list(columns, 'columns')
+    ignore = as_list(ignore, 'ignore')
+    columns = as_list(columns, 'columns')
 
     df = df.copy()
 

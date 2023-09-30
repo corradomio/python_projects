@@ -22,9 +22,7 @@ class DatetimeEncoder(BaseEncoder):
         self._log = logging.getLogger("DatetimeEncoder")
 
     def transform(self, X: DataFrame) -> DataFrame:
-        assert isinstance(X, DataFrame)
-
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
         X = self._convert_to_datetime(X)
         X = self._copy_to_index(X)
@@ -69,7 +67,7 @@ class DatetimeEncoder(BaseEncoder):
         if isinstance(df.index, PeriodIndex):
             return df
 
-        df = df.set_index(df[col])
+        df.set_index(df[col], inplace=True)
         # df = df[df.columns.difference([col])]
 
         # STUPID Pandas if 'df' has index a PeriodIndex, df.to_period() raise an exception!

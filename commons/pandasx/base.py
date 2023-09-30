@@ -4,7 +4,7 @@
 #
 import warnings
 from typing import List, Union, Optional
-from stdlib import NoneType, CollectionType, _as_list
+from stdlib import NoneType, CollectionType, as_list
 
 import numpy as np
 import pandas as pd
@@ -49,7 +49,7 @@ def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) -> pd
     :return: the dataframe with the encoded columns
     """
     assert isinstance(df, pd.DataFrame)
-    columns = _as_list(columns, 'columns')
+    columns = as_list(columns, 'columns')
 
     for col in columns:
         s = df[col]
@@ -85,7 +85,7 @@ def onehot_encode(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFr
     :return pd.DataFrame: new dataframe
     """
     assert isinstance(df, pd.DataFrame)
-    columns = _as_list(columns, 'columns')
+    columns = as_list(columns, 'columns')
 
     for col in columns:
         dummies = pd.get_dummies(df[col], prefix=col)
@@ -168,7 +168,7 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[t
 
     :return list[tuple[str]: the list of tuples
     """
-    groups = _as_list(groups, 'groups')
+    groups = as_list(groups, 'groups')
 
     tlist = [tuple()]
     if len(groups) == 0:
@@ -204,7 +204,7 @@ def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=Fal
     :return dict[tuple[str], DataFrame]: a dictionary
     """
     assert isinstance(df, pd.DataFrame)
-    groups = _as_list(groups, 'groups')
+    groups = as_list(groups, 'groups')
 
     if len(groups) == 0:
         return {tuple(): df}
@@ -249,8 +249,8 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame],
     :param sortby: columns to use in the sort
     """
     assert isinstance(dfdict, dict)
-    groups = _as_list(groups, 'groups')
-    sortby = _as_list(sortby, 'sortby')
+    groups = as_list(groups, 'groups')
+    sortby = as_list(sortby, 'sortby')
 
     n = len(groups)
     dfonly = []
@@ -287,8 +287,8 @@ def groups_select(df: pd.DataFrame, groups: Union[str, list[str]], values: Union
     """
     assert isinstance(df, pd.DataFrame)
 
-    groups = _as_list(groups, 'groups')
-    values = _as_list(values, 'values')
+    groups = as_list(groups, 'groups')
+    values = as_list(values, 'values')
     assert len(groups) == len(values), "groups and values don't have the same number of elements"
 
     n = len(groups)
@@ -306,8 +306,8 @@ def groups_select(df: pd.DataFrame, groups: Union[str, list[str]], values: Union
 # end
 
 
-dataframe_split_on_groups = groups_split
-dataframe_merge_on_groups = groups_merge
+# dataframe_split_on_groups = groups_split
+# dataframe_merge_on_groups = groups_merge
 
 
 # ---------------------------------------------------------------------------
@@ -383,8 +383,8 @@ def columns_split(df: pd.DataFrame,
     Split the dataframe in a list of series based on the list of selected columns
     """
     assert isinstance(df, pd.DataFrame)
-    columns = _as_list(columns, 'columns')
-    ignore = _as_list(ignore, 'ignore')
+    columns = as_list(columns, 'columns')
+    ignore = as_list(ignore, 'ignore')
 
     if len(columns) == 0:
         columns = list(df.columns.difference(ignore))
@@ -435,9 +435,9 @@ def columns_merge(df: pd.DataFrame,
 # end
 
 
-dataframe_split_column = split_column
-dataframe_split_on_columns = columns_split
-dataframe_merge_columns = columns_merge
+# dataframe_split_column = split_column
+# dataframe_split_on_columns = columns_split
+# dataframe_merge_columns = columns_merge
 
 
 # ---------------------------------------------------------------------------
@@ -563,8 +563,8 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, 
     :param shared: shared columns with 'X' and 'y'
     :return: list of split dataframes
     """
-    target = _as_list(target, 'target')
-    shared = _as_list(shared, 'shared')
+    target = as_list(target, 'target')
+    shared = as_list(shared, 'shared')
 
     xy_list = []
     for data in data_list:
@@ -589,8 +589,8 @@ def nan_split(*data_list,
     :return:
     """
 
-    ignore = _as_list(ignore, 'ignore')
-    columns = _as_list(columns, 'columns')
+    ignore = as_list(ignore, 'ignore')
+    columns = as_list(columns, 'columns')
 
     vi_list = []
     for data in data_list:
@@ -677,8 +677,8 @@ def train_test_split(*data_list, train_size=0, test_size=0,
     """
     assert train_size > 0 or test_size > 0, "train_size or test_size must be > 0"
 
-    groups = _as_list(groups, "groups")
-    sortby = _as_list(sortby, "sortby")
+    groups = as_list(groups, "groups")
+    sortby = as_list(sortby, "sortby")
 
     tt_list = []
 
@@ -842,13 +842,13 @@ def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
         columns = [target] + columns
 
     if groups is not None:
-        dfdict = dataframe_split_on_groups(df, groups=groups)
+        dfdict = groups_split(df, groups=groups)
         corr_dict = {}
         for key in dfdict:
             df = dfdict[key]
             dfcorr = dataframe_correlation(df, columns=columns)
             corr_dict[key] = dfcorr
-        dfcorr = dataframe_merge_on_groups(corr_dict, groups=groups)
+        dfcorr = groups_merge(corr_dict, groups=groups)
         dfcorr.set_index(dfcorr[groups], inplace=True)
         return dfcorr
     # end
@@ -890,13 +890,13 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
         columns = [columns]
 
     if groups is not None:
-        dfdict = dataframe_split_on_groups(df, groups=groups)
+        dfdict = groups_split(df, groups=groups)
         outl_dict = {}
         for key in dfdict:
             df = dfdict[key]
             dfoutl = dataframe_clip_outliers(df, columns=columns)
             outl_dict[key] = dfoutl
-        dfoutl = dataframe_merge_on_groups(outl_dict, groups=groups)
+        dfoutl = groups_merge(outl_dict, groups=groups)
         return dfoutl
     # end
 
@@ -968,7 +968,7 @@ def ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     :param ignore: columns to ignore
     :return: dataframe processed
     """
-    ignore = _as_list(ignore, "ignore")
+    ignore = as_list(ignore, "ignore")
     if len(ignore) > 0:
         df = df[df.columns.difference(ignore)]
     return df

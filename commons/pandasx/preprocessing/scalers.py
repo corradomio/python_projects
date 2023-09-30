@@ -40,7 +40,7 @@ class StandardScaler(BaseEncoder):
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
         columns = self._get_columns(X)
         for col in columns:
@@ -116,7 +116,7 @@ class MinMaxScaler(BaseEncoder):
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
-        if self.copy: X = X.copy()
+        X = self._check_X(X)
 
         minv = self._min_value
         deltav = self._delta_values

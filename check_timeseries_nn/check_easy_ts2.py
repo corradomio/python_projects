@@ -27,28 +27,36 @@ def load_data():
         sep=';'
     )
 
-    TARGET = ['EASY']
-
-    # pe = ppx.PeriodicEncoder(periodic=ppx.PERIODIC_MONTH, datetime=('DATE', 'M'), target='EASY')
-    pe = ppx.PeriodicEncoder(periodic=ppx.PERIODIC_MONTH | ppx.PERIODIC_QUARTER,
-                             datetime=None,
-                             target=TARGET,
-                             add_periods=False)
-    dfx = pe.fit_transform(df)
-
     ss = ppx.StandardScaler()
-    dfs = ss.fit_transform(dfx)
+    dfs = ss.fit_transform(df)
     dfo = ss.inverse_transform(dfs)
 
-    y = dfs[TARGET].to_numpy(dtype=np.float32)
-    X = dfs[dfs.columns.difference(TARGET)].to_numpy(dtype=np.float32)
-    ix = dfs.index
+    TARGET = ['EASY']
 
-    tt = sktx.RNNTrainTransform3D(lags=[12, 12], tlags=[0, 1, 2, 3])
-    Xt, yt = tt.fit_transform(X, y)
+    PAST = 16
+    FUTURE = 24
+
+    pe = ppx.PeriodicEncoder(TARGET, periodic=ppx.PERIODIC_MONTH | ppx.PERIODIC_QUARTER)
+    dfx = pe.fit_transform(df)
+
+    dfp = dfx.iloc[:-FUTURE]    # past
+    dff = dfx.iloc[-FUTURE:]    # future
+
+    lt = ppx.LagsTransformer(target=TARGET, xlags=1, ylags=16)
+    X = lt.fit_transform(dfp)
+
+    at = ppx.ArrayTransformer(target=TARGET, xlags=16, ylags=1)
+    Xt, yt = at.fit_transform(X)
+
+    # y = dfs[TARGET].to_numpy(dtype=np.float32)
+    # X = dfs[dfs.columns.difference(TARGET)].to_numpy(dtype=np.float32)
+    # ix = dfs.index
+
+    # tt = sktx.RNNTrainTransform3D(lags=[12, 12], tlags=[0, 1, 2, 3])
+    # Xt, yt = tt.fit_transform(X, y)
 
     n = len(Xt)
-    ix = ix[:n]
+    ix = Xt.index
 
     Xp = Xt[-N:]
     yp = yt[-N:]
@@ -79,6 +87,7 @@ def plots(smodel, yt, yp, ypred, it, ip):
 def bilstm():
     Xt, yt, Xp, yp, it, ip = load_data()
 
+    seq_len = Xt.shape[1]
     input_size = Xt.shape[2]  # (batch, seq, data)
     output_size = yt.shape[2]  # (batch, seq, data)
 
@@ -90,10 +99,10 @@ def bilstm():
                  return_sequence=True,
                  activation='tanh'),
         # nn.Tanh(),
-        nnk.Dense(input=(input_size, 12, 2), units=(4, output_size)),
+        nnk.Dense(input=(input_size, seq_len, 2), units=(4, output_size)),
     )
 
-    early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.01)
+    early_stop = skorchx.callbacks.EarlyStopping(min_epochs=50, patience=10, threshold=0.001)
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
@@ -114,33 +123,34 @@ def seq2seq():
     Xt, yt, Xp, yp, it, ip = load_data()
 
     input_size = Xt.shape[2]  # (batch, seq, data)
+    hidden_size = 9
     output_size = yt.shape[2]  # (batch, seq, data)
 
     print(f" input_size: {input_size}")
     print(f"output_size: {output_size}")
 
     tmodule = nn.Sequential(
-        nnx.Probe("input"),
+        nnx.Probe("input"),             # (B, L, input_size)
         nnk.LSTM(input=input_size,
                  units=input_size,
                  return_sequence=False,
                  activation='tanh'),
-        nnx.Probe("lstm1"),
+        nnx.Probe("lstm1"),             # (B, input_size)
         # nn.Tanh(),
-        nnk.Dense(input=3,
-                  units=150,
+        nnk.Dense(input=input_size,
+                  units=hidden_size,
                   activation='relu'),
-        nnx.Probe("dense"),
+        nnx.Probe("dense"),             # (B, hidden_size)
         nnk.RepeatVector(12),
-        nnx.Probe("repeat"),
-        nnk.LSTM(input=150,
+        nnx.Probe("repeat"),            # (B, 12, hidden_size)
+        nnk.LSTM(input=hidden_size,
                  units=input_size,
                  return_sequence=True,
                  activation='tanh'),
-        nnx.Probe("lstm2"),
+        nnx.Probe("lstm2"),             # (B, 12, input_size)
         # nn.Tanh(),
-        nnk.TimeDistributed(nnk.Dense(input=input_size, units=output_size, activation="linear")),
-        nnx.Probe("tdist"),
+        nnk.TimeDistributed(nnk.Dense(input=input_size, units=2*output_size, activation="linear")),
+        nnx.Probe("tdist"),             # (B, 12, output_size)
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.01)

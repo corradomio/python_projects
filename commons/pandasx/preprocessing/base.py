@@ -27,5 +27,11 @@ class BaseEncoder:
         else:
             return list(X.columns)
 
+    def _check_X(self, X: DataFrame):
+        assert isinstance(X, DataFrame)
+        if self.copy:
+            return X.copy()
+        else:
+            return X
 
 # end
