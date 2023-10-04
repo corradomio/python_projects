@@ -8,5 +8,5 @@ from .periodic import PeriodicEncoder
 from .periodic import PERIODIC_ALL, \
     PERIODIC_DAY, PERIODIC_WEEK, PERIODIC_MONTH, PERIODIC_QUARTER, PERIODIC_YEAR, \
     PERIODIC_DAY_OF_WEEK, PERIODIC_DMY
-from .lagt import LagsTransformer
+from .lagst import LagsTransformer
 from .arryt import ArrayTransformer

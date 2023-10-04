@@ -2,6 +2,7 @@ import logging.config
 
 import matplotlib.pyplot as plt
 import pandas as pd
+import numpy as np
 import skorch
 import torch
 import torch.nn as nn
@@ -37,28 +38,18 @@ def load_data():
     Xp__test = pe.transform(X__test)
     yp__test = y__test
 
-    # add X[0] and previous 16 timeslots fo the target
-    # predict just y[0] (1 timeslot)
-    lt = ppx.LagsTransformer(xlags=[0], ylags=12, tlags=4)
+    at = ppx.ArrayTransformer(xlags=1, ylags=1, tlags=1, sequence=False, dtype=np.float64)
+    Xt, yt = at.fit_transform(Xp_train, yp_train)
+    Xp, yp = at.transform(Xp__test, yp__test)
 
-    Xl_train, yl_train = lt.fit(Xp_train, yp_train).transform(Xp_train, yp_train)
-    Xl__test, yl__test = lt.transform(Xp__test, yp__test)
+    yf = at.prepare_forecast(X=Xp__test)
 
-    # scale all values with mean=0, std=1
-    ssx = ppx.StandardScaler()
-    Xs_train = ssx.fit_transform(Xl_train)
-    Xs__test = ssx.transform(Xl__test)
-
-    ssy = ppx.StandardScaler()
-    ys_train = ssy.fit_transform(yl_train)
-    ys__test = ssy.transform(yl__test)
-
-    ix_train = X_train.index
-    ix__test = X__test.index
-
-    at = ppx.ArrayTransformer(xlags=12, ylags=0, tlags=4, sequence=True)
-    Xt, yt = at.fit_transform(Xs_train, ys_train)
-    Xp, yp = at.transform(Xs__test, ys__test)
+    n = len(yp)
+    for i in range(n):
+        Xf, yf = at.forecast(i)
+        yf[0, :] = yp[i]
+        at.set_forecast(i, yf)
+        pass
 
     it = None
     ip = None

@@ -1,7 +1,7 @@
 from typing import List
 import pandas as pd
 from .base import datetime_encode, onehot_encode, binary_encode, \
-    set_index, dataframe_ignore, datetime_reindex, as_list, \
+    set_index, ignore_columns, datetime_reindex, as_list, \
     find_unnamed_columns, find_binary
 from .time import periodic_encode
 
@@ -286,7 +286,7 @@ def read_data(file: str,
 
     # remove the 'ignore' columne
     if len(ignore) > 0:
-        df = dataframe_ignore(df, ignore)
+        df = ignore_columns(df, ignore)
 
     # force the reindex
     if reindex:

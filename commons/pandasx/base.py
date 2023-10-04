@@ -11,6 +11,47 @@ import pandas as pd
 from numpy import issubdtype, integer
 
 
+__all__ = [
+    "find_binary",
+    "binary_encode",
+    "onehot_encode",
+    "datetime_encode",
+    "datetime_reindex",
+
+    "groups_list",
+    "groups_split",
+    "groups_merge",
+    "groups_select",
+
+    "split_column",
+    "columns_split",
+    "columns_merge",
+
+    "multiindex_get_level_values",
+    "set_index",
+    "index_split",
+    "index_merge",
+
+    "xy_split",
+    "nan_split",
+    "train_test_split",
+
+    "series_argmax",
+    "series_argmin",
+    "series_range",
+    "series_unique_values",
+
+    "dataframe_correlation",
+    "filter_outliers",
+    "clip_outliers",
+
+    "index_labels",
+    "find_unnamed_columns",
+
+    "ignore_columns"
+]
+
+
 # ---------------------------------------------------------------------------
 # find_binary
 # onehot_encode
@@ -155,8 +196,8 @@ def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFram
 # ---------------------------------------------------------------------------
 
 DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
-TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[None, DATAFRAME_OR_DICT]]
-PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
+TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[NoneType, DATAFRAME_OR_DICT]]
+PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series, NoneType]
 
 
 def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[tuple]:
@@ -497,7 +538,7 @@ def set_index(df: pd.DataFrame,
 # end
 
 
-dataframe_index = set_index
+# dataframe_index = set_index
 
 
 def index_split(df: pd.DataFrame, levels: int = -1) -> dict[tuple, pd.DataFrame]:
@@ -544,8 +585,8 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 # end
 
 
-dataframe_split_on_index = index_split
-dataframe_merge_on_index = index_merge
+# dataframe_split_on_index = index_split
+# dataframe_merge_on_index = index_merge
 
 
 # ---------------------------------------------------------------------------
@@ -570,6 +611,13 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, 
     for data in data_list:
         assert isinstance(data, pd.DataFrame)
         X = data[data.columns.difference(target)]
+
+        #
+        # Note it seems not a grat idea
+        #
+        # if len(X.columns) == 0:
+        #     X = None
+
         y = data[target + shared]
         xy_list += [X, y]
     # end
@@ -683,8 +731,16 @@ def train_test_split(*data_list, train_size=0, test_size=0,
     tt_list = []
 
     for data in data_list:
+        #
+        # It seems to be not a good idea to try to split a None object!
+        # This because some other algorithms need X AND ITS index to work
+        # correctly.
+        # This means that X can be an EMPTY dataframe BUT with a correct index!
+        #
+        assert data is not None
+
         if len(groups) > 0:
-            dfdict = groups_split(data, groups);
+            dfdict = groups_split(data, groups)
             d_trn = {}
             d_tst = {}
             for key in dfdict:
@@ -894,7 +950,7 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
         outl_dict = {}
         for key in dfdict:
             df = dfdict[key]
-            dfoutl = dataframe_clip_outliers(df, columns=columns)
+            dfoutl = clip_outliers(df, columns=columns)
             outl_dict[key] = dfoutl
         dfoutl = groups_merge(outl_dict, groups=groups)
         return dfoutl
@@ -918,8 +974,8 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
     return df
 
 
-dataframe_clip_outliers = clip_outliers
-dataframe_filter_outliers = filter_outliers
+# dataframe_clip_outliers = clip_outliers
+# dataframe_filter_outliers = filter_outliers
 
 
 # ---------------------------------------------------------------------------
@@ -961,7 +1017,7 @@ def find_unnamed_columns(df: pd.DataFrame) -> list[str]:
 # end
 
 
-def ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
+def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     """
     Remove a column or list of columns
     :param df: dataframe to analyze
@@ -975,7 +1031,7 @@ def ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
 # end
 
 
-dataframe_ignore = ignore
+# dataframe_ignore = ignore
 
 
 # ---------------------------------------------------------------------------
