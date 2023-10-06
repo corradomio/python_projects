@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 from stdlib import as_list
-from .base import XyBaseEncoder
+from .base import BaseEncoder, XyBaseEncoder
 from ..base import groups_split, groups_merge
 
 
@@ -244,11 +244,12 @@ def _add_onehot(df, datetime, periodic):
 #      must contain the group columns!
 #
 
-class PeriodicEncoder(XyBaseEncoder):
+class PeriodicEncoder(BaseEncoder):
 
     def __init__(self,
                  datetime: Union[None, str, tuple] = None,
                  *,
+                 target=None,
                  periodic: int = 0,
                  freq: Optional[str] = None,
                  groups: Union[None, str, list[str]] = None,
@@ -281,7 +282,8 @@ class PeriodicEncoder(XyBaseEncoder):
             self.datetime = datetime[0]
             self.freq = datetime[1]
 
-        self.groups = as_list(groups)
+        self.target = as_list(target, "target")
+        self.groups = as_list(groups, "groups")
         self.means = means
         self.method = method
 
@@ -289,9 +291,16 @@ class PeriodicEncoder(XyBaseEncoder):
         self._means = {}
         self._targets = None
 
-    def fit(self, X, y) -> "PeriodicEncoder":
+    def fit(self, X, y=None) -> "PeriodicEncoder":
+        self._check_Xy(X, y)
+
         if not self.means:
             return self
+
+        if y is None:
+            target = self.target
+            assert len(target) > 0, "If y is None 'target' must be specified"
+            y = X[target]
 
         self._check_datetime(X, y)
 
@@ -334,12 +343,20 @@ class PeriodicEncoder(XyBaseEncoder):
             assert X is None or datetime in X.columns, f"The column {datetime} is not present in X"
             assert y is None or datetime in y.columns, f"The column {datetime} is not present in y"
 
-    def transform(self, X=None, y=None) -> pd.DataFrame:
+    # -----------------------------------------------------------------------
+
+    def transform(self, X) -> pd.DataFrame:
+        if isinstance(X, pd.PeriodIndex):
+            fh = X
+            X = pd.DataFrame(data=None, index=fh)
+
+        self._check_X(X)
+
         if len(self.groups) == 0:
             return self._transform(X, self._means)
 
         X_dict: dict = dict()
-        groups = groups_split(X, groups=self.groups, drop=True) if X is not None else None
+        groups = groups_split(X, groups=self.groups, drop=True)
 
         for g in groups:
             Xg = groups[g]
@@ -351,7 +368,6 @@ class PeriodicEncoder(XyBaseEncoder):
         return X
 
     def _transform(self, X, means) -> pd.DataFrame:
-        X = self._check_X(X)
         X = X.copy()
 
         datetime = self.datetime
@@ -406,160 +422,3 @@ class PeriodicEncoder(XyBaseEncoder):
         return X
     # end
 # end
-
-# class PeriodicEncoder(BaseEncoder):
-#
-#     def __init__(self,
-#                  columns: Union[None, str, list[str]] = None,
-#                  periodic: int = 0,
-#                  datetime: Union[None, str, tuple] = None,
-#                  freq: Optional[str] = None,
-#                  groups: Union[None, str, list[str]] = None,
-#                  means=True,
-#                  method=None):
-#         """
-#         Add different periodic types and the means
-#
-#         If 'datetime' is not defined, it is used the index. If defined, it must be a valid datetime column
-#         If 'groups' is defined, the dataframe is split and merged
-#
-#         :param columns: column name(s) where to compute the means
-#         :param periodic: flags of periodics to use
-#         :param datetime str|(str, str): datetime column. If not specified, it is used the index
-#         :param freq: datetime frequency
-#         :param groups: list of columns used to split the sub time series
-#         :params means: if to add the means columns for each period
-#         :params method: if to add the periods columns:
-#             None: no period columns are added
-#             "oh", "onehot": add columns in onehot encoding
-#             "fourier", "sincos": add columns in fourier form
-#         """
-#         super().__init__(columns, False)
-#         self.periodic = periodic
-#         self.freq = freq
-#         self.datetime = datetime
-#
-#         if datetime is None or isinstance(datetime, str):
-#             self.datetime = datetime
-#         else:
-#             self.datetime = datetime[0]
-#             self.freq = datetime[1]
-#
-#         self.groups = as_list(groups)
-#         self.means = means
-#         self.method = method
-#
-#         # means for each column and period
-#         self._means = {}
-#
-#     def fit(self, df: pd.DataFrame) -> "PeriodicEncoder":
-#         if not self.means:
-#             return self
-#
-#         if len(self.groups) == 0:
-#             X = df
-#             means = self._compute_means(X)
-#             self._means = means
-#             return self
-#
-#         groups = groups_split(df, groups=self.groups, drop=True)
-#         for g in groups:
-#             X = groups[g]
-#             means = self._compute_means(X)
-#             self._means[g] = means
-#
-#         return self
-#
-#     def _compute_means(self, X: pd.DataFrame):
-#         datetime = self.datetime
-#         targets = self.columns
-#         periodic = self.periodic
-#
-#         if len(targets) == 0 or periodic == 0:
-#             return self
-#
-#         if datetime is None:
-#             datetime = NAME_DATETIME
-#             values = X[targets]
-#             values[datetime] = values.index.to_series()
-#         else:
-#             values = X[targets + [datetime]]
-#
-#         values = _add_periods(values, datetime, periodic)
-#         means = _compute_means(values, datetime, periodic, targets)
-#
-#         return means
-#
-#     def transform(self, df: pd.DataFrame) -> pd.DataFrame:
-#         if len(self.groups) == 0:
-#             return self._transform(df, self._means)
-#
-#         X_dict: dict = dict()
-#         groups = groups_split(df, groups=self.groups, drop=True)
-#         for g in groups:
-#             X = groups[g]
-#             means = self._means[g]
-#             X = self._transform(X, means)
-#             X_dict[g] = X
-#
-#         X = groups_merge(X_dict, groups=self.groups)
-#         return X
-#
-#     def _transform(self, X: pd.DataFrame, means) -> pd.DataFrame:
-#         X = self._check_X(X)
-#
-#         datetime = self.datetime
-#         targets = self.columns
-#         periodic = self.periodic
-#         drop_dt = False
-#         drop_periods = self.method is None
-#
-#         #
-#         # to simplify the merging of means, it is added
-#         # a 'virtual' datetime column, removed before
-#         # to return the dataset
-#         #
-#
-#         if datetime is None:
-#             datetime = NAME_DATETIME
-#             X[datetime] = X.index.to_series()
-#             drop_dt = True
-#
-#         #
-#         # it is necessary to encode the periods to add means correctly.
-#         # Then:
-#         #
-#         #   1) add the periods
-#         #   2) if necessary, add the means
-#         #   3) if necessary, add the periods
-#         #   3) if necessary, drop the periods
-#         #
-#
-#         X = _add_periods(X, datetime, periodic)
-#
-#         if self.means:
-#             X = _add_means(X, datetime, periodic, targets, means)
-#
-#         if self.method in [True, "plain"]:
-#             pass
-#
-#         if self.method in ["fourier", "sincos"]:
-#             X = _add_fourier(X, datetime, periodic)
-#             drop_periods = True
-#
-#         if self.method in ["oh", "onehot"]:
-#             X = _add_onehot(X, datetime, periodic)
-#             drop_periods = True
-#
-#         if drop_periods:
-#             X = _drop_periods(X, datetime, periodic)
-#
-#         if drop_dt:
-#             X.drop(datetime, axis=1, inplace=True)
-#
-#         return X
-#     # end
-# # end
-
-
-# ---------------------------------------------------------------------------

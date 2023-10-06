@@ -1,20 +1,31 @@
-from typing import Union, Optional, Any, Optional
+from typing import Union, Any, Optional
 
 import numpy as np
 import torch
 import torch.nn as nn
+from torch import Tensor
 from torch.utils.data import TensorDataset
+from stdlib import import_from
+
+
+class TorchLayerMixin:
+    pass
+
+class KerasLayerMixin:
+    pass
 
 
 # ---------------------------------------------------------------------------
-# Utilities
+# List utilities
 # ---------------------------------------------------------------------------
 
-def ranked(dim: Union[int, list[int]]) -> list[int]:
+def dim_of(dim: Union[int, list[int]]):
     return [dim] if isinstance(dim, int) else dim
 
 
-def mul(dim: list[int]) -> int:
+def mul(dim: Union[int, list[int]]) -> int:
+    if isinstance(dim, int):
+        return dim
     d = 1
     for l in dim:
         d *= l
@@ -25,29 +36,32 @@ def mul(dim: list[int]) -> int:
 # torch Utilities
 # ---------------------------------------------------------------------------
 
-def _import_from(qname: str) -> Any:
-    """
-    Import a class specified by the fully qualified name string
-
-    :param qname: fully qualified name of the class
-    :return: Python class
-    """
-    import importlib
-    p = qname.rfind('.')
-    qmodule = qname[:p]
-    name = qname[p+1:]
-
-    module = importlib.import_module(qmodule)
-    clazz = getattr(module, name)
-    return clazz
-# end
-
-
-def _as_tensor(v: np.ndarray, dtype=torch.float32) -> torch.Tensor:
+def to_tensor(v: np.ndarray, dtype=torch.float32) -> Tensor:
     if len(v.shape) == 1:
         v = v.reshape((-1, 1))
     return torch.from_numpy(v).type(dtype)
-# end
+
+
+def expand_dims(t: Tensor, dim=-1) -> Tensor:
+    # if dim == -1:
+    #     # return t.reshape(list(t.shape) + [1])
+    #     return t[:, None]
+    # elif dim == 0:
+    #     # return t.reshape([0] + list(t.shape))
+    #     return t[None, :]
+    # else:
+    #     shape = list(t.shape)
+    #     return t.reshape(shape[:dim] + [1] + shape[dim:])
+    return torch.unsqueeze(t, dim)
+
+
+def cast(t: Tensor, dtype) -> Tensor:
+    return t.to(dtype)
+
+
+def max(t: Tensor, dim=None, keepdims=False):
+    max_vals, max_idx = torch.max(t, dim=dim, keepdims=keepdims)
+    return max_vals
 
 
 # ---------------------------------------------------------------------------
@@ -60,8 +74,8 @@ class NumpyDataset(TensorDataset):
         assert isinstance(X, np.ndarray)
         assert isinstance(y, np.ndarray)
         super().__init__(
-            _as_tensor(X, dtype=dtype),
-            _as_tensor(y, dtype=dtype)
+            to_tensor(X, dtype=dtype),
+            to_tensor(y, dtype=dtype)
         )
 # end
 
@@ -430,7 +444,7 @@ def create_layer(layer_config: Union[str, list, tuple, dict], **kwargs) -> nn.Mo
     layer_class_name = _normalize_class_name(layer_config, LAYER, NS="nn")
     layer_params = _class_params(layer_config, LAYER, **kwargs)
 
-    layer_class = _import_from(layer_class_name)
+    layer_class = import_from(layer_class_name)
     layer = layer_class(**layer_params)
     assert isinstance(layer, nn.Module)
     return layer
@@ -447,7 +461,7 @@ def create_optimizer(module: nn.Module, optimizer_config: Union[None, str, list,
     optimizer_class_name = _normalize_class_name(optimizer_config, OPTIMIZER, NS="optim")
     optimizer_params = _class_params(optimizer_config, OPTIMIZER)
 
-    optimizer_class = _import_from(optimizer_class_name)
+    optimizer_class = import_from(optimizer_class_name)
     optimizer = optimizer_class(module.parameters(), **optimizer_params)
     assert isinstance(optimizer,  torch.optim.Optimizer)
     return optimizer
@@ -464,7 +478,7 @@ def create_loss_function(module: nn.Module, loss_config: Union[None, str, list, 
     loss_class_name = _normalize_class_name(loss_config, LOSS, NS="nn")
     loss_params = _class_params(loss_config, LOSS)
 
-    loss_class = _import_from(loss_class_name)
+    loss_class = import_from(loss_class_name)
     loss = loss_class(**loss_params)
     assert isinstance(loss,  torch.nn.modules.loss._Loss)
     return loss

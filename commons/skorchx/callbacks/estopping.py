@@ -26,21 +26,6 @@ class EarlyStopping(skc.EarlyStopping):
 
         super().on_epoch_end(net, **kwargs)
 
-        # if not self._is_score_improved(current_score):
-        #     self.misses_ += 1
-        # else:
-        #     self.misses_ = 0
-        #     self.dynamic_threshold_ = self._calc_new_threshold(current_score)
-        #     self.best_epoch_ = net.history[-1, "epoch"]
-        #     if self.load_best:
-        #         self.best_model_weights_ = deepcopy(net.module_.state_dict())
-        # if self.misses_ == self.patience:
-        #     if net.verbose:
-        #         self._sink("Stopping since {} has not improved in the last "
-        #                    "{} epochs.".format(self.monitor, self.patience),
-        #                    verbose=net.verbose)
-        #     raise KeyboardInterrupt
-
     def _is_over_threshold(self, current_score):
         if self.lower_is_better:
             if current_score > self.dynamic_threshold_ + self.threshold:

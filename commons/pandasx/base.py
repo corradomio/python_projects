@@ -601,7 +601,7 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, 
 
     :param data_list: df list
     :param target: target column name
-    :param shared: shared columns with 'X' and 'y'
+    :param shared: the columns mus be present in 'X' and 'y'
     :return: list of split dataframes
     """
     target = as_list(target, 'target')
@@ -610,15 +610,13 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, 
     xy_list = []
     for data in data_list:
         assert isinstance(data, pd.DataFrame)
-        X = data[data.columns.difference(target)]
 
-        #
-        # Note it seems not a grat idea
-        #
-        # if len(X.columns) == 0:
-        #     X = None
+        columns = data.columns.difference(target).union(shared)
+        X = data[columns]
 
-        y = data[target + shared]
+        columns = data.columns.difference(columns).union(target).union(shared)
+        y = data[columns]
+
         xy_list += [X, y]
     # end
     return xy_list

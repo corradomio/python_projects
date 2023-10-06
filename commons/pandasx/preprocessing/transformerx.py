@@ -35,8 +35,9 @@ class OrderedLabelEncoder(BaseEncoder):
         self.mapping: list[str] = mapping
         self.remove_chars = '()[]{}' if remove_chars is None else remove_chars
 
-    def fit(self, X: DataFrame):
-        assert isinstance(X, DataFrame)
+    def fit(self, X: DataFrame, y=None):
+        self._check_X(X, y)
+
         if len(self.mapping) == 0:
             col = self.columns[0]
             self.mapping = sorted(X[col].unique())

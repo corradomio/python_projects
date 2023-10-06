@@ -17,8 +17,8 @@ class BinaryLabelsEncoder(BaseEncoder):
         super().__init__(columns, copy)
         self._maps = {}
 
-    def fit(self, X: DataFrame) -> "BinaryLabelsEncoder":
-        assert isinstance(X, DataFrame)
+    def fit(self, X: DataFrame, y=None) -> "BinaryLabelsEncoder":
+        self._check_X(X, y)
 
         for col in self.columns:
             x = X[col]
@@ -75,8 +75,8 @@ class OneHotEncoder(BaseEncoder):
         self._maps = {}
         self._bins = {}
 
-    def fit(self, X: DataFrame) -> "OneHotEncoder":
-        assert isinstance(X, DataFrame)
+    def fit(self, X: DataFrame, y=None) -> "OneHotEncoder":
+        self._check_X(X, y)
 
         for col in self.columns:
             x = X[col]

@@ -12,10 +12,13 @@ class Probe(nn.Module):
     def __init__(self, name=""):
         super().__init__()
         self.name = name
+        self._log = True
         self._repr = f"Probe({name})"
 
     def forward(self, input):
-        print(f"{self._repr}: {tuple(input.shape)}")
+        if self._log:
+            print(f"{self._repr}: {tuple(input.shape)}")
+            self._log = False
         return input
 
     def __repr__(self):

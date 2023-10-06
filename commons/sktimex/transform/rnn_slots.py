@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags
+from ..lag import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +49,7 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
         t = len(self.slots)
 
         u = len(tlags)
-        v = max(tlags)
+        v = lmax(tlags)
 
         mx = X.shape[1] if X is not None else 0
         my = y.shape[1]

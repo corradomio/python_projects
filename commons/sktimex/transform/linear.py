@@ -1,7 +1,7 @@
 import numpy as np
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags
+from ..lag import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -35,7 +35,7 @@ class LinearTrainTransform(ModelTrainTransform):
         st = len(tlags)
         t = len(self.slots)
 
-        s = max(tlags)
+        s = lmax(tlags)
         r = s + t
 
         mx = X.shape[1] if X is not None else 0

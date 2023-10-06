@@ -1,7 +1,8 @@
 import numpy as np
-from pandas import DataFrame, RangeIndex
+import pandas as pd
 
 from .base import XyBaseEncoder
+from ..base import as_list
 
 
 #
@@ -27,17 +28,24 @@ from .base import XyBaseEncoder
 #
 #   n is converted in [0...n-1]
 #
+RangeType = type(range(0))
+
 
 def _resolve_xylags(lags, forecast=False):
     if lags is None and forecast:
-        return [0]
+        return []
+        # return [0]
     elif lags is None:
         return []
     elif isinstance(lags, int):
         s = 0 if forecast else 1
         return list(range(s, s+lags))
-    else:
+    elif isinstance(lags, RangeType):
+        return list(lags)
+    elif isinstance(lags, (list, tuple)):
         return lags
+    else:
+        raise ValueError(f"Unsupported lags '{lags}'")
 
 
 # def _resolve_lags(lags, forecast=False):
@@ -72,9 +80,10 @@ def lmax(l): return max(l) if l else 0
 def _add_col(Xt, X, col, lags, s, n, forecast=False, Xh=None):
     def name_of(k):
         if k < 0:
-            return f"{col}{k:02}"
+            k = -k
+            return f"{col}-{k:02}"
         elif k > 0:
-            return f"{col}_{k:02}"
+            return f"{col}+{k:02}"
         else:
             return col
 
@@ -122,7 +131,8 @@ class LagsTransformer(XyBaseEncoder):
     def __init__(self,
                  xlags=None,
                  ylags=None,
-                 tlags=None):
+                 tlags=None,
+                 target=None):
         """
 
         :param columns: columns to use as features
@@ -134,6 +144,7 @@ class LagsTransformer(XyBaseEncoder):
         self.xlags = xlags
         self.ylags = ylags
         self.tlags = tlags
+        self.target = as_list(target, "target")
 
         self._xlags = _resolve_xylags(xlags)
         self._ylags = _resolve_xylags(ylags)
@@ -144,19 +155,35 @@ class LagsTransformer(XyBaseEncoder):
         self.Xf = None
         self.yf = None
 
-    def fit(self, X, y):
+    def fit(self, X=None, y=None):
         super().fit(X, y)
+
+        if len(self.target) > 0:
+            y = X[self.target]
+
+        self._check_Xy(X, y)
+
         self.Xh = X
         self.yh = y
         return self
 
-    def transform(self, X: DataFrame, y: DataFrame):
+    def transform(self, X=None, y=None):
+        if len(self.target) > 0:
+            y = X[self.target]
+        if X is None:
+            X = y.index
+        if isinstance(X, pd.PeriodIndex):
+            ix = X
+            X = pd.DataFrame(index=ix)
+
         X, y = self._check_Xy(X, y)
 
         if self.Xh.index[0] == X.index[0]:
-            return self._transform_fitted(X, y)
+            Xt, yt = self._transform_fitted(X, y)
         else:
-            return self._transform_forecast(X, y)
+            Xt, yt = self._transform_forecast(X, y)
+
+        return (Xt, yt) if self.tlags else Xt
 
     def _transform_fitted(self, X, y):
         assert self.Xh.index[0] == X.index[0]
@@ -167,11 +194,11 @@ class LagsTransformer(XyBaseEncoder):
         tlags = self._tlags
 
         s = max(lmax(xlags), lmax(ylags))
-        st = max(tlags)
+        st = lmax(tlags)
         n = len(X) - (s + st)
         ix = y.index
 
-        Xt = DataFrame(index=RangeIndex(n))
+        Xt = pd.DataFrame(index=pd.RangeIndex(n))
         for col in X.columns:
             _add_col(Xt, X, col, xlags, s, n)
 
@@ -180,7 +207,7 @@ class LagsTransformer(XyBaseEncoder):
 
         Xt.index = ix[s:s+n]
 
-        yt = DataFrame(index=RangeIndex(n))
+        yt = pd.DataFrame(index=pd.RangeIndex(n))
         for col in y.columns:
             _add_col(yt, y, col, tlags, s, n, True)
 
@@ -195,12 +222,12 @@ class LagsTransformer(XyBaseEncoder):
         xlags = self._xlags if X is not None else []
         ylags = self._ylags
         tlags = self._tlags
-        st = max(tlags)
+        st = lmax(tlags)
 
         n = len(y)
         ix = y.index - st
 
-        Xt = DataFrame(index=RangeIndex(n))
+        Xt = pd.DataFrame(index=pd.RangeIndex(n))
         for col in X.columns:
             _add_col(Xt, X, col, xlags, -st, n, False, self.Xh)
 
@@ -209,7 +236,7 @@ class LagsTransformer(XyBaseEncoder):
 
         Xt.index = ix
 
-        yt = DataFrame(index=RangeIndex(n))
+        yt = pd.DataFrame(index=pd.RangeIndex(n))
         for col in y.columns:
             _add_col(yt, y, col, tlags, -st, n, True, self.yh)
 
@@ -218,151 +245,3 @@ class LagsTransformer(XyBaseEncoder):
         return Xt, yt
 # end
 
-
-# class LagsTransformer(BaseEncoder):
-#     """
-#     Add a list of columns based on xlags, ylags and tlags, where:
-#
-#         - xlags: lags applied to columns
-#         - ylags: lags applied to target(s)
-#         - tlags: lags applied to target(s) and used for forecasting
-#
-#     xlags and ylags are used to compose X, tlags is used to compose y
-#     """
-#
-#     def __init__(self, columns=None,
-#                  target=None,
-#                  xlags=None,
-#                  ylags=None,
-#                  copy=True):
-#         """
-#
-#         :param columns: columns to use as features
-#         :param target: column(s) to use ad target
-#         :param lags: lags used on the train features
-#         :param copy:
-#         """
-#         super().__init__(columns, copy)
-#         self.targets = as_list(target)
-#         self.xlags = xlags
-#         self.ylags = ylags
-#
-#         self._xlags = _resolve_xylags(xlags)
-#         self._ylags = _resolve_xylags(ylags, True)
-#
-#     def transform(self, df: DataFrame) -> (DataFrame, DataFrame):
-#         """
-#         Apply the lags transformations.
-#         If tlags is not defined, it is not composed y
-#
-#         :param df:
-#         :return: (X, y) if tlags is defined otherwise (X, None)
-#         """
-#         df = self._check_X(df)
-#
-#         xlags = self._xlags
-#         ylags = self._ylags
-#         s = _window_len(xlags, ylags)
-#         n = len(df) - s
-#
-#         columns = self._get_columns(df)
-#         targets = self.targets
-#         features = columns
-#         ix = df.index
-#
-#         X = DataFrame(index=RangeIndex(n))
-#         for col in features:
-#             _add_col(X, df, col, xlags, s, n)
-#
-#         for col in targets:
-#             _add_col(X, df, col, ylags, s, n)
-#
-#         X.index = ix[s:s+n]
-#
-#         return X
-#     # end
-# # end
-
-
-# ---------------------------------------------------------------------------
-# LagsTransformerOld
-# ---------------------------------------------------------------------------
-# Note: it is not possible to join X and y because the time stamps are
-# different.
-#
-
-# class LagsTransformerOld(BaseEncoder):
-#     """
-#     Add a list of columns based on xlags, ylags and tlags, where:
-#
-#         - xlags: lags applied to columns
-#         - ylags: lags applied to target(s)
-#         - tlags: lags applied to target(s) and used for forecasting
-#
-#     xlags and ylags are used to compose X, tlags is used to compose y
-#     """
-#
-#     def __init__(self, columns=None,
-#                  target=None,
-#                  lags=None, tlags=None,
-#                  copy=True):
-#         """
-#
-#         :param columns: columns to use as features
-#         :param target: column(s) to use ad target
-#         :param lags: lags used on the train features
-#         :param tlags: lags used on the predicted targets
-#         :param copy:
-#         """
-#         super().__init__(columns, copy)
-#         self.targets = as_list(target)
-#         self.lags = lags
-#         self.tlags = tlags
-#
-#         self._slots = _resolve_lags(lags)
-#         self._tlags = _resolve_xylags(tlags)
-#
-#     def transform(self, df: DataFrame) -> (DataFrame, DataFrame):
-#         """
-#         Apply the lags transformations.
-#         If tlags is not defined, it is not composed y
-#
-#         :param df:
-#         :return: (X, y) if tlags is defined otherwise (X, None)
-#         """
-#         df = self._check_X(df)
-#
-#         xlags, ylags = self._slots
-#         tlags = self._tlags
-#
-#         w = _window_len(xlags, ylags, tlags)
-#         s = _window_len(xlags, ylags)
-#         n = len(df) - w
-#
-#         columns = self._get_columns(df)
-#         targets = self.targets
-#         features = list(set(columns).difference(targets))
-#         ix = df.index
-#
-#         X = DataFrame(index=RangeIndex(n))
-#         for col in features:
-#             _add_col(X, df, col, xlags, s, n)
-#
-#         for col in targets:
-#             _add_col(X, df, col, ylags, s, n)
-#
-#         X.index = ix[s:s+n]
-#
-#         # if tlags is None or [], return ONLY X
-#         if not tlags:
-#             return X, None
-#
-#         y = DataFrame(index=RangeIndex(n))
-#         for col in targets:
-#             _add_col(y, df, col, tlags, s, n, True)
-#
-#         y.index = ix[w:w+n]
-#
-#         return X, y
-#     # end
-# # end

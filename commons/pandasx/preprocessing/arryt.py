@@ -20,55 +20,65 @@ def _to_numpy(X, dtype):
 
 
 # ---------------------------------------------------------------------------
-# LagsArrayTransform
+# LagsArrayForecaster
 # ---------------------------------------------------------------------------
 
-class LagsArrayTransform(XyBaseEncoder):
+class LagsArrayForecaster(XyBaseEncoder):
 
     def __init__(self,
                  xlags=None,
                  ylags=None,
                  tlags=None,
                  dtype=np.float32,
-                 sequence=False,
-                 channels=False):
+                 temporal=False,
+                 channels=False,
+                 y_flatten=False):
         super().__init__(None, False)
 
-        assert dtype is not None, "Parameter 'dtype' is None"
+        assert dtype is not None, "Parameter 'dtype' must be not None"
+        assert (not temporal and not channels
+                or temporal and not channels
+                or not temporal and channels), \
+            "Only a parameter between 'temporal' and 'channels' can be True"
 
         self.xlags = xlags
         self.ylags = ylags
         self.tlags = tlags
 
         self.dtype = dtype
-        self.sequence = sequence
+        self.temporal = temporal
         self.channels = channels
+        self.y_flatten = y_flatten
 
         self._xlags = _resolve_xylags(xlags)
         self._ylags = _resolve_xylags(ylags)
         self._tlags = _resolve_xylags(tlags, True)
 
-        self.ih = None      # Index history
-        self.Xh = None      # X history
-        self.yh = None      # y history
-        self.Xf = None      # X forecast
-        self.yf = None      # y forecast
-        self.Xp = None      # X prediction
-        self.yp = None      # y prediction
+        self.X = None
+        self.y = None
+        self.Xh = None  # X history
+        self.yh = None  # y history
+        self.Xf = None  # X forecast
+        self.yf = None  # y forecast
+        self.Xp = None  # X prediction
 
-        self.Xp_shape = None    # X shape used in prediction
-        self.yp_shape = None    # y shape used in prediction
-        self.yf_shape = None    # y forecast shape
-
-    # -----------------------------------------------------------------------
+        self.Xp_shape = None  # X shape used in prediction
+        self.yp_shape = None  # y shape used in prediction
+        self.yf_shape = None  # y forecast shape
 
     def fit(self, X, y):
+        if isinstance(X, pd.PeriodIndex):
+            fh = X
+            X = pd.DataFrame(index=fh)
+
         self._check_Xy(X, y)
+
+        self.X = X
+        self.y = y
 
         X_ = _to_numpy(X, self.dtype)
         y_ = _to_numpy(y, self.dtype)
 
-        self.ih = y.index
         self.Xh = X_
         self.yh = y_
 
@@ -83,231 +93,50 @@ class LagsArrayTransform(XyBaseEncoder):
         mx = X_.shape[1] if nx > 0 else 0  # n of features for x
         my = y_.shape[1] if ny > 0 else 0  # n of features for y
 
-        if not self.sequence:
-            self.Xp_shape = (1, nx*mx + ny*my)
-            self.yp_shape = (1, nt*my)
-        elif not self.channels:
+        if self.temporal:
             nf = nx if nx > 0 else ny
             self.Xp_shape = (1, nf, mx + my)
             self.yp_shape = (1, nt, my)
-        else:
+        elif self.channels:
             nf = nx if nx > 0 else ny
             self.Xp_shape = (1, mx + my, nf)
             self.yp_shape = (1, my, nt)
+        else:
+            self.Xp_shape = (1, nx * mx + ny * my)
+            self.yp_shape = (1, nt * my)
 
         return self
 
-    def transform(self, X: DataFrame, y: DataFrame):
-        self._check_Xy(X, y)
+    def transform(self, X, y=None):
+        """
+        Initialize the forecaster with the in put X
+        It returns a shared array that will contain the predicted values and used
+        to create the X tensor passed to the model. The array is updated by 'update(i, y)'
+
+        :param X: dataframe to use as input
+        :return: the array used as 'y' predicted.
+        """
+        if isinstance(X, pd.PeriodIndex):
+            ix = X
+            X = pd.DataFrame(index=ix)
+
+        self._check_X(X, y)
 
         X_ = _to_numpy(X, self.dtype)
-        y_ = _to_numpy(y, self.dtype)
 
-        self.Xf = X_
-        self.yf = y_
-
-        if self.ih[0] == X.index[0]:
-            return self._transform_fitted(X_, y_)
-        elif self.ih[-1] == (X.index[0]-1):
-            return self._transform_forecast(X_, y_)
-        else:
-            raise ValueError("Invalid timestamps")
-
-    # -----------------------------------------------------------------------
-
-    def _atx(self, i):
-        return self.Xh[i] if i < 0 else self.Xf[i]
-
-    def _aty(self, i):
-        return self.yh[i] if i < 0 else self.yf[i]
-
-    def _transform_fitted(self, X, y):
-        xlags = list(reversed(self._xlags)) if X is not None else []
-        ylags = list(reversed(self._ylags)) if y is not None else []
-        s = max(lmax(xlags), lmax(ylags))
-
-        if not self.sequence:
-            return self._transform_flatten(X, y, s)
-        elif self.channels:
-            return self._transform_channels(X, y, s)
-        else:
-            return self._transform_sequence(X, y, s)
-
-    def _transform_forecast(self, X, y):
-        if not self.sequence:
-            # return self._transform_forecast_flatten(X, y)
-            return self._transform_flatten(X, y, 0)
-        elif self.channels:
-            # return self._transform_forecast_channels(X, y)
-            return self._transform_channels(X, y, 0)
-        else:
-            # return self._transform_forecast_sequence(X, y)
-            return self._transform_sequence(X, y, 0)
-
-    def _transform_flatten(self, X, y, s):
-        xlags = list(reversed(self._xlags)) if X is not None else []
-        ylags = list(reversed(self._ylags)) if y is not None else []
-        tlags = self._tlags
-
-        n = len(X)  # n of rows
-        nx = len(xlags)  # n of lags for x
-        ny = len(ylags)  # n of lags for y
-        nt = len(tlags)  # n of lags for t
-
-        st = max(tlags)  # window length for t)arget
-
-        mx = X.shape[1] if nx > 0 else 0  # n of features for x
-        my = y.shape[1] if ny > 0 else 0  # n of features for y
-        mt = y.shape[1]
-        nl = n - (st + s)  # n of predicted rows
-
-        Xt = np.zeros((nl, nx*mx + ny*my), dtype=self.dtype)
-        yt = np.zeros((nl, nt*mt), dtype=self.dtype)
-
-        atx = self._atx
-        aty = self._aty
-
-        for j in range(n):
-
-            c = 0
-            for i in range(nx):
-                k = xlags[i]
-                ik = s + j - k
-                Xt[j, c:c + mx] = atx(ik)
-                c += mx
-
-            for i in range(ny):
-                k = ylags[i]
-                ik = s + j - k
-                Xt[j, c:c + my] = aty(ik)
-                c += my
-
-            c = 0
-            for i in range(nt):
-                k = tlags[i]
-                ik = s + j + k
-                yt[j, c:c + my] = aty(ik)
-                c += my
-
-        return Xt, yt
-
-    def _transform_channels(self, X, y, s):
-        Xt, yt = self._transform_sequence(X, y, s)
-        Xt = Xt.swapaxes(1, 2)
-        return Xt, yt
-
-    def _transform_sequence(self, X, y, s):
-        xlags = list(reversed(self._xlags)) if X is not None else []
-        ylags = list(reversed(self._ylags)) if y is not None else []
-        tlags = self._tlags
-
-        n = len(X)  # n of rows
-        nx = len(xlags)  # n of lags for x
-        ny = len(ylags)  # n of lags for y
-        nf = max(nx, ny)  # n of lags for both features
-        nt = len(tlags)  # n of lags for t)arget
-
-        assert nx == 0 or ny == 0 or nx == ny and xlags == ylags, "Valid x/y lags : [n, 0], [0, n], [n, n]"
-
-        st = max(tlags)  # window length for t)arget
-
-        mx = X.shape[1] if nx > 0 else 0  # n of features
-        my = y.shape[1] if ny > 0 else 0  # n of features
-        mt = y.shape[1]
-        nl = n - (s + st)  # n of predicted rows
-
-        Xt = np.zeros((nl, nf, mx + my), dtype=self.dtype)
-        yt = np.zeros((nl, nt, mt), dtype=self.dtype)
-
-        atx = self._atx
-        aty = self._aty
-
-        for j in range(n):
-
-            for i in range(nx):
-                k = xlags[i]
-                ik = s + j - k
-                Xt[j, i, :mx] = atx(ik)
-
-            for i in range(ny):
-                k = ylags[i]
-                ik = s + j - k
-                Xt[j, i, mx:] = aty(ik)
-
-            for i in range(nt):
-                k = tlags[i]
-                ik = s + j + k
-                yt[:, i] = aty(ik)
-
-        return Xt, yt
-
-
-# ---------------------------------------------------------------------------
-# LagsArrayTransform
-# ---------------------------------------------------------------------------
-
-class LagsForecastTransform(XyBaseEncoder):
-
-    def __init__(self,
-                 xlags=None,
-                 ylags=None,
-                 tlags=None,
-                 dtype=np.float32,
-                 sequence=False,
-                 channels=False):
-        super().__init__(None, False)
-
-        assert dtype is not None, "Parameter 'dtype' is None"
-
-        self.xlags = xlags
-        self.ylags = ylags
-        self.tlags = tlags
-
-        self.dtype = dtype
-        self.sequence = sequence
-        self.channels = channels
-
-        self._xlags = _resolve_xylags(xlags)
-        self._ylags = _resolve_xylags(ylags)
-        self._tlags = _resolve_xylags(tlags, True)
-
-        self.ih = None  # Index history
-        self.Xh = None  # X history
-        self.yh = None  # y history
-        self.Xf = None  # X forecast
-        self.yf = None  # y forecast
-        self.Xp = None  # X prediction
-        self.yp = None  # y prediction
-
-        self.Xp_shape = None  # X shape used in prediction
-        self.yp_shape = None  # y shape used in prediction
-        self.yf_shape = None  # y forecast shape
-
-    def fit(self, *, fh=None, X=None):
-        assert isinstance(fh, (NoneType, int)), "Parameter 'fh' must be int"
-
-        X_ = _to_numpy(X, self.dtype)
-        if fh is None:
-            fh = len(X_)
-
+        fh = len(X)
         yh_shape = (fh,) + self.yh.shape[1:]
 
         self.Xf = X_
         self.yf = np.zeros(yh_shape, dtype=self.dtype)
         self.Xp = np.zeros(self.Xp_shape, dtype=self.dtype)
-        self.yp = np.zeros(self.yp_shape, dtype=self.dtype)
 
-        return self.yf
+        return pd.DataFrame(self.yf, columns=self.y.columns, index=X.index)
 
-    def transform(self, i):
-        if not self.sequence:
-            Xp = self._transform_flatten(i)
-        elif self.channels:
-            Xp = self._transform_channels(i)
-        else:
-            Xp = self._transform_sequence(i)
+    def fit_transform(self, X, y=None):
+        raise NotImplemented("fit_transform is not supported")
 
-        return Xp
+    # -----------------------------------------------------------------------
 
     def _atx(self, i):
         return self.Xh[i] if i < 0 else self.Xf[i]
@@ -371,7 +200,7 @@ class LagsForecastTransform(XyBaseEncoder):
 
         return Xp
 
-    def _transform_sequence(self, j):
+    def _transform_temporal(self, j):
         atx = self._atx
         aty = self._aty
 
@@ -399,614 +228,377 @@ class LagsForecastTransform(XyBaseEncoder):
 
     # -----------------------------------------------------------------------
 
-    def set_forecast(self, j, y):
-        if not self.sequence:
-            self._set_flatten(j, y)
-        else:
-            self._set_sequence(j, y)
+    def step(self, i):
+        """
+        Prepare the tensor to use as input for the NN model.
+        Note: the tensor returned is a local object override each time
 
-    def _set_flatten(self, j, y):
+        :param i: current step
+        :return: the tensor to use
+        """
+        assert isinstance(i, int)
+        if self.temporal:
+            Xp = self._transform_temporal(i)
+        elif self.channels:
+            Xp = self._transform_channels(i)
+        else:
+            Xp = self._transform_flatten(i)
+
+        return Xp
+
+    def update(self, i, y):
+        """
+
+        :param i: current step
+        :param y:
+        :return: the next valid index to use with 'step(i)'
+        """
+        if len(y.shape) == 2:
+            return self._update_flatten(i, y)
+        elif self.temporal:
+            return self._update_temporal(i, y)
+        elif self.channels:
+            return self._update_channels(i, y)
+        else:
+            return self._update_flatten(i, y)
+
+    def _update_flatten(self, i, y):
         tlags = self._tlags
+        yf = self.yf
+
         nt = len(tlags)
-        my = self.yf.shape[1]
-        ny = len(self.yf)
+        my = yf.shape[1]
+        ny = len(yf)
 
         c = 0
-        for i in range(nt):
-            k = tlags[i]
-            ik = j + k
+        for j in range(nt):
+            k = tlags[j]
+            ik = i + k
 
             # if |tlags| > 1, the prediction will be longer than yf
             if ik < ny:
-                self.yf[ik] = y[0, c:c + my]
+                yf[ik] = y[0, c:c + my]
                 c += my
 
-    def _set_sequence(self, j, y):
-        tlags = self.tlags
-        nt = len(tlags)
-        ny = len(self.yf)
+        return i + lmax(tlags) + 1
 
-        for i in range(nt):
-            k = tlags[i]
-            ik = j + k
+    def _update_temporal(self, i, y):
+        tlags = self._tlags
+        yf = self.yf
+
+        nt = len(tlags)
+        ny = len(yf)
+
+        for j in range(nt):
+            k = tlags[j]
+            ik = i + k
 
             # if |tlags| > 1, the prediction will be longer than yf
             if ik < ny:
-                self.yf[ik] = y[0, i]
+                self.yf[ik] = y[0, j, :]
+
+        return i + lmax(tlags) + 1
+
+    def _update_channels(self, i, y):
+        tlags = self._tlags
+        yf = self.yf
+
+        nt = len(tlags)
+        ny = len(yf)
+
+        for j in range(nt):
+            k = tlags[j]
+            ik = i + k
+
+            # if |tlags| > 1, the prediction will be longer than yf
+            if ik < ny:
+                self.yf[ik] = y[0, :, j]
+
+        return i + lmax(tlags) + 1
+# end
+
 
 # ---------------------------------------------------------------------------
-# End
+# LagsArrayTransformer
 # ---------------------------------------------------------------------------
 
+class LagsArrayTransformer(XyBaseEncoder):
 
-# ---------------------------------------------------------------------------
-# ArrayTransformer
-# ---------------------------------------------------------------------------
-# It is able to prepare the array for
-#
-#       linear models   2D tensor (batch, data)
-#       RNN             3D tensor (batch, sequence, data)
-#       CNN             3D tensor (batch, data, sequence)
-#
+    def __init__(self,
+                 xlags=None,
+                 ylags=None,
+                 tlags=None,
+                 dtype=np.float32,
+                 temporal=False,
+                 channels=False,
+                 y_flatten=False):
+        super().__init__(None, False)
 
-# class ArrayTransformer(XyBaseEncoder):
-#     def __init__(self,
-#                  xlags=None,
-#                  ylags=None,
-#                  tlags=None,
-#                  dtype=np.float32,
-#                  sequence=False,
-#                  channels=False):
-#         super().__init__(None, False)
-#
-#         assert dtype is not None, "Parameter 'dtype' is None"
-#
-#         self.xlags = xlags
-#         self.ylags = ylags
-#         self.tlags = tlags
-#
-#         self.dtype = dtype
-#         self.sequence = sequence
-#         self.channels = channels
-#
-#         self._xlags = _resolve_xylags(xlags)
-#         self._ylags = _resolve_xylags(ylags)
-#         self._tlags = _resolve_xylags(tlags, True)
-#
-#         self.ih = None      # Index history
-#         self.Xh = None      # X history
-#         self.yh = None      # y history
-#         self.Xf = None      # X forecast
-#         self.yf = None      # y forecast
-#         self.Xp = None      # X prediction
-#         self.yp = None      # y prediction
-#
-#         self.Xp_shape = None    # X shape used in prediction
-#         self.yp_shape = None    # y shape used in prediction
-#         self.yf_shape = None    # y forecast shape
-#
-#     # -----------------------------------------------------------------------
-#
-#     def fit(self, X, y):
-#         self._check_Xy(X, y)
-#
-#         X_ = _to_numpy(X, self.dtype)
-#         y_ = _to_numpy(y, self.dtype)
-#
-#         self.ih = y.index
-#         self.Xh = X_
-#         self.yh = y_
-#
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#         nt = len(tlags)
-#
-#         mx = X_.shape[1] if nx > 0 else 0  # n of features for x
-#         my = y_.shape[1] if ny > 0 else 0  # n of features for y
-#
-#         if not self.sequence:
-#             self.Xp_shape = (1, nx*mx + ny*my)
-#             self.yp_shape = (1, nt*my)
-#         elif not self.channels:
-#             nf = nx if nx > 0 else ny
-#             self.Xp_shape = (1, nf, mx + my)
-#             self.yp_shape = (1, nt, my)
-#         else:
-#             nf = nx if nx > 0 else ny
-#             self.Xp_shape = (1, mx + my, nf)
-#             self.yp_shape = (1, my, nt)
-#
-#         return self
-#
-#     def transform(self, X: DataFrame, y: DataFrame):
-#         self._check_Xy(X, y)
-#
-#         X_ = _to_numpy(X, self.dtype)
-#         y_ = _to_numpy(y, self.dtype)
-#
-#         self.Xf = X_
-#         self.yf = y_
-#
-#         if self.ih[0] == X.index[0]:
-#             return self._transform_fitted(X_, y_)
-#         elif self.ih[-1] == (X.index[0]-1):
-#             return self._transform_forecast(X_, y_)
-#         else:
-#             raise ValueError("Invalid timestamps")
-#
-#     # -----------------------------------------------------------------------
-#
-#     def _transform_fitted(self, X, y):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         s = max(lmax(xlags), lmax(ylags))
-#
-#         if not self.sequence:
-#             # return self._transform_fitted_flatten(X, y)
-#             return self._transform_flatten(X, y, s)
-#         elif self.channels:
-#             # return self._transform_fitted_channels(X, y)
-#             return self._transform_channels(X, y, s)
-#         else:
-#             # return self._transform_fitted_sequence(X, y)
-#             return self._transform_sequence(X, y, s)
-#
-#     def _transform_fitted_flatten(self, X, y):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)          # n of rows
-#         nx = len(xlags)     # n of lags for x
-#         ny = len(ylags)     # n of lags for y
-#         nt = len(tlags)     # n of lags for t
-#
-#         sx = lmax(xlags)    # window length for x
-#         sy = lmax(ylags)    # window length for y
-#         sf = max(sx, sy)    # window length for both features
-#         st = max(tlags)     # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0    # n of features for x
-#         my = y.shape[1] if ny > 0 else 0    # n of features for y
-#         mt = y.shape[1]
-#         nl = n - (sf + st)                  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nx*mx + ny*my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt*mt), dtype=self.dtype)
-#
-#         c = 0
-#         for i in range(nx):
-#             k = xlags[i]
-#             ik = sf - k
-#             Xt[:, c:c+mx] = X[ik:ik + nl]
-#             c += mx
-#
-#         for i in range(ny):
-#             k = ylags[i]
-#             ik = sf - k
-#             Xt[:, c:c+my] = y[ik:ik + nl]
-#             c += my
-#
-#         c = 0
-#         for i in range(nt):
-#             k = tlags[i]
-#             ik = sf + k
-#             yt[:, c:c+my] = y[ik:ik + nl]
-#             c += my
-#
-#         return Xt, yt
-#
-#     def _transform_fitted_channels(self, X, y):
-#         Xt, yt = self._transform_fitted_sequence(X, y)
-#         Xt = Xt.swapaxes(1, 2)
-#         return Xt, yt
-#
-#     def _transform_fitted_sequence(self, X, y):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)          # n of rows
-#         nx = len(xlags)     # n of lags for x
-#         ny = len(ylags)     # n of lags for y
-#         nf = max(nx, ny)    # n of lags for both features
-#         nt = len(tlags)     # n of lags for t)arget
-#
-#         assert nx == 0 or ny == 0 or nx == ny and xlags == ylags, "Valid x/y lags : [n, 0], [0, n], [n, n]"
-#
-#         sx = lmax(xlags)    # window length for x
-#         sy = lmax(ylags)    # window length for y
-#         sf = max(sx, sy)    # window length for both features
-#         st = max(tlags)     # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0  # n of features
-#         my = y.shape[1] if ny > 0 else 0  # n of features
-#         mt = y.shape[1]
-#         nl = n - (sf + st)  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nf, mx + my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt, mt), dtype=self.dtype)
-#
-#         for i in range(nx):
-#             k = xlags[i]
-#             ik = sx - k
-#             Xt[:, i, :mx] = X[ik:ik + nl]
-#
-#         for i in range(ny):
-#             k = ylags[i]
-#             ik = sy - k
-#             Xt[:, i, mx:] = y[ik:ik + nl]
-#
-#         for i in range(nt):
-#             k = tlags[i]
-#             ik = sy + k
-#             yt[:, i] = y[ik:ik + nl]
-#
-#         return Xt, yt
-#
-#     # -----------------------------------------------------------------------
-#
-#     def _transform_forecast(self, X, y):
-#         if not self.sequence:
-#             # return self._transform_forecast_flatten(X, y)
-#             return self._transform_flatten(X, y, 0)
-#         elif self.channels:
-#             # return self._transform_forecast_channels(X, y)
-#             return self._transform_channels(X, y, 0)
-#         else:
-#             # return self._transform_forecast_sequence(X, y)
-#             return self._transform_sequence(X, y, 0)
-#
-#     def _transform_forecast_flatten(self, X, y):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)  # n of rows
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#         nt = len(tlags)  # n of lags for t
-#
-#         st = max(tlags)  # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0  # n of features for x
-#         my = y.shape[1] if ny > 0 else 0  # n of features for y
-#         mt = y.shape[1]
-#         nl = n - st  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nx*mx + ny*my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt*mt), dtype=self.dtype)
-#
-#         atx = self._atx
-#         aty = self._aty
-#
-#         for j in range(n):
-#
-#             c = 0
-#             for i in range(nx):
-#                 k = xlags[i]
-#                 ik = j - k
-#                 Xt[j, c:c + mx] = atx(ik)
-#                 c += mx
-#
-#             for i in range(ny):
-#                 k = ylags[i]
-#                 ik = j - k
-#                 Xt[j, c:c + my] = aty(ik)
-#                 c += my
-#
-#             c = 0
-#             for i in range(nt):
-#                 k = tlags[i]
-#                 ik = j + k
-#                 yt[j, c:c + my] = aty(ik)
-#                 c += my
-#
-#         return Xt, yt
-#
-#     def _transform_forecast_channels(self, X, y):
-#         Xt, yt = self._transform_forecast_sequence(X, y)
-#         Xt = Xt.swapaxes(1, 2)
-#         return Xt, yt
-#
-#     def _transform_forecast_sequence(self, X, y):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)  # n of rows
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#         nf = max(nx, ny)  # n of lags for both features
-#         nt = len(tlags)  # n of lags for t)arget
-#
-#         assert nx == 0 or ny == 0 or nx == ny and xlags == ylags, "Valid x/y lags : [n, 0], [0, n], [n, n]"
-#
-#         st = max(tlags)  # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0  # n of features
-#         my = y.shape[1] if ny > 0 else 0  # n of features
-#         mt = y.shape[1]
-#         nl = n - st  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nf, mx + my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt, mt), dtype=self.dtype)
-#
-#         atx = self._atx
-#         aty = self._aty
-#
-#         for j in range(n):
-#
-#             for i in range(nx):
-#                 k = xlags[i]
-#                 ik = j - k
-#                 Xt[j, i, :mx] = atx(ik)
-#
-#             for i in range(ny):
-#                 k = ylags[i]
-#                 ik = j - k
-#                 Xt[j, i, mx:] = aty(ik)
-#
-#             for i in range(nt):
-#                 k = tlags[i]
-#                 ik = j + k
-#                 yt[:, i] = aty(ik)
-#
-#         return Xt, yt
-#
-#     # -----------------------------------------------------------------------
-#
-#     def _transform_flatten(self, X, y, s):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)  # n of rows
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#         nt = len(tlags)  # n of lags for t
-#
-#         st = max(tlags)  # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0  # n of features for x
-#         my = y.shape[1] if ny > 0 else 0  # n of features for y
-#         mt = y.shape[1]
-#         nl = n - (st + s)  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nx*mx + ny*my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt*mt), dtype=self.dtype)
-#
-#         atx = self._atx
-#         aty = self._aty
-#
-#         for j in range(n):
-#
-#             c = 0
-#             for i in range(nx):
-#                 k = xlags[i]
-#                 ik = s + j - k
-#                 Xt[j, c:c + mx] = atx(ik)
-#                 c += mx
-#
-#             for i in range(ny):
-#                 k = ylags[i]
-#                 ik = s + j - k
-#                 Xt[j, c:c + my] = aty(ik)
-#                 c += my
-#
-#             c = 0
-#             for i in range(nt):
-#                 k = tlags[i]
-#                 ik = s + j + k
-#                 yt[j, c:c + my] = aty(ik)
-#                 c += my
-#
-#         return Xt, yt
-#
-#     def _transform_channels(self, X, y, s):
-#         Xt, yt = self._transform_sequence(X, y, s)
-#         Xt = Xt.swapaxes(1, 2)
-#         return Xt, yt
-#
-#     def _transform_sequence(self, X, y, s):
-#         xlags = list(reversed(self._xlags)) if X is not None else []
-#         ylags = list(reversed(self._ylags)) if y is not None else []
-#         tlags = self._tlags
-#
-#         n = len(X)  # n of rows
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#         nf = max(nx, ny)  # n of lags for both features
-#         nt = len(tlags)  # n of lags for t)arget
-#
-#         assert nx == 0 or ny == 0 or nx == ny and xlags == ylags, "Valid x/y lags : [n, 0], [0, n], [n, n]"
-#
-#         st = max(tlags)  # window length for t)arget
-#
-#         mx = X.shape[1] if nx > 0 else 0  # n of features
-#         my = y.shape[1] if ny > 0 else 0  # n of features
-#         mt = y.shape[1]
-#         nl = n - (s + st)  # n of predicted rows
-#
-#         Xt = np.zeros((nl, nf, mx + my), dtype=self.dtype)
-#         yt = np.zeros((nl, nt, mt), dtype=self.dtype)
-#
-#         atx = self._atx
-#         aty = self._aty
-#
-#         for j in range(n):
-#
-#             for i in range(nx):
-#                 k = xlags[i]
-#                 ik = s + j - k
-#                 Xt[j, i, :mx] = atx(ik)
-#
-#             for i in range(ny):
-#                 k = ylags[i]
-#                 ik = s + j - k
-#                 Xt[j, i, mx:] = aty(ik)
-#
-#             for i in range(nt):
-#                 k = tlags[i]
-#                 ik = s + j + k
-#                 yt[:, i] = aty(ik)
-#
-#         return Xt, yt
-#
-#     # -----------------------------------------------------------------------
-#
-#     def prepare_forecast(self, *, fh=None, X=None):
-#         assert isinstance(fh, (NoneType, int)), "Parameter 'fh' must be int"
-#
-#         X_ = _to_numpy(X, self.dtype)
-#         if fh is None:
-#             fh = len(X_)
-#
-#         yh_shape = (fh,) + self.yh.shape[1:]
-#
-#         self.Xf = X_
-#         self.yf = np.zeros(yh_shape, dtype=self.dtype)
-#         self.Xp = np.zeros(self.Xp_shape, dtype=self.dtype)
-#         self.yp = np.zeros(self.yp_shape, dtype=self.dtype)
-#
-#         return self.yf
-#
-#     def forecast(self, i):
-#         if not self.sequence:
-#             Xp = self._prepare_forecast_flatten(i)
-#         elif self.channels:
-#             Xp = self._prepare_forecast_channels(i)
-#         else:
-#             Xp = self._prepare_forecast_sequence(i)
-#
-#         return Xp
-#
-#     def _atx(self, i):
-#         return self.Xh[i] if i < 0 else self.Xf[i]
-#
-#     def _aty(self, i):
-#         return self.yh[i] if i < 0 else self.yf[i]
-#
-#     def _prepare_forecast_flatten(self, j):
-#         atx = self._atx
-#         aty = self._aty
-#
-#         xlags = list(reversed(self._xlags)) if self.Xh is not None else []
-#         ylags = list(reversed(self._ylags)) if self.yh is not None else []
-#
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#
-#         mx = self.Xh.shape[1] if nx > 0 else 0  # n of features
-#         my = self.yh.shape[1] if ny > 0 else 0  # n of features
-#
-#         Xp = self.Xp
-#
-#         c = 0
-#         for i in range(nx):
-#             k = xlags[i]
-#             ik = j - k
-#             Xp[0, c:c + mx] = atx(ik)
-#             c += mx
-#
-#         for i in range(ny):
-#             k = ylags[i]
-#             ik = j - k
-#             Xp[0, c:c + my] = aty(ik)
-#             c += my
-#
-#         return Xp
-#
-#     def _prepare_forecast_channels(self, j):
-#         atx = self._atx
-#         aty = self._aty
-#
-#         xlags = list(reversed(self._xlags)) if self.Xh is not None else []
-#         ylags = list(reversed(self._ylags)) if self.yh is not None else []
-#
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#
-#         mx = self.Xh.shape[1] if nx > 0 else 0  # n of features
-#
-#         Xp = self.Xp
-#
-#         for i in range(nx):
-#             k = xlags[i]
-#             ik = j - k
-#             Xp[0, :mx, i] = atx(ik)
-#
-#         for i in range(ny):
-#             k = ylags[i]
-#             ik = j - k
-#             Xp[0, mx:, i] = aty(ik)
-#
-#         return Xp
-#
-#     def _prepare_forecast_sequence(self, j):
-#         atx = self._atx
-#         aty = self._aty
-#
-#         xlags = list(reversed(self._xlags)) if self.Xh is not None else []
-#         ylags = list(reversed(self._ylags)) if self.yh is not None else []
-#
-#         nx = len(xlags)  # n of lags for x
-#         ny = len(ylags)  # n of lags for y
-#
-#         mx = self.Xh.shape[1] if nx > 0 else 0  # n of features
-#
-#         Xp = self.Xp
-#
-#         for i in range(nx):
-#             k = xlags[i]
-#             ik = j - k
-#             Xp[0, i, :mx] = atx(ik)
-#
-#         for i in range(ny):
-#             k = ylags[i]
-#             ik = j - k
-#             Xp[0, i, mx:] = aty(ik)
-#
-#         return Xp
-#
-#     # -----------------------------------------------------------------------
-#
-#     def set_forecast(self, j, y):
-#         if not self.sequence:
-#             self._set_flatten(j, y)
-#         else:
-#             self._set_sequence(j, y)
-#
-#     def _set_flatten(self, j, y):
-#         tlags = self._tlags
-#         nt = len(tlags)
-#         my = self.yf.shape[1]
-#         ny = len(self.yf)
-#
-#         c = 0
-#         for i in range(nt):
-#             k = tlags[i]
-#             ik = j + k
-#
-#             # if |tlags| > 1, the prediction will be longer than yf
-#             if ik < ny:
-#                 self.yf[ik] = y[0, c:c+my]
-#                 c += my
-#
-#     def _set_sequence(self, j, y):
-#         tlags = self.tlags
-#         nt = len(tlags)
-#         ny = len(self.yf)
-#
-#         for i in range(nt):
-#             k = tlags[i]
-#             ik = j + k
-#
-#             # if |tlags| > 1, the prediction will be longer than yf
-#             if ik < ny:
-#                 self.yf[ik] = y[0, i]
-# # end
+        assert dtype is not None, "Parameter 'dtype' must be not None"
+        assert (not temporal and not channels
+                or temporal and not channels
+                or not temporal and channels), \
+            "Only a parameter between 'temporal' and 'channels' can be True"
+
+        self.xlags = xlags
+        self.ylags = ylags
+        self.tlags = tlags
+
+        self.dtype = dtype
+        self.temporal = temporal
+        self.channels = channels
+        self.y_flatten = y_flatten
+
+        self._xlags = _resolve_xylags(xlags)
+        self._ylags = _resolve_xylags(ylags)
+        self._tlags = _resolve_xylags(tlags, True)
+
+        self.X = None
+        self.y = None
+
+        self.Xh = None      # X history (ndarray)
+        self.yh = None      # y history (ndarray)
+        self.Xf = None      # X forecast (ndarray)
+        self.yf = None      # y forecast (ndarray)
+        self.Xp = None      # X prediction (ndarray)
+
+        self.Xp_shape = None    # X shape used in prediction
+        self.yp_shape = None    # y shape used in prediction
+        self.yf_shape = None    # y forecast shape
+
+    # -----------------------------------------------------------------------
+
+    def fit(self, X=None, y=None):
+        self._check_Xy(X, y)
+
+        self.X = X
+        self.y = y
+
+        X_ = _to_numpy(X, self.dtype)
+        y_ = _to_numpy(y, self.dtype)
+
+        self.Xh = X_
+        self.yh = y_
+
+        xlags = list(reversed(self._xlags)) if X is not None else []
+        ylags = list(reversed(self._ylags)) if y is not None else []
+        tlags = self._tlags
+
+        nx = len(xlags)  # n of lags for x
+        ny = len(ylags)  # n of lags for y
+        nt = len(tlags)
+
+        mx = X_.shape[1] if nx > 0 else 0  # n of features for x
+        my = y_.shape[1] if ny > 0 else 0  # n of features for y
+
+        if self.temporal:
+            nf = nx if nx > 0 else ny
+            self.Xp_shape = (1, nf, mx + my)
+            self.yp_shape = (1, nt, my)
+        elif self.channels:
+            nf = nx if nx > 0 else ny
+            self.Xp_shape = (1, mx + my, nf)
+            self.yp_shape = (1, my, nt)
+        else:
+            self.Xp_shape = (1, nx * mx + ny * my)
+            self.yp_shape = (1, nt * my)
+
+        return self
+
+    def transform(self, X=None, y=None):
+        if isinstance(X, pd.PeriodIndex):
+            fh = X
+            X = pd.DataFrame(index=fh)
+
+        self._check_Xy(X, y)
+
+        X_ = _to_numpy(X, self.dtype)
+        y_ = _to_numpy(y, self.dtype)
+
+        self.Xf = X_
+        self.yf = y_
+
+        ih = self.y.index
+        if ih[0] == X.index[0]:
+            Xt, yt = self._transform_fitted(X_, y_)
+            xt = self._index_fitted(X.index)
+        elif ih[-1] == (X.index[0]-1):
+            Xt, yt = self._transform_forecast(X_, y_)
+            xt = self._index_forecast(X.index)
+        else:
+            raise ValueError("Invalid timestamps")
+
+        if self.y_flatten:
+            ny = yt.shape[0]
+            yt = yt.reshape((ny, -1))
+
+        return Xt, yt, xt
+
+    # -----------------------------------------------------------------------
+
+    def forecaster(self) -> LagsArrayForecaster:
+        faf = LagsArrayForecaster(
+            xlags=self.xlags,
+            ylags=self.ylags,
+            tlags=self.tlags,
+            dtype=self.dtype,
+            temporal=self.temporal,
+            channels=self.channels,
+            y_flatten=self.y_flatten
+        )
+
+        faf.fit(self.X, self.y)
+        return faf
+
+    # -----------------------------------------------------------------------
+
+    def _atx(self, i):
+        return self.Xh[i] if i < 0 else self.Xf[i]
+
+    def _aty(self, i):
+        return self.yh[i] if i < 0 else self.yf[i]
+
+    def _transform_fitted(self, X, y):
+        xlags = list(reversed(self._xlags)) if X is not None else []
+        ylags = list(reversed(self._ylags)) if y is not None else []
+        s = max(lmax(xlags), lmax(ylags))
+
+        if self.temporal:
+            return self._transform_temporal(X, y, s)
+        elif self.channels:
+            return self._transform_channels(X, y, s)
+        else:
+            return self._transform_flatten(X, y, s)
+
+    def _transform_forecast(self, X, y):
+        if self.temporal:
+            return self._transform_temporal(X, y, 0)
+        elif self.channels:
+            return self._transform_channels(X, y, 0)
+        else:
+            return self._transform_flatten(X, y, 0)
+
+    # -----------------------------------------------------------------------
+
+    def _transform_flatten(self, X, y, s):
+        xlags = list(reversed(self._xlags)) if X is not None else []
+        ylags = list(reversed(self._ylags)) if y is not None else []
+        tlags = self._tlags
+
+        n = len(X)  # n of rows
+        nx = len(xlags)  # n of lags for x
+        ny = len(ylags)  # n of lags for y
+        nt = len(tlags)  # n of lags for t
+
+        st = lmax(tlags)  # window length for t)arget
+
+        mx = X.shape[1] if nx > 0 else 0  # n of features for x
+        my = y.shape[1] if ny > 0 else 0  # n of features for y
+        mt = y.shape[1]
+        nl = n - (st + s)  # n of predicted rows
+
+        Xt = np.zeros((nl, nx*mx + ny*my), dtype=self.dtype)
+        yt = np.zeros((nl, nt*mt), dtype=self.dtype)
+
+        atx = self._atx
+        aty = self._aty
+
+        for j in range(nl):
+
+            c = 0
+            for i in range(nx):
+                k = xlags[i]
+                ik = s + j - k
+                Xt[j, c:c + mx] = atx(ik)
+                c += mx
+
+            for i in range(ny):
+                k = ylags[i]
+                ik = s + j - k
+                Xt[j, c:c + my] = aty(ik)
+                c += my
+
+            c = 0
+            for i in range(nt):
+                k = tlags[i]
+                ik = s + j + k
+                yt[j, c:c + mt] = aty(ik)
+                c += mt
+
+        return Xt, yt
+
+    def _transform_channels(self, X, y, s):
+        Xt, yt = self._transform_temporal(X, y, s)
+        Xt = Xt.swapaxes(1, 2)
+        return Xt, yt
+
+    def _transform_temporal(self, X, y, s):
+        xlags = list(reversed(self._xlags)) if X is not None else []
+        ylags = list(reversed(self._ylags)) if y is not None else []
+        tlags = self._tlags
+
+        n = len(X)  # n of rows
+        nx = len(xlags)  # n of lags for x
+        ny = len(ylags)  # n of lags for y
+        nf = max(nx, ny)  # n of lags for both features
+        nt = len(tlags)  # n of lags for t)arget
+
+        assert nx == 0 or ny == 0 or nx == ny and xlags == ylags, "Valid x/y lags : [n, 0], [0, n], [n, n]"
+
+        st = lmax(tlags)  # window length for t)arget
+
+        mx = X.shape[1] if nx > 0 else 0  # n of features
+        my = y.shape[1] if ny > 0 else 0  # n of features
+        mt = y.shape[1]
+        nl = n - (s + st)  # n of predicted rows
+
+        Xt = np.zeros((nl, nf, mx + my), dtype=self.dtype)
+        yt = np.zeros((nl, nt, mt), dtype=self.dtype)
+
+        atx = self._atx
+        aty = self._aty
+
+        for j in range(nl):
+
+            for i in range(nx):
+                k = xlags[i]
+                ik = s + j - k
+                Xt[j, i, :mx] = atx(ik)
+
+            for i in range(ny):
+                k = ylags[i]
+                ik = s + j - k
+                Xt[j, i, mx:] = aty(ik)
+
+            for i in range(nt):
+                k = tlags[i]
+                ik = s + j + k
+                yt[j, i, :] = aty(ik)
+
+        return Xt, yt
+
+    # -----------------------------------------------------------------------
+
+    def _index_fitted(self, ix):
+        xlags = list(reversed(self._xlags)) if self.Xh is not None else []
+        ylags = list(reversed(self._ylags)) if self.yh is not None else []
+        tlags = self._tlags
+
+        s = max(lmax(xlags), lmax(ylags))
+        st = lmax(tlags)
+        n = len(ix) - (s+st)
+
+        return ix[s:s+n]
+
+    def _index_forecast(self, ix):
+        tlags = self._tlags
+        st = lmax(tlags)
+        n = len(ix) - st
+
+        return ix[0:n]
+# end
+
+
+ArrayTransformer = LagsArrayTransformer
+
+

@@ -45,13 +45,13 @@ from ..utils import import_from
 #
 
 NNX_RNN_FLAVOURS = {
-    'lstm': nnx.LSTM,
-    'gru': nnx.GRU,
-    'rnn': nnx.RNN,
+    'lstm': nnx.LSTMLinear,
+    'gru': nnx.GRULinear,
+    'rnn': nnx.RNNLinear,
 }
 
 NNX_CNN_FLAVOURS = {
-    'cnn': nnx.Conv1d
+    'cnn': nnx.Conv1dLinear
 }
 
 

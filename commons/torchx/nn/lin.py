@@ -1,25 +1,26 @@
-import torch.nn as nn
 from typing import Union
-from torch import Tensor
-from ..utils import ranked, mul
 
+import torch.nn as nn
+from torch import Tensor
+
+from ..utils import mul
+from ..utils import TorchLayerMixin
 
 # ---------------------------------------------------------------------------
 # Linear
 # ---------------------------------------------------------------------------
 # It extends nn.Linear with an Integrated Flatten and Unflatten layers
 #
+#
 
-class Linear(nn.Linear):
+class Linear(nn.Linear, TorchLayerMixin):
 
     def __init__(self,
-                 in_features: Union[int, tuple],
-                 out_features: Union[int, tuple],
+                 in_features: Union[int, tuple[int, ...]],
+                 out_features: Union[int, tuple[int, ...]],
                  bias: bool = True,
                  device=None,
                  dtype=None):
-        in_features: list[int] = ranked(in_features)
-        out_features: list[int] = ranked(out_features)
         super().__init__(
             in_features=mul(in_features),
             out_features=mul(out_features),
@@ -27,12 +28,18 @@ class Linear(nn.Linear):
             device=device,
             dtype=dtype
         )
-        self.flatten = nn.Flatten()
-        self.unflatten = nn.Unflatten(1, unflattened_size=out_features)
+
+        self.flatten = None if isinstance(in_features, int) \
+            else nn.Flatten()
+        self.unflatten = None if isinstance(out_features, int) \
+            else nn.Unflatten(1, unflattened_size=out_features)
 
     def forward(self, input: Tensor) -> Tensor:
-        t = self.flatten.forward(input)
+        t = input
+        if self.flatten:
+            t = self.flatten.forward(t)
         t = super().forward(t)
-        t = self.unflatten.forward(t)
+        if self.unflatten:
+            t = self.unflatten.forward(t)
         return t
 # end

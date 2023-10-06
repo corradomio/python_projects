@@ -78,7 +78,7 @@ def tobool(s: str) -> bool:
 # as_list
 # ---------------------------------------------------------------------------
 
-def as_list(l: Union[NoneType, str, list[str], tuple[str]], param="param"):
+def as_list(l: Union[NoneType, str, list[str], tuple[str]], param):
     """
     Convert parameter 'l' in a list.
     If 'l' is None, the empty list, if a string, in a singleton list

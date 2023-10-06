@@ -1,7 +1,9 @@
 from typing import Tuple, Optional, Union
 
-import torch.nn as nn
 from torch import Tensor
+
+from ...utils import KerasLayerMixin
+from ... import nn as nnx
 from ...activation import activation_function
 
 
@@ -62,46 +64,135 @@ from ...activation import activation_function
 #       ... 8 members for each extra layer ...
 #
 #   note: l0 is the layer 0. If more layers are specified, there are
-
 #
 
-class LSTM(nn.LSTM):
+class LSTM(nnx.LSTM, KerasLayerMixin):
     # nn.LSTM returns a tuple:
     #
     #   1) the complete sequence
     #   2) a tuple containing the hidden state
     #
-    # nn_keras.LSTM has 2 parameters that permits to specify what to return
+    # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
     #
-    #   1) return_sequence: if to return the complete sequence or just the
-    #      last value
+    #   1) return_sequence: if to return the complete sequence or just the last value
     #   2) return_state: if to return the hidden state
+    #   3) it is possible to specify directly the activation function
     #
-    # it is also possible
 
     def __init__(self,
                  input=None,
                  units=None,
-                 return_sequence=True,
-                 return_state=False,
                  activation=None,
                  **kwargs):
-        super().__init__(input_size=input, hidden_size=units, **kwargs)
-        self.return_sequence = return_sequence
-        self.return_state = return_state
+        super().__init__(
+            input_size=input,
+            hidden_size=units,
+            **kwargs)
         self.activation = activation_function(activation)
 
     def forward(self,
                 input: Tensor,
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Tuple]]:
-        seq, state = super().forward(input, hx)
+
+        state = None
+        if self.return_state:
+            seq, state = super().forward(input, hx)
+        else:
+            seq = super().forward(input, hx)
 
         if self.activation:
             seq = self.activation.forward(seq)
 
-        if self.return_sequence and self.return_state:
+        if self.return_state:
             return seq, state
-        elif self.return_sequence:
-            return seq
         else:
-            return seq[:, -1]
+            return seq
+# end
+
+
+class GRU(nnx.GRU, KerasLayerMixin):
+    # nn.LSTM returns a tuple:
+    #
+    #   1) the complete sequence
+    #   2) a tuple containing the hidden state
+    #
+    # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
+    #
+    #   1) return_sequence: if to return the complete sequence or just the last value
+    #   2) return_state: if to return the hidden state
+    #   3) it is possible to specify directly the activation function
+    #
+
+    def __init__(self,
+                 input=None,
+                 units=None,
+                 activation=None,
+                 **kwargs):
+        super().__init__(
+            input_size=input,
+            hidden_size=units,
+            **kwargs)
+        self.activation = activation_function(activation)
+
+    def forward(self,
+                input: Tensor,
+                hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Tuple]]:
+
+        state = None
+        if self.return_state:
+            seq, state = super().forward(input, hx)
+        else:
+            seq = super().forward(input, hx)
+
+        if self.activation:
+            seq = self.activation.forward(seq)
+
+        if self.return_state:
+            return seq, state
+        else:
+            return seq
+# end
+
+
+class RNN(nnx.RNN, KerasLayerMixin):
+    # nn.LSTM returns a tuple:
+    #
+    #   1) the complete sequence
+    #   2) a tuple containing the hidden state
+    #
+    # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
+    #
+    #   1) return_sequence: if to return the complete sequence or just the last value
+    #   2) return_state: if to return the hidden state
+    #   3) it is possible to specify directly the activation function
+    #
+
+    def __init__(self,
+                 input=None,
+                 units=None,
+                 activation=None,
+                 **kwargs):
+        super().__init__(
+            input_size=input,
+            hidden_size=units,
+            **kwargs)
+        self.activation = activation_function(activation)
+
+    def forward(self,
+                input: Tensor,
+                hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Tuple]]:
+
+        state = None
+        if self.return_state:
+            seq, state = super().forward(input, hx)
+        else:
+            seq = super().forward(input, hx)
+
+        if self.activation:
+            seq = self.activation.forward(seq)
+
+        if self.return_state:
+            return seq, state
+        else:
+            return seq
+# end

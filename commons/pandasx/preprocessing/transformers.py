@@ -18,8 +18,8 @@ class OutlierTransformer(BaseEncoder):
         self._sdev = {}
         self._median = {}
 
-    def fit(self, X: DataFrame) -> "OutlierTransformer":
-        assert isinstance(X, DataFrame)
+    def fit(self, X: DataFrame, y=None) -> "OutlierTransformer":
+        self._check_X(X, y)
 
         columns = self._get_columns(X)
         for col in columns:
@@ -77,7 +77,7 @@ class IgnoreTransformer(BaseEncoder):
         :param keep: columns to keep (as alternative to columns)
         """
         super().__init__(columns, copy)
-        self.keep = as_list(keep)
+        self.keep = as_list(keep, "keep")
 
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)

@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags
+from ..lag import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +41,7 @@ class CNNTrainTransform3D(ModelTrainTransform):
         st = len(tlags)
 
         t = len(self.slots)
-        v = max(tlags)
+        v = lmax(tlags)
 
         mx = X.shape[1] if X is not None and sx > 0 else 0
         my = y.shape[1]

@@ -1,5 +1,6 @@
-from .base import *
-
+import pandas as pd
+from .base import BaseEncoder, as_list
+from ..base import groups_split, groups_merge
 
 # ---------------------------------------------------------------------------
 # StandardScaler
@@ -12,15 +13,31 @@ NO_SCALE_EPS = 0.0000001
 class StandardScaler(BaseEncoder):
     # (mean, sdev) scaler for each column
 
-    def __init__(self, columns=None, copy=True):
+    def __init__(self, columns=None, groups=None, copy=True):
         super().__init__(columns, copy)
-        self._mean = {}
-        self._sdev = {}
+        self.groups = as_list(groups, "groups")
+        self._means = {}
 
-    def fit(self, X: DataFrame) -> "StandardScalerEncoder":
-        assert isinstance(X, DataFrame)
+    def fit(self, X: pd.DataFrame, y=None):
+        self._check_X(X, y)
+
+        if len(self.groups) == 0:
+            self._means = self._compute_means(X)
+            return self
+
+        groups = groups_split(X, groups=self.groups, drop=True)
+        for g in groups:
+            Xg = groups[g]
+            means = self._compute_means(Xg)
+            self._means[g] = means
+
+        return self
+
+    def _compute_means(self, X: pd.DataFrame):
+        assert isinstance(X, pd.DataFrame)
 
         columns = self._get_columns(X)
+        mean_stdv = {}
         for col in columns:
 
             x = X[col].to_numpy(dtype=float)
@@ -31,25 +48,38 @@ class StandardScaler(BaseEncoder):
                 continue
 
             if (vmax - vmin) <= NO_SCALE_EPS:
-                self._mean[col] = x.mean()
-                self._sdev[col] = 0.
+                mean_stdv[col] = (x.mean(), 0.)
             else:
-                self._mean[col] = x.mean()
-                self._sdev[col] = x.std()
+                mean_stdv[col] = (x.mean(), x.std())
             # end
-        return self
+        return mean_stdv
 
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         X = self._check_X(X)
 
+        if len(self.groups) == 0:
+            return self._transform(X, self._means)
+
+        X_dict: dict = dict()
+        groups = groups_split(X, groups=self.groups, drop=True)
+
+        for g in groups:
+            Xg = groups[g]
+            means = self._means[g]
+            Xg = self._transform(Xg, means)
+            X_dict[g] = Xg
+
+        X = groups_merge(X_dict, groups=self.groups)
+        return X
+
+    def _transform(self, X: pd.DataFrame, means) -> pd.DataFrame:
         columns = self._get_columns(X)
         for col in columns:
-            if col not in self._mean:
+            if col not in means:
                 continue
 
             x = X[col].to_numpy(dtype=float)
-            mean = self._mean[col]
-            sdev = self._sdev[col]
+            mean, sdev = means[col]
 
             if sdev <= NO_SCALE_EPS:
                 x = (x - mean)
@@ -59,17 +89,29 @@ class StandardScaler(BaseEncoder):
             X[col] = x
         return X
 
-    def inverse_transform(self, X: DataFrame):
-        assert isinstance(X, DataFrame)
+    def inverse_transform(self, X: pd.DataFrame):
+        X = self._check_X(X)
 
-        if self.copy:
-            X = X.copy()
+        if len(self.groups) == 0:
+            return self._inverse_transform(X, self._means)
 
+        X_dict: dict = dict()
+        groups = groups_split(X, groups=self.groups, drop=True)
+
+        for g in groups:
+            Xg = groups[g]
+            means = self._means[g]
+            Xg = self._inverse_transform(Xg, means)
+            X_dict[g] = Xg
+
+        X = groups_merge(X_dict, groups=self.groups)
+        return X
+
+    def _inverse_transform(self, X, means):
         columns = self._get_columns(X)
         for col in columns:
             x = X[col].to_numpy(dtype=float)
-            mean = self._mean[col]
-            sdev = self._sdev[col]
+            mean, sdev = means[col]
 
             if sdev <= NO_SCALE_EPS:
                 x = x + mean
@@ -101,8 +143,8 @@ class MinMaxScaler(BaseEncoder):
         self._min = {}
         self._delta = {}
 
-    def fit(self, X: DataFrame) -> "MinMaxScaler":
-        assert isinstance(X, DataFrame)
+    def fit(self, X: pd.DataFrame, y=None) -> "MinMaxScaler":
+        self._check_X(X, y)
 
         columns = self._get_columns(X)
         for col in columns:
@@ -115,7 +157,7 @@ class MinMaxScaler(BaseEncoder):
 
         return self
 
-    def transform(self, X: DataFrame) -> DataFrame:
+    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
         X = self._check_X(X)
 
         minv = self._min_value
@@ -132,8 +174,8 @@ class MinMaxScaler(BaseEncoder):
             X[col] = values
         return X
 
-    def inverse_transform(self, X: DataFrame):
-        assert isinstance(X, DataFrame)
+    def inverse_transform(self, X: pd.DataFrame):
+        assert isinstance(X, pd.DataFrame)
         if self._copy: X = X.copy()
 
         minv = self._min_value
@@ -154,55 +196,6 @@ class MinMaxScaler(BaseEncoder):
 
 # compatibility
 MinMaxEncoder = MinMaxScaler
-
-
-# ---------------------------------------------------------------------------
-# MeanStdScaler
-# ---------------------------------------------------------------------------
-
-# class MeanStdScaler(BaseEncoder):
-#     # (mean, sted) scaler for the COMPLETE dataframe
-#
-#     def __init__(self, columns, copy=True):
-#         super().__init__(columns, copy)
-#
-#         self._mean = 0.
-#         self._sdev = 0.
-#
-#     def fit(self, X: DataFrame) -> "MeanStdScaler":
-#         assert isinstance(X, DataFrame)
-#         col = self._col
-#
-#         values = X[col].to_numpy(dtype=float)
-#         self._mean = values.mean()
-#         self._sdev = values.std()
-#         return self
-#
-#     def transform(self, X: DataFrame) -> DataFrame:
-#         assert isinstance(X, DataFrame)
-#         if self.copy: X = X.copy()
-#
-#         col = self._col
-#         values = X[col].to_numpy(dtype=float)
-#         values = (values - self._mean) / self._sdev
-#
-#         X[col] = values
-#         return X
-#
-#     def inverse_transform(self, X: DataFrame):
-#         assert isinstance(X, DataFrame)
-#         if self.copy: X = X.copy()
-#
-#         col = self._col
-#         values = X[col].to_numpy(dtype=float)
-#         values = values*self._sdev + self._mean
-#
-#         X[col] = values
-#         return X
-# # end
-#
-#
-# MeanStdEncoder = MeanStdScaler
 
 
 # ---------------------------------------------------------------------------
