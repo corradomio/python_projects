@@ -7,6 +7,7 @@
 from typing import *
 from itertools import combinations
 
+
 # ---------------------------------------------------------------------------
 # Support
 # ---------------------------------------------------------------------------
@@ -118,6 +119,7 @@ def ilowbit(S: int) -> int:
         b += 1
         S >>= 1
     return b
+
 
 # ---------------------------------------------------------------------------
 
@@ -266,11 +268,6 @@ def ilexidx(S: int, n: int) -> int:
 # bitset but is is available as icompl(c | X) = idiff(X, s)
 #
 
-
-# ---------------------------------------------------------------------------
-# Constructor
-# ---------------------------------------------------------------------------
-
 def ibinset(bits: Iterable[int]) -> int:
     """
     Binary set (composed by {0,1}) to integer
@@ -325,8 +322,10 @@ def ilist(S: int) -> Tuple[int]:
 def ilist_tuple(S: int) -> Tuple[int]:
     return tuple(imembers(S))
 
+
 def ilist_set(S: int) -> Set[int]:
     return set(imembers(S))
+
 
 def ilist_list(S: int) -> List[int]:
     return list(imembers(S))
@@ -1030,7 +1029,6 @@ def imapset(M : Union[List[List[int]], Dict[int, List[int]]]) -> List[int]:
         S[i] = iset(M[i])
     # end
     return S
-
 
 
 # ---------------------------------------------------------------------------

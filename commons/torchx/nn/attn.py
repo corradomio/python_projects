@@ -6,6 +6,7 @@ from ..utils import TorchLayerMixin
 from ..utils import expand_dims, cast, max
 from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
 
+
 # ---------------------------------------------------------------------------
 # SelfAttention
 # ---------------------------------------------------------------------------
@@ -122,10 +123,10 @@ class SequentialSelfAttention(nn.Module, TorchLayerMixin):
             xavier_uniform_(self.Wt)
             xavier_uniform_(self.Wx)
             xavier_uniform_(self.Wa)
-            if self.bias:
-                xavier_uniform_(self.bh)
-            if self.attention_bias:
-                xavier_uniform_(self.ba)
+            # if self.bias:
+            #     constant_(self.bh, 0.)
+            # if self.attention_bias:
+            #     xavier_uniform_(self.ba)
         elif attention_type == self.ATTENTION_TYPE_MUL:
             xavier_uniform_(self.Wa)
             if self.attention_bias:

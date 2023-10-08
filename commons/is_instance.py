@@ -4,7 +4,7 @@ from types import *
 from collections import *
 
 __all__ = [
-    'is_instance'
+    'is_instance',
     'All',
     'Const'     # equivalent to 'Final'
 ]
@@ -329,6 +329,7 @@ class IsCollection(IsInstance):
                     return False
         return True
 
+
 class IsList(IsCollection):
     def __init__(self, tp):
         super().__init__(tp, list)
@@ -463,16 +464,20 @@ class IsImmutable(IsInstance):
 class IsConst(IsInstance):
     def __init__(self, tp):
         super().__init__(tp)
+
     def is_instance(self, obj) -> bool:
         if len(self.args) == 0:
             return True
         else:
             return is_instance(obj, self.args[0])
 
+
 # ---------------------------------------------------------------------------
 
 class HasAttribute(IsInstance):
+
     def __init__(self, *attrs):
+        super().__init__(NoneType)
         self.attrs = attrs
         
     def __call__(self, *args, **kwargs):
@@ -486,9 +491,6 @@ class HasAttribute(IsInstance):
             if av is None:
                 return False
         return True
-
-
-# ---------------------------------------------------------------------------
 
 
 # ---------------------------------------------------------------------------
@@ -541,6 +543,7 @@ IS_INSTANCE_OF = {
     'typing.AsyncIterable': HasAttribute('__aiter__'),
     'typing.AsyncIterator': HasAttribute('__aiter__', '__anext__'),
 }
+
 
 def type_name(a_type: type) -> str:
     # if hasattr(a_type, '__origin__'):

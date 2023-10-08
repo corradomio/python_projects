@@ -7,3 +7,4 @@ from .rnn_lin import RNNLinear, LSTMLinear, GRULinear
 from .xnn import RepeatVector, TimeDistributed, ChannelDistributed, ReshapeVector
 from .tcn import TemporalConvNet
 from .attn import SelfAttention, SequentialSelfAttention
+from .mdn import NoiseType, MixtureDensityNetwork

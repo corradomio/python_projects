@@ -2,8 +2,9 @@ from multimethod import multimethod
 
 
 @multimethod
-def mul(i: int)->int:
+def mul(i: int) -> int:
     return i
+
 
 @multimethod
 def mul(s: str) -> str:
@@ -11,4 +12,4 @@ def mul(s: str) -> str:
 
 
 print(mul(10))
-print(mul("11"))
+print(mul("s"))

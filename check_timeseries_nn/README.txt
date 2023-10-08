@@ -58,3 +58,13 @@ Tensorflow extensions:
 
             TCN
             ResidualBlock
+
+Other models
+------------
+
+    N-BITS
+    N-HiTS
+    N-Linear
+    Temporal Fusion Transformer
+    Timeseries Dense Encoder (TiDE)
+    Transformer Model
