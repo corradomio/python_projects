@@ -19,6 +19,11 @@ def main():
     input_size = Xt.shape[2]    # 19 (batch, seq, data)
     output_size = yt.shape[1]   # 24 (batch, seq, data)
 
+    input_size = Xt.shape[2]    # 19 (batch, seq, data)
+    window_len = Xt.shape[1]    # 24
+    output_size = yt.shape[2]   # 1 (batch, seq, data)
+    predict_len = yt.shape[1]   # 12
+
     # -------------------------------------------------------------------------------
 
     tmodule = nn.Sequential(
@@ -48,39 +53,12 @@ def main():
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.0005,
+        lr=0.0001,
         callbacks=[early_stop],
         batch_size=6
     )
 
     smodel.fit(Xt, yt)
-
-    # -------------------------------------------------------------------------------
-    # Plot history
-
-    # history = smodel.history
-    # plt.plot(history[:, 'train_loss'], label='train_loss')
-    # plt.plot(history[:, 'valid_loss'], label='valid_loss')
-    # plt.legend()
-    # plt.show()
-
-    # -------------------------------------------------------------------------------
-    # Plot Test prediction
-
-    # ypred = smodel.predict(Xp)
-    # if len(ypred.shape) == 3:
-    #     y_train = pd.Series(data=yt[:, 0, 0], index=it)
-    #     y_test = pd.Series(data=yp[:, 0, 0], index=ip)
-    #     y_pred = pd.Series(data=ypred[:, 0, 0], index=ip)
-    # else:
-    #     n = yp.shape[1]
-    #     ip = pd.period_range(ip[0], periods=n)
-    #     y_train = pd.Series(data=yt[:, 0], index=it)
-    #     y_test = pd.Series(data=yp[0, :], index=ip)
-    #     y_pred = pd.Series(data=ypred[0, :], index=ip)
-    #
-    # plot_series(y_train, y_test, y_pred, labels=['train', 'test', 'pred'])
-    # plt.show()
 
     # -------------------------------------------------------------------------------
     # Forecaster usage
@@ -99,9 +77,6 @@ def main():
 
     plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'])
     plt.show()
-
-    # plt.plot(yf_pred['EASY'].to_numpy())
-    # plt.show()
 
     pass
 

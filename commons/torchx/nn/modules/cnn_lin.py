@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..activation import activation_function
-from ..utils import TorchLayerMixin
+from torchx.activation import activation_function
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +19,7 @@ from ..utils import TorchLayerMixin
 #         device=None,
 #         dtype=None
 #
-class Conv1dLinear(nn.Conv1d, TorchLayerMixin):
+class Conv1dLinear(nn.Conv1d):
     def __init__(self, *,
                  input_size,
                  output_size,

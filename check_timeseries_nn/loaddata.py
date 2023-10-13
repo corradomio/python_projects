@@ -15,7 +15,7 @@ def lags_transform(X, y):
     pass
 
 
-def load_data():
+def load_data(tlags=24):
     df: pd.DataFrame = pdx.read_data(
         "easy_ts.csv",
         datetime=('DATE', '%Y-%m-%d', 'M'),
@@ -54,7 +54,7 @@ def load_data():
 
     # lags_transform(Xs_train, ys_train)
 
-    at = ppx.LagsArrayTransformer(xlags=24, ylags=0, tlags=24,
+    at = ppx.LagsArrayTransformer(xlags=24, ylags=0, tlags=tlags,
                                   temporal=True,
                                   y_flatten=False,
                                   dtype=np.float32)

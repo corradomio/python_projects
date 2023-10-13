@@ -30,22 +30,29 @@ def main():
     logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
 
-    x, y = gen_data(alpha=0)
+    x, y = gen_data(alpha=0.5)
     x = torch.Tensor(x)
     y = torch.Tensor(y)
 
-    model = MixtureDensityNetwork(1, 1, n_components=3, hidden_size=50, noise_type=NoiseType.DIAGONAL)
+    loss = torch.nn.L1Loss
+
+    model = MixtureDensityNetwork(1, 1, n_mixtures=3, hidden_size=50, noise_type=NoiseType.DIAGONAL)
     optimizer = optim.Adam(model.parameters(), lr=0.005)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, args.n_iterations)
 
     for i in range(args.n_iterations):
         optimizer.zero_grad()
-        loss = model.loss(x, y).mean()
+
+        y_hat = model.forward(x)
+        loss = model.loss_hat(y_hat, y)
+
+        # loss = model.loss(x, y).mean()
+
         loss.backward()
         optimizer.step()
         scheduler.step()
         if i % 100 == 0:
-            logger.info(f"Iter: {i}\t" + f"Loss: {loss.data:.2f}")
+            logger.info(f"Iter: {i:4}\t" + f"Loss: {loss.data:.2f}")
 
     with torch.no_grad():
         y_hat = model.sample(x)

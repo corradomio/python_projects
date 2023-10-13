@@ -7,6 +7,7 @@ import torch.nn as nn
 from sktime.utils.plotting import plot_series
 
 import torchx.nn as nnx
+import torchx.keras.layers as nnk
 from loaddata import *
 
 
@@ -16,21 +17,23 @@ def main():
     Xp, yp, ip = at.transform(Xs_test_, ys_test_)
 
     input_size = Xt.shape[2]    # 19 (batch, seq, data)
-    output_size = yt.shape[1]   # 24 (batch, seq, data)
+    window_len = Xt.shape[1]    # 24
+    output_size = yt.shape[2]   # 1 (batch, seq, data)
+    predict_len = yt.shape[1]   # 12
 
     # -------------------------------------------------------------------------------
 
     tmodule = nn.Sequential(
         # (*, 24, 19)
-        nnx.LSTM(input_size=input_size,
-                 hidden_size=input_size,
+        nnk.LSTM(input=input_size,
+                 units=input_size,
                  bidirectional=True,
                  return_sequence=False), nn.Tanh(),
-        # (*, 24, 2*19)
-        nnx.Linear(in_features=(input_size, 2), out_features=output_size),
-        # (*, 24, 24)
-        nn.Unflatten(1, (output_size, 1))
+        nnx.Probe("lstm"),
+        # (*, 2*19) because return_sequence=False and bidirectional=True
+        nnk.Dense(input=(input_size, 2), units=(predict_len, output_size)),
         # (*, 24, 1)
+        nnx.Probe("last"),
     )
 
     # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
@@ -40,7 +43,7 @@ def main():
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.01,
+        lr=0.001,
         callbacks=[early_stop],
         batch_size=32
     )

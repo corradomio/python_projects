@@ -1,23 +1,56 @@
+from typing import Union, Tuple, Optional
 import torch
 import torch.nn as nn
 from torch import Tensor
-from ..activation import activation_function
-from ..utils import TorchLayerMixin
-from ..utils import expand_dims, cast, max
+from torchx.activation import activation_function
+from torchx.utils import expand_dims, cast, max
 from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
 
 
 # ---------------------------------------------------------------------------
 # SelfAttention
+# MultiheadAttention
 # ---------------------------------------------------------------------------
+#
 
-class SelfAttention(nn.MultiheadAttention, TorchLayerMixin):
+class MultiheadAttention(nn.MultiheadAttention):
+    """
+    Extends nn.MultiheadAttention
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    Args:
+        batch_first: If ``True``, then the input and output tensors are provided
+            as (batch, seq, feature). Default: ``True`` (batch, seq, feature).
+        return_attention: If ``True`` it returns the attention weights. Default: ``False``
+    """
 
-    def forward(self, input: Tensor, *args, **kwargs) -> Tensor:
-        return super().forward(input, input, input)
+    def __init__(self,
+                 batch_first=True,
+                 return_attention=False,
+                 **kwargs):
+        super().__init__(batch_first=batch_first, **kwargs)
+        self.return_attention = return_attention
+
+    def forward(self, query: Tensor, key: Tensor, value: Tensor) -> Tuple[Tensor, Optional[Tensor]]:
+        t, a = super().forward(query, key, value)
+        if self.return_attention:
+            return t, a
+        else:
+            return t
+
+
+class SelfAttention(MultiheadAttention):
+    """
+    Extends nnx.MultiheadAttention.
+    It accepts a single input used as query, key and value
+
+    """
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def forward(self, input: Tensor) -> Tensor:
+        t = super().forward(input, input, input)
+        return t
 
 
 # ---------------------------------------------------------------------------
@@ -55,7 +88,14 @@ class SelfAttention(nn.MultiheadAttention, TorchLayerMixin):
 #       device=None,
 #       dtype=None
 
-class SequentialSelfAttention(nn.Module, TorchLayerMixin):
+class SeqSelfAttention(nn.Module):
+    """
+    As defined in 'keras-self-attention' package
+
+    https://pypi.org/project/keras-self-attention/
+    https://github.com/CyberZHG/keras-self-attention
+
+    """
 
     ATTENTION_TYPE_ADD = 'additive'
     ATTENTION_TYPE_MUL = 'multiplicative'
@@ -193,3 +233,15 @@ class SequentialSelfAttention(nn.Module, TorchLayerMixin):
             e = torch.bmm(torch.matmul(inputs, self.Wa), inputs.swapaxes(1, 2)) + self.ba
         return e
 # end
+
+
+# ---------------------------------------------------------------------------
+# Another implementation
+# ---------------------------------------------------------------------------
+# https://github.com/philipperemy/keras-attention/blob/master/attention/attention.py
+#
+# scores
+#   https://arxiv.org/pdf/1508.04025.pdf (Luong).
+#   https://arxiv.org/pdf/1409.0473.pdf (Bahdanau).
+#   https://machinelearningmastery.com/the-bahdanau-attention-mechanism/ (Some more explanation).
+#

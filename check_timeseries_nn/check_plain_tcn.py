@@ -5,9 +5,8 @@ import skorch
 import torch
 import torch.nn as nn
 from sktime.utils.plotting import plot_series
-
+from torchx.nn import TemporalConvNetwork as TCN
 import torchx.nn as nnx
-import torchx.keras.layers as nnk
 from loaddata import *
 
 
@@ -21,38 +20,31 @@ def main():
     output_size = yt.shape[2]   # 1 (batch, seq, data)
     predict_len = yt.shape[1]   # 12
 
+    hidden_size = 20
+
     # -------------------------------------------------------------------------------
 
     tmodule = nn.Sequential(
+        nnx.Probe("input"),
         # (*, 24, 19)
-        nnk.LSTM(input=input_size,
-                 units=input_size,
-                 bidirectional=True,
-                 return_sequence=True), nn.Tanh(),
-        # (*, 24, 2*19)
-        nnk.SeqSelfAttention(input=2*input_size, units=32),
-        # (*, 24, 38)
-        nnk.TimeDistributed(
-            # (24, 38)
-            nnk.Dense(input=38, units=output_size)
-            # (24, 24)
-        ),
-        # (*, 24, 24)
-        nnk.Dense(input=24, units=1),
+        TCN(in_channels=input_size, out_channels=[hidden_size] * 2, kernel_size=3, dropout=0.25, channels_last=True),
+        nnx.Probe("tcn"),
+        # (*, 20, 1)
+        nnx.Linear(in_features=(window_len, hidden_size), out_features=(predict_len, output_size)),
         # (*, 24, 1)
         nnx.Probe("last")
     )
 
     # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
-    early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.0001, monitor="valid_loss")
+    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.0005,
+        lr=0.01,
         callbacks=[early_stop],
-        batch_size=6
+        batch_size=32
     )
 
     smodel.fit(Xt, yt)
@@ -72,7 +64,8 @@ def main():
         i = ft.update(i, ypm)
         pass
 
-    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'])
+    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'],
+                title="TemporalConvolutionalNetwork")
     plt.show()
 
     pass

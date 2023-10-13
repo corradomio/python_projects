@@ -46,6 +46,12 @@ NNX_ACTIVATION = {
 }
 
 
+def register_activation(name, activation):
+    assert name not in NNX_ACTIVATION, f"Activation name '{name}' already registered"
+    assert issubclass(activation, nn.Module), f"Activation function {activation} is not a subclass of nn.Module"
+    NNX_ACTIVATION[name] = activation
+
+
 def activation_function(activation, activation_params=None):
     # None     -> None
     # False    -> Identity

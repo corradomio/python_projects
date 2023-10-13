@@ -2,9 +2,7 @@ from typing import Tuple, Optional, Union
 
 from torch import Tensor
 
-from ...utils import KerasLayerMixin
 from ... import nn as nnx
-from ...activation import activation_function
 
 
 # tf.nn_keras.layers.LSTM(
@@ -66,7 +64,11 @@ from ...activation import activation_function
 #   note: l0 is the layer 0. If more layers are specified, there are
 #
 
-class LSTM(nnx.LSTM, KerasLayerMixin):
+class LSTM(nnx.LSTM):
+    """
+    Keras compatible LSTM
+    """
+
     # nn.LSTM returns a tuple:
     #
     #   1) the complete sequence
@@ -79,16 +81,14 @@ class LSTM(nnx.LSTM, KerasLayerMixin):
     #   3) it is possible to specify directly the activation function
     #
 
-    def __init__(self,
-                 input=None,
-                 units=None,
-                 activation=None,
+    def __init__(self, input, units,
+                 return_sequences=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
+            return_sequence=return_sequences,
             **kwargs)
-        self.activation = activation_function(activation)
 
     def forward(self,
                 input: Tensor,
@@ -99,9 +99,6 @@ class LSTM(nnx.LSTM, KerasLayerMixin):
             seq, state = super().forward(input, hx)
         else:
             seq = super().forward(input, hx)
-
-        if self.activation:
-            seq = self.activation.forward(seq)
 
         if self.return_state:
             return seq, state
@@ -110,29 +107,19 @@ class LSTM(nnx.LSTM, KerasLayerMixin):
 # end
 
 
-class GRU(nnx.GRU, KerasLayerMixin):
-    # nn.LSTM returns a tuple:
-    #
-    #   1) the complete sequence
-    #   2) a tuple containing the hidden state
-    #
-    # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
-    #
-    #   1) return_sequence: if to return the complete sequence or just the last value
-    #   2) return_state: if to return the hidden state
-    #   3) it is possible to specify directly the activation function
-    #
+class GRU(nnx.GRU):
+    """
+    Keras compatible GRU
+    """
 
-    def __init__(self,
-                 input=None,
-                 units=None,
-                 activation=None,
+    def __init__(self, input, units,
+                 return_sequences=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
+            return_sequence=return_sequences,
             **kwargs)
-        self.activation = activation_function(activation)
 
     def forward(self,
                 input: Tensor,
@@ -143,9 +130,6 @@ class GRU(nnx.GRU, KerasLayerMixin):
             seq, state = super().forward(input, hx)
         else:
             seq = super().forward(input, hx)
-
-        if self.activation:
-            seq = self.activation.forward(seq)
 
         if self.return_state:
             return seq, state
@@ -154,29 +138,19 @@ class GRU(nnx.GRU, KerasLayerMixin):
 # end
 
 
-class RNN(nnx.RNN, KerasLayerMixin):
-    # nn.LSTM returns a tuple:
-    #
-    #   1) the complete sequence
-    #   2) a tuple containing the hidden state
-    #
-    # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
-    #
-    #   1) return_sequence: if to return the complete sequence or just the last value
-    #   2) return_state: if to return the hidden state
-    #   3) it is possible to specify directly the activation function
-    #
+class RNN(nnx.RNN):
+    """
+    Keras compatible RNN
+    """
 
-    def __init__(self,
-                 input=None,
-                 units=None,
-                 activation=None,
+    def __init__(self, input, units,
+                 return_sequences=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
+            return_sequence=return_sequences,
             **kwargs)
-        self.activation = activation_function(activation)
 
     def forward(self,
                 input: Tensor,
@@ -187,9 +161,6 @@ class RNN(nnx.RNN, KerasLayerMixin):
             seq, state = super().forward(input, hx)
         else:
             seq = super().forward(input, hx)
-
-        if self.activation:
-            seq = self.activation.forward(seq)
 
         if self.return_state:
             return seq, state

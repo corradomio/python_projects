@@ -7,12 +7,11 @@ import torch.nn as nn
 from sktime.utils.plotting import plot_series
 
 import torchx.nn as nnx
-import torchx.keras.layers as nnk
 from loaddata import *
 
 
-def main():
-    Xt, yt, it, ys_train, Xs_test_, ys_test_, at = load_data()
+def model1():
+    Xt, yt, it, ys_train, Xs_test_, ys_test_, at = load_data(12)
     ft = at.forecaster()
     Xp, yp, ip = at.transform(Xs_test_, ys_test_)
 
@@ -24,33 +23,24 @@ def main():
     # -------------------------------------------------------------------------------
 
     tmodule = nn.Sequential(
+        nnx.Probe("input"),
         # (*, 24, 19)
-        nnk.LSTM(input=input_size,
-                 units=input_size,
-                 bidirectional=True,
-                 return_sequence=True), nn.Tanh(),
-        # (*, 24, 2*19)
-        nnk.SeqSelfAttention(input=2*input_size, units=32),
-        # (*, 24, 38)
-        nnk.TimeDistributed(
-            # (24, 38)
-            nnk.Dense(input=38, units=output_size)
-            # (24, 24)
-        ),
-        # (*, 24, 24)
-        nnk.Dense(input=24, units=1),
-        # (*, 24, 1)
+        nnx.SelfAttention(embed_dim=input_size, num_heads=1),
+        nnx.Probe("attn"),
+        # (*, 24, 19)
+        nnx.Linear(in_features=(window_len, input_size), out_features=(predict_len, output_size)),
         nnx.Probe("last")
+        # (*, 12, 1)
     )
 
     # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
-    early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.0001, monitor="valid_loss")
+    early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.0005,
+        lr=0.0001,
         callbacks=[early_stop],
         batch_size=6
     )
@@ -72,9 +62,15 @@ def main():
         i = ft.update(i, ypm)
         pass
 
-    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'])
+    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'],
+                title="Attention")
     plt.show()
 
+    pass
+
+
+def main():
+    model1()
     pass
 
 

@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 import skorch
 import torch
 import torch.nn as nn
+import torch.optim.lr_scheduler as lrsched
 from sktime.utils.plotting import plot_series
-
 import torchx.nn as nnx
-import torchx.keras.layers as nnk
 from loaddata import *
 
 
@@ -21,38 +20,38 @@ def main():
     output_size = yt.shape[2]   # 1 (batch, seq, data)
     predict_len = yt.shape[1]   # 12
 
+    hidden_size = 20
+
     # -------------------------------------------------------------------------------
 
     tmodule = nn.Sequential(
+        nnx.Probe("input"),
         # (*, 24, 19)
-        nnk.LSTM(input=input_size,
-                 units=input_size,
-                 bidirectional=True,
-                 return_sequence=True), nn.Tanh(),
-        # (*, 24, 2*19)
-        nnk.SeqSelfAttention(input=2*input_size, units=32),
-        # (*, 24, 38)
-        nnk.TimeDistributed(
-            # (24, 38)
-            nnk.Dense(input=38, units=output_size)
-            # (24, 24)
+        nnx.ReshapeVector(shape=(1, window_len*input_size)),
+        nnx.Probe("reshape"),
+        # (*, 24*19, 1)
+        nnx.TimeDistributed(
+            nnx.Probe("td"),
+            nnx.MixtureDensityNetwork(in_features=input_size,
+                                      out_features=output_size,
+                                      n_mixtures=8,
+                                      )
         ),
-        # (*, 24, 24)
-        nnk.Dense(input=24, units=1),
-        # (*, 24, 1)
         nnx.Probe("last")
     )
 
     # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
-    early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.0001, monitor="valid_loss")
+    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
+    lr_scheduler = skorch.callbacks.LRScheduler(policy=lrsched.CosineAnnealingLR, T_max=1000)
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.0005,
-        callbacks=[early_stop],
-        batch_size=6
+        criterion=nnx.MixtureDensityNetworkLoss,
+        lr=0.01,
+        callbacks=[early_stop, lr_scheduler],
+        batch_size=32
     )
 
     smodel.fit(Xt, yt)
@@ -72,7 +71,8 @@ def main():
         i = ft.update(i, ypm)
         pass
 
-    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'])
+    plot_series(ys_train['EASY'], ys_test_['EASY'], yf_pred['EASY'], labels=['train', 'test', 'pred'],
+                title="TemporalConvolutionalNetwork")
     plt.show()
 
     pass

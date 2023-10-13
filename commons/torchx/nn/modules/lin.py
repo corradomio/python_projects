@@ -3,8 +3,15 @@ from typing import Union
 import torch.nn as nn
 from torch import Tensor
 
-from ..utils import mul
-from ..utils import TorchLayerMixin
+
+def mul(dim: Union[int, list[int]]) -> int:
+    if isinstance(dim, int):
+        return dim
+    d = 1
+    for l in dim:
+        d *= l
+    return d
+
 
 # ---------------------------------------------------------------------------
 # Linear
@@ -13,21 +20,27 @@ from ..utils import TorchLayerMixin
 #
 #
 
-class Linear(nn.Linear, TorchLayerMixin):
+class Linear(nn.Linear):
+    """
+    Extends nn.Linear
+
+    It applies flatten/unflatten if ``in_features``/``out_features``
+    are not integers.
+
+    Args:
+        in_features: can be a tuple
+        out_features: can be a tuple
+    """
 
     def __init__(self,
-                 in_features: Union[int, tuple[int, ...]],
-                 out_features: Union[int, tuple[int, ...]],
-                 bias: bool = True,
-                 device=None,
-                 dtype=None):
+                 in_features: Union[int, tuple[int, ...]] = None,
+                 out_features: Union[int, tuple[int, ...]] = None,
+                 **kwargs):
+
         super().__init__(
             in_features=mul(in_features),
             out_features=mul(out_features),
-            bias=bias,
-            device=device,
-            dtype=dtype
-        )
+            **kwargs)
 
         self.flatten = None if isinstance(in_features, int) \
             else nn.Flatten()

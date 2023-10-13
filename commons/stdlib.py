@@ -53,10 +53,16 @@ def from_name(tsname) -> tuple[str]:
 # ---------------------------------------------------------------------------
 
 def list_map(f, l):
+    """
+    Same as 'list(map(f, l))'
+    """
     return list(map(f, l))
 
 
 def lrange(start, stop=None, step=None):
+    """
+    Same as 'list(range(...))'
+    """
     if stop is None:
         return list(range(start))
     elif step is None:
@@ -66,6 +72,16 @@ def lrange(start, stop=None, step=None):
 
 
 def tobool(s: str) -> bool:
+    """
+    Convert the string into a boolean value.
+    Supported conversions:
+
+        False: 0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no',  'close'
+         True: 1, True,      't', 'true',  'T', 'True',  'TRUE',  'on',  'yes', 'open'
+
+    :param s: string
+    :return: boolean value
+    """
     if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
         return False
     if s in [1, True, 't', 'true', 'T', 'True', 'TRUE', 'on', 'yes', 'open']:
@@ -82,6 +98,7 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param):
     """
     Convert parameter 'l' in a list.
     If 'l' is None, the empty list, if a string, in a singleton list
+
     :param l: value to convert
     :param param: parameter's name, used in the error message
     :return: a list
@@ -122,23 +139,23 @@ def import_from(qname: str) -> Any:
 # generic utilities
 # ---------------------------------------------------------------------------
 
-def as_kwargs(locals):
-    kwargs = {} | locals
-    for key in ['forecaster', 'window_length', 'reduction_strategy',
-                'self', '__class__']:
-        del kwargs[key]
-    return kwargs
-# end
+# def as_kwargs(locals):
+#     kwargs = {} | locals
+#     for key in ['forecaster', 'window_length', 'reduction_strategy',
+#                 'self', '__class__']:
+#         del kwargs[key]
+#     return kwargs
+# # end
 
 
-def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None,
-          keys=None) -> Any:
+def kwval(kwargs: dict, key: str, defval: Any = None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
+    Note: it convert automatically the string into the same type of defval
+
     :param kwargs: dictionary containing pairs (key, value)
     :param key: key (or alternate names) to read
-    :param keys: list of keys used to navigate the dictionary
     :param defval: value to return is the key is not in the dictionary
     :return: the value in the dictionary or the default value
     """
@@ -162,10 +179,9 @@ def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, lis
 
 def dict_contains_some(d: dict, keys: Union[str, list[str]]):
     """
-    Chekc if the dictionary contains a key in the list
+    Check if the dictionary contains some key in the list
     """
-    if isinstance(keys, str):
-        keys = [keys]
+    keys = as_list(keys, "keys")
     for k in keys:
         if k in d:
             return True
@@ -191,6 +207,7 @@ def dict_union(d1: dict, d2: dict) -> dict:
 def dict_update(d1: dict, d2: dict) -> dict:
     """
     Update dictionary 'd1' with the content of 'd2
+
     :param d1: the dictionary to update
     :param d2: the dictionary used for the updates
     :return: the updated dictionary
@@ -200,20 +217,44 @@ def dict_update(d1: dict, d2: dict) -> dict:
     return d1
 
 
+def dict_select(d: dict, keys: Union[str, list[str]], prefix=None) -> dict:
+    """
+    Create a new dictionary containing only the keys specified
+
+    Example:
+
+    :param d: original dictionary
+    :param keys: keys to select
+    :param prefix: prefix used to save the keys in 'd'
+    :return: new dictionary
+    """
+    keys = as_list(keys, "keys")
+    sd = {}
+    for k in keys:
+        # if prefix is defined, try to use <prefix><key>
+        # if <prefix><key> is not present, try tp use <key>
+        if prefix:
+            dk = prefix + k
+            if dk not in d:
+                dk = k
+        else:
+            dk = k
+
+        if dk in d:
+            sd[k] = d[dk]
+    return sd
+
+
 def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     """
     Remove from the dictionary some keys (and values
+
     :param d1: dictionary
     :param keys: keys to remove
     :return: the new dictionary
     """
+    keys = as_list(keys)
     # keys is a string
-    if keys is None:
-        return {} | d1
-    if isinstance(keys, str): keys = [keys]
-    assert isinstance(keys, (list, tuple))
-
-    # keys is None/empty
     if len(keys) == 0:
         return {} | d1
 
@@ -228,6 +269,7 @@ def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
 def dict_rename(d: dict, k1: str, k2: str) -> dict:
     """
     Rename the key 'k1' in the dictionary as 'k2
+
     :param d: dictionary
     :param k1: key to rename
     :param k2: new name to use

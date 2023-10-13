@@ -2,15 +2,13 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from ..utils import TorchLayerMixin
-
 
 # ---------------------------------------------------------------------------
 # ReshapeVector
 # ---------------------------------------------------------------------------
 # It is equivalent to nn.Unflatten(...) but more simple
 
-class ReshapeVector(nn.Module, TorchLayerMixin):
+class ReshapeVector(nn.Module):
     def __init__(self, shape=None, n_dims=0):
         """
         Reshape the input tensor T as
@@ -22,18 +20,22 @@ class ReshapeVector(nn.Module, TorchLayerMixin):
             new_shape = T.shape = [1 for i in range(new_dims)]
 
         :param shape: new tensor shape
-        :param n_dims: new dimensions to add
+        :param n_dims: new dimensions to add. If < 0, the dims are added in front
+                otherwise at end
         """
 
         super().__init__()
         self.shape = list(shape) if shape else None
-        self.n_dims = [1 for i in range(n_dims)]
+        self.suffix = n_dims > 0
+        self.n_dims = [1 for i in range(abs(n_dims))]
 
     def forward(self, input: Tensor) -> Tensor:
         if self.shape:
             shape = [input.shape[0]] + self.shape
-        else:
+        elif self.suffix:
             shape = list(input.shape) + self.n_dims
+        else:
+            shape = self.n_dims + list(input.shape)
         t = torch.reshape(input, shape)
         return t
 
@@ -44,7 +46,7 @@ class ReshapeVector(nn.Module, TorchLayerMixin):
 # As TF RepeatedVector
 #
 
-class RepeatVector(nn.Module, TorchLayerMixin):
+class RepeatVector(nn.Module):
 
     def __init__(self, n_repeat=1):
         super().__init__()
@@ -66,7 +68,7 @@ class RepeatVector(nn.Module, TorchLayerMixin):
 #   Distributed:    (batch, seq, units)   ->  (batch, seq,     1)
 #
 
-class TimeDistributed(nn.Module, TorchLayerMixin):
+class TimeDistributed(nn.Module):
 
     def __init__(self, *models):
         super().__init__()
@@ -104,7 +106,7 @@ class TimeDistributed(nn.Module, TorchLayerMixin):
 #   Distributed:    (batch, seq, units)   ->  (batch, 1,     seq)
 #
 
-class ChannelDistributed(nn.Module, TorchLayerMixin):
+class ChannelDistributed(nn.Module):
 
     def __init__(self, *models):
         super().__init__()

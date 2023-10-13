@@ -109,7 +109,7 @@ class LagsArrayForecaster(XyBaseEncoder):
 
     def transform(self, X, y=None):
         """
-        Initialize the forecaster with the in put X
+        Initialize the forecaster with the input X
         It returns a shared array that will contain the predicted values and used
         to create the X tensor passed to the model. The array is updated by 'update(i, y)'
 
@@ -231,7 +231,8 @@ class LagsArrayForecaster(XyBaseEncoder):
     def step(self, i):
         """
         Prepare the tensor to use as input for the NN model.
-        Note: the tensor returned is a local object override each time
+
+        Note: the tensor returned is a local object override at each step
 
         :param i: current step
         :return: the tensor to use
@@ -246,21 +247,36 @@ class LagsArrayForecaster(XyBaseEncoder):
 
         return Xp
 
-    def update(self, i, y):
+    def update(self, i, y) -> int:
         """
+        Update the shared 'yf' created and returned with 'transform(X)'.
+        Return the next valid step index to use.
+
+        It updates 'yf[i+k]' with k specified in 'tlags'
+
+        Note: the number of steps to advance depends on 'tlags':
+
+            [0]         1 step
+            [0,1,2,3]   4 steps
+            [0,1,4,5]   2 steps because it starts with 0 and the longest consecutive sequence is [0,1]
+            [1,2,3]     0 steps because it doesn't start with 0
+
+        Note: if tlags is not consecutive, the values not in sequence will be override
 
         :param i: current step
         :param y:
         :return: the next valid index to use with 'step(i)'
         """
         if len(y.shape) == 2:
-            return self._update_flatten(i, y)
+            next_i = self._update_flatten(i, y)
         elif self.temporal:
-            return self._update_temporal(i, y)
+            next_i = self._update_temporal(i, y)
         elif self.channels:
-            return self._update_channels(i, y)
+            next_i = self._update_channels(i, y)
         else:
-            return self._update_flatten(i, y)
+            next_i = self._update_flatten(i, y)
+
+        return i + self._advance()
 
     def _update_flatten(self, i, y):
         tlags = self._tlags
@@ -315,6 +331,16 @@ class LagsArrayForecaster(XyBaseEncoder):
                 self.yf[ik] = y[0, :, j]
 
         return i + lmax(tlags) + 1
+
+    def _advance(self) -> int:
+        tlags = self._tlags
+        nt = len(tlags)
+
+        for i in range(nt):
+            if tlags[i] != i:
+                return i
+        else:
+            return lmax(tlags) + 1
 # end
 
 

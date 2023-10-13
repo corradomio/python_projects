@@ -1,3 +1,6 @@
+#
+# https://www.kaggle.com/code/ceshine/pytorch-temporal-convolutional-networks
+#
 # ======================
 #     Dataset Utils
 # ======================
@@ -7,7 +10,7 @@ import pandas as pd
 import numpy as np
 import torch
 from torch.utils.data import DataLoader, TensorDataset
-from torchx.nn import TemporalConvNet
+from torchx.nn import TemporalConvNetwork
 
 
 def get_dataset(x, y):
@@ -50,28 +53,32 @@ def read_dataset(data_dir=Path("data/")):
 # ===============================================
 #     Model Creation, Training, and Inference
 # ==============================================
+# helperbot:
+#   python-telegram-bot
+#
 import logging
 
 from helperbot.bot import BaseBot
 from helperbot.lr_scheduler import TriangularLR
-from helperbot.weight_decay import WeightDecayOptimizerWrapper
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import log_loss, roc_auc_score
 import torch.nn as nn
 import pandas as pd
+from pathlib import Path
 
 
 class TurkeyBot(BaseBot):
     name = "Turkey"
 
     def __init__(self, model, train_loader, val_loader, *, optimizer,
-                 avg_window=20, log_dir="./cache/logs/",
-                 log_level=logging.INFO, checkpoint_dir="./cache/model_cache/"):
+                 avg_window=20, log_dir=Path("./cache/logs/"),
+                 log_level=logging.INFO, checkpoint_dir=Path("./cache/model_cache/")):
         super().__init__(
-            model, train_loader, val_loader,
+            model=model, train_loader=train_loader, val_loader=val_loader,
             optimizer=optimizer, avg_window=avg_window,
             log_dir=log_dir, log_level=log_level, checkpoint_dir=checkpoint_dir,
-            batch_idx=0, echo=False, device=DEVICE
+            batch_idx=0, echo=False, device=DEVICE,
+            criterion=torch.nn.BCEWithLogitsLoss()
         )
         self.criterion = torch.nn.BCEWithLogitsLoss()
         self.loss_format = "%.8f"
@@ -80,7 +87,7 @@ class TurkeyBot(BaseBot):
 class TCNModel(nn.Module):
     def __init__(self, num_channels, kernel_size=2, dropout=0.2):
         super(TCNModel, self).__init__()
-        self.tcn = TemporalConvNet(
+        self.tcn = TemporalConvNetwork(
             128, num_channels, kernel_size=kernel_size, dropout=dropout)
         self.dropout = nn.Dropout(dropout)
         self.decoder = nn.Linear(num_channels[-1], 1)
@@ -158,4 +165,5 @@ def main():
     df_sub.to_csv("submission.csv", index=False)
 
 
-main()
+if __name__ == "__main__":
+    main()

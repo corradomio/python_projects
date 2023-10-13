@@ -25,20 +25,14 @@ def main():
 
     tmodule = nn.Sequential(
         # (*, 24, 19)
-        nnk.LSTM(input=input_size,
-                 units=input_size,
-                 bidirectional=True,
-                 return_sequence=True), nn.Tanh(),
-        # (*, 24, 2*19)
-        nnk.SeqSelfAttention(input=2*input_size, units=32),
-        # (*, 24, 38)
-        nnk.TimeDistributed(
-            # (24, 38)
-            nnk.Dense(input=38, units=output_size)
-            # (24, 24)
-        ),
-        # (*, 24, 24)
-        nnk.Dense(input=24, units=1),
+        nnx.Probe("input"),
+        nnx.Time2Vec(input_size=(window_len, input_size), output_size=120),
+        # (*, 24, 139)
+        nnx.Probe("time2vec"),
+        nnx.LSTM(input_size=(120 + input_size), hidden_size=48, bidirectional=True, return_sequence=True),
+        nnx.Probe("lstm"),
+        # (*, 24, 2*48)
+        nnx.Linear(in_features=(window_len, 48, 2), out_features=(predict_len, output_size)),
         # (*, 24, 1)
         nnx.Probe("last")
     )
@@ -50,9 +44,11 @@ def main():
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
-        lr=0.0005,
+        lr=0.0008,
+        optimizer__betas=(0.9, 0.999),
+        optimizer__amsgrad=True,
         callbacks=[early_stop],
-        batch_size=6
+        batch_size=23
     )
 
     smodel.fit(Xt, yt)

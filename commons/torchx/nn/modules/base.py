@@ -5,19 +5,35 @@ import torch.nn as nn
 # ---------------------------------------------------------------------------
 # Probe
 # ---------------------------------------------------------------------------
-# Used to insert breakpoints inside the layers
+# Used to insert breakpoints during the training/prediction and to print the
+# tensor shapes (ONLY the first time)
+
+def print_shape(what, x, i=0):
+    if isinstance(x, (tuple, list)):
+        if i == 0:
+            print("  "*i, what, "...")
+        else:
+            print("  " * i, "...")
+        for t in x:
+            print_shape(what, t, i+1)
+        return
+    if i == 0:
+        print("  "*i, what, tuple(x.shape))
+    else:
+        print("  " * i, tuple(x.shape))
+
 
 class Probe(nn.Module):
 
-    def __init__(self, name=""):
+    def __init__(self, name="probe"):
         super().__init__()
         self.name = name
         self._log = True
-        self._repr = f"Probe({name})"
+        self._repr = f"[{name}]\t"
 
     def forward(self, input):
         if self._log:
-            print(f"{self._repr}: {tuple(input.shape)}")
+            print_shape(self._repr, input)
             self._log = False
         return input
 

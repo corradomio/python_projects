@@ -1,8 +1,7 @@
 import torch
 import torch.nn as nn
 
-from ..activation import activation_function
-from ..utils import TorchLayerMixin
+from torchx.activation import activation_function
 
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
@@ -31,7 +30,7 @@ from ..utils import TorchLayerMixin
 #         bidirectional: If ``True``, becomes a bidirectional LSTM. Default: ``False``
 #         proj_size: If ``> 0``, will use LSTM with projections of corresponding size. Default: 0
 #
-class LSTMLinear(nn.LSTM, TorchLayerMixin):
+class LSTMLinear(nn.LSTM):
 
     def __init__(self, *,
                  input_size,
@@ -99,7 +98,7 @@ class LSTMLinear(nn.LSTM, TorchLayerMixin):
 #             :attr:`dropout`. Default: 0
 #         bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
 #
-class GRULinear(nn.GRU, TorchLayerMixin):
+class GRULinear(nn.GRU):
 
     def __init__(self, *,
                  input_size,
@@ -170,7 +169,7 @@ class GRULinear(nn.GRU, TorchLayerMixin):
 #             :attr:`dropout`. Default: 0
 #         bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False``
 #
-class RNNLinear(nn.RNN, TorchLayerMixin):
+class RNNLinear(nn.RNN):
 
     def __init__(self, *,
                  input_size,

@@ -17,6 +17,9 @@ def main():
     Xp, yp, ip = at.transform(Xs_test_, ys_test_)
 
     input_size = Xt.shape[2]    # 19 (batch, seq, data)
+    output_size = yt.shape[1]   # 24 (batch, seq, data)
+
+    input_size = Xt.shape[2]    # 19 (batch, seq, data)
     window_len = Xt.shape[1]    # 24
     output_size = yt.shape[2]   # 1 (batch, seq, data)
     predict_len = yt.shape[1]   # 12
@@ -30,15 +33,9 @@ def main():
                  bidirectional=True,
                  return_sequence=True), nn.Tanh(),
         # (*, 24, 2*19)
-        nnk.SeqSelfAttention(input=2*input_size, units=32),
+        nnk.Dense(input=2*input_size, units=250), nn.Tanh(),
         # (*, 24, 38)
-        nnk.TimeDistributed(
-            # (24, 38)
-            nnk.Dense(input=38, units=output_size)
-            # (24, 24)
-        ),
-        # (*, 24, 24)
-        nnk.Dense(input=24, units=1),
+        nnk.MixtureDensityNetwork(input=250, units=5),
         # (*, 24, 1)
         nnx.Probe("last")
     )
@@ -79,7 +76,7 @@ def main():
 
 
 if __name__ == "__main__":
-    logging.config.fileConfig('logging_config.ini')
+    logging.config.fileConfig('../logging_config.ini')
     log = logging.getLogger("root")
     log.info("Logging system configured")
     main()
