@@ -72,7 +72,6 @@ def main():
         nnx.Probe("last")
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=25, threshold=0.0001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

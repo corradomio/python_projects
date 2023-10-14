@@ -1,5 +1,8 @@
+from typing import Union
+
 import torch
 import torch.nn as nn
+from torch.nn.common_types import _size_1_t
 
 
 # ---------------------------------------------------------------------------
@@ -22,10 +25,31 @@ class Conv1d(nn.Conv1d):
             (batch, seq, channels)
     """
     def __init__(self,
-                 kernel_size=1,
-                 channels_last=False,
-                 **kwargs):
-        super().__init__(kernel_size=kernel_size, **kwargs)
+                 in_channels: int,
+                 out_channels: int,
+                 kernel_size: _size_1_t = 1,
+                 stride: _size_1_t = 1,
+                 padding: Union[str, _size_1_t] = 0,
+                 dilation: _size_1_t = 1,
+                 groups: int = 1,
+                 bias: bool = True,
+                 padding_mode: str = 'zeros',  # TODO: refine this type
+                 device=None,
+                 dtype=None,
+                 channels_last=False):
+        super().__init__(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
+            padding_mode=padding_mode,
+            dilation=dilation,
+            groups=groups,
+            bias=bias,
+            device=device,
+            dtype=dtype
+        )
         self.channels_last = channels_last
 
     def forward(self, input):

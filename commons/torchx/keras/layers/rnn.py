@@ -76,7 +76,7 @@ class LSTM(nnx.LSTM):
     #
     # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
     #
-    #   1) return_sequence: if to return the complete sequence or just the last value
+    #   1) return_sequences: if to return the complete sequence or just the last value
     #   2) return_state: if to return the hidden state
     #   3) it is possible to specify directly the activation function
     #
@@ -87,7 +87,7 @@ class LSTM(nnx.LSTM):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequence=return_sequences,
+            return_sequences=return_sequences,
             **kwargs)
 
     def forward(self,
@@ -118,7 +118,7 @@ class GRU(nnx.GRU):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequence=return_sequences,
+            return_sequences=return_sequences,
             **kwargs)
 
     def forward(self,
@@ -149,7 +149,7 @@ class RNN(nnx.RNN):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequence=return_sequences,
+            return_sequences=return_sequences,
             **kwargs)
 
     def forward(self,

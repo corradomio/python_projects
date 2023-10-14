@@ -29,13 +29,12 @@ def main():
                    out_channels=input_size,
                    channels_last=True), nn.Tanh(),
         nnx.Probe("cnn"),
-        # (*, 24, 2*19) because return_sequence=False that is, it returns just the last element
+        # (*, 24, 2*19) because return_sequences=False that is, it returns just the last element
         nnx.Linear(in_features=(window_len, input_size), out_features=(predict_len, output_size)),
         # (*, 24, 1)
         nnx.Probe("last")
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

@@ -357,7 +357,7 @@ class SlotsCNNForecaster(BaseCNNForecaster):
                 output_size=-1,         # disable nn.Linear layer
                 **self._cnn_args
             )
-            inner_size += cnn.output_size
+            inner_size += cnn.out_features
 
             input_models.append(cnn)
 
@@ -369,7 +369,7 @@ class SlotsCNNForecaster(BaseCNNForecaster):
                 output_size=-1,         # disable nn.Linear layer
                 **self._cnn_args
             )
-            inner_size += cnn.output_size
+            inner_size += cnn.out_features
 
             input_models.append(cnn)
 

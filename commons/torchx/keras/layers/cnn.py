@@ -46,6 +46,7 @@ class Conv1D(nnx.Conv1d):
 
     def __init__(self, input, filters,
                  strides=1, dilation_rate=1, use_bias=True,
+                 channels_last=True,
                  **kwargs):
         super().__init__(
             in_channels=input,
@@ -53,6 +54,6 @@ class Conv1D(nnx.Conv1d):
             stride=strides,
             dilation=dilation_rate,
             bias=use_bias,
-            channels_last=True,     # invert the dimension orders
+            channels_last=channels_last,     # invert the dimension orders
             **kwargs)
 

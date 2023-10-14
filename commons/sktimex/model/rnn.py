@@ -342,7 +342,7 @@ class SlotsRNNForecaster(BaseRNNForecaster):
                 output_size=-1,         # disable nn.Linear layer
                 **self._rnn_args
             )
-            inner_size += rnn.output_size
+            inner_size += rnn.out_features
 
             input_models.append(rnn)
 
@@ -354,7 +354,7 @@ class SlotsRNNForecaster(BaseRNNForecaster):
                 output_size=-1,         # disable nn.Linear layer
                 **self._rnn_args
             )
-            inner_size += rnn.output_size
+            inner_size += rnn.out_features
 
             input_models.append(rnn)
 

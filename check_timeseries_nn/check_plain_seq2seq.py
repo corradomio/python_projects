@@ -37,7 +37,6 @@ def rnn():
         # (*, 24, 1)
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=25, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
@@ -102,7 +101,6 @@ def gru():
         # (*, 24, 1)
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=25, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
@@ -167,7 +165,6 @@ def lstm():
         # (*, 24, 1)
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=25, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

@@ -33,7 +33,7 @@ def main():
                  bidirectional=True,
                  return_sequences=False), nn.Tanh(),
         nnx.Probe("lstm"),
-        # (*, 2*19) because return_sequence=False and bidirectional=True
+        # (*, 2*19) because return_sequences=False and bidirectional=True
         nnk.Dense(input=(input_size, 2), units=hidden_size), nn.Tanh(),
         # (*, 250)
         nnx.Probe("dense"),
@@ -44,7 +44,6 @@ def main():
         nnx.Probe("last")
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
@@ -52,9 +51,9 @@ def main():
         max_epochs=1000,
         optimizer=torch.optim.Adam,
         criterion=nnx.MixtureDensityNetworkLoss,
-        criterion__output_size=output_size*predict_len,
+        criterion__out_features=output_size*predict_len,
         criterion__n_mixtures=n_mixtures,
-        lr=0.0001,
+        lr=0.001,
         callbacks=[early_stop],
         batch_size=32
     )
@@ -68,7 +67,7 @@ def main():
     mdn_predictor = nnx.MixtureDensityNetworkPredictor(
         smodel,
         (predict_len, output_size),
-        n_mixtures, n_samples=100)
+        n_mixtures, n_samples=1)
 
     n = len(yf_pred)
     i = 0

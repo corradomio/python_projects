@@ -11,12 +11,19 @@ CollectionType = (list, tuple)
 # ---------------------------------------------------------------------------
 
 def module_path():
+    """
+    Pyhon module of the current class
+    """
     import sys
     this_path = path(sys.modules[__name__].__file__)
     return this_path.parent
 
 
 def qualified_name(klass: Any):
+    """
+    Fully qualified of the class.
+    For builtin classes, only the name
+    """
     module = klass.__module__
     if module == 'builtins':
         return klass.__qualname__   # avoid outputs like 'builtins.str'
@@ -24,8 +31,8 @@ def qualified_name(klass: Any):
 # end
 
 
-def type_of(obj: object):
-    return str(type(obj))
+# def type_of(obj: object):
+#     return str(type(obj))
 
 
 # ---------------------------------------------------------------------------
@@ -34,18 +41,33 @@ def type_of(obj: object):
 # tuple, sep -> str
 # str, sep -> tuple
 
-def to_name(ts) -> str:
+def to_name(ts: tuple[str], sep="~") -> str:
+    """
+    Convert a list/tuple of strings in a single string with teh tuple's
+    components separated by '~'.
+    The empty tuple is converted in 'root'
+
+    :param ts: tuple of string
+    :param sep: strings separator
+    :return: concatenated string
+    """
     if len(ts) == 0:
         return "root"
     else:
-        return "~".join(list(ts))
+        return sep.join(list(ts))
 
 
-def from_name(tsname) -> tuple[str]:
+def from_name(tsname, sep="~") -> tuple[str]:
+    """
+    Convert the string in its components separated by '~'
+    :param tsname: tuples name
+    :param sep: name's separator
+    :return: teh tuple
+    """
     if tsname == 'root':
         return tuple()
     else:
-        return tuple(tsname.split('/'))
+        return tuple(tsname.split(sep))
 
 
 # ---------------------------------------------------------------------------
@@ -90,10 +112,6 @@ def tobool(s: str) -> bool:
         raise ValueError(f"Unsupported boolean value '{s}'")
 
 
-# ---------------------------------------------------------------------------
-# as_list
-# ---------------------------------------------------------------------------
-
 def as_list(l: Union[NoneType, str, list[str], tuple[str]], param):
     """
     Convert parameter 'l' in a list.
@@ -110,7 +128,34 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param):
             list(l) if tl == tuple else l
 
 
-_as_list = as_list
+# ---------------------------------------------------------------------------
+# Numerical aggregation functions
+# ---------------------------------------------------------------------------
+# sum  as Python 'sum([...])'
+# mul  'mul([...])'
+#
+
+def sum_(x):
+    if x is None:
+        return 0
+    elif isinstance(x, (int, float)):
+        return x
+    else:
+        return sum(x)
+
+
+def mul_(x):
+    if x is None:
+        return 1
+    elif isinstance(x, (int, float)):
+        return x
+    else:
+        m = 1
+        for e in x:
+            m *= e
+        return m
+
+mul = mul_
 
 
 # ---------------------------------------------------------------------------

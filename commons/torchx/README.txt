@@ -40,7 +40,7 @@ LSTM
     dropout         float
     proj_size       int
 
-    return_sequence             bool
+    return_sequences            bool
     return_state                bool
 
     (batch, seq, input_size)    ->  (batch, seq, hidden_size (*2 if bidi))
@@ -53,7 +53,7 @@ GRU
     bias            bool
     dropout         float
 
-    return_sequence             bool
+    return_sequences            bool
     return_state                bool
 
     (batch, seq, input_size)    ->  (batch, seq, hidden_size (*2 if bidi))
@@ -67,7 +67,7 @@ RNN
     dropout         float
     nonlinearity    {'tanh', 'relu'}
 
-    return_sequence             bool
+    return_sequences            bool
     return_state                bool
 
     (batch, seq, input_size)    ->  (batch, seq, hidden_size (*2 if bidi))

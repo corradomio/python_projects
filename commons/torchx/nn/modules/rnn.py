@@ -15,7 +15,7 @@ from torch import Tensor
 # decide the result type;
 #
 #       return_state:       if to return the hidden state
-#       return_sequence:    if to return the sequenze or just the last value
+#       return_sequences:   if to return the sequenze or just the last value
 
 class LSTM(nn.LSTM):
     """
@@ -23,17 +23,17 @@ class LSTM(nn.LSTM):
 
     Args:
         batch_first: Default ``True``
-        return_sequence: If ``False`` it returns only the last predicted value
+        return_sequences: If ``False`` it returns only the last predicted value
         return_state: If ``false`` it doesn't return the state
     """
 
     def __init__(self,
-                 return_sequence=True,
+                 return_sequences=True,
                  return_state=False,
                  batch_first=True,
                  **kwargs):
         super().__init__(batch_first=batch_first, **kwargs)
-        self.return_sequence = return_sequence
+        self.return_sequences = return_sequences
         self.return_state = return_state
 
     def forward(self,
@@ -41,9 +41,9 @@ class LSTM(nn.LSTM):
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
         seq, state = super().forward(input, hx)
 
-        if self.return_sequence and self.return_state:
+        if self.return_sequences and self.return_state:
             return seq, state
-        elif self.return_sequence:
+        elif self.return_sequences:
             return seq
         elif self.return_state:
             return seq[:, -1], (state[0][:, -1], state[1][:, -1])
@@ -58,16 +58,16 @@ class GRU(nn.GRU):
 
     Args:
         batch_first: Default ``True``
-        return_sequence: If ``False`` it returns only the last predicted value
+        return_sequences: If ``False`` it returns only the last predicted value
         return_state: If ``false`` it doesn't return the state
     """
     def __init__(self,
-                 return_sequence=True,
+                 return_sequences=True,
                  return_state=False,
                  batch_first=True,
                  **kwargs):
         super().__init__(batch_first=batch_first, **kwargs)
-        self.return_sequence = return_sequence
+        self.return_sequences = return_sequences
         self.return_state = return_state
 
     def forward(self,
@@ -89,9 +89,9 @@ class GRU(nn.GRU):
 
         seq, state = super().forward(input, hx)
 
-        if self.return_sequence and self.return_state:
+        if self.return_sequences and self.return_state:
             return seq, state
-        elif self.return_sequence:
+        elif self.return_sequences:
             return seq
         elif self.return_state:
             return seq[:, -1], state[:, -1]
@@ -106,16 +106,16 @@ class RNN(nn.RNN):
 
     Args:
         batch_first: Default ``True``
-        return_sequence: If ``False`` it returns only the last predicted value
+        return_sequences: If ``False`` it returns only the last predicted value
         return_state: If ``false`` it doesn't return the state
     """
     def __init__(self,
-                 return_sequence=True,
+                 return_sequences=True,
                  return_state=False,
                  batch_first=True,
                  **kwargs):
         super().__init__(batch_first=batch_first, **kwargs)
-        self.return_sequence = return_sequence
+        self.return_sequences = return_sequences
         self.return_state = return_state
 
     def forward(self,
@@ -137,9 +137,9 @@ class RNN(nn.RNN):
 
         seq, state = super().forward(input, hx)
 
-        if self.return_sequence and self.return_state:
+        if self.return_sequences and self.return_state:
             return seq, state
-        elif self.return_sequence:
+        elif self.return_sequences:
             return seq
         elif self.return_state:
             return seq[:, -1], state[:, -1]
@@ -160,5 +160,5 @@ RNNX_FLAVOURS = {
 
 RNNX_PARAMS = [
     'input_size', 'hidden_size', 'num_layers', 'bidirectional', 'bias', 'dropout',
-    'return_sequence', 'return_state'
+    'return_sequences', 'return_state'
 ]

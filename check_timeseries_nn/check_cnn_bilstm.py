@@ -66,7 +66,7 @@ def main():
             # (24, 64)
         ),
         # (*, 24, 64)
-        nnk.LSTM(input=64, units=input_size, bidirectional=True, return_sequence=True), nn.Tanh(),
+        nnk.LSTM(input=64, units=input_size, bidirectional=True, return_sequences=True), nn.Tanh(),
         # (*, 24, 19*2)
         nnk.TimeDistributed(
             # (24, 38)
@@ -78,7 +78,6 @@ def main():
         # (*, 24, 1)
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

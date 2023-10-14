@@ -28,7 +28,7 @@ def main():
         nnk.LSTM(input=input_size,
                  units=input_size,
                  bidirectional=True,
-                 return_sequence=True), nn.Tanh(),
+                 return_sequences=True), nn.Tanh(),
         # (*, 24, 2*19)
         nnk.SeqSelfAttention(input=2*input_size, units=32),
         # (*, 24, 38)
@@ -43,7 +43,6 @@ def main():
         nnx.Probe("last")
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.0001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

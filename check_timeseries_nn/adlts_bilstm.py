@@ -28,15 +28,14 @@ def main():
         nnk.LSTM(input=input_size,
                  units=input_size,
                  bidirectional=True,
-                 return_sequence=False), nn.Tanh(),
+                 return_sequences=False), nn.Tanh(),
         nnx.Probe("lstm"),
-        # (*, 2*19) because return_sequence=False and bidirectional=True
+        # (*, 2*19) because return_sequences=False and bidirectional=True
         nnk.Dense(input=(input_size, 2), units=(predict_len, output_size)),
         # (*, 24, 1)
         nnx.Probe("last"),
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

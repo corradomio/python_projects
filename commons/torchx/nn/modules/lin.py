@@ -2,15 +2,7 @@ from typing import Union
 
 import torch.nn as nn
 from torch import Tensor
-
-
-def mul(dim: Union[int, list[int]]) -> int:
-    if isinstance(dim, int):
-        return dim
-    d = 1
-    for l in dim:
-        d *= l
-    return d
+from stdlib import mul
 
 
 # ---------------------------------------------------------------------------
@@ -35,12 +27,15 @@ class Linear(nn.Linear):
     def __init__(self,
                  in_features: Union[int, tuple[int, ...]] = None,
                  out_features: Union[int, tuple[int, ...]] = None,
-                 **kwargs):
+                 bias: bool = True, device=None, dtype=None):
 
         super().__init__(
             in_features=mul(in_features),
             out_features=mul(out_features),
-            **kwargs)
+            bias=bias,
+            device=device,
+            dtype=dtype
+        )
 
         self.flatten = None if isinstance(in_features, int) \
             else nn.Flatten()

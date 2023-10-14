@@ -1,2 +1,2 @@
 from .modules import *
-from .losses import *
+from .networks import *

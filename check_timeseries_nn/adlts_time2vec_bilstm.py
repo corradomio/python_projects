@@ -7,7 +7,6 @@ import torch.nn as nn
 from sktime.utils.plotting import plot_series
 
 import torchx.nn as nnx
-import torchx.keras.layers as nnk
 from loaddata import *
 
 
@@ -29,7 +28,7 @@ def main():
         nnx.Time2Vec(input_size=(window_len, input_size), output_size=120),
         # (*, 24, 139)
         nnx.Probe("time2vec"),
-        nnx.LSTM(input_size=(120 + input_size), hidden_size=48, bidirectional=True, return_sequence=True),
+        nnx.LSTM(input_size=(120 + input_size), hidden_size=48, bidirectional=True, return_sequences=True),
         nnx.Probe("lstm"),
         # (*, 24, 2*48)
         nnx.Linear(in_features=(window_len, 48, 2), out_features=(predict_len, output_size)),
@@ -37,7 +36,6 @@ def main():
         nnx.Probe("last")
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=12, threshold=0.0001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(

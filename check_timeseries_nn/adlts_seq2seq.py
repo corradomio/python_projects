@@ -28,16 +28,16 @@ def main():
     tmodule = nn.Sequential(
         nnx.Probe("input"),
         # (*, 23, 19)
-        nnk.LSTM(input=input_size, units=input_size, return_sequence=False), nn.Tanh(),
+        nnk.LSTM(input=input_size, units=input_size, return_sequences=False), nn.Tanh(),
         nnx.Probe("lstm1"),
-        # (*, 19) because 'return_sequence=False'
+        # (*, 19) because 'return_sequences=False'
         nnk.Dense(input=(input_size), units=hidden_size), nn.ReLU(),
         nnx.Probe("dense"),
         # (*, 150)
         nnk.RepeatVector(predict_len),
         nnx.Probe("repv"),
         # (*, 12, 150)
-        nnk.LSTM(input=hidden_size, units=input_size, return_sequence=True), nn.Tanh(),
+        nnk.LSTM(input=hidden_size, units=input_size, return_sequences=True), nn.Tanh(),
         nnx.Probe("lstm2"),
         # (*, 12, 19)
         nnk.TimeDistributed(
@@ -49,7 +49,6 @@ def main():
         # (*, 24, 1)
     )
 
-    # early_stop = skorchx.callbacks.EarlyStopping(min_epochs=100, patience=10, threshold=0.0001)
     early_stop = skorch.callbacks.EarlyStopping(patience=50, threshold=0.001, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
