@@ -3,6 +3,11 @@ import torch.nn as nn
 from torch.nn.utils import weight_norm
 import torch.nn.functional as F
 
+__all__ = [
+    'TDNN',
+    'TDNNF',
+    'SemiOrthogonalConv'
+]
 
 # ---------------------------------------------------------------------------
 # https://github.com/cvqluu/TDNN

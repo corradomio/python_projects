@@ -1,20 +1,15 @@
 from typing import Union
-
 import torch.nn as nn
 from torch.nn.utils import weight_norm
 
+__all__ = [
+    'TemporalConvNetwork'
+]
 
 # ---------------------------------------------------------------------------
 # https://www.kaggle.com/code/ceshine/pytorch-temporal-convolutional-networks
 # ---------------------------------------------------------------------------
 # Based on https://github.com/locuslab/TCN
-
-
-# ---------------------------------------------------------------------------
-# https://github.com/locuslab/TCN
-# ---------------------------------------------------------------------------
-import torch.nn as nn
-from torch.nn.utils import weight_norm
 
 
 class Chomp1d(nn.Module):

@@ -130,3 +130,22 @@ class ChannelDistributed(nn.Module):
         out = torch.reshape(out, shape=(out.shape[0], out.shape[1]//n_repeat, n_repeat))
         return out
 # end
+
+
+# ---------------------------------------------------------------------------
+# Clip
+# ---------------------------------------------------------------------------
+
+class Clip(nn.Module):
+
+    def __init__(self, clip=(0, 1)):
+        super().__init__()
+        self.clip = clip
+
+    def forward(self, x):
+        cmin, cmax = self.clip
+        x[x < cmin] = cmin
+        x[x > cmax] = cmax
+        return x
+
+

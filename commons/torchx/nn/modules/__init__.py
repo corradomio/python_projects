@@ -7,7 +7,7 @@ from .pos import PositionalEncoding
 from .rnn import LSTM, GRU, RNN
 from .pos import PositionalEncoding
 from .t2v import Time2Vec
-from .xnn import RepeatVector, TimeDistributed, ChannelDistributed, ReshapeVector
+from .xnn import RepeatVector, TimeDistributed, ChannelDistributed, ReshapeVector, Clip
 
 #
 # Special cases

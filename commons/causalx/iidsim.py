@@ -1,4 +1,4 @@
-import castle.datasets as cds
+from . import simulator as sim
 import numpy as np
 import networkx as nx
 
@@ -25,7 +25,7 @@ class IIDSimulation:
         :param n:
         :return: true causal matrix, dataset
         """
-        iids = cds.IIDSimulation(W=self.W, n=n, method=self.method, sem_type=self.sem_type)
+        iids = sim.IIDSimulation(W=self.W, n=n, method=self.method, sem_type=self.sem_type)
         # note: B is a 'csr_array'. It can be converted in a numpy array with 'B.A'
         B, X = iids.B, iids.X
         return X

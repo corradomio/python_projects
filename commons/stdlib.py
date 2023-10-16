@@ -112,7 +112,7 @@ def tobool(s: str) -> bool:
         raise ValueError(f"Unsupported boolean value '{s}'")
 
 
-def as_list(l: Union[NoneType, str, list[str], tuple[str]], param):
+def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
     """
     Convert parameter 'l' in a list.
     If 'l' is None, the empty list, if a string, in a singleton list

@@ -4,11 +4,15 @@ Parameter names:
 
     (in|out)_features           int | tuple
     (input|hidden|output)_size  int | tuple
-    num_(layers)                int
+    num_(layers|features)       int
 
     <name>                      if input  configuration
     return_(sequence|state)     if output configuration
     <name>_(first|last)
+
+    dim
+    device
+    dtype
 
 
 Keras parameter names:

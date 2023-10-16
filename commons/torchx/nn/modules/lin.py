@@ -25,8 +25,8 @@ class Linear(nn.Linear):
     """
 
     def __init__(self,
-                 in_features: Union[int, tuple[int, ...]] = None,
-                 out_features: Union[int, tuple[int, ...]] = None,
+                 in_features: Union[int, tuple[int, ...]],
+                 out_features: Union[int, tuple[int, ...]],
                  bias: bool = True, device=None, dtype=None):
 
         super().__init__(

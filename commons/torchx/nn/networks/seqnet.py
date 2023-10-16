@@ -4,6 +4,10 @@ from stdlib import dict_select
 from torchx.nn.modules.rnn import RNNX_FLAVOURS, RNNX_PARAMS
 from torchx.utils import time_repeat
 
+__all__ = [
+    'Seq2SeqNetwork'
+]
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -85,10 +89,4 @@ class Seq2SeqNetwork(nn.Module):
         staten = time_repeat(state1, batch_len)
         output = self.decoder.forward(contextn, staten)
         return output
-
-
-
-
-
-
 

@@ -1,7 +1,8 @@
+import numpy as np
 import matplotlib.pyplot as plt
 import skorch
 import torch
-import numpy as np
+
 import causalx as cx
 import netx as nxx
 import numpyx as npx
@@ -17,7 +18,7 @@ def gen():
     # nxx.draw(G)
     # plt.show()
 
-    X = cx.IIDSimulation(method='linear', sem_type='gauss').fit(G).generate(1000)
+    X = cx.IIDSimulation(method='linear', sem_type='gauss').fit(G).generate(10000)
 
     scaler = npx.MinMaxScaler(globally=True)
     # scaler = npx.NormalScaler(globally=True)
@@ -30,21 +31,21 @@ def main():
 
     X = gen().astype(np.float32)
 
-    tmodule = nnx.LinearVAE(input_size=10, hidden_size=10, latent_size=10)
+    tmodule = nnx.LinearVAE(input_size=10, hidden_size=5, latent_size=3)
     # tmodule = nnx.Autoencoder(input_size=10, latent_size=3)
 
-    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0, monitor="valid_loss")
+    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=1e-4, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
         max_epochs=1000,
         optimizer=torch.optim.Adam,
         criterion=nnx.LinearVAELoss,
-        criterion__beta=1/500.,
         # criterion=nn.MSELoss,
         lr=1.e-3,
         callbacks=[early_stop],
         batch_size=32,
+        device='cpu'
     )
     smodel.set_params(callbacks__print_log=skorchx.callbacks.PrintLog(delay=1))
 
@@ -55,16 +56,10 @@ def main():
 
     plt.imshow(X[:20, :])
     plt.show()
+    print(X.min(), X.max(), X.mean())
     plt.imshow(Y[:20, :])
     plt.show()
-
-    mean = tmodule.mean.weight.data
-    sigma = torch.exp(0.5*tmodule.log_var.weight.data)
-
-    print(f"X:     {X.min():.3g}, {X.max():.3g}, {X.mean():.3g}")
-    print(f"Y:     {Y.min():.3g}, {Y.max():.3g}, {Y.mean():.3g}")
-    print(f"mean:  {mean.min():.3g}, {mean.max():.3g}, {mean.mean():.3g}")
-    print(f"sigma: {sigma.min():.3g}, {sigma.max():.3g}, {sigma.mean():.3g}")
+    print(Y.min(), Y.max(), Y.mean())
     pass
 
 
