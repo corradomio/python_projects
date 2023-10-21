@@ -1,4 +1,7 @@
-from .base import *
+from typing import Optional
+
+from pandas import DataFrame
+from .base import BaseEncoder
 
 
 # ---------------------------------------------------------------------------
@@ -6,16 +9,18 @@ from .base import *
 # ---------------------------------------------------------------------------
 
 class DTypeEncoder(BaseEncoder):
-    # convert the selected columns to the specified dtype
+    """
+    Apply '.astype(T)' to the selected columns
+    """
 
-    def __init__(self, columns, dtype, copy=True):
+    def __init__(self, columns=None, dtype=float, copy=True):
         super().__init__(columns, copy)
         self.dtype = dtype
 
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)
 
-        for col in self.columns:
+        for col in self._get_columns(X):
             X[col] = X[col].astype(self.dtype)
         return X
 # end
@@ -27,40 +32,49 @@ class DTypeEncoder(BaseEncoder):
 
 class OrderedLabelEncoder(BaseEncoder):
     # As an One Hot encoding but it ensure that the labels have a unique order
+    # It is NOT reasonable to split the dataset in groups because it is possible
+    # that each group can have different number of labels, than the number of
+    # onehot columns can be different. This has the following effect: it is not
+    # possible to use the same model (or its clone) to each group!
+    #
 
-    def __init__(self, columns, mapping=(), remove_chars=None, copy=True):
+    def __init__(self, columns=None, mapping=None, remove_chars=None, copy=True):
         super().__init__(columns, copy)
-        assert isinstance(mapping, (list, tuple))
-
-        self.mapping: list[str] = mapping
+        self.mapping: Optional[list[str]] = mapping
         self.remove_chars = '()[]{}' if remove_chars is None else remove_chars
 
-    def fit(self, X: DataFrame, y=None):
-        self._check_X(X, y)
+        self._mapping = {}
 
-        if len(self.mapping) == 0:
-            col = self.columns[0]
-            self.mapping = sorted(X[col].unique())
+    def fit(self, X: DataFrame):
+        self._check_X(X)
+
+        for col in self._get_columns(X):
+            unique = sorted(X[col].unique())
+            self._mapping[col] = {unique[i]: i for i in range(len(unique))}
         return self
 
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)
 
-        for col in self.columns:
-            if len(self.mapping) <= 2:
+        for col in self._get_columns(X):
+            mapping = self._get_mapping(col)
+
+            if len(mapping) <= 2:
                 X = self._map_single_column(X, col)
             else:
-                X = self._map_multiple_colmns(X, col)
+                X = self._map_multiple_columns(X, col)
         return X
 
+    def _get_mapping(self, col):
+        return self.mapping if self.mapping else self._mapping[col]
+
     def _map_single_column(self, X, col):
-        l = self.mapping
-        n = len(l)
-        mapping = {l[i]: i for i in range(n)}
+        mapping = self._get_mapping(col)
         X[col] = X[col].replace(mapping)
         return X
 
-    def _map_multiple_colmns(self, X, col: str):
+    def _map_multiple_columns(self, X, col: str):
+        mapping = self._get_mapping(col)
 
         def ccol_of(key: str):
             if not isinstance(key, str):
@@ -68,16 +82,18 @@ class OrderedLabelEncoder(BaseEncoder):
             if ' ' in key:
                 key = key.replace(' ', '_')
             for c in self.remove_chars:
-                if c in key:
-                    key = key.replace(c, '')
-            return col + "_" + key
+                key = key.replace(c, '')
+                # if c in key:
+                #     key = key.replace(c, '')
+            return f"{col}_{key}"
 
-        for key in self.mapping:
+        for key in mapping:
             ccol = ccol_of(key)
             X[ccol] = 0
             X.loc[X[col] == key, ccol] = 1
 
-        X = X[X.columns.difference([col])]
+        # remove the original column
+        X.drop([col], axis=1, inplace=True)
         return X
 # end
 
@@ -95,8 +111,12 @@ class PandasCategoricalEncoder(BaseEncoder):
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)
 
-        for col in self.columns:
+        for col in self._get_columns(X):
             X[col] = X[col].astype('category')
         return X
 # end
 
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

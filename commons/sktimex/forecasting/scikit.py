@@ -1,10 +1,14 @@
 import logging
+import pandas as pd
+from typing import Union, Any
 
-from stdlib import qualified_name
+from sktime.forecasting.base import ForecastingHorizon
+
 from .base import ExtendedBaseForecaster
-from ..forecasting.compose import make_reduction
-from ..lag import LagSlots, resolve_lag
-from ..utils import *
+from sktimex.forecasting.compose import make_reduction
+from sktimex.lags import LagSlots, resolve_lags
+from sktimex.utils import import_from, NoneType, kwval, dict_del, qualified_name
+from sktimex.utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
 
 __all__ = [
     "ScikitForecastRegressor"
@@ -12,7 +16,7 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# ScikitForecastRegressor
+# Utilities
 # ---------------------------------------------------------------------------
 
 def _ns_of(s):
@@ -28,7 +32,7 @@ def _replace_lags(kwargs: dict) -> dict:
         lags = None
 
     if lags is not None:
-        rlags: LagSlots = resolve_lag(lags)
+        rlags: LagSlots = resolve_lags(lags)
         window_length = len(rlags)
         kwargs["window_length"] = window_length
     # end
@@ -36,7 +40,26 @@ def _replace_lags(kwargs: dict) -> dict:
 # end
 
 
-class ScikitForecastRegressor(ExtendedBaseForecaster):
+def _to_prediction_length(tlags: Union[NoneType, int, list[int], range]):
+    if tlags is None:
+        return None
+    elif tlags == 1:
+        return None
+    elif isinstance(tlags, int):
+        return tlags
+    elif type(tlags) == type(range(0)):
+        return list(tlags)[-1]
+    elif len(tlags) == ((tlags[-1]) + 1):
+        return 1 + tlags[-1]
+    else:
+        raise ValueError("Parameter 'tlags' is not: None, int, list(range(n))")
+
+
+# ---------------------------------------------------------------------------
+# ScikitForecaster
+# ---------------------------------------------------------------------------
+
+class ScikitForecaster(ExtendedBaseForecaster):
     _tags = {
         # to list all valid tags with description, use sktime.registry.all_tags
         #   all_tags(estimator_types="forecaster", as_dataframe=True)
@@ -89,9 +112,12 @@ class ScikitForecastRegressor(ExtendedBaseForecaster):
     #   4) a sklearn instance   -> wrap it with make_reduction
 
     def __init__(self,
+                 prediction_length=None,
                  estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
                  **kwargs):
         super().__init__()
+        self.estimator = estimator
+        self.prediction_length = _to_prediction_length(prediction_length)
 
         kwargs = _replace_lags(kwargs)
 
@@ -132,7 +158,7 @@ class ScikitForecastRegressor(ExtendedBaseForecaster):
             # create the forecaster
             self.forecaster_ = estimator(**kwargs)
         else:
-            # raise ValueError(f"Unsupported class_name '{class_name}'")
+            raise ValueError(f"Unsupported estimator '{estimator}'")
             pass
     # end
 
@@ -158,7 +184,8 @@ class ScikitForecastRegressor(ExtendedBaseForecaster):
 
     def get_params(self, deep=True):
         params = {
-            'estimator': self._class_name
+            'estimator': self.estimator,
+            'prediction_length': self.prediction_length
         }
         params = params | self._kwargs
         return params
@@ -177,23 +204,41 @@ class ScikitForecastRegressor(ExtendedBaseForecaster):
     #
 
     def _fit(self, y, X=None, fh: FH_TYPES = None):
-        # ensure fh relative AND not None for tabular models
-        fh = self._make_fh_relative(fh)
+        # if fh is None, it uses self.prediction_length
+        # Note: prediction length
+
+        # ensure fh relative AND NOT None for tabular models
+        fh = self._compose_tabular_fh(fh)
 
         self.forecaster_.fit(y=y, X=X, fh=fh)
         return self
     # end
 
-    def _make_fh_relative(self, fh):
-        # if is_tabular and fh is not defined, compose it based on 'window_length'
-        is_tabular = 'window_length' in self._kwargs and 'strategy' in self._kwargs
-        if fh is None and is_tabular:
-            window_length = self._kwargs['window_length']
-            fh = ForecastingHorizon(list(range(1, window_length + 1)))
-        if fh is None or fh.is_relative:
-            return fh
+    def _compose_tabular_fh(self, fh):
+        # ensure fh relative AND NOT None for tabular models
+        if fh is None and self.prediction_length is None:
+            fh = ForecastingHorizon([1], is_relative=True)
+        elif isinstance(fh, int):
+            pl = fh
+            fh = ForecastingHorizon(list(range(1, pl + 1)), is_relative=True)
+        elif isinstance(fh, ForecastingHorizon):
+            fh = fh if fh.is_relative else fh.to_relative(self.cutoff)
+        elif self.prediction_length >= 1:
+            pl = self.prediction_length
+            fh = ForecastingHorizon(list(range(1, pl + 1)), is_relative=True)
         else:
-            return fh.to_relative(self.cutoff)
+            raise ValueError(f"Unsupported fh {fh}")
+        return fh
+
+        # # if is_tabular and fh is not defined, compose it based on 'window_length'
+        # is_tabular = 'window_length' in self._kwargs and 'strategy' in self._kwargs
+        # if fh is None and is_tabular:
+        #     window_length = self._kwargs['window_length']
+        #     fh = ForecastingHorizon(list(range(1, window_length + 1)))
+        # if fh is None or fh.is_relative:
+        #     return fh
+        # else:
+        #     return fh.to_relative(self.cutoff)
     # end
 
     # -----------------------------------------------------------------------
@@ -275,3 +320,10 @@ class ScikitForecastRegressor(ExtendedBaseForecaster):
     # end
     # -----------------------------------------------------------------------
 # end
+
+
+ScikitForecastRegressor = ScikitForecaster
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

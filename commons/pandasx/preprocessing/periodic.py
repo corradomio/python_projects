@@ -3,8 +3,7 @@ from typing import Union, Optional
 import numpy as np
 import pandas as pd
 
-from stdlib import as_list
-from .base import BaseEncoder, XyBaseEncoder
+from .base import XyBaseEncoder, as_list
 from ..base import groups_split, groups_merge
 
 
@@ -244,7 +243,7 @@ def _add_onehot(df, datetime, periodic):
 #      must contain the group columns!
 #
 
-class PeriodicEncoder(BaseEncoder):
+class PeriodicEncoder(XyBaseEncoder):
 
     def __init__(self,
                  datetime: Union[None, str, tuple] = None,
@@ -345,7 +344,7 @@ class PeriodicEncoder(BaseEncoder):
 
     # -----------------------------------------------------------------------
 
-    def transform(self, X) -> pd.DataFrame:
+    def transform(self, X, y=None) -> pd.DataFrame:
         if isinstance(X, pd.PeriodIndex):
             fh = X
             X = pd.DataFrame(data=None, index=fh)

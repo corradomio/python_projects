@@ -1,6 +1,6 @@
 from numpy import issubdtype, integer
-
-from .base import *
+from pandas import DataFrame
+from .base import BaseEncoder
 
 
 # ---------------------------------------------------------------------------
@@ -9,18 +9,19 @@ from .base import *
 
 class BinaryLabelsEncoder(BaseEncoder):
     """
-    Convert the values in the column in {0,1}
+    Convert not integer values in the column in {0,1}
+    It is applied to columns with 1 or 2 not integer values ONLY
     Note: OneHotEncoder is able to encode binary columns in the correct way
     """
 
-    def __init__(self, columns, copy=True):
+    def __init__(self, columns=None, copy=True):
         super().__init__(columns, copy)
         self._maps = {}
 
-    def fit(self, X: DataFrame, y=None) -> "BinaryLabelsEncoder":
-        self._check_X(X, y)
+    def fit(self, X: DataFrame) -> "BinaryLabelsEncoder":
+        self._check_X(X)
 
-        for col in self.columns:
+        for col in self._get_columns(X):
             x = X[col]
             if issubdtype(x.dtype.type, integer):
                 continue
@@ -49,13 +50,15 @@ class BinaryLabelsEncoder(BaseEncoder):
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)
 
-        for col in self.columns:
-            if col not in self._maps:
-                continue
+        X.replace(self._maps, inplace=True)
 
-            vmap = self._maps[col]
-            X.replace({col: vmap}, inplace=True)
-        # end
+        # for col in self._get_columns(X):
+        #     if col not in self._maps:
+        #         continue
+        #
+        #     vmap = self._maps[col]
+        #     X.replace({col: vmap}, inplace=True)
+        # # end
         return X
 # end
 
@@ -70,15 +73,15 @@ class OneHotEncoder(BaseEncoder):
     converted in a single column
     """
 
-    def __init__(self, columns, copy=True):
+    def __init__(self, columns=None, copy=True):
         super().__init__(columns, copy)
         self._maps = {}
         self._bins = {}
 
-    def fit(self, X: DataFrame, y=None) -> "OneHotEncoder":
-        self._check_X(X, y)
+    def fit(self, X: DataFrame) -> "OneHotEncoder":
+        self._check_X(X)
 
-        for col in self.columns:
+        for col in self._get_columns(X):
             x = X[col]
 
             values = list(sorted(x.unique()))
@@ -120,3 +123,7 @@ class OneHotEncoder(BaseEncoder):
 
         return X
 # end
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

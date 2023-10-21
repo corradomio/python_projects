@@ -1,9 +1,6 @@
-from .base import *
+from pandas import DataFrame
+from .base import BaseEncoder
 
-
-# ---------------------------------------------------------------------------
-# Pipeline
-# ---------------------------------------------------------------------------
 
 class Pipeline:
 

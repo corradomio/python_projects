@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags, lmax
+from ..lags import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -154,5 +154,9 @@ class CNNPredictTransform(ModelPredictTransform):
 
         return Xt
     # end
+
+    def update(self, i, y_pred):
+        self.yp[i] = y_pred[0]
+        return i+1
 # end
 

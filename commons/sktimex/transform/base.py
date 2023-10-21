@@ -2,8 +2,8 @@ from typing import Optional
 
 import numpy as np
 
-from ..lag import LagSlots, flatten_max, resolve_lags
-from stdlib import NoneType
+from ..lags import LagSlots, resolve_lags, resolve_tlags
+from ..utils import NoneType
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +53,8 @@ class ModelTrainTransform(ModelTransform):
         return X, y
     # end
 
+    def fit_transform(self, X, y):
+        return self.fit(X, y).transform(X, y)
 # end
 
 
@@ -62,10 +64,10 @@ class ModelPredictTransform(ModelTransform):
         if isinstance(slots, (list, tuple, dict)):
             slots = resolve_lags(slots)
         if isinstance(tlags, int):
-            tlags = list(range(tlags))
+            tlags = resolve_tlags(tlags)
 
         assert isinstance(slots, LagSlots)
-        assert isinstance(tlags, (tuple, list))
+        assert isinstance(tlags, (tuple, list)), f"Parameter tlags not of type list|tuple: {tlags}"
 
         self.slots = slots
         self.xlags = slots.input

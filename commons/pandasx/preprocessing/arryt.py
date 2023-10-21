@@ -1,10 +1,8 @@
 import numpy as np
 import pandas as pd
-from pandas import DataFrame
 
-from stdlib import NoneType
-from .base import XyBaseEncoder
 from .lagst import _resolve_xylags, lmax
+from .base import XyBaseEncoder
 
 
 def _to_numpy(X, dtype):

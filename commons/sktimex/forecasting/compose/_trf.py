@@ -6,7 +6,7 @@ from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose._reduce import _Reducer
 
-from ...lag import resolve_lag
+from ...lags import resolve_lag
 from ...transform import LinearTrainTransform, LinearPredictTransform
 
 
@@ -125,6 +125,21 @@ def _is_fh_seq(fh):
     return len(fh) == fh[-1]
 
 
+def _to_tlags(fh):
+    """
+    Convert fh into tlags:
+
+        fh = [1,2,3] -> tlags = [0,1,2]
+
+    """
+    if fh is None:
+        tlags = [0]
+    elif fh.is_relative:
+        tlags = [f-1 for f in fh]
+    else:
+        raise ValueError("fh is not relative")
+    return tlags
+
 # ---------------------------------------------------------------------------
 # TabularRegressorForecaster
 # ---------------------------------------------------------------------------
@@ -156,11 +171,6 @@ class TabularRegressorForecaster(_Reducer):
         return params
     # end
 
-    def fit(self, y, X=None, fh=None):
-        if fh is None:
-            fh = [1]
-        return super().fit(y=y, X=X, fh=fh)
-
     def _transform(self, y, X=None) -> tuple[np.ndarray, np.ndarray]:
         X = _to_numpy(X)
         y = _to_numpy(y)
@@ -172,7 +182,8 @@ class TabularRegressorForecaster(_Reducer):
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
         slots = resolve_lag([xlags, ylags])
-        tlags = list(fh - 1)
+        # tlags = list(fh - 1)
+        tlags = _to_tlags(fh)
         lt = LinearTrainTransform(slots=slots, tlags=tlags)
 
         Xt, yt = lt.fit_transform(X, y)
@@ -195,33 +206,39 @@ class TabularRegressorForecaster(_Reducer):
         return self
 
     def _predict(self, fh, X=None):
+        # fh MUST BE passed!
+        # The check is done by 'sktime'
         self._check_X_y(X=X)
         self._check_fh(fh=fh)
 
-        fh = fh.to_relative(self.cutoff)
-
+        # X, yh, Xh
         Xp = _to_numpy(X)
         yh = _to_numpy(self._y)
         Xh = _to_numpy(self._X)
 
-        # X, yh, Xh
-        n = int(fh[-1])
+        # n of timeslots to predict
+        fh = fh.to_relative(self.cutoff)
+        n = len(fh)
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
         slots = resolve_lag([xlags, ylags])
+        tlags = _to_tlags(self._fh)
 
-        pt = LinearPredictTransform(slots=slots)
+        pt = LinearPredictTransform(slots=slots, tlags=tlags)
         y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)
 
         i = 0
         while i < n:
             Xt = pt.step(i)
+
             for j, estimator in enumerate(self.estimators_):
-                if i+j >= n: continue
+                t = tlags[j]
+                if i+t >= n: continue
+
                 yp: np.ndarray = estimator.predict(Xt)
-                y_pred[i] = yp[0]
-                i += 1
+
+                i = pt.update(i, yp, t)
         # end
         # add the index
         y_pred = self._from_numpy(y_pred, fh)

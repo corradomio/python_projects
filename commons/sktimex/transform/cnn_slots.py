@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags, flatten_max
+from ..lags import resolve_lags, flatten_max
 
 
 # ---------------------------------------------------------------------------
@@ -77,10 +77,8 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
 
     # end
 
-    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
-        return self.fit(X, y).transform(X, y)
-
-
+    # def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
+    #     return self.fit(X, y).transform(X, y)
 # end
 
 
@@ -166,4 +164,8 @@ class CNNSlotsPredictTransform(ModelPredictTransform):
 
         return Xts
     # end
+
+    def update(self, i, y_pred):
+        self.yp[i] = y_pred[0]
+        return i+1
 # end

@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags, lmax
+from ..lags import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------

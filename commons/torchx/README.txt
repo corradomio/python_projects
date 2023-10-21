@@ -10,15 +10,31 @@ Parameter names:
     return_(sequence|state)     if output configuration
     <name>_(first|last)
 
+    add_<name>                  if to add the configuration <name>
+
     dim
     device
     dtype
+
+Note:
+    instead than 'return_<name>' it is better to use 'need_<name>'.
+    BUT ONLY in 'forward(...)', because the semantic is:
+
+        I call 'forward' AND I NEED <name> in the result
+
+    Used in 'MultiheadAttention.forward(...)'
 
 
 Keras parameter names:
 
     input_shape
     units
+
+
+
+-----------------------------------------------------------------------------
+
+    layer(args) == layer.forward(args)
 
 
 -----------------------------------------------------------------------------
@@ -32,7 +48,7 @@ Linear
     (batch, input_size)    ->  (batch, output_size)
 
 -----------------------------------------------------------------------------
-changed defauls:
+changed defaults:
     batch_first = True
 
 LSTM
@@ -99,7 +115,7 @@ Conv1d
 
 
 -----------------------------------------------------------------------------
-changed defauls:
+changed defaults:
     batch_first=True
 
 Note:

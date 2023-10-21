@@ -15,9 +15,13 @@ class ReshapeVector(nn.Module):
 
             new_shape = T.shape[0] + shape
 
-        or add new_dims dimensions as
+        or add new_dims dimensions at the end if n_dims > 0
 
-            new_shape = T.shape = [1 for i in range(new_dims)]
+            new_shape = T.shape + [1]*n_dims
+
+        or at the begin if n_dims < 0
+
+            new_shape = [1]*n_dims + T.shape
 
         :param shape: new tensor shape
         :param n_dims: new dimensions to add. If < 0, the dims are added in front
@@ -26,16 +30,17 @@ class ReshapeVector(nn.Module):
 
         super().__init__()
         self.shape = list(shape) if shape else None
-        self.suffix = n_dims > 0
-        self.n_dims = [1 for i in range(abs(n_dims))]
+        self.n_dims = n_dims
+        self.new_dims = [1]*n_dims if n_dims > 0 else [1]*(-n_dims)
 
     def forward(self, input: Tensor) -> Tensor:
-        if self.shape:
+        if self.shape is not None:
             shape = [input.shape[0]] + self.shape
-        elif self.suffix:
-            shape = list(input.shape) + self.n_dims
+        elif self.n_dims > 0:
+            shape = list(input.shape) + self.new_dims
         else:
-            shape = self.n_dims + list(input.shape)
+            shape = self.new_dims + list(input.shape)
+
         t = torch.reshape(input, shape)
         return t
 
@@ -52,9 +57,11 @@ class RepeatVector(nn.Module):
         super().__init__()
         self.n_repeat = n_repeat
 
-    def forward(self, input: torch.Tensor):
-        rep_list = [input for i in range(self.n_repeat)]
-        repeated = torch.stack(rep_list, 1)
+    def forward(self, x: torch.Tensor):
+        n_repeat = self.n_repeat
+        # rep_list = [x for i in range(self.n_repeat)]
+        # repeated = torch.stack(rep_list, 1)
+        repeated = x.repeat((n_repeat, 1))
         return repeated
 # end
 

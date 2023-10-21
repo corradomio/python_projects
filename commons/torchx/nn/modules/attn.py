@@ -1,10 +1,12 @@
-from typing import Union, Tuple, Optional
+from typing import Tuple, Optional
+
 import torch
 import torch.nn as nn
 from torch import Tensor
+from torch.nn.init import xavier_uniform_
+
 from torchx.activation import activation_function
 from torchx.utils import expand_dims, cast, max
-from torch.nn.init import constant_, xavier_normal_, xavier_uniform_
 
 
 # ---------------------------------------------------------------------------

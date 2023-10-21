@@ -26,6 +26,7 @@ lightning_logs
 *.pdf
 *.log
 check_causal_inference
+intro_dgm-main
 Hands*
 
 

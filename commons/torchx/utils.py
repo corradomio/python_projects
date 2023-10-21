@@ -352,7 +352,7 @@ def norm(data, p=1) -> torch.Tensor:
 #         self.Xt = np.zeros((1, ns, xdim))
 #         self.yp = np.zeros((fh, my))
 #
-#         self.yp
+#         return self.yp
 #     # end
 #
 #     def _atx(self, i):
@@ -533,5 +533,3 @@ def norm(data, p=1) -> torch.Tensor:
 # ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------
-def compose_data():
-    return None

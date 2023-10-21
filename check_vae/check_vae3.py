@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
+import numpy as np
 import skorch
 import torch
-import numpy as np
+
 import causalx as cx
 import netx as nxx
-import numpyx as npx
 import skorchx
-import torch.nn as nn
 import torchx.nn as nnx
+import numpyx as npx
+from mathx import sq
 
 
 def gen():
@@ -19,34 +20,35 @@ def gen():
 
     X = cx.IIDSimulation(method='linear', sem_type='gauss').fit(G).generate(1000)
 
-    scaler = npx.MinMaxScaler(globally=True)
+    # scaler = npx.MinMaxScaler(globally=True)
     # scaler = npx.NormalScaler(globally=True)
-    X = scaler.fit_transform(X)
+    # X = scaler.fit_transform(X)
 
-    return X
+    return X.astype(np.float32)
 
 
 def main():
 
-    X = gen().astype(np.float32)
+    X: np.ndarray = gen()
+    sigma = X.std(axis=0)
 
     tmodule = nnx.LinearVAE(input_size=10, hidden_size=10, latent_size=10)
     # tmodule = nnx.Autoencoder(input_size=10, latent_size=3)
 
-    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0, monitor="valid_loss")
+    early_stop = skorch.callbacks.EarlyStopping(patience=20, threshold=0, monitor="valid_loss")
 
     smodel = skorch.NeuralNetRegressor(
         module=tmodule,
-        max_epochs=1000,
+        max_epochs=10000,
         optimizer=torch.optim.Adam,
-        criterion=nnx.LinearVAELoss,
-        criterion__beta=1/500.,
-        # criterion=nn.MSELoss,
+        criterion=nnx.GaussianVAELoss,
+        criterion__beta=1.,
+        # criterion__sigma=sigma,
         lr=1.e-3,
         callbacks=[early_stop],
         batch_size=32,
     )
-    smodel.set_params(callbacks__print_log=skorchx.callbacks.PrintLog(delay=1))
+    smodel.set_params(callbacks__print_log=skorchx.callbacks.PrintLog(delay=3))
 
     smodel.fit(X, X)
 

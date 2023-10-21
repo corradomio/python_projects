@@ -3,12 +3,13 @@ from typing import Union
 import pandas as pd
 import skorch
 import torch
+from sktime.forecasting.base import ForecastingHorizon
 
+from torchx import nnlin as nnx
 from numpyx.scalers import MinMaxScaler
-from torchx import nn as nnx
 from .base import ExtendedBaseForecaster
-from ..lag import resolve_lag, LagSlots
-from ..utils import import_from
+from sktimex.lags import resolve_lags, LagSlots
+from sktimex.utils import import_from
 
 # ---------------------------------------------------------------------------
 # Optimizers
@@ -99,7 +100,7 @@ def parse_class(aclass, default_class):
 #       lags = [12, 12]
 #
 
-class SimpleNNForecaster(ExtendedBaseForecaster):
+class BaseNNForecaster(ExtendedBaseForecaster):
     _tags = {
         # to list all valid tags with description, use sktime.registry.all_tags
         #   all_tags(estimator_types="forecaster", as_dataframe=True)
@@ -143,6 +144,7 @@ class SimpleNNForecaster(ExtendedBaseForecaster):
 
     def __init__(self, *,
                  lags: Union[int, list, tuple, dict] = (0, 1),
+                 tlags: Union[int, list, tuple] = (0,),
                  scale: bool=False,
 
                  # --
@@ -167,6 +169,7 @@ class SimpleNNForecaster(ExtendedBaseForecaster):
 
         self._flavour = flavour.lower() if isinstance(flavour, str) else flavour
         self._lags = lags
+        self._tlags = tlags
         self._scale = scale
 
         optimizer = parse_class(optimizer, torch.optim.Adam)
@@ -183,6 +186,7 @@ class SimpleNNForecaster(ExtendedBaseForecaster):
         #
         self._nn_args = dict(
             lags=lags,
+            tlags=tlags,
             flavour=flavour,
             scale=scale,
 
@@ -202,7 +206,7 @@ class SimpleNNForecaster(ExtendedBaseForecaster):
         #
         #
         #
-        self._slots: LagSlots = resolve_lag(lags)
+        self._slots: LagSlots = resolve_lags(lags)
         self._model = None
 
         # index
@@ -262,8 +266,18 @@ class SimpleNNForecaster(ExtendedBaseForecaster):
             y = self._y_scaler.inverse_transform(y)
         return y
 
+    def _make_fh_relative_absolute(self, fh: ForecastingHorizon) -> tuple[ForecastingHorizon, ForecastingHorizon]:
+        fhp = fh
+        if fhp.is_relative:
+            fh = fhp
+            fhp = fh.to_absolute(self.cutoff)
+        else:
+            fh = fhp.to_relative(self.cutoff)
+        return fh, fhp
+
     def _create_skorch_model(self, input_size, output_size):
-        pass
+        # Implemented in derivated classes
+        ...
 
     # -----------------------------------------------------------------------
     # Status

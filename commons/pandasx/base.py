@@ -129,7 +129,7 @@ def onehot_encode(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFr
     columns = as_list(columns, 'columns')
 
     for col in columns:
-        dummies = pd.get_dummies(df[col], prefix=col)
+        dummies = pd.get_dummies(df[col], prefix=col).astype(int)
         df = df.join(dummies)
     return df
 # end
@@ -191,8 +191,9 @@ def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFram
 
 
 # ---------------------------------------------------------------------------
-# dataframe_split_on_groups
-# dataframe_merge_on_groups
+# groups_list
+# groups_split
+# groups_merge
 # ---------------------------------------------------------------------------
 
 DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
@@ -200,17 +201,7 @@ TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[NoneType, DATAFRAME_OR_DICT]]
 PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series, NoneType]
 
 
-def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[tuple]:
-    """
-    Compose the list of tuples that represent the groups
-
-    :param df: DataFrame to split
-    :param groups: list of columns to use during the split. The columns must be categorical or string
-
-    :return list[tuple[str]: the list of tuples
-    """
-    groups = as_list(groups, 'groups')
-
+def _groups_list_by_columns(df, groups):
     tlist = [tuple()]
     if len(groups) == 0:
         return tlist
@@ -229,27 +220,46 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]]) -> list[t
 # end
 
 
-def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=False, keep=0) \
-        -> dict[tuple[str], pd.DataFrame]:
-    """
-    Split the dataframe based on the content of 'group' columns list.
+def _groups_list_by_index(df):
+    assert isinstance(df.index, pd.MultiIndex)
+    index = list(df.index)
+    groups = set()
+    for idx in index:
+        groups.add(idx[0:-1])
 
-    If 'groups' is None or the empty list, it is returned a dictionary with key
-    the 'empty tuple' (a tuple of length zero)
+    return list(groups)
+# end
+
+
+def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]] = None, sort=True) -> list[tuple]:
+    """
+    Compose the list of tuples that represent the groups
 
     :param df: DataFrame to split
     :param groups: list of columns to use during the split. The columns must be categorical or string
-    :param drop: if to remove the 'groups' columns
-    :param keep:  (debug), keep only the first 'keep' groups
 
-    :return dict[tuple[str], DataFrame]: a dictionary
+    :return list[tuple[str]: the list of tuples
     """
-    assert isinstance(df, pd.DataFrame)
     groups = as_list(groups, 'groups')
 
-    if len(groups) == 0:
-        return {tuple(): df}
+    if len(groups) == 0 and not isinstance(df.index, pd.MultiIndex):
+        return [tuple()]
 
+    if len(groups) > 0:
+        glist = _groups_list_by_columns(df, groups)
+    else:
+        glist = _groups_list_by_index(df)
+
+    if sorted:
+        glist = list(sorted(glist))
+
+    return glist
+# end
+
+
+# ---------------------------------------------------------------------------
+
+def _groups_split_on_columns(df, groups, drop, keep):
     dfdict: dict[tuple, pd.DataFrame] = {}
 
     # Note: IF len(groups) == 1, Pandas return 'gname' in instead than '(gname,)'
@@ -262,12 +272,10 @@ def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=Fal
         for g, gdf in df.groupby(by=groups):
             dfdict[g] = gdf
             if keep > 0 and len(dfdict) == keep: break
-    # end
 
     if drop:
         for g in dfdict:
             gdf = dfdict[g]
-            # dfdict[g] = gdf[gdf.columns.difference(groups)]
             gdf.drop(groups, inplace=True, axis=1)
     # end
 
@@ -275,8 +283,104 @@ def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]], drop=Fal
 # end
 
 
-def groups_merge(dfdict: dict[tuple[str], pd.DataFrame],
-                 groups: Union[None, str, list[str]],
+def _groups_split_on_index(df, drop, keep):
+    # the multiindex is converted in a plain index
+    dfdict = index_split(df, levels=-1, drop=drop)
+
+    if keep > 0:
+        for k in reversed(list(dfdict.keys())):
+            if len(dfdict) > keep:
+                del dfdict[k]
+
+    if not drop:
+        # it is necessary to recreate the multiindex
+        pass
+
+    return dfdict
+
+
+def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]]=None, drop=True, keep=-1) \
+        -> dict[tuple[str], pd.DataFrame]:
+    """
+    Split the dataframe based on the content of 'group' columns list or the MultiIndex.
+
+    If 'groups' is None or the empty list AND df has a norma index, it is returned a dictionary
+    with key the 'empty tuple' '()'
+
+    If the dataset has as index a MultIndex, it is split based on the first 'n-levels-1'.
+    The last level must be a PeriodIndex
+
+    :param df: DataFrame to split
+    :param groups: list of columns to use during the split. The columns must be categorical or string.
+        None if it is used the MultiIndex
+    :param drop: if to remove the 'groups' columns or from the index
+    :param keep:  [DEBUG] keep only the first 'keep' groups
+
+    :return dict[tuple[str], DataFrame]: a dictionary
+    """
+    assert isinstance(df, pd.DataFrame)
+    groups = as_list(groups, 'groups')
+
+    if len(groups) == 0 and not isinstance(df.index, pd.MultiIndex):
+        return {tuple(): df}
+
+    if len(groups) > 0:
+        dfdict = _groups_split_on_columns(df, groups, drop, keep)
+    else:
+        dfdict = _groups_split_on_index(df, drop, keep)
+
+    return dfdict
+# end
+
+
+# ---------------------------------------------------------------------------
+
+def _groups_merge_by_columns(dfdict, groups, sortby):
+    n = len(groups)
+    dfonly = []
+    for g in dfdict:
+        assert len(g) == len(groups)
+        gdf = dfdict[g]
+        gdf = gdf.copy()
+
+        for i in range(n):
+            gdf[groups[i]] = g[i]
+
+        dfonly.append(gdf)
+    # end
+
+    df = pd.concat(dfonly, axis=0)
+    if len(sortby) > 0:
+        df.sort_values(*sortby, inplace=True)
+
+    # put groups columns in first positions
+    df = df[list(groups) + list(df.columns.difference(groups))]
+
+    return df
+# end
+
+
+def _groups_merge_by_index(dfdict):
+    dfonly = []
+    for g in dfdict:
+        gdf = dfdict[g]
+        gdf = gdf.copy()
+        tuples = []
+        for ix in gdf.index:
+            tuples.append(g + (ix,))
+
+        gix = pd.MultiIndex.from_tuples(tuples)
+        gdf.set_index(gix, inplace=True)
+
+        dfonly.append(gdf)
+        pass
+    df = pd.concat(dfonly, axis=0)
+    return df
+# end
+
+
+def groups_merge(dfdict: dict[tuple[str], pd.DataFrame], *,
+                 groups: Union[None, str, list[str]] = None,
                  sortby: Union[None, str, list[str]] = None) \
         -> pd.DataFrame:
     """
@@ -293,43 +397,29 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame],
     groups = as_list(groups, 'groups')
     sortby = as_list(sortby, 'sortby')
 
-    n = len(groups)
-    dfonly = []
-    for gvalues in dfdict:
-        assert len(gvalues) == len(groups)
-        gdf = dfdict[gvalues]
-        gdf = gdf.copy()
-
-        for i in range(n):
-            gdf[groups[i]] = gvalues[i]
-
-        dfonly.append(gdf)
-    # end
-
-    df = pd.concat(dfonly, axis=0)
-    if len(sortby) > 0:
-        df.sort_values(*sortby, inplace=True)
-        
-    # put groups columns in first positions
-    df = df[list(groups) + list(df.columns.difference(groups))]
-    
-    return df
+    if len(groups) > 0:
+        return _groups_merge_by_columns(dfdict, groups, sortby)
+    else:
+        return _groups_merge_by_index(dfdict)
 # end
 
 
-def groups_select(df: pd.DataFrame, groups: Union[str, list[str]], values: Union[str, list[str]], drop=False):
-    """
-    Select the sub-dataframe based on the list of columns & values
-    :param df: dataframe to analize
-    :param groups: list of columns
-    :param values: list of values (one for each column)
-    :param drop: if to delete the columns used for the selection
-    :return: the selected dataframe
-    """
-    assert isinstance(df, pd.DataFrame)
+# ---------------------------------------------------------------------------
 
-    groups = as_list(groups, 'groups')
-    values = as_list(values, 'values')
+def as_tuple(l):
+    t = type(l)
+    if t == tuple:
+        return l
+    if t == list:
+        return tuple(l)
+    else:
+        return (l,)
+
+
+def _group_select_by_columns(df, groups, values, drop):
+    groups = as_list(groups)
+    values = as_list(values)
+
     assert len(groups) == len(values), "groups and values don't have the same number of elements"
 
     n = len(groups)
@@ -344,6 +434,53 @@ def groups_select(df: pd.DataFrame, groups: Union[str, list[str]], values: Union
     if drop:
         selected_df.drop(groups, inplace=True, axis=1)
     return selected_df
+
+
+def _groups_select_by_index(df, values, drop):
+    # if 'drop=True', the index levels change!
+    # default behavior of 'df.loc[...]'
+    values = as_tuple(values)
+
+    if None not in values and drop:
+        return df.loc[values]
+
+    selected = df
+    # drop is False or some levels are skipped
+    level = 0
+    for v in values:
+        if v is None:
+            level += 1
+            continue
+        selected = selected.xs(v, level=level, drop_level=drop)
+        if not drop:
+            level += 1
+    # end
+    return selected
+
+
+def groups_select(df: pd.DataFrame, *,
+                  values: Union[None, str, list[str], tuple[str]],
+                  groups: Union[None, str, list[str], tuple[str]] = None,
+                  drop=True):
+    """
+    Select the sub-dataframe based on the list of columns & values.
+    To use the dataframe index (a multiindex), 'groups' must be None.
+    If it is used the dataframe MultiIndex, it is necessary to specify all consecutive levels.
+    To skip a level, to use None
+
+    :param df: dataframe to analyze
+    :param groups: list of columns or None if it is used the dataframe index (a MultiIndex)
+    :param values: list of values (one for each column/index level)
+    :param drop: if to delete the columns/levels used in the selection
+    :return: the selected dataframe
+    """
+    assert isinstance(df, pd.DataFrame)
+
+    if groups is None:
+        return _groups_select_by_index(df, values, drop)
+    else:
+        return _group_select_by_columns(df, groups, values, drop)
+
 # end
 
 
@@ -492,7 +629,7 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
         -> list[tuple]:
     """
     Retrieve the multi level values
-    :param mi: multi index or a DataFrame/Series with multi index
+    :param mi: multiindex or a DataFrame/Series with multiindex
     :param int levels: can be < 0
     :return: a list of tuples
     """
@@ -541,12 +678,13 @@ def set_index(df: pd.DataFrame,
 # dataframe_index = set_index
 
 
-def index_split(df: pd.DataFrame, levels: int = -1) -> dict[tuple, pd.DataFrame]:
+def index_split(df: pd.DataFrame, levels: int = -1, drop=True) -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the first 'levels' values of the multiindex
 
     :param df: dataframe to process
-    :param levels: n of multiidex levels to consider. Can be < 0
+    :param levels: n of first multiidex levels to consider. Can be < 0
+    :param drop: if to drop the levels used during the splitting
     :return: a dictionary
     """
     assert isinstance(df, (pd.DataFrame, pd.Series))
@@ -560,6 +698,18 @@ def index_split(df: pd.DataFrame, levels: int = -1) -> dict[tuple, pd.DataFrame]
             dflv = df.loc[lv]
             dfdict[lv] = dflv
         # end
+
+    if drop:
+        return dfdict
+
+    for lv in dfdict:
+        dflv: pd.DataFrame = dfdict[lv]
+        tuples = []
+        for idx in dflv.index:
+            tuples.append(lv + (idx,))
+        mi = pd.MultiIndex.from_tuples(tuples)
+        dflv.set_index(mi, inplace=True)
+
     return dfdict
 # end
 
@@ -567,6 +717,7 @@ def index_split(df: pd.DataFrame, levels: int = -1) -> dict[tuple, pd.DataFrame]
 def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
     """
     Recreate a dataframe using the keys in the dictionary as multiindex
+
     :param dfdict: a dictionary of dataframes
     :return: the new dataframe
     """
@@ -594,7 +745,7 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 # nan_split
 # ---------------------------------------------------------------------------
 
-def xy_split(*data_list, target: Union[str, list[str]], shared: Union[NoneType, str, list[str]] = None) \
+def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str, list[str]] = None) \
     -> list[PANDAS_TYPE]:
     """
     Split the df in 'data_list' in X, y
@@ -1029,7 +1180,7 @@ def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFr
 # end
 
 
-# dataframe_ignore = ignore
+# dataframe_ignore = ignore_columns
 
 
 # ---------------------------------------------------------------------------

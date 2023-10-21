@@ -1,125 +1,163 @@
+from typing import Union
+
 import pandas as pd
-from .base import BaseEncoder, as_list
-from ..base import groups_split, groups_merge
+
+from .base import GroupsEncoder
 
 # ---------------------------------------------------------------------------
 # StandardScaler
 # ---------------------------------------------------------------------------
 
-NO_SCALE_LIMIT = 10
-NO_SCALE_EPS = 0.0000001
+NO_SCALE_EPS = 1.e-6
 
 
-class StandardScaler(BaseEncoder):
-    # (mean, sdev) scaler for each column
+class StandardScaler(GroupsEncoder):
 
-    def __init__(self, columns=None, groups=None, copy=True):
-        super().__init__(columns, copy)
-        self.groups = as_list(groups, "groups")
+    def __init__(self, columns=None,
+                 feature_range=(0, 1),
+                 *,
+                 outlier_std=0, clip=False,
+                 groups=None, copy=True):
+        """
+        Apply the scaler to the selected columns.
+
+        If no column is specified, the scaler is applied to all columns
+        If it is specified 'groups' or it has a MultIndex, the scaling is applied on
+            'per-group' basis
+
+        :param columns: column or columns where to apply the scaling.
+            If None, the scaling is applied to all columns
+        :param feature_range: tuple (mean, std) values to use
+        :param groups: if the dataset contains groups, column(s) used to identify each group
+        """
+        super().__init__(columns, groups, copy)
+        self.feature_range = feature_range
+        self.outlier_std = outlier_std
+        self.clip = clip and outlier_std > 0
+
+        self._meanv = float(feature_range[0])
+        self._sdevv = float(feature_range[1])
         self._means = {}
+        self._sdevs = {}
 
-    def fit(self, X: pd.DataFrame, y=None):
-        self._check_X(X, y)
+    # -----------------------------------------------------------------------
 
-        if len(self.groups) == 0:
-            self._means = self._compute_means(X)
-            return self
+    def _get_params(self, g):
+        if g is None:
+            return self._means, self._sdevs
+        else:
+            return self._means[g], self._sdevs[g]
 
-        groups = groups_split(X, groups=self.groups, drop=True)
-        for g in groups:
-            Xg = groups[g]
-            means = self._compute_means(Xg)
+    def _set_params(self, g, params):
+        means, sdevs = params
+        if g is None:
+            self._means = means
+            self._sdevs = sdevs
+        else:
             self._means[g] = means
+            self._sdevs[g] = sdevs
+        pass
 
-        return self
+    def _compute_params(self, X):
+        return self._compute_means_sdevs(X)
 
-    def _compute_means(self, X: pd.DataFrame):
-        assert isinstance(X, pd.DataFrame)
+    def _apply_transform(self, X, params):
+        means, sdevs = params
+        return self._transform(X, means, sdevs)
 
+    def _apply_inverse_transform(self, X, params):
+        means, sdevs = params
+        return self._inverse_transform(X, means, sdevs)
+
+    # -----------------------------------------------------------------------
+
+    def _compute_means_sdevs(self, X: pd.DataFrame):
         columns = self._get_columns(X)
-        mean_stdv = {}
+        means = {}
+        sdevs = {}
         for col in columns:
 
             x = X[col].to_numpy(dtype=float)
             vmin, vmax = min(x), max(x)
 
-            # if the values are already in a reasonable small range, don't scale
-            if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
-                continue
-
             if (vmax - vmin) <= NO_SCALE_EPS:
-                mean_stdv[col] = (x.mean(), 0.)
+                means[col] = x.mean()
+                sdevs[col] = 0.
             else:
-                mean_stdv[col] = (x.mean(), x.std())
+                means[col] = x.mean()
+                sdevs[col] = x.std()
             # end
-        return mean_stdv
+        return means, sdevs
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        X = self._check_X(X)
-
-        if len(self.groups) == 0:
-            return self._transform(X, self._means)
-
-        X_dict: dict = dict()
-        groups = groups_split(X, groups=self.groups, drop=True)
-
-        for g in groups:
-            Xg = groups[g]
-            means = self._means[g]
-            Xg = self._transform(Xg, means)
-            X_dict[g] = Xg
-
-        X = groups_merge(X_dict, groups=self.groups)
+    def _transform(self, X: pd.DataFrame, means, sdevs) -> pd.DataFrame:
+        X = self._clip(X, means, sdevs)
+        X = self._scale(X, means, sdevs)
         return X
 
-    def _transform(self, X: pd.DataFrame, means) -> pd.DataFrame:
-        columns = self._get_columns(X)
-        for col in columns:
+    def _clip(self, X, means, sdevs):
+        if not self.clip:
+            return X
+
+        outlier_std = self.outlier_std
+        for col in self._get_columns(X):
             if col not in means:
                 continue
 
-            x = X[col].to_numpy(dtype=float)
-            mean, sdev = means[col]
+            meanc = means[col]
+            sdevc = sdevs[col]
+            minc = meanc - outlier_std*sdevc
+            maxc = meanc + outlier_std*sdevc
 
-            if sdev <= NO_SCALE_EPS:
-                x = (x - mean)
-            else:
-                x = (x - mean) / sdev
+            x = X[col].to_numpy(dtype=float)
+
+            x[x < minc] = minc
+            x[x > maxc] = maxc
 
             X[col] = x
         return X
 
-    def inverse_transform(self, X: pd.DataFrame):
-        X = self._check_X(X)
+    def _scale(self, X, means, sdevs):
+        meanv = self._meanv
+        sdevv = self._sdevv
 
-        if len(self.groups) == 0:
-            return self._inverse_transform(X, self._means)
+        for col in self._get_columns(X):
+            if col not in means:
+                continue
 
-        X_dict: dict = dict()
-        groups = groups_split(X, groups=self.groups, drop=True)
+            meanc = means[col]
+            sdevc = sdevs[col]
 
-        for g in groups:
-            Xg = groups[g]
-            means = self._means[g]
-            Xg = self._inverse_transform(Xg, means)
-            X_dict[g] = Xg
+            x = X[col].to_numpy(dtype=float)
 
-        X = groups_merge(X_dict, groups=self.groups)
+            if sdevc <= NO_SCALE_EPS:
+                x = meanv + (x - meanc) * sdevv
+            else:
+                x = meanv + (x - meanc) / sdevc * sdevv
+
+            X[col] = x
         return X
 
-    def _inverse_transform(self, X, means):
+    def _inverse_transform(self, X, means, sdevs):
         columns = self._get_columns(X)
+        meanv = self._meanv
+        sdevv = self._sdevv
+
         for col in columns:
             x = X[col].to_numpy(dtype=float)
-            mean, sdev = means[col]
+            meanc = means[col]
+            sdevc = sdevs[col]
 
-            if sdev <= NO_SCALE_EPS:
-                x = x + mean
+            if sdevc <= NO_SCALE_EPS:
+                x = (x - meanv)/sdevv + meanc
             else:
-                x = x*sdev + mean
+                x = (x - meanv)/sdevv*sdevc + meanc
 
             X[col] = x
         return X
+
+    # -----------------------------------------------------------------------
+    # end
+    # -----------------------------------------------------------------------
 # end
 
 
@@ -131,63 +169,136 @@ StandardScalerEncoder = StandardScaler
 # MinMaxScaler
 # ---------------------------------------------------------------------------
 
-class MinMaxScaler(BaseEncoder):
-    # (min, max) scaler for each column
+class MinMaxScaler(GroupsEncoder):
 
-    def __init__(self, columns, feature_range=(0, 1), *, copy=True):
-        super().__init__(columns, copy)
+    def __init__(self, columns: Union[None, str, list[str]] = None,
+                 feature_range=(0, 1),
+                 *,
+                 quantile=.05, clip=False,
+                 groups=None, copy=True):
+        """
+        Apply the scaler to the selected columns.
+        If no column is specified, the scaler is applied to all columns
+        If it is specified 'groups' or the has a MultIndex, the scaling is applied on
+            'per-group' basis
+
+        :param columns: column or columns where to apply the scaling.
+            If None, the scaling is applied to all columns
+        :param feature_range: tuple (min, max) values to use
+        :param quantile: used to exclude too low or too high values
+            Can be an integer value or a value < 1.
+        :param clip: if to clip the outlier values
+        :param groups: if the dataset contains multiple groups, column(s) used to identify each group
+        """
+        super().__init__(columns, groups, copy)
         self.feature_range = feature_range
+        self.quantile = quantile
+        self.clip = clip and quantile > 0
 
-        self._min_value = feature_range[0],
-        self._delta_values = feature_range[1] - feature_range[0]
-        self._min = {}
-        self._delta = {}
+        self._minv = float(feature_range[0]),
+        self._deltav = float(feature_range[1] - feature_range[0])
 
-    def fit(self, X: pd.DataFrame, y=None) -> "MinMaxScaler":
-        self._check_X(X, y)
+        self._mins = {}
+        self._deltas = {}
 
-        columns = self._get_columns(X)
-        for col in columns:
-            values = X[col].to_numpy(dtype=float)
-            minval = min(values)
-            deltaval = max(values) - minval
+        assert self._deltav > 0, f"Invalid feature_range: min must be <= max: {feature_range}"
 
-            self._min[col] = minval
-            self._delta[col] = deltaval
+    # -----------------------------------------------------------------------
 
-        return self
+    def _get_params(self, g):
+        if g is None:
+            return self._mins, self._deltas
+        else:
+            return self._mins[g], self._deltas[g]
 
-    def transform(self, X: pd.DataFrame) -> pd.DataFrame:
-        X = self._check_X(X)
+    def _set_params(self, g, params):
+        mins, deltas = params
+        if g is None:
+            self._mins = mins
+            self._deltas = deltas
+        else:
+            self._mins[g] = mins
+            self._deltas[g] = deltas
+        pass
 
-        minv = self._min_value
-        deltav = self._delta_values
+    def _compute_params(self, X):
+        return self._compute_mins_deltas(X)
 
-        columns = self._get_columns(X)
-        for col in columns:
-            minval = self._min[col]
-            deltaval = self._delta[col]
+    def _apply_transform(self, X, params):
+        mins, deltas = params
+        return self._transform(X, mins, deltas)
 
-            values = X[col].to_numpy(dtype=float)
-            values = minv + deltav*(values-minval)/deltaval
+    def _apply_inverse_transform(self, X, params):
+        mins, deltas = params
+        return self._inverse_transform(X,mins, deltas)
 
-            X[col] = values
+    # -----------------------------------------------------------------------
+
+    def _compute_mins_deltas(self, X):
+        mins = {}
+        deltas = {}
+
+        n = len(X)
+        nskip = self.quantile if self.quantile >= 1 else int(self.quantile*n)
+
+        for col in self._get_columns(X):
+            x = X[col].to_numpy()
+            x.sort()
+
+            minc = x[nskip]
+            maxc = x[n - nskip - 1]
+
+            mins[col] = minc
+            deltas[col] = maxc - minc if maxc > (minc + NO_SCALE_EPS) else 1.
+        # end
+        return mins, deltas
+
+    def _transform(self, X, mins, deltas):
+        X = self._clip(X, mins, deltas)
+        X = self._scale(X, mins, deltas)
         return X
 
-    def inverse_transform(self, X: pd.DataFrame):
-        assert isinstance(X, pd.DataFrame)
-        if self._copy: X = X.copy()
+    def _clip(self, X, mins, deltas):
+        if not self.clip:
+            return X
 
-        minv = self._min_value
-        deltav = self._delta_values
+        for col in self._get_columns(X):
+            minc = mins[col]
+            deltac = deltas[col]
+            maxc = minc + deltac
 
-        columns = self.columns
+            x = X[col]
+            x[x < minc] = minc
+            x[x > maxc] = maxc
+
+            X[col] = x
+        return X
+
+    def _scale(self, X, mins, deltas):
+        minv = self._minv
+        deltav = self._deltav
+
+        columns = self._get_columns(X)
         for col in columns:
-            minval = self._min[col]
-            deltaval = self._delta[col]
+            minc = mins[col]
+            deltac = deltas[col]
+
+            x = X[col]
+            x = minv + deltav * (x - minc) / deltac
+
+            X[col] = x
+        return X
+
+    def _inverse_transform(self, X, mins, deltas):
+        minv = self._minv
+        deltav = self._deltav
+
+        for col in self._get_columns(X):
+            minc = mins[col]
+            deltac = deltas[col]
 
             values = (X[col].to_numpy(dtype=float) - minv)/deltav
-            values = minval + deltaval*values
+            values = minc + deltac*values
 
             X[col] = values
         return X
@@ -196,7 +307,6 @@ class MinMaxScaler(BaseEncoder):
 
 # compatibility
 MinMaxEncoder = MinMaxScaler
-
 
 # ---------------------------------------------------------------------------
 # End

@@ -7,10 +7,10 @@ from .transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransfor
 from .transform.rnn_3d import RNNTrainTransform3D, RNNPredictTransform3D
 from .transform.cnn_3d import CNNTrainTransform3D, CNNPredictTransform3D
 
-from .model.linear import LinearForecastRegressor
-from .model.scikit import ScikitForecastRegressor
-from .model.rnn import SimpleRNNForecaster, SlotsRNNForecaster, LagsRNNForecaster
-from .model.cnn import SimpleCNNForecaster
+from .forecasting.linear import LinearForecastRegressor
+from .forecasting.scikit import ScikitForecastRegressor
+from .forecasting.rnn import SimpleRNNForecaster, MultiLagsRNNForecaster
+from .forecasting.cnn import SimpleCNNForecaster, MultiLagsCNNForecaster
 
-from .lag import resolve_lags, resolve_lag, LagSlots
+from .lags import resolve_lags, resolve_tlags, LagSlots
 

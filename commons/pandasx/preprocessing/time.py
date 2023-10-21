@@ -1,9 +1,9 @@
 import logging
 
 from numpy import issubdtype, datetime64
-from pandas import Period, PeriodIndex, to_datetime
+from pandas import DataFrame, Period, PeriodIndex, to_datetime
 
-from .base import *
+from .base import BaseEncoder
 
 
 # ---------------------------------------------------------------------------

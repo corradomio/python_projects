@@ -5,11 +5,10 @@ import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
-from stdlib import qualified_name
 from .base import ExtendedBaseForecaster
-from ..lag import resolve_lag
-from ..transform.linear import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, to_matrix, import_from
+from sktimex.lags import resolve_lags, resolve_tlags
+from sktimex.transform.linear import LinearTrainTransform, LinearPredictTransform
+from sktimex.utils import PD_TYPES, to_matrix, import_from, qualified_name
 
 __all__ = [
     "LinearForecastRegressor"
@@ -41,16 +40,16 @@ __all__ = [
 #   fh, y, X    X[:y], y    X[y:]       |fh|
 #
 
+
 # ---------------------------------------------------------------------------
 # LinearForecastRegressor
 # ---------------------------------------------------------------------------
-
 #
 # We suppose that the dataset is ALREADY normalized.
 # the ONLY information is to know the name of the target column'
 #
 
-class LinearForecastRegressor(ExtendedBaseForecaster):
+class LinearForecaster(ExtendedBaseForecaster):
     _tags = {
         # to list all valid tags with description, use sktime.registry.all_tags
         #   all_tags(estimator_types="forecaster", as_dataframe=True)
@@ -100,6 +99,7 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
                  lags: Union[int, list, tuple, dict] = (0, 1),
                  tlags=(0,),
                  estimator: Union[str, Any]="sklearn.linear_model.LinearRegression",
+                 flatten=True,
                  **kwargs):
         """
 
@@ -121,38 +121,56 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
                     'current': True
                 }
 
-        :param estimator:
-        :param kwargs:
+        :param estimator: estimator to use. It can be
+                - q fully qualified class name (str). The parameters to use must be passed with 'kwargs'
+                - a Python class (type). The parameters to use must be passed with 'kwargs'
+                - a class instance. The parameters 'kwargs' are retrieved from the instance
+        :param kwargs: parameters to pass to the estimator constructor
+        :param flatten: if to use a single model to predict the forecast horizon or a model for each
+                timeslot
         """
         super().__init__()
 
-        self._lags = lags
-        self._tlags = tlags
+        # Unmodified parameters [readonly]
+        self.lags = lags
+        self.tlags = tlags
+        self.estimator = estimator
+        self.flatten = flatten
+        self.kwargs = kwargs
+
+        # effective parameters
         self._kwargs = kwargs
-        self._slots = resolve_lag(lags)
+        self._tlags = resolve_tlags(tlags)
+        self._slots = resolve_lags(lags)
+
+        self._models = {}       # one model for each 'tlag'
+        self._model = None      # a single model for all 'tlags'
 
         if isinstance(estimator, str):
             self._class_name = estimator
-            self._create_estimator()
+            self._create_estimators(import_from(self._class_name))
         elif isinstance(estimator, type):
             self._class_name = qualified_name(estimator)
-            self._create_estimator(estimator)
+            self._create_estimators(estimator)
         else:
             self._class_name = qualified_name(type(estimator))
             self._kwargs = estimator.get_params()
-            self._model = estimator
+            self._create_estimators(type(estimator))
 
         self.Xh: Optional[np.ndarray] = None
         self.yh: Optional[np.ndarray] = None
 
         name = self._class_name[self._class_name.rfind('.')+1:]
         self._log = logging.getLogger(f"LinearForecastRegressor.{name}")
+        # self._log.info(f"Created {self}")
     # end
 
-    def _create_estimator(self, estimator=None):
-        if estimator is None:
-            estimator = import_from(self._class_name)
-        self._model = estimator(**self._kwargs)
+    def _create_estimators(self, estimator=None):
+        if self.flatten:
+            self._model = estimator(**self._kwargs)
+        else:
+            for t in self._tlags:
+                self._models[t] = estimator(**self._kwargs)
     # end
 
     # -----------------------------------------------------------------------
@@ -161,9 +179,10 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
 
     def get_params(self, deep=True):
         params = {
-            'lags': self._lags,
-            'tlags': self._tlags,
-            'estimator': self._class_name
+            'lags': self.lags,
+            'tlags': self.tlags,
+            'flatten': self.flatten,
+            'estimator': self.estimator
         }
         params = params | self._kwargs
         return params
@@ -183,11 +202,28 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
         yh = to_matrix(y)
         self._save_history(Xh, yh)
 
-        tt = LinearTrainTransform(slots=self._slots)
-        Xt, yt = tt.fit_transform(X=Xh, y=yh)
-
-        self._model.fit(Xt, yt)
+        if self.flatten:
+            self._fit_flatten(Xh, yh)
+        else:
+            self._fit_tlags(Xh, yh)
+        # end
         return self
+
+    def _fit_flatten(self, Xh, yh):
+        tt = LinearTrainTransform(slots=self._slots, tlags=self._tlags)
+        Xt, yt = tt.fit_transform(X=Xh, y=yh)
+        self._model.fit(Xt, yt)
+
+    def _fit_tlags(self, Xh, yh):
+        tlags = self._tlags
+        tt = LinearTrainTransform(slots=self._slots, tlags=tlags)
+        Xt, ytt = tt.fit_transform(X=Xh, y=yh)
+        st = len(tlags)
+
+        for i in range(st):
+            t = tlags[i]
+            yt = ytt[:, i:i+1]
+            self._models[t].fit(Xt, yt)
 
     def _save_history(self, Xh, yh):
         s = len(self._slots)
@@ -215,26 +251,53 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
 
         nfh = int(fh[-1])
         Xs = to_matrix(X)
-        pt = LinearPredictTransform(slots=self._slots)
-        y_pred = pt.fit(X=self.Xh, y=self.yh).transform(X=Xs, fh=nfh)  # save X,y prediction
 
-        tlags = self._tlags
-        st = len(tlags)
+        if self.flatten:
+            y_pred = self._predict_flatten(Xs, nfh, fhp)
+        else:
+            y_pred = self._predict_tlags(Xs, nfh, fhp)
+
+        return y_pred
+    # end
+
+    def _predict_flatten(self, Xs, nfh, fhp):
+        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
+        yp = pt.fit(X=self.Xh, y=self.yh).transform(X=Xs, fh=nfh)  # save X,y prediction
 
         for i in range(nfh):
             Xt = pt.step(i)
-            yp: np.ndarray = self._model.predict(Xt)
-            for j in range(st):
-                t = tlags[j]
-                if i + t >= nfh: continue
-                y_pred[i+t] = yp[0, :]
-            # end
+
+            y_pred: np.ndarray = self._model.predict(Xt)
+
+            pt.update(i, y_pred)
         # end
 
         # add the index
-        y_series: pd.Series = self._from_numpy(y_pred, fhp)
+        y_series: pd.Series = self._from_numpy(yp, fhp)
         return y_series
-    # end
+
+    def _predict_tlags(self, Xs, nfh, fhp):
+        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
+        yp = pt.fit(X=self.Xh, y=self.yh).transform(X=Xs, fh=nfh)  # save X,y prediction
+        tlags = self._tlags
+
+        i = 0
+        while i < nfh:
+            it = i
+            for t in tlags:
+                model = self._models[t]
+
+                Xt = pt.step(i)
+
+                y_pred: np.ndarray = model.predict(Xt)
+
+                it = pt.update(i, y_pred, t)
+            i = it
+        # end
+
+        # add the index
+        y_series: pd.Series = self._from_numpy(yp, fhp)
+        return y_series
 
     def _from_numpy(self, ys, fhp):
         ys = ys.reshape(-1)
@@ -334,6 +397,8 @@ class LinearForecastRegressor(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 # end
 
+
+LinearForecastRegressor = LinearForecaster
 
 # ---------------------------------------------------------------------------
 # End

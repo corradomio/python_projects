@@ -2,7 +2,7 @@ import numpy as np
 from typing import Optional
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags, lmax
+from ..lags import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -100,8 +100,8 @@ class RNNTrainTransform3D(ModelTrainTransform):
         return Xt, yt
     # end
 
-    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return self.fit(X, y).transform(X, y)
+    # def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    #     return self.fit(X, y).transform(X, y)
 # end
 
 

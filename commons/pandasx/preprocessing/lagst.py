@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from .base import XyBaseEncoder
-from ..base import as_list
+from .base import XyBaseEncoder, as_list
 
 
 #

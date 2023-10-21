@@ -2,8 +2,11 @@ from typing import Union, Any
 
 import numpy as np
 import pandas as pd
+
+# DON'T remove 'qualified_name' import! It is used in other modules
+# to avoid the direct dependency with 'stdlib'
+from stdlib import NoneType, qualified_name   # DON'T REMOVE!!!!
 from sktime.forecasting.base import ForecastingHorizon
-from stdlib import NoneType
 
 # ---------------------------------------------------------------------------
 # Constants

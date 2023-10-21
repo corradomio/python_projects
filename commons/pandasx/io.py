@@ -1,5 +1,6 @@
 from typing import List
 import pandas as pd
+from stdlib import NoneType
 from .base import datetime_encode, onehot_encode, binary_encode, \
     set_index, ignore_columns, datetime_reindex, as_list, \
     find_unnamed_columns, find_binary
@@ -100,6 +101,14 @@ def read_database(url: str, dtype, **kwargs):
 # ---------------------------------------------------------------------------
 # read_data
 # ---------------------------------------------------------------------------
+# dtype,
+# categorical, boolean, numeric, onehot, binary,
+# datetime, periodic,
+# index, reindex,
+# ignore, ignore_unnamed,
+# count,
+# na_values, dropna,
+#
 
 def read_data(file: str,
               *,
@@ -188,9 +197,9 @@ def read_data(file: str,
     :return pd.DataFrame: a Pandas DataFrame
     """
     assert isinstance(file, str), "'file' must be a str"
-    assert isinstance(datetime, (type(None), str, list, tuple)), \
+    assert isinstance(datetime, (NoneType, str, list, tuple)), \
         "'datetime' must be (None, str, (str, str), (str, str, str))"
-    assert isinstance(periodic, (type(None), str, list, tuple)), \
+    assert isinstance(periodic, (NoneType, str, list, tuple)), \
         "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
 
@@ -233,9 +242,6 @@ def read_data(file: str,
         df = read_database(file, dtype=dt, **kwargs)
     else:
         raise TypeError("File extension unsupported: " + file)
-
-    if dropna:
-        df = df.dropna(how='any', axis=0)
 
     if dtype is not None:
         categorical, boolean = _parse_dtype(list(df.columns), dtype)
@@ -284,9 +290,14 @@ def read_data(file: str,
     if ignore_unnamed:
         ignore += find_unnamed_columns(df)
 
-    # remove the 'ignore' columne
+    # remove the 'ignore' columns
     if len(ignore) > 0:
         df = ignore_columns(df, ignore)
+
+    # remove the rows containing NaN
+    # note: it is better to check for NaN ONLY AFTER ignored columns
+    if dropna:
+        df = df.dropna(how='any', axis=0)
 
     # force the reindex
     if reindex:

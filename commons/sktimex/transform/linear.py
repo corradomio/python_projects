@@ -1,7 +1,7 @@
 import numpy as np
 
 from .base import ModelTrainTransform, ModelPredictTransform
-from ..lag import resolve_lags, lmax
+from ..lags import resolve_lags, lmax
 
 
 # ---------------------------------------------------------------------------
@@ -22,6 +22,14 @@ class LinearTrainTransform(ModelTrainTransform):
         super().__init__(
             slots=slots if slots is not None else resolve_lags(lags),
             tlags=tlags)
+        self.Xh = None
+        self.yh = None
+
+    def fit(self, X, y):
+        super().fit(X, y)
+        self.Xh = X
+        self.yh = y
+        return self
 
     def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         X, y = super().transform(X, y)
@@ -65,8 +73,51 @@ class LinearTrainTransform(ModelTrainTransform):
         return Xt, yt
     # end
 
-    def fit_transform(self, X, y):
-        return self.fit(X, y).transform(X, y)
+    # def fit_transform(self, X, y):
+    #     return self.fit(X, y).transform(X, y)
+
+    def transform_tlag(self, at):
+        X = self.Xh
+        y = self.yh
+        X, y = super().transform(X, y)
+
+        xlags = self.xlags if X is not None else []
+        ylags = self.ylags
+        tlags = self.tlags
+
+        sx = len(xlags)
+        sy = len(ylags)
+        st = len(tlags)
+        t = len(self.slots)
+
+        s = max(tlags)
+        r = s + t
+
+        mx = X.shape[1] if X is not None else 0
+        my = y.shape[1]
+        mt = sx * mx + sy * my
+        mu = st * my
+        n = y.shape[0] - r
+
+        Xt = np.zeros((n, mt), dtype=y.dtype)
+        yt = np.zeros((n, mu), dtype=y.dtype)
+
+        for i in range(n):
+            c = 0
+            for j in reversed(ylags):
+                Xt[i, c:c + my] = y[t + i - j]
+                c += my
+            for j in reversed(xlags):
+                Xt[i, c:c + mx] = X[t + i - j]
+                c += mx
+
+            c = 0
+            for j in tlags:
+                yt[i, c:c + my] = y[t + i + j]
+                c += my
+        # end
+
+        return Xt, yt
 # end
 
 
@@ -135,6 +186,24 @@ class LinearPredictTransform(ModelPredictTransform):
 
         return Xt
     # end
+
+    def update(self, i, y_pred, t=None):
+        tlags = [t] if t is not None else self.tlags
+        st = len(tlags)
+        nfh = len(self.yp)
+        my = self.yp.shape[1]
+
+        if len(y_pred.shape) == 1:
+            y_pred = y_pred.reshape((1, -1))
+
+        c = 0
+        for j in range(st):
+            t = tlags[j]
+            if i + t < nfh:
+                self.yp[i + t] = y_pred[0, c:c+my]
+                c += my
+        # end
+        return i + st
 
     def fit_transform(self, X, y):
         raise NotImplemented()

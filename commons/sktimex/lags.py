@@ -1,10 +1,12 @@
-from typing import Union, Optional
+from typing import Union
 
 __all__ = [
     'LagSlots',
     'LagsResolver',
-    'resolve_lag',
-    'flatten_max'
+    'resolve_lags',
+    'resolve_tlags',
+    'flatten_max',
+    'lmax'
 ]
 
 
@@ -57,15 +59,21 @@ LAG_TYPES: list[str] = list(LAG_FACTORS)
 # ---------------------------------------------------------------------------
 
 def lmax(l: list[int]) -> int:
+    """
+    Maximum value in a list, 0 for empty lists
+    """
     return 0 if len(l) == 0 else max(l)
 
 
 def flatten_max(ll: list[list[int]]) -> int:
+    """
+    Maximum scanning recursively a list of lists of int
+    """
     m = 0
     for l in ll:
         if len(ll) == 0:
             continue
-        m = max(m, max(l))
+        m = max(m, lmax(l))
     return m
 
 
@@ -74,13 +82,16 @@ def flatten_max(ll: list[list[int]]) -> int:
 # ---------------------------------------------------------------------------
 
 def _flatten(ll: list[list]) -> list:
+    """
+    Convert a list of list in a flatten list
+    """
     f = set()
     for l in ll:
         f.update(l)
     return sorted(f)
 
 
-def _resolve_lags(entry, lags) -> list[list[int]]:
+def _resolve_lags(entry: str, lags: dict) -> list[list[int]]:
     assert isinstance(lags, dict)
 
     def _check_current():
@@ -107,9 +118,10 @@ def _resolve_lags(entry, lags) -> list[list[int]]:
     return slots
 
 
-def _is_integer(sval):
+def _is_integer(s: str) -> bool:
+    """Check if s can be converted as an integer"""
     try:
-        ival = int(sval)
+        ival = int(s)
         return True
     except:
         return False
@@ -353,10 +365,10 @@ class LagsResolver:
 
 
 # ---------------------------------------------------------------------------
-# resolve_lag
+# resolve_lags
 # ---------------------------------------------------------------------------
 
-def resolve_lag(lags: Union[int, tuple, list, dict]) -> LagSlots:
+def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
     """
     Resolve the 'lags' configuration in a list of 'slots' to select in the input dataset, where a 'slot'
     is a record.
@@ -524,8 +536,8 @@ def resolve_lag(lags: Union[int, tuple, list, dict]) -> LagSlots:
         1. a single integer value
         2. two integer values
         3. a dictionary
-    :param current: if to consider the current time slot
-    :return LagSlots: an object containing the time slots to select for the input and target features.
+    :param current: if to consider the current timeslot
+    :return LagSlots: an object containing the timeslots to select for the input and target features.
     """
     lr = LagsResolver(lags)
     res: LagSlots = lr.resolve()
@@ -534,7 +546,18 @@ def resolve_lag(lags: Union[int, tuple, list, dict]) -> LagSlots:
 
 
 # compatibility with the previous implementation
-resolve_lags = resolve_lag
+resolve_lag = resolve_lags
+
+
+def resolve_tlags(tlags: Union[int, tuple, list]) -> list[int]:
+    """
+    Resolve t)arget lags.
+    A target lag can be specified as integer, a tuple or a list
+    """
+    if isinstance(tlags, int):
+        return list(range(tlags))
+    else:
+        return list(tlags)
 
 # ---------------------------------------------------------------------------
 # end

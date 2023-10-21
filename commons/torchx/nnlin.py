@@ -1,15 +1,14 @@
 import torch
 import torch.nn as nn
 
-from torchx.activation import activation_function
+from .activation import activation_function
+
 
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
 # ---------------------------------------------------------------------------
 # It combines in a module a RNN layer connected to a Linear layer,
 # batch_first = True for default
-
-
 #
 #     Args:
 #         input_size: The number of expected features in the input `x`
@@ -55,6 +54,7 @@ class LSTMLinear(nn.LSTM):
         self.activation = activation_function(activation, activation_params)
         if output_size > 0:
             self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+            self.output_size = output_size
         else:
             self.V = None
             self.output_size = f * hidden_size * steps
@@ -63,11 +63,6 @@ class LSTMLinear(nn.LSTM):
         L = input.shape[0 if self.batch_first else 1]
 
         if L not in self.hidden:
-            # D = self.D
-            # N = self.hidden_size
-            # hidden_state = torch.zeros(D, L, N, dtype=input.dtype)
-            # cell_state = torch.zeros(D, L, N, dtype=input.dtype)
-            # self.hidden[L] = (hidden_state, cell_state)
             self.hidden[L] = None
 
         hidden = self.hidden[L]
@@ -126,6 +121,7 @@ class GRULinear(nn.GRU):
         self.activation = activation_function(activation, activation_params)
         if output_size > 0:
             self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+            self.output_size = output_size
         else:
             self.V = None
             self.output_size = f * hidden_size * steps
@@ -134,10 +130,6 @@ class GRULinear(nn.GRU):
         L = input.shape[0 if self.batch_first else 1]
 
         if L not in self.hidden:
-            # D = self.D
-            # N = self.hidden_size
-            # hidden_state = torch.zeros(D, L, N)
-            # self.hidden[L] = hidden_state
             self.hidden[L] = None
 
         hidden = self.hidden[L]
@@ -198,6 +190,7 @@ class RNNLinear(nn.RNN):
         self.activation = activation_function(activation, activation_params)
         if output_size > 0:
             self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
+            self.output_size = output_size
         else:
             self.V = None
             self.output_size = f*hidden_size*steps
@@ -206,10 +199,6 @@ class RNNLinear(nn.RNN):
         L = input.shape[0 if self.batch_first else 1]
 
         if L not in self.hidden:
-            # D = self.D
-            # N = self.hidden_size
-            # hidden_state = torch.zeros(D, L, N)
-            # self.hidden[L] = hidden_state
             self.hidden[L] = None
 
         hidden = self.hidden[L]
@@ -219,3 +208,97 @@ class RNNLinear(nn.RNN):
         output = self.V(t) if self.V else t
         return output
 # end
+
+
+# ---------------------------------------------------------------------------
+# CNN
+# ---------------------------------------------------------------------------
+# in_channels: int,
+#         out_channels: int,
+#         kernel_size: _size_1_t,
+#         stride: _size_1_t = 1,
+#         padding: Union[str, _size_1_t] = 0,
+#         dilation: _size_1_t = 1,
+#         groups: int = 1,
+#         bias: bool = True,
+#         padding_mode: str = 'zeros',  # TODO: refine this type
+#         device=None,
+#         dtype=None
+#
+class Conv1dLinear(nn.Conv1d):
+    def __init__(self, *,
+                 input_size,
+                 output_size,
+                 hidden_size=1,
+                 steps=1,
+                 activation=None,
+                 activation_params=None,
+                 kernel_size=1,
+                 stride=1,
+                 padding=0,
+                 dilation=1,
+                 groups=1):
+        super().__init__(in_channels=input_size,
+                         out_channels=hidden_size,
+                         kernel_size=kernel_size,
+                         stride=stride,
+                         padding=padding,
+                         dilation=dilation,
+                         groups=groups)
+
+        self.activation = activation_function(activation, activation_params)
+        if output_size > 0:
+            self.lin = nn.Linear(in_features=hidden_size * steps, out_features=output_size)
+            self.output_size = output_size
+        else:
+            self.lin = None
+            self.output_size = hidden_size * steps
+    # end
+
+    def forward(self, input):
+        t = super().forward(input)
+        t = self.activation(t) if self.activation else t
+        t = torch.reshape(t, (len(input), -1))
+        t = self.lin(t) if self.lin else t
+        return t
+    # end
+# end
+
+
+# ---------------------------------------------------------------------------
+# MultiInputs
+# ---------------------------------------------------------------------------
+
+class MultiInputs(nn.Module):
+
+    def __init__(self, input_models, output_model):
+        super().__init__()
+
+        self.input_models = input_models
+        self.output_model = output_model
+        self.n_inputs = len(input_models)
+
+    def forward(self, input_list):
+        assert len(input_list) == self.n_inputs
+        n = self.n_inputs
+        inner_results = []
+
+        # for each input, call the related models
+        for i in range(n):
+            input = input_list[i]
+            model = self.input_models[i]
+
+            inner_result = model.forward(input)
+            inner_results.append(inner_result)
+
+        # concatenate the inner results
+        inner = torch.concatenate(inner_results, dim=1)
+
+        result = self.output_model.forward(inner)
+        return result
+    # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
