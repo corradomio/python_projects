@@ -200,5 +200,4 @@ class XyBaseEncoder(BaseEncoder):
         assert isinstance(X, DataFrame)
         assert isinstance(y, (NoneType, DataFrame))
         return X.copy() if self.copy else X, y
-
 # end

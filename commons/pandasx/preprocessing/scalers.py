@@ -192,7 +192,9 @@ class MinMaxScaler(GroupsEncoder):
         """
         super().__init__(columns, groups, copy)
         self.feature_range = feature_range
-        self.quantile = quantile
+        self.quantile = quantile if 0 < quantile < 0.5 else \
+            (1. - quantile) if 0.5 < quantile < 1 \
+            else quantile
         self.clip = clip and quantile > 0
 
         self._minv = float(feature_range[0]),

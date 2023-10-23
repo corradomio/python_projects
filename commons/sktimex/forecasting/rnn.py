@@ -2,9 +2,9 @@ from sktime.forecasting.base import ForecastingHorizon
 from torch import nn as nn
 
 from .nn import *
-from sktimex.transform.rnn import RNNTrainTransform, RNNPredictTransform
-from sktimex.transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
-from sktimex.utils import FH_TYPES, PD_TYPES, to_matrix
+from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
+from ..transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
+from ..utils import FH_TYPES, PD_TYPES, to_matrix
 from skorchx.callbacks import PrintLog
 
 __all__ = [

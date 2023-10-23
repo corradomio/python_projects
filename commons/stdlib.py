@@ -31,8 +31,22 @@ def qualified_name(klass: Any):
 # end
 
 
-# def type_of(obj: object):
-#     return str(type(obj))
+def import_from(qname: str) -> Any:
+    """
+    Import a class specified by the fully qualified name string
+
+    :param qname: fully qualified name of the class
+    :return: Python class
+    """
+    import importlib
+    p = qname.rfind('.')
+    qmodule = qname[:p]
+    name = qname[p+1:]
+
+    module = importlib.import_module(qmodule)
+    clazz = getattr(module, name)
+    return clazz
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -155,34 +169,17 @@ def mul_(x):
             m *= e
         return m
 
-mul = mul_
-
 
 # ---------------------------------------------------------------------------
-# import_from
+# Keyword parameters
 # ---------------------------------------------------------------------------
-
-def import_from(qname: str) -> Any:
-    """
-    Import a class specified by the fully qualified name string
-
-    :param qname: fully qualified name of the class
-    :return: Python class
-    """
-    import importlib
-    p = qname.rfind('.')
-    qmodule = qname[:p]
-    name = qname[p+1:]
-
-    module = importlib.import_module(qmodule)
-    clazz = getattr(module, name)
-    return clazz
-# end
-
-
-# ---------------------------------------------------------------------------
-# generic utilities
-# ---------------------------------------------------------------------------
+#
+#   - ricuperare il valore di un parametro dato il nome ed il valore
+#     di default
+#   - estrarre i parametri che hanno un certo prefisso, seguito da "__"
+#     usato in skorch, ad esempio.
+#
+#
 
 # def as_kwargs(locals):
 #     kwargs = {} | locals
@@ -193,14 +190,15 @@ def import_from(qname: str) -> Any:
 # # end
 
 
-def kwval(kwargs: dict, key: str, defval: Any = None) -> Any:
+def kwval(kwargs: dict, key: str, defval=None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
-    Note: it convert automatically the string into the same type of defval
+    It convert automatically the string into the same type of defval.
+    Supported types: None, str, bool, int, float
 
     :param kwargs: dictionary containing pairs (key, value)
-    :param key: key (or alternate names) to read
+    :param key: key to read
     :param defval: value to return is the key is not in the dictionary
     :return: the value in the dictionary or the default value
     """
@@ -222,9 +220,51 @@ def kwval(kwargs: dict, key: str, defval: Any = None) -> Any:
     return val
 
 
+def kwparams(kwargs: dict, prefix: str) -> dict:
+    """
+    Extract the parameters with prefix '<prefix>__<name>' returning
+    a dictionary using '<name>'
+
+    Example:
+
+        d = {
+            'criterion': ...,
+            'criterion__beta': 1,
+            'criterion__sigma': sigma
+        }
+
+        kwparams(d, 'criterion') -> {
+            'beta': 1,
+            'sigma': sigma
+        }
+
+    :param kwargs: keyword parameters
+    :param prefix: prefix to use
+    :return:
+    """
+    sep = "__"
+    p = f"{prefix}{sep}"
+    l = len(p)
+
+    params = {}
+    for kw in kwargs:
+        if kw.startswith(p):
+            n = kw[l:]
+            params[n] = kwargs[kw]
+    return params
+# end
+
+
+# ---------------------------------------------------------------------------
+# dict utilities
+# ---------------------------------------------------------------------------
+
 def dict_contains_some(d: dict, keys: Union[str, list[str]]):
     """
     Check if the dictionary contains some key in the list
+
+    :param d: dictionary
+    :param keys: key name or list of names
     """
     keys = as_list(keys, "keys")
     for k in keys:
@@ -233,7 +273,7 @@ def dict_contains_some(d: dict, keys: Union[str, list[str]]):
     return False
 
 
-def dict_union(d1: dict, d2: dict) -> dict:
+def dict_union(d1: dict, d2: dict, inplace=False) -> dict:
     """
     Union of 2 dictionaries. The second dictionary will override the
     common keys in the first one.
@@ -242,24 +282,12 @@ def dict_union(d1: dict, d2: dict) -> dict:
     :param d2: second dictionary
     :return: merged dictionary (a new one)
     """
-    if d1 is None: d1 = {}
-    if d2 is None: d2 = {}
-
-    d = {} | d1 | d2
-    return d
-
-
-def dict_update(d1: dict, d2: dict) -> dict:
-    """
-    Update dictionary 'd1' with the content of 'd2
-
-    :param d1: the dictionary to update
-    :param d2: the dictionary used for the updates
-    :return: the updated dictionary
-    """
-    for k in d2:
-        d1[k] = d2[k]
-    return d1
+    if inplace:
+        for k in d2:
+            d1[k] = d2[k]
+        return d1
+    else:
+        return {} | d1 | d2
 
 
 def dict_select(d: dict, keys: Union[str, list[str]], prefix=None) -> dict:
@@ -298,11 +326,7 @@ def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     :param keys: keys to remove
     :return: the new dictionary
     """
-    keys = as_list(keys)
-    # keys is a string
-    if len(keys) == 0:
-        return {} | d1
-
+    keys = set(as_list(keys))
     d = {}
     for k in d1:
         if k in keys:
@@ -311,7 +335,7 @@ def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     return d
 
 
-def dict_rename(d: dict, k1: str, k2: str) -> dict:
+def dict_rename(d: dict, k1: str, k2: str, inplace=False) -> dict:
     """
     Rename the key 'k1' in the dictionary as 'k2
 
@@ -320,24 +344,28 @@ def dict_rename(d: dict, k1: str, k2: str) -> dict:
     :param k2: new name to use
     :return: the new dictionary
     """
+    if not inplace:
+        d = {} | d
     if k1 not in d:
         return d
+
     val = d[k1]
     del d[k1]
     d[k2] = val
     return d
 
 
-def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
+def dict_del(d: dict, keys: Union[str, list[str]], inplace=False) -> dict:
     """
     Remove the list of keys from the dictionary
+
     :param d: dictionary
     :param keys: key(s) to remove
     :return: the updated dictionary
     """
-    d = {} | d
-    if isinstance(keys, str):
-        keys = list[keys]
+    keys = as_list(keys, 'keys')
+    if not inplace:
+        d = {} | d
     for k in keys:
         if k in d:
             del d[k]

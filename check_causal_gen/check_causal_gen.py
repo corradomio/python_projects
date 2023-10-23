@@ -1,12 +1,12 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import netx as nxx
-from causalx import IIDSimulation, PC
+from causalx import IIDSimulation
+from causalx.algorithms import PC
 
 
 def gen():
     G = nxx.random_dag(10, 20)
-    M = nx.adjacency_matrix(G).A
 
     nxx.draw(G)
     plt.show()

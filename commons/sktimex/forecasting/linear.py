@@ -6,9 +6,9 @@ import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
 from .base import ExtendedBaseForecaster
-from sktimex.lags import resolve_lags, resolve_tlags
-from sktimex.transform.linear import LinearTrainTransform, LinearPredictTransform
-from sktimex.utils import PD_TYPES, to_matrix, import_from, qualified_name
+from ..lags import resolve_lags, resolve_tlags
+from ..transform.linear import LinearTrainTransform, LinearPredictTransform
+from ..utils import PD_TYPES, to_matrix, import_from, qualified_name
 
 __all__ = [
     "LinearForecastRegressor"

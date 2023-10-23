@@ -344,7 +344,7 @@ class PeriodicEncoder(XyBaseEncoder):
 
     # -----------------------------------------------------------------------
 
-    def transform(self, X, y=None) -> pd.DataFrame:
+    def transform(self, X) -> pd.DataFrame:
         if isinstance(X, pd.PeriodIndex):
             fh = X
             X = pd.DataFrame(data=None, index=fh)

@@ -10,8 +10,8 @@ class PrintLog(skcl.PrintLog):
         net.set_params(callbacks__print_log=sktorchx.callbacks.PrintLog(delay=3))
     """
 
-    def __init__(self, delay=3, **kwargs):
-        super().__init__(kwargs)
+    def __init__(self, delay=3, sink=print, **kwargs):
+        super().__init__(sink=sink, **kwargs)
         self.delay = delay
         self.timestamp = -delay
 

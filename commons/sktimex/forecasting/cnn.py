@@ -1,8 +1,8 @@
 from torch import nn as nn
 
-from sktimex.transform.cnn import CNNTrainTransform, CNNPredictTransform
-from sktimex.transform.cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
-from sktimex.utils import FH_TYPES, PD_TYPES, to_matrix
+from ..transform.cnn import CNNTrainTransform, CNNPredictTransform
+from ..transform.cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
+from ..utils import FH_TYPES, PD_TYPES, to_matrix
 from .nn import *
 
 __all__ = [

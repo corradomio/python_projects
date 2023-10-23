@@ -5,10 +5,10 @@ from typing import Union, Any
 from sktime.forecasting.base import ForecastingHorizon
 
 from .base import ExtendedBaseForecaster
-from sktimex.forecasting.compose import make_reduction
-from sktimex.lags import LagSlots, resolve_lags
-from sktimex.utils import import_from, NoneType, kwval, dict_del, qualified_name
-from sktimex.utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
+from ..forecasting.compose import make_reduction
+from ..lags import LagSlots, resolve_lags
+from ..utils import import_from, NoneType, kwval, dict_del, qualified_name
+from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
 
 __all__ = [
     "ScikitForecastRegressor"

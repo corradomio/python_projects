@@ -8,8 +8,8 @@ from sktime.forecasting.base import ForecastingHorizon
 from torchx import nnlin as nnx
 from numpyx.scalers import MinMaxScaler
 from .base import ExtendedBaseForecaster
-from sktimex.lags import resolve_lags, LagSlots
-from sktimex.utils import import_from
+from ..lags import resolve_lags, LagSlots
+from ..utils import import_from
 
 # ---------------------------------------------------------------------------
 # Optimizers
