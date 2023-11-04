@@ -3,7 +3,7 @@ import pandas as pd
 from stdlib import NoneType
 from .base import datetime_encode, onehot_encode, binary_encode, \
     set_index, ignore_columns, datetime_reindex, as_list, \
-    find_unnamed_columns, find_binary
+    find_unnamed_columns, find_binary, dataframe_sort
 from .time import periodic_encode
 
 
@@ -112,26 +112,28 @@ def read_database(url: str, dtype, **kwargs):
 
 def read_data(file: str,
               *,
-              dtype=None,
-              categorical=None,
-              boolean=None,
-              numeric=None,
-              onehot=None,
-              binary=None,
+              dtype=None,       # list of columns types
+              categorical=None, # categorical columns
+              boolean=None,     # boolean columns
+              numeric=None,     # numerical/float columns
+              onehot=None,      # columns to convert using onehot encoding
+              binary=None,      # columns to convert using onehot encoding in a single column
 
-              index=None,
-              ignore=None,
-              ignore_unnamed=False,
+              index=None,       # columns to use as index
+              ignore=None,      # columns to ignore
+              ignore_unnamed=False,     # if to ignore 'Unnamed *' columns
 
-              datetime=None,
-              periodic=None,
+              datetime=None,    # datetime column to convert in a PeriodTime
 
-              count=False,
-              reindex=False,
+              periodic=None,    # [EXPERIMENTAL]
+              count=False,      # [EXPERIMENTAL] if to add the column 'count' with value 1
+              reindex=False,    # [EXPERIMENTAL] if to reindex the dataset
+              sort=False,       # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
 
-              na_values=None,
-              dropna=False,
-              **kwargs) -> pd.DataFrame:
+              dropna=False,     # if to drop the rows containing NaN values
+              na_values=None,   # strings to consider NaN values
+              **kwargs          # parameters to pass to 'pandas.read_*(...)' routine
+              ) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -176,24 +178,32 @@ def read_data(file: str,
                     (case insensitive)
                 - enum: string used as enumeration
                 - ienum: integer value used as enumeration
-    :param categorical: columns to convert in 'pandas.categorical' format
-    :param boolean: columns to convert in 'boolean' type
-    :param numeric: columns to convert in 'float' type. To force a float value on integer columns
-    :param datetime: column used as datetime. Formats:
-                None
-                col: column already in datetime format
-                (col, format): 'format' used to convert the string into pandas datetime
-                (col, format, freq): 'freq' used to convert a datetime in a pandas period
-    :param index: column or list of columns to use as index. With multiple columns, it is created
-                a MultiIndex following the columns order
-    :param ignore: column or list of columns to ignore
-    :param ignore_unnamed: if to ignore 'Unnamed: *' columns
-    :param onehot: columns to convert using onehot encoding
+    :param categorical: column(s) to convert in 'pandas.categorical' value
+    :param boolean: column(s) to convert in 'boolean' value (False, True)
+            It support several 'boolean' values:
+                0/1, 'f'/'t', 'F'/'T', 'false'/'true', 'False'/'True', 'off'/'on', 'close'/'open'
+    :param onehot: column(s) to convert using onehot encoding
+    :param binary: column(s) to convert using onehot encoding in a single column.
+            If the column contains 3+ values, it is not converted
+    :param numeric: column(s) to convert in 'float' type. To force float values on integer columns
+    :param datetime: column used as datetime. Supported formats:
+                - col: column already in datetime format
+                - (col, format): 'format' used to convert the string into pandas datetime
+                - (col, format, freq): 'freq' used to convert a datetime in a pandas period
+    :param index: column(s) to use as pandas index.
+            With multiple columns, it is created a MultiIndex following the columns order.
+            Used to specify the index for a dataset multi-time series.
+            The datetime index must be the last index in the list
+            The columns are not automatically ignored
+    :param ignore: column(s) to ignore
+    :param ignore_unnamed: if to ignore 'Unnamed: *' columns, created automatically by pandas read_*
+            routines
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
     :param periodic: if to add 'periodic' information (EXPERIMENTAL)
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
-    :param dict kwargs: extra parameters passed to pd.read_xxx()
+    :param sort: resort the dataframe based on index or column(s) (EXPERIMENTAL)
+    :param dict kwargs: extra parameters passed to pd.read_*()
     :return pd.DataFrame: a Pandas DataFrame
     """
     assert isinstance(file, str), "'file' must be a str"
@@ -285,6 +295,11 @@ def read_data(file: str,
     # compose the index
     if len(index) > 0:
         df = set_index(df, index)
+
+    # force a sort
+    # Note: here it is possible to use columns not yet removed
+    if sort is not False:
+        df = dataframe_sort(df, sort)
 
     # add 'Unnamed: ...' columns to the list of columns to remove
     if ignore_unnamed:

@@ -59,7 +59,7 @@ class GroupsEncoder(BaseEncoder):
     # -----------------------------------------------------------------------
 
     def fit(self, X):
-        self._check_X(X)
+        X = self._check_X(X)
 
         if len(self.groups) > 0:
             self._fit_by_columns(X)
@@ -148,7 +148,7 @@ class GroupsEncoder(BaseEncoder):
 
     def _inverse_transform_plain(self, X):
         params = self._get_params(None)
-        return self._apply_transform(X, params)
+        return self._apply_inverse_transform(X, params)
 
     def _inverse_transform_by_columns(self, X):
         X_dict: dict = dict()

@@ -47,32 +47,6 @@ def _resolve_xylags(lags, forecast=False):
         raise ValueError(f"Unsupported lags '{lags}'")
 
 
-# def _resolve_lags(lags, forecast=False):
-#     if forecast:
-#         if lags is None:
-#             return []
-#         elif isinstance(lags, int):
-#             return list(range(lags))
-#         else:
-#             return lags
-#     # end
-#     if lags is None:
-#         lags = [[0], []]
-#     elif isinstance(lags, int):
-#         lags = [lags, lags]
-#     if len(lags) == 0:
-#         lags = [[0], []]
-#     elif len(lags) == 1:
-#         lags = lags + [[]]
-#
-#     xlags, ylags = lags
-#     if isinstance(xlags, int):
-#         xlags = list(range(1, xlags+1))
-#     if isinstance(ylags, int):
-#         ylags = list(range(1, ylags+1))
-#
-#     return xlags, ylags
-
 def lmax(l): return max(l) if l else 0
 
 
@@ -160,7 +134,7 @@ class LagsTransformer(XyBaseEncoder):
         if len(self.target) > 0:
             y = X[self.target]
 
-        self._check_Xy(X, y)
+        X, y = self._check_Xy(X, y)
 
         self.Xh = X
         self.yh = y

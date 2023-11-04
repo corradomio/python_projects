@@ -8,7 +8,7 @@ warnings.filterwarnings("ignore")
 
 LOGGER = logging.getLogger("root")
 
-DATA_DIR = "./data"
+DATA_DIR = "../data"
 
 DATETIME = ["imp_date", "[%Y/%m/%d %H:%M:%S]", "M"]
 TARGET = "import_kg"

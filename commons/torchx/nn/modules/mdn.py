@@ -11,7 +11,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from . import lin as nnx
-from stdlib import mul
+from stdlib import mul_
 
 
 # ---------------------------------------------------------------------------
@@ -220,7 +220,7 @@ class MixtureDensityNetworkPredictor:
 
     def __init__(self, model, out_features, n_mixtures, n_samples=1):
         self.model = model
-        self.out_features = mul(out_features)
+        self.out_features = mul_(out_features)
         self.n_mixtures = n_mixtures
         self.n_samples = n_samples
 

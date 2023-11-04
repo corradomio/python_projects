@@ -11,6 +11,7 @@ from ..transform.linear import LinearTrainTransform, LinearPredictTransform
 from ..utils import PD_TYPES, to_matrix, import_from, qualified_name
 
 __all__ = [
+    "LinearForecaster",
     "LinearForecastRegressor"
 ]
 
@@ -42,7 +43,7 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# LinearForecastRegressor
+# LinearForecaster
 # ---------------------------------------------------------------------------
 #
 # We suppose that the dataset is ALREADY normalized.
@@ -161,7 +162,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         self.yh: Optional[np.ndarray] = None
 
         name = self._class_name[self._class_name.rfind('.')+1:]
-        self._log = logging.getLogger(f"LinearForecastRegressor.{name}")
+        self._log = logging.getLogger(f"LinearForecaster.{name}")
         # self._log.info(f"Created {self}")
     # end
 
@@ -262,7 +263,7 @@ class LinearForecaster(ExtendedBaseForecaster):
 
     def _predict_flatten(self, Xs, nfh, fhp):
         pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
-        yp = pt.fit(X=self.Xh, y=self.yh).transform(X=Xs, fh=nfh)  # save X,y prediction
+        yp = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
 
         for i in range(nfh):
             Xt = pt.step(i)
@@ -278,7 +279,7 @@ class LinearForecaster(ExtendedBaseForecaster):
 
     def _predict_tlags(self, Xs, nfh, fhp):
         pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
-        yp = pt.fit(X=self.Xh, y=self.yh).transform(X=Xs, fh=nfh)  # save X,y prediction
+        yp = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
         tlags = self._tlags
 
         i = 0
@@ -390,7 +391,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         return state
 
     def __repr__(self, **kwargs):
-        return f"LinearForecastRegressor[{self._class_name}]"
+        return f"LinearForecaster[{self._class_name}]"
 
     # -----------------------------------------------------------------------
     # End

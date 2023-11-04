@@ -15,8 +15,11 @@ __all__ = [
     "find_binary",
     "binary_encode",
     "onehot_encode",
+
     "datetime_encode",
     "datetime_reindex",
+
+    "dataframe_sort",
 
     "groups_list",
     "groups_split",
@@ -185,8 +188,24 @@ def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFram
     # remove duplicated index keys
     df = df[~df.index.duplicated(keep=keep)]
     # make sure that all timestamps are present
-    df = df.reindex(index= dtrange, method=mehod)
+    df = df.reindex(index=dtrange, method=mehod)
     return df
+# end
+
+
+# ---------------------------------------------------------------------------
+# dataframe_sort
+# ---------------------------------------------------------------------------
+
+def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, ascending=True) \
+    -> pd.DataFrame:
+    if sort in [None, False, [], ()]:
+        return df
+    if sort is True:
+        return df.sort_index(axis=0, ascending=ascending)
+    else:
+        sort = as_list(sort, 'sort')
+        return df.sort_values(axis=0, by=sort, ascending=ascending)
 # end
 
 
@@ -299,7 +318,7 @@ def _groups_split_on_index(df, drop, keep):
     return dfdict
 
 
-def groups_split(df: pd.DataFrame, groups: Union[None, str, list[str]]=None, drop=True, keep=-1) \
+def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
         -> dict[tuple[str], pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list or the MultiIndex.
@@ -480,7 +499,6 @@ def groups_select(df: pd.DataFrame, *,
         return _groups_select_by_index(df, values, drop)
     else:
         return _group_select_by_columns(df, groups, values, drop)
-
 # end
 
 
@@ -746,7 +764,7 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str, list[str]] = None) \
-    -> list[PANDAS_TYPE]:
+        -> list[PANDAS_TYPE]:
     """
     Split the df in 'data_list' in X, y
 
@@ -775,8 +793,8 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
 
 
 def nan_split(*data_list,
-              ignore: Union[None, str, list[str]]=None,
-              columns: Union[None, str, list[str]]=None) -> list[PANDAS_TYPE]:
+              ignore: Union[None, str, list[str]] = None,
+              columns: Union[None, str, list[str]] = None) -> list[PANDAS_TYPE]:
     """
     Remove the columns of the dataframe containing nans
 
@@ -852,7 +870,7 @@ def _train_test_split_multiindex(data, train_size, test_size) -> tuple[pd.DataFr
 def _sort_by(data, sortby):
     if len(sortby) > 0:
         data.sort_values(by=sortby, axis=0, ascending=True, inplace=True)
-    return data        
+    return data
 # end
 
 
@@ -889,7 +907,7 @@ def train_test_split(*data_list, train_size=0, test_size=0,
         assert data is not None
 
         if len(groups) > 0:
-            dfdict = groups_split(data, groups)
+            dfdict = groups_split(data, groups=groups)
             d_trn = {}
             d_tst = {}
             for key in dfdict:
@@ -899,8 +917,8 @@ def train_test_split(*data_list, train_size=0, test_size=0,
                 d_trn[key] = trn
                 d_tst[key] = tst
             # end
-            trn = groups_merge(d_trn, groups)
-            tst = groups_merge(d_tst, groups)
+            trn = groups_merge(d_trn, groups=groups)
+            tst = groups_merge(d_tst, groups=groups)
         elif type(data.index) == pd.MultiIndex:
             trn, tst = _train_test_split_multiindex(data, train_size=train_size, test_size=test_size)
         else:
@@ -1037,7 +1055,6 @@ def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
                           columns: Union[str, list[str]],
                           target: Optional[str] = None,
                           groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
-
     if isinstance(columns, str):
         columns = [columns]
 
@@ -1090,7 +1107,6 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
                   columns: Union[str, list[str]],
                   outlier_std: float = 3,
                   groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
-
     if isinstance(columns, str):
         columns = [columns]
 

@@ -1,3 +1,3 @@
 # For compatibility
-from .models.linear import LinearForecastRegressor, LinearForecaster
-from .models.scikit import ScikitForecastRegressor, ScikitForecaster
+from .forecasting.linear import LinearForecastRegressor, LinearForecaster
+from .forecasting.scikit import ScikitForecastRegressor, ScikitForecaster

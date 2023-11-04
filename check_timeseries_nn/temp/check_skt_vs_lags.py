@@ -13,12 +13,12 @@ warnings.filterwarnings("ignore")
 
 
 PLOTS_DIR = "./plots"
-DATA_DIR = "./data"
+DATA_DIR = "../data"
 
 DATETIME = ['date', "%Y-%m-%d", "M"]
 TARGET = 'volume'
-TARGET_2 = 'volume2'
 GROUPS = ['agency', 'sku']
+TARGET_2 = 'volume2'
 
 
 def plot_pred(y, y_pred):

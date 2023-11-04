@@ -25,6 +25,7 @@ venv
 lightning_logs
 *.pdf
 *.log
+*.h5
 check_causal_inference
 intro_dgm-main
 Hands*

@@ -181,17 +181,10 @@ class SimpleRNNForecaster(BaseRNNForecaster):
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
-        # fhp = fh
-        # if fhp.is_relative:
-        #     fh = fhp
-        #     fhp = fh.to_absolute(self.cutoff)
-        # else:
-        #     fh = fhp.to_relative(self.cutoff)
-
         nfh = int(fh[-1])
         Xs = to_matrix(X)
         pt = RNNPredictTransform(slots=self._slots, tlags=[0])
-        ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
+        ys = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)
 
         for i in range(nfh):
             Xt = pt.step(i)
@@ -223,7 +216,7 @@ class SimpleRNNForecaster(BaseRNNForecaster):
         #   proj_size =0
         rnn_constructor = NNX_RNN_FLAVOURS[self._flavour]
         rnn = rnn_constructor(
-            steps=len(self._slots.target),
+            steps=len(self._slots.ylags),
             input_size=input_size,
             output_size=output_size,
             **self._rnn_args
@@ -288,17 +281,10 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
-        # fhp = fh
-        # if fhp.is_relative:
-        #     fh = fhp
-        #     fhp = fh.to_absolute(self.cutoff)
-        # else:
-        #     fh = fhp.to_relative(self.cutoff)
-
         nfh = int(fh[-1])
         Xs = to_matrix(X)
         pt = RNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
-        ys = pt.fit(self.Xh, self.yh).transform(Xs, fh=nfh)
+        ys = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)
 
         for i in range(nfh):
             Xt = pt.step(i)
@@ -345,8 +331,8 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
         input_models = []
         inner_size = 0
 
-        xlags_list = self._slots.input_lists
-        for xlags in xlags_list:
+        xlags_lists = self._slots.xlags_lists
+        for xlags in xlags_lists:
             rnn = rnn_constructor(
                 steps=len(xlags),
                 input_size=mx,
@@ -357,8 +343,8 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
 
             input_models.append(rnn)
 
-        ylags_list = self._slots.target_lists
-        for ylags in ylags_list:
+        ylags_lists = self._slots.ylags_lists
+        for ylags in ylags_lists:
             rnn = rnn_constructor(
                 steps=len(ylags),
                 input_size=my,

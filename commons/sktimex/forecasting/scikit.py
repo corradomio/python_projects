@@ -11,6 +11,7 @@ from ..utils import import_from, NoneType, kwval, dict_del, qualified_name
 from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
 
 __all__ = [
+    'ScikitForecaster',
     "ScikitForecastRegressor"
 ]
 
@@ -135,7 +136,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
             self._wrap_estimator(estimator)
 
         name = self._class_name[self._class_name.rfind('.')+1:]
-        self._log = logging.getLogger(f"ScikitForecastRegressor.{name}")
+        self._log = logging.getLogger(f"ScikitForecaster.{name}")
     # end
 
     def _create_estimator(self, estimator=None):
@@ -267,6 +268,13 @@ class ScikitForecaster(ExtendedBaseForecaster):
     #
     # -----------------------------------------------------------------------
 
+    def _update(self, y, X=None, update_params=True):
+        return super()._update(y=y, X=X, update_params=False)
+
+    # -----------------------------------------------------------------------
+    #
+    # -----------------------------------------------------------------------
+
     # def _update_fit(self, y, X):
     #     ...
 
@@ -314,7 +322,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
         return state
 
     def __repr__(self):
-        return f"ScikitForecastRegressor[{self._class_name}]"
+        return f"ScikitForecaster[{self._class_name}]"
 
     # -----------------------------------------------------------------------
     # end

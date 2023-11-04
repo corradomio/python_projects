@@ -1,11 +1,13 @@
-from typing import Union, Any
+from typing import Union, Any, Optional
 
 import numpy as np
 import pandas as pd
 
-# DON'T remove 'qualified_name' import! It is used in other modules
-# to avoid the direct dependency with 'stdlib'
-from stdlib import NoneType, qualified_name   # DON'T REMOVE!!!!
+# DON'T REMOVE!!!!
+# They are used in other modules to avoid the direct dependency with 'stdlib'
+from stdlib import NoneType, kwval, dict_del, import_from, qualified_name, lrange   # DON'T REMOVE!!!!
+# DON'T REMOVE!!!!
+
 from sktime.forecasting.base import ForecastingHorizon
 
 # ---------------------------------------------------------------------------
@@ -20,70 +22,34 @@ PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]
 
 
 # ---------------------------------------------------------------------------
-# utilities
+# Utilities
 # ---------------------------------------------------------------------------
 
-def to_matrix(data):
+def lmax(l: list) -> int:
+    if l is None or len(l) == 0:
+        return 0
+    else:
+        return max(l)
+
+
+def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=np.float32) -> Optional[np.ndarray]:
     if data is None:
         return None
-    if isinstance(data, (pd.Series, pd.DataFrame)):
-        data = data.to_numpy().astype(np.float32)
-    assert isinstance(data, np.ndarray)
-    if len(data.shape) == 1:
-        data = data.reshape(-1, 1)
+    if isinstance(data, pd.Series):
+        data = data.to_numpy().astype(dtype).reshape((-1, 1))
+    elif isinstance(data, pd.DataFrame):
+        data = data.to_numpy().astype(dtype)
+    elif len(data.shape) == 1:
+        assert isinstance(data, np.ndarray)
+        data = data.astype(dtype).reshape((-1, 1))
+    else:
+        assert isinstance(data, np.ndarray)
+        data = data.astype(dtype)
     return data
 
 
 def fh_range(n: int) -> ForecastingHorizon:
     return ForecastingHorizon(list(range(1, n+1)))
-
-
-def import_from(qname: str) -> Any:
-    import importlib
-    p = qname.rfind('.')
-    qmodule = qname[:p]
-    name = qname[p+1:]
-
-    module = importlib.import_module(qmodule)
-    clazz = getattr(module, name)
-    return clazz
-
-
-def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
-    d = {} | d
-    if isinstance(keys, str):
-        keys = list[keys]
-    for k in keys:
-        if k in d:
-            del d[k]
-    return d
-
-
-def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[str, tuple], defval: Any = None) -> Any:
-    if key not in kwargs:
-        return defval
-
-    def _tobool(s: str) -> bool:
-        if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
-            return False
-        if s in [1, True, 't', 'true', 'T', 'True', 'TRUE', 'on', 'yes', 'open']:
-            return True
-        else:
-            raise ValueError(f"Unsupported boolean value '{s}'")
-
-    val = kwargs[key]
-    if not isinstance(defval, str) and isinstance(val, str):
-        if defval is None:
-            return val
-        if isinstance(defval, bool):
-            return _tobool(val)
-        if isinstance(defval, int):
-            return int(val)
-        if isinstance(defval, float):
-            return float(val)
-        else:
-            raise ValueError(f"Unsupported conversion from str to '{type(defval)}'")
-    return val
 
 
 # ---------------------------------------------------------------------------

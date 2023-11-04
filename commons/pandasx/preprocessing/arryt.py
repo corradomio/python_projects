@@ -64,12 +64,12 @@ class LagsArrayForecaster(XyBaseEncoder):
         self.yp_shape = None  # y shape used in prediction
         self.yf_shape = None  # y forecast shape
 
-    def fit(self, X, y):
+    def fit(self, X, y=None):
         if isinstance(X, pd.PeriodIndex):
             fh = X
             X = pd.DataFrame(index=fh)
 
-        self._check_Xy(X, y)
+        X, y = self._check_Xy(X, y)
 
         self.X = X
         self.y = y
@@ -118,7 +118,7 @@ class LagsArrayForecaster(XyBaseEncoder):
             ix = X
             X = pd.DataFrame(index=ix)
 
-        self._check_X(X, y)
+        X = self._check_X(X)
 
         X_ = _to_numpy(X, self.dtype)
 
@@ -393,7 +393,7 @@ class LagsArrayTransformer(XyBaseEncoder):
     # -----------------------------------------------------------------------
 
     def fit(self, X=None, y=None):
-        self._check_Xy(X, y)
+        X, y = self._check_Xy(X, y)
 
         self.X = X
         self.y = y
@@ -434,7 +434,7 @@ class LagsArrayTransformer(XyBaseEncoder):
             fh = X
             X = pd.DataFrame(index=fh)
 
-        self._check_Xy(X, y)
+        X, y = self._check_Xy(X, y)
 
         X_ = _to_numpy(X, self.dtype)
         y_ = _to_numpy(y, self.dtype)
@@ -461,7 +461,7 @@ class LagsArrayTransformer(XyBaseEncoder):
     # -----------------------------------------------------------------------
 
     def forecaster(self) -> LagsArrayForecaster:
-        faf = LagsArrayForecaster(
+        laf = LagsArrayForecaster(
             xlags=self.xlags,
             ylags=self.ylags,
             tlags=self.tlags,
@@ -471,8 +471,8 @@ class LagsArrayTransformer(XyBaseEncoder):
             y_flatten=self.y_flatten
         )
 
-        faf.fit(self.X, self.y)
-        return faf
+        laf.fit(self.X, self.y)
+        return laf
 
     # -----------------------------------------------------------------------
 

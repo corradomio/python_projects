@@ -1,5 +1,5 @@
 from .encoders import OneHotEncoder, BinaryLabelsEncoder
-from .encoderx import PandasCategoricalEncoder, OrderedLabelEncoder, DTypeEncoder
+from .encoderx import PandasCategoricalEncoder, OrderedLabelsEncoder, DTypeEncoder
 from .scalers import StandardScaler, MinMaxScaler
 from .time import DatetimeEncoder
 from .transformers import IgnoreTransformer

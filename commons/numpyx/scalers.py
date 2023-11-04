@@ -122,7 +122,7 @@ class MinMaxScaler(Scaler):
 # end
 
 
-class NormalScaler(Scaler):
+class StandardScaler(Scaler):
     """
    Apply a scaling to the array in such way that all valuer have
    a normal distribution with parameters meanr and stdr
@@ -202,3 +202,5 @@ class NormalScaler(Scaler):
         return scaled
 # end
 
+
+NormalScaler = StandardScaler

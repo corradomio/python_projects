@@ -76,20 +76,18 @@ class StandardScaler(GroupsEncoder):
         means = {}
         sdevs = {}
         for col in columns:
-
             x = X[col].to_numpy(dtype=float)
-            vmin, vmax = min(x), max(x)
 
-            if (vmax - vmin) <= NO_SCALE_EPS:
-                means[col] = x.mean()
-                sdevs[col] = 0.
-            else:
-                means[col] = x.mean()
-                sdevs[col] = x.std()
-            # end
+            if 0 <= min(x) <= max(x) <= 1:
+                continue
+
+            means[col] = x.mean()
+            sdevs[col] = x.std()
+        # end
         return means, sdevs
 
     def _transform(self, X: pd.DataFrame, means, sdevs) -> pd.DataFrame:
+        X = X.copy()
         X = self._clip(X, means, sdevs)
         X = self._scale(X, means, sdevs)
         return X
@@ -116,7 +114,7 @@ class StandardScaler(GroupsEncoder):
             X[col] = x
         return X
 
-    def _scale(self, X, means, sdevs):
+    def _scale(self, X: pd.DataFrame, means, sdevs):
         meanv = self._meanv
         sdevv = self._sdevv
 
@@ -129,28 +127,29 @@ class StandardScaler(GroupsEncoder):
 
             x = X[col].to_numpy(dtype=float)
 
-            if sdevc <= NO_SCALE_EPS:
-                x = meanv + (x - meanc) * sdevv
-            else:
+            if sdevc > 0:
                 x = meanv + (x - meanc) / sdevc * sdevv
+            else:   # sdevc is 0 for CONSTANT values
+                x = meanv
 
             X[col] = x
         return X
 
     def _inverse_transform(self, X, means, sdevs):
+        X = X.copy()
         columns = self._get_columns(X)
         meanv = self._meanv
         sdevv = self._sdevv
 
         for col in columns:
+            if col not in means:
+                continue
+
             x = X[col].to_numpy(dtype=float)
             meanc = means[col]
             sdevc = sdevs[col]
 
-            if sdevc <= NO_SCALE_EPS:
-                x = (x - meanv)/sdevv + meanc
-            else:
-                x = (x - meanv)/sdevv*sdevc + meanc
+            x = (x - meanv)/sdevv*sdevc + meanc
 
             X[col] = x
         return X
@@ -174,7 +173,7 @@ class MinMaxScaler(GroupsEncoder):
     def __init__(self, columns: Union[None, str, list[str]] = None,
                  feature_range=(0, 1),
                  *,
-                 quantile=.05, clip=False,
+                 quantile=0., clip=False,
                  groups=None, copy=True):
         """
         Apply the scaler to the selected columns.
@@ -182,12 +181,14 @@ class MinMaxScaler(GroupsEncoder):
         If it is specified 'groups' or the has a MultIndex, the scaling is applied on
             'per-group' basis
 
-        :param columns: column or columns where to apply the scaling.
+        :param columns: column(s) where to apply the scaling.
             If None, the scaling is applied to all columns
         :param feature_range: tuple (min, max) values to use
         :param quantile: used to exclude too low or too high values
-            Can be an integer value or a value < 1.
-        :param clip: if to clip the outlier values
+            Can be an integer value or a positive value < 1.
+            In the last case, it is converted in an integer with 'int(quantile*len(X))'
+        :param clip: if to clip the outlier values. If it is False and quantile is not 0,
+            the scaler can generate number less than 0 and greater than 1.
         :param groups: if the dataset contains multiple groups, column(s) used to identify each group
         """
         super().__init__(columns, groups, copy)
@@ -244,18 +245,28 @@ class MinMaxScaler(GroupsEncoder):
         nskip = self.quantile if self.quantile >= 1 else int(self.quantile*n)
 
         for col in self._get_columns(X):
+            # DANGEROUS WARNING:
+            # 1) X[col].to_numpy() return the INTERNAL numpy array!
+            # 2) x.sort() SORT the array INPLACE.
+            # this means that it is MANDATORY to CLONE the numpy array!!!!
             x = X[col].to_numpy()
+
+            if 0 <= min(x) <= max(x) <= 1:
+                continue
+
+            x = x.copy()
             x.sort()
 
             minc = x[nskip]
             maxc = x[n - nskip - 1]
 
             mins[col] = minc
-            deltas[col] = maxc - minc if maxc > (minc + NO_SCALE_EPS) else 1.
+            deltas[col] = maxc - minc
         # end
         return mins, deltas
 
     def _transform(self, X, mins, deltas):
+        X = X.copy()
         X = self._clip(X, mins, deltas)
         X = self._scale(X, mins, deltas)
         return X
@@ -265,6 +276,9 @@ class MinMaxScaler(GroupsEncoder):
             return X
 
         for col in self._get_columns(X):
+            if col not in mins:
+                continue
+
             minc = mins[col]
             deltac = deltas[col]
             maxc = minc + deltac
@@ -276,33 +290,44 @@ class MinMaxScaler(GroupsEncoder):
             X[col] = x
         return X
 
-    def _scale(self, X, mins, deltas):
+    def _scale(self, X: pd.DataFrame, mins, deltas):
         minv = self._minv
         deltav = self._deltav
 
         columns = self._get_columns(X)
         for col in columns:
+            if col not in mins:
+                continue
+
             minc = mins[col]
             deltac = deltas[col]
 
             x = X[col]
-            x = minv + deltav * (x - minc) / deltac
+
+            if deltac > 0:
+                x = minv + deltav * (x - minc) / deltac
+            else:
+                x = minv + deltav * (x - minc)
 
             X[col] = x
         return X
 
     def _inverse_transform(self, X, mins, deltas):
+        X = X.copy()
         minv = self._minv
         deltav = self._deltav
 
         for col in self._get_columns(X):
+            if col not in mins:
+                continue
+
             minc = mins[col]
             deltac = deltas[col]
 
-            values = (X[col].to_numpy(dtype=float) - minv)/deltav
-            values = minc + deltac*values
+            x = X[col].to_numpy(dtype=float)
+            x = minc + (x - minv)/deltav*deltac
 
-            X[col] = values
+            X[col] = x
         return X
 # end
 

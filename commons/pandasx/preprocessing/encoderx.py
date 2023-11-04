@@ -30,7 +30,7 @@ class DTypeEncoder(BaseEncoder):
 # OrderedLabelEncoder
 # ---------------------------------------------------------------------------
 
-class OrderedLabelEncoder(BaseEncoder):
+class OrderedLabelsEncoder(BaseEncoder):
     # As an One Hot encoding but it ensure that the labels have a unique order
     # It is NOT reasonable to split the dataset in groups because it is possible
     # that each group can have different number of labels, than the number of
@@ -46,7 +46,7 @@ class OrderedLabelEncoder(BaseEncoder):
         self._mapping = {}
 
     def fit(self, X: DataFrame):
-        self._check_X(X)
+        X = self._check_X(X)
 
         for col in self._get_columns(X):
             unique = sorted(X[col].unique())

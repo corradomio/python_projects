@@ -7,6 +7,38 @@ CollectionType = (list, tuple)
 
 
 # ---------------------------------------------------------------------------
+# Generic utilities
+# ---------------------------------------------------------------------------
+
+def to_area(ts) -> str:
+    if len(ts) == 0:
+        return "root"
+    else:
+        return "/".join(list(ts))
+
+
+def from_area(tsname) -> tuple[str]:
+    if tsname == 'root':
+        return tuple()
+    else:
+        return tuple(tsname.split('/'))
+
+
+def to_name(ts) -> str:
+    if len(ts) == 0:
+        return "root"
+    else:
+        return "~".join(list(ts))
+
+
+def from_name(tsname) -> tuple[str]:
+    if tsname == 'root':
+        return tuple()
+    else:
+        return tuple(tsname.split('/'))
+
+
+# ---------------------------------------------------------------------------
 # Class names
 # ---------------------------------------------------------------------------
 
@@ -47,41 +79,6 @@ def import_from(qname: str) -> Any:
     clazz = getattr(module, name)
     return clazz
 # end
-
-
-# ---------------------------------------------------------------------------
-# Generic utilities
-# ---------------------------------------------------------------------------
-# tuple, sep -> str
-# str, sep -> tuple
-
-def to_name(ts: tuple[str], sep="~") -> str:
-    """
-    Convert a list/tuple of strings in a single string with teh tuple's
-    components separated by '~'.
-    The empty tuple is converted in 'root'
-
-    :param ts: tuple of string
-    :param sep: strings separator
-    :return: concatenated string
-    """
-    if len(ts) == 0:
-        return "root"
-    else:
-        return sep.join(list(ts))
-
-
-def from_name(tsname, sep="~") -> tuple[str]:
-    """
-    Convert the string in its components separated by '~'
-    :param tsname: tuples name
-    :param sep: name's separator
-    :return: teh tuple
-    """
-    if tsname == 'root':
-        return tuple()
-    else:
-        return tuple(tsname.split(sep))
 
 
 # ---------------------------------------------------------------------------
@@ -145,8 +142,8 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
 # ---------------------------------------------------------------------------
 # Numerical aggregation functions
 # ---------------------------------------------------------------------------
-# sum  as Python 'sum([...])'
-# mul  'mul([...])'
+# sum_  as Python 'sum([...])'
+# mul_  as Pythin 'sum([...]) but with multiplication
 #
 
 def sum_(x):
@@ -181,43 +178,67 @@ def mul_(x):
 #
 #
 
-# def as_kwargs(locals):
-#     kwargs = {} | locals
-#     for key in ['forecaster', 'window_length', 'reduction_strategy',
-#                 'self', '__class__']:
-#         del kwargs[key]
-#     return kwargs
-# # end
+def as_kwargs(locals):
+    kwargs = {} | locals
+    for key in ['forecaster', 'window_length', 'reduction_strategy',
+                'self', '__class__']:
+        del kwargs[key]
+    return kwargs
+# end
 
 
-def kwval(kwargs: dict, key: str, defval=None) -> Any:
+def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None,
+          keys=None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
-    It convert automatically the string into the same type of defval.
-    Supported types: None, str, bool, int, float
-
     :param kwargs: dictionary containing pairs (key, value)
-    :param key: key to read
+    :param key: key (or alternate names) to read
+    :param keys: list of keys used to navigate the dictionary
     :param defval: value to return is the key is not in the dictionary
     :return: the value in the dictionary or the default value
     """
-    if key not in kwargs:
-        return defval
+    def _parse_val(val):
+        if not isinstance(defval, str) and isinstance(val, str):
+            if defval is None:
+                return val
+            if isinstance(defval, bool):
+                return tobool(val)
+            if isinstance(defval, int):
+                return int(val)
+            if isinstance(defval, float):
+                return float(val)
+            else:
+                raise ValueError(f"Unsupported conversion from str to '{type(defval)}'")
+        return val
 
-    val = kwargs[key]
-    if not isinstance(defval, str) and isinstance(val, str):
-        if defval is None:
-            return val
-        if isinstance(defval, bool):
-            return tobool(val)
-        if isinstance(defval, int):
-            return int(val)
-        if isinstance(defval, float):
-            return float(val)
+    if keys is not None:
+        assert isinstance(keys, CollectionType)
+        n = len(keys)
+        for i in range(n-1):
+            key = keys[i]
+            if key not in kwargs:
+                return defval
+            kwargs = kwargs[key]
+        # end
+        key = keys[-1]
+        if key not in kwargs:
+            return defval
         else:
-            raise ValueError(f"Unsupported conversion from str to '{type(defval)}'")
-    return val
+            return _parse_val(kwargs[key])
+    # end
+
+    if isinstance(key, CollectionType):
+        altkeys = key
+        for key in altkeys:
+            if key in kwargs:
+                return _parse_val(kwargs[key])
+        return defval
+    elif key in kwargs:
+        return _parse_val(kwargs[key])
+    else:
+        return defval
+# end
 
 
 def kwparams(kwargs: dict, prefix: str) -> dict:
@@ -290,43 +311,33 @@ def dict_union(d1: dict, d2: dict, inplace=False) -> dict:
         return {} | d1 | d2
 
 
-def dict_select(d: dict, keys: Union[str, list[str]], prefix=None) -> dict:
-    """
-    Create a new dictionary containing only the keys specified
-
-    Example:
-
-    :param d: original dictionary
-    :param keys: keys to select
-    :param prefix: prefix used to save the keys in 'd'
-    :return: new dictionary
-    """
-    keys = as_list(keys, "keys")
-    sd = {}
+def dict_select(d: dict, keys: list[str]) -> dict:
+    s = {}
     for k in keys:
-        # if prefix is defined, try to use <prefix><key>
-        # if <prefix><key> is not present, try tp use <key>
-        if prefix:
-            dk = prefix + k
-            if dk not in d:
-                dk = k
-        else:
-            dk = k
-
-        if dk in d:
-            sd[k] = d[dk]
-    return sd
+        if k in d:
+            s[k] = d[k]
+    return s
 
 
 def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     """
     Remove from the dictionary some keys (and values
-
     :param d1: dictionary
     :param keys: keys to remove
     :return: the new dictionary
     """
-    keys = set(as_list(keys))
+    # keys is a string
+    if keys is None: keys = []
+    if isinstance(keys, str): keys = [keys]
+    assert isinstance(keys, CollectionType)
+
+    # keys is None/empty
+    if len(keys) == 0:
+        return d1
+    # dict doesn't contain keys
+    if len(set(keys).intersection(d1.keys())) == 0:
+        return d1
+
     d = {}
     for k in d1:
         if k in keys:
@@ -335,37 +346,44 @@ def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     return d
 
 
-def dict_rename(d: dict, k1: str, k2: str, inplace=False) -> dict:
+def dict_rename(d: dict, k1: Union[str, list[str], dict[str, str]], k2: Optional[str]=None) -> dict:
     """
     Rename the key 'k1' in the dictionary as 'k2
-
     :param d: dictionary
-    :param k1: key to rename
+    :param k1: key to rename, or a list of tuples [(kold, knew), ...)
+                or a dict {kold: knew, ...}
     :param k2: new name to use
     :return: the new dictionary
     """
-    if not inplace:
-        d = {} | d
-    if k1 not in d:
-        return d
+    def _renk(kold, knew):
+        if kold in d:
+            v = d[kold]
+            del d[kold]
+            d[knew] = v
 
-    val = d[k1]
-    del d[k1]
-    d[k2] = val
+    if isinstance(k1, str):
+        _renk(k1, k2)
+    elif isinstance(k1, CollectionType):
+        klist = k1
+        for k1, k2 in klist:
+            _renk(k1, k2)
+    elif isinstance(k1, dict):
+        kdict = k1
+        for k1 in kdict:
+            k2 = kdict[k1]
+            _renk(k1, k2)
     return d
 
 
-def dict_del(d: dict, keys: Union[str, list[str]], inplace=False) -> dict:
+def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
     """
     Remove the list of keys from the dictionary
-
     :param d: dictionary
     :param keys: key(s) to remove
     :return: the updated dictionary
     """
-    keys = as_list(keys, 'keys')
-    if not inplace:
-        d = {} | d
+    if isinstance(keys, str):
+        keys = list[keys]
     for k in keys:
         if k in d:
             del d[k]
@@ -421,7 +439,6 @@ def is_filesystem(datasource: str) -> bool:
 #
 
 def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
-    # assert (dt, (NoneType, str))
 
     if dt is None:
         return None

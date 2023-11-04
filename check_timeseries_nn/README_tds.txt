@@ -30,3 +30,15 @@ Time Series & Attention Mechanism
       https://arxiv.org/pdf/1508.04025.pdf (Luong).
       https://arxiv.org/pdf/1409.0473.pdf (Bahdanau).
       https://machinelearningmastery.com/the-bahdanau-attention-mechanism/ (Some more explanation).
+
+
+Implementations
+---------------
+
+    https://medium.com/@maxbrenner-ai/implementing-seq2seq-models-for-efficient-time-series-forecasting-88dba1d66187
+
+    Questo articolo ha un sacco di CAZZATE:
+    1) come input usa le informazioni da predire.
+    2) il codice puo' essere semplificato
+    3) concatena come un'unica serie temporale 3 serie temporali che hanno properieta' statistiche
+       diverse

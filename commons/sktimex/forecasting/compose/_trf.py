@@ -186,7 +186,7 @@ class TabularRegressorForecaster(_Reducer):
         tlags = _to_tlags(fh)
         lt = LinearTrainTransform(slots=slots, tlags=tlags)
 
-        Xt, yt = lt.fit_transform(X, y)
+        Xt, yt = lt.fit_transform(y=y, X=X)
         return yt, Xt
 
     def _fit(self, y, X=None, fh=None):
@@ -226,7 +226,7 @@ class TabularRegressorForecaster(_Reducer):
         tlags = _to_tlags(self._fh)
 
         pt = LinearPredictTransform(slots=slots, tlags=tlags)
-        y_pred = pt.fit(X=Xh, y=yh).transform(X=Xp, fh=n)
+        y_pred = pt.fit(y=yh, X=Xh).transform(fh=n, X=Xp)
 
         i = 0
         while i < n:

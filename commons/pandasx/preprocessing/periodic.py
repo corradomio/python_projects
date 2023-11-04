@@ -3,7 +3,7 @@ from typing import Union, Optional
 import numpy as np
 import pandas as pd
 
-from .base import XyBaseEncoder, as_list
+from .base import BaseEncoder, as_list
 from ..base import groups_split, groups_merge
 
 
@@ -243,7 +243,7 @@ def _add_onehot(df, datetime, periodic):
 #      must contain the group columns!
 #
 
-class PeriodicEncoder(XyBaseEncoder):
+class PeriodicEncoder(BaseEncoder):
 
     def __init__(self,
                  datetime: Union[None, str, tuple] = None,
@@ -290,16 +290,13 @@ class PeriodicEncoder(XyBaseEncoder):
         self._means = {}
         self._targets = None
 
-    def fit(self, X, y=None) -> "PeriodicEncoder":
-        self._check_Xy(X, y)
+    def fit(self, X) -> "PeriodicEncoder":
+        X = self._check_X(X)
 
         if not self.means:
             return self
 
-        if y is None:
-            target = self.target
-            assert len(target) > 0, "If y is None 'target' must be specified"
-            y = X[target]
+        y = X[self.target]
 
         self._check_datetime(X, y)
 
@@ -349,7 +346,7 @@ class PeriodicEncoder(XyBaseEncoder):
             fh = X
             X = pd.DataFrame(data=None, index=fh)
 
-        self._check_X(X)
+        X = self._check_X(X)
 
         if len(self.groups) == 0:
             return self._transform(X, self._means)
@@ -367,8 +364,6 @@ class PeriodicEncoder(XyBaseEncoder):
         return X
 
     def _transform(self, X, means) -> pd.DataFrame:
-        X = X.copy()
-
         datetime = self.datetime
         targets = self._targets
         periodic = self.periodic

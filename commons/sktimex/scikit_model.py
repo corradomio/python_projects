@@ -1,2 +1,2 @@
 # For compatibility
-from .models.scikit import ScikitForecastRegressor
+from .forecasting.scikit import ScikitForecaster

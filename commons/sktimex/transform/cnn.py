@@ -9,28 +9,23 @@ from ..lags import resolve_lags, lmax
 # CNNTrainTransform
 # CNNPredictTransform
 # ---------------------------------------------------------------------------
-# N, Channels, Channel_Length
-# N, Data,     Channel_Length
-
-# Difference between CNNTrainTransform AND CNNFlatTrainTransform
-# --------------------------------------------------------------
-# The only difference is in y:  y[n, my, s]  vs  y[n, my]
-# and how y is initialized
 
 class CNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None):
+    def __init__(self, slots=None, tlags=(0,), lags=None, flatten=False):
+        # lags is an alternative to slots
         super().__init__(
-            slots=slots if slots is not None else resolve_lags(lags),
+            slots=lags if lags is not None else slots,
             tlags=tlags)
 
+        self.flatten = flatten
         xlags = self.xlags
         ylags = self.ylags
         assert len(xlags) == 0 or xlags == ylags, "Supported only [0, n], [n, n]"
     # end
 
-    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        X, y = super().transform(X, y)
+    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:
+        y, X = super().transform(y, X)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags
@@ -65,60 +60,59 @@ class CNNTrainTransform(ModelTrainTransform):
             # end
         # end
 
-        yt = np.zeros((n, my*st), dtype=y.dtype)
+        yt = np.zeros((n, my, st), dtype=y.dtype)
 
         for i in range(n):
-            c = 0
+            # pass
             for j in range(st):
                 k = tlags[j]
-                yt[i, c:c + my] = y[i + t + k]
-                c += my
+                yt[i, :, j] = y[i + t + k]
+                # pass
             # end
         # end
 
+        if self.flatten:
+            yt = yt.reshape((yt.shape[0], -1))
+
         return Xt, yt
     # end
-
-    def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        return self.fit(X, y).transform(X, y)
 # end
 
 
 class CNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None):
+    def __init__(self, slots=None, tlags=(0,), lags=None, flatten=False):
+        # lags is an alternative to slots
         super().__init__(
-            slots=slots if slots is not None else resolve_lags(lags),
+            slots=lags if lags is not None else slots,
             tlags=tlags)
 
-    def transform(self, X: np.ndarray, fh: int = 0) -> np.ndarray:
-        X, fh = super().transform(X, fh)
+        self.flatten = flatten
+
+    def transform(self, fh: int = 0, X: Optional[np.ndarray] = None) -> np.ndarray:
+        fh, X = super().transform(fh, X)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags
-        tlags = self.tlags
 
         sx = len(xlags)
         sy = len(ylags)
-        st = len(tlags)
 
         y = self.yh
-
-        if fh == 0: fh = len(X)
 
         mx = X.shape[1] if X is not None and sx > 0 else 0
         my = y.shape[1]
         mt = mx + my
-        mu = my * st
+        #
 
         Xt = np.zeros((1, mt, sy), dtype=y.dtype)
-        yp = np.zeros((fh, mu), dtype=y.dtype)
+        yp = np.zeros((fh, my), dtype=y.dtype)
 
         self.Xp = X
         self.yp = yp
         self.Xt = Xt
 
-        return yp
+        return self.to_pandas(yp)
     # end
 
     def _atx(self, i):
@@ -133,11 +127,9 @@ class CNNPredictTransform(ModelPredictTransform):
 
         xlags = self.xlags if self.Xh is not None else []
         ylags = self.ylags
-        tlags = self.tlags
 
         sx = len(xlags)
         sy = len(ylags)
-        st = len(tlags)
 
         Xt = self.Xt
         my = self.yh.shape[1]
@@ -153,10 +145,11 @@ class CNNPredictTransform(ModelPredictTransform):
         # end
 
         return Xt
-    # end
 
-    def update(self, i, y_pred):
-        self.yp[i] = y_pred[0]
-        return i+1
+    def update(self, i, y_pred, t=None):
+        return super().update(i, y_pred, t)
 # end
 
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

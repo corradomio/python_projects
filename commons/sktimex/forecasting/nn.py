@@ -234,7 +234,7 @@ class BaseNNForecaster(ExtendedBaseForecaster):
     def _compute_input_output_sizes(self):
         Xh = self.Xh
         yh = self.yh
-        sx = len(self._slots.input)
+        sx = len(self._slots.xlags)
         mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
         my = yh.shape[1]
         input_size = mx + my

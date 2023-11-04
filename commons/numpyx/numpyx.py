@@ -29,6 +29,8 @@ def ashuffle(*arr_list):
         res.append(arr)
     # end
     return res
+
+
 # end
 
 
@@ -43,7 +45,7 @@ ShapeType = Union[int, list[int], tuple[int]]
 def fzeros(n: ShapeType) -> ndarray: return zeros(n, dtype=float)
 
 
-def fones(n: ShapeType) -> ndarray: return ones(n,  dtype=float)
+def fones(n: ShapeType) -> ndarray: return ones(n, dtype=float)
 
 
 # ---------------------------------------------------------------------------
@@ -58,7 +60,7 @@ def is_pos_def(m: ndarray) -> bool:
 
 def is_symmetric(a: ndarray, tol=1e-8) -> bool:
     """Check if the matrix is symmetric"""
-    return all(abs(a-a.T) < tol)
+    return all(abs(a - a.T) < tol)
 
 
 # ---------------------------------------------------------------------------
@@ -231,7 +233,7 @@ def m2vec(m):
     assert len(m.shape) == 2
 
     ny, nx = m.shape
-    n = nx*ny
+    n = nx * ny
     xs = zeros(shape=n)
     ys = zeros(shape=n)
     zs = zeros(shape=n)
@@ -261,7 +263,7 @@ def xym2vec(x, y, m):
 
     nx = len(x)
     ny = len(y)
-    n = nx*ny
+    n = nx * ny
 
     xs = zeros(shape=n)
     ys = zeros(shape=n)
@@ -275,7 +277,6 @@ def xym2vec(x, y, m):
             zs[k] = m[i, j]
             k += 1
     return xs, ys, zs
-
 
 # ---------------------------------------------------------------------------
 # filter_outliers

@@ -1,5 +1,6 @@
 import torch
-import torch.nn as nn
+import math
+from torch import nn, Tensor
 
 
 # ---------------------------------------------------------------------------
@@ -16,20 +17,82 @@ import torch.nn as nn
 #
 # the output will be as the input:  (batch, seq, data)
 
-class PositionalEncoding(nn.Module):
+# class PositionalEncoder(nn.Module):
+#
+#     def __init__(self, in_features, max_len=100, dtype=torch.float32):
+#         super().__init__()
+#         self.in_features = in_features
+#         self.max_len = max_len
+#
+#         self.pos = torch.zeros((1, max_len, in_features), dtype=dtype)
+#         X = (torch.arange(max_len, dtype=dtype).reshape(-1, 1) /
+#              torch.pow(10000, torch.arange(0, in_features, 2, dtype=dtype) / in_features))
+#         self.pos[0, :, 0::2] = torch.sin(X)
+#         self.pos[0, :, 1::2] = torch.cos(X)
+#
+#     def forward(self, input):
+#         seq_len = input.shape[1]
+#         t = input + self.pos[0, 0:seq_len, :].to(input.device)
+#         return t
+# # end
 
-    def __init__(self, in_features, max_len=100, dtype=torch.float32):
+
+# ---------------------------------------------------------------------------
+# PositionalEncoder
+# https://towardsdatascience.com/how-to-make-a-pytorch-transformer-for-time-series-forecasting-69e073d4061e
+# ---------------------------------------------------------------------------
+
+class PositionalEncoder(nn.Module):
+    """
+    The authors of the original transformer paper describe very succinctly what
+    the positional encoding layer does and why it is needed:
+
+    "Since our model contains no recurrence and no convolution, in order for the
+    model to make use of the order of the sequence, we must inject some
+    information about the relative or absolute position of the tokens in the
+    sequence." (Vaswani et al, 2017)
+    Adapted from:
+    https://pytorch.org/tutorials/beginner/transformer_tutorial.html
+    """
+
+    def __init__(
+            self,
+            dropout: float = 0.1,
+            max_seq_len: int = 5000,
+            d_model: int = 512,
+            batch_first: bool = False
+    ):
+        """
+        Parameters:
+            dropout: the dropout rate
+            max_seq_len: the maximum length of the input sequences
+            d_model: The dimension of the output of sub-layers in the model
+                     (Vaswani et al, 2017)
+        """
+
         super().__init__()
-        self.in_features = in_features
-        self.max_len = max_len
+        self.d_model = d_model
+        self.dropout = nn.Dropout(p=dropout)
+        self.batch_first = batch_first
+        self.x_dim = 1 if batch_first else 0
 
-        self.pos = torch.zeros((1, max_len, in_features), dtype=dtype)
-        X = (torch.arange(max_len, dtype=dtype).reshape(-1, 1) /
-             torch.pow(10000, torch.arange(0, in_features, 2, dtype=dtype) / in_features))
-        self.pos[0, :, 0::2] = torch.sin(X)
-        self.pos[0, :, 1::2] = torch.cos(X)
+        # copy pasted from PyTorch tutorial
+        position = torch.arange(max_seq_len).unsqueeze(1)
+        div_term = torch.exp(torch.arange(0, d_model, 2) * (-math.log(10000.0) / d_model))
+        pe = torch.zeros(max_seq_len, 1, d_model)
 
-    def forward(self, input):
-        seq_len = input.shape[1]
-        t = input + self.pos[0, 0:seq_len, :].to(input.device)
-        return t
+        pe[:, 0, 0::2] = torch.sin(position * div_term)
+        pe[:, 0, 1::2] = torch.cos(position * div_term)
+
+        self.register_buffer('pe', pe)
+
+    def forward(self, x: Tensor) -> Tensor:
+        """
+        Args:
+            x: Tensor, shape [batch_size, enc_seq_len, dim_val] or
+               [enc_seq_len, batch_size, dim_val]
+        """
+
+        x = x + self.pe[:x.size(self.x_dim)]
+        return self.dropout(x)
+# end

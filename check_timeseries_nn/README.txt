@@ -7,8 +7,6 @@ Time series with attention
     https://towardsdatascience.com/attention-seq2seq-with-pytorch-learning-to-invert-a-sequence-34faf4133e53
 
 
-
-
 NN Extensions
 -------------
 

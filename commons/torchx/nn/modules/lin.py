@@ -2,7 +2,7 @@ from typing import Union
 
 import torch.nn as nn
 from torch import Tensor
-from stdlib import mul
+from stdlib import mul_
 
 
 # ---------------------------------------------------------------------------
@@ -16,8 +16,7 @@ class Linear(nn.Linear):
     """
     Extends nn.Linear
 
-    It applies flatten/unflatten if ``in_features``/``out_features``
-    are not integers.
+    It applies flatten/unflatten if ``in_features``/``out_features`` are tuples.
 
     Args:
         in_features: can be a tuple
@@ -30,8 +29,8 @@ class Linear(nn.Linear):
                  bias: bool = True, device=None, dtype=None):
 
         super().__init__(
-            in_features=mul(in_features),
-            out_features=mul(out_features),
+            in_features=mul_(in_features),
+            out_features=mul_(out_features),
             bias=bias,
             device=device,
             dtype=dtype

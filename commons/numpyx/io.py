@@ -9,8 +9,7 @@ import csvx
 # load_data
 # ---------------------------------------------------------------------------
 
-def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=None):
-
+def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str] = None):
     if fname.endswith(".arff"):
         data, _, dtype = csvx.load_arff(fname, na=na)
     else:
@@ -34,7 +33,7 @@ def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str]=Non
     elif ycol == -1:
         dtypes = list(set(dtype[0:-1]))
     else:
-        dtypes = list(set(dtype[0:ycol] + dtype[ycol+1:]))
+        dtypes = list(set(dtype[0:ycol] + dtype[ycol + 1:]))
     if len(dtypes) == 1 and dtypes[0] in ["enum", "ienum", enumerate]:
         X = X.astype(int)
 

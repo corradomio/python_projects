@@ -19,7 +19,7 @@ class BinaryLabelsEncoder(BaseEncoder):
         self._maps = {}
 
     def fit(self, X: DataFrame) -> "BinaryLabelsEncoder":
-        self._check_X(X)
+        X = self._check_X(X)
 
         for col in self._get_columns(X):
             x = X[col]
@@ -79,7 +79,7 @@ class OneHotEncoder(BaseEncoder):
         self._bins = {}
 
     def fit(self, X: DataFrame) -> "OneHotEncoder":
-        self._check_X(X)
+        X = self._check_X(X)
 
         for col in self._get_columns(X):
             x = X[col]

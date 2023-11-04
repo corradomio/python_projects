@@ -13,20 +13,20 @@ from ..lags import resolve_lags, flatten_max
 class CNNSlotsTrainTransform(ModelTrainTransform):
 
     def __init__(self, slots=None, tlags=(0,), lags=None):
+        # lags is an alternative to slots
         super().__init__(
-            slots=slots if slots is not None else resolve_lags(lags),
+            slots=lags if lags is not None else slots,
             tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags
         # because 'super' initialization uses 'slots.input' and 'slots.target'
         #
-        self.xlags = slots.input_lists
-        self.ylags = slots.target_lists
-    # end
+        self.xlags = slots.xlags_lists
+        self.ylags = slots.ylags_lists
 
-    def transform(self, X: Optional[np.ndarray], y: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
-        X, y = super().transform(X, y)
+    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[list[np.ndarray], np.ndarray]:
+        y, X = super().transform(y, X)
 
         # Note: self.xlags and self.ylags ARE list of timeslots!
         #   xlags = [[0], [1,2,3,4,5], [2,4,6]]
@@ -74,37 +74,31 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
         # end
 
         return Xts, yt
-
     # end
-
-    # def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
-    #     return self.fit(X, y).transform(X, y)
 # end
 
 
 class CNNSlotsPredictTransform(ModelPredictTransform):
 
     def __init__(self, slots=None, tlags=(0,), lags=None):
+        # lags is an alternative to slots
         super().__init__(
-            slots=slots if slots is not None else resolve_lags(lags),
+            slots=lags if lags is not None else slots,
             tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags
-        # because 'super' initialization uses 'slots.input' and 'slots.target'
+        # because 'super' initialization uses 'slots.xlags' and 'slots.ylags'
         #
-        self.xlags = slots.input_lists
-        self.ylags = slots.target_lists
+        self.xlags = self.slots.xlags_lists
+        self.ylags = self.slots.ylags_lists
 
-    def transform(self, X: np.ndarray, fh: int = 0) -> np.ndarray:
-        super().transform(X, fh)
+    def transform(self, fh: int = 0, X: Optional[np.ndarray] = None) -> np.ndarray:
+        fh, X = super().transform(fh, X)
 
         xlags_list = self.xlags if X is not None else []
         ylags_list = self.ylags
         y = self.yh
-        self.Xp = X
-
-        if fh == 0: fh = len(X)
 
         mx = X.shape[1] if X is not None else 0
         my = y.shape[1]
@@ -122,11 +116,11 @@ class CNNSlotsPredictTransform(ModelPredictTransform):
 
         yp = np.zeros((fh, my), dtype=y.dtype)
 
+        self.Xp = X
         self.Xt = Xts
         self.yp = yp
 
-        return yp
-
+        return self.to_pandas(yp)
     # end
 
     def _atx(self, i):
@@ -163,9 +157,7 @@ class CNNSlotsPredictTransform(ModelPredictTransform):
                 Xt[0, :, j] = aty(i - k)
 
         return Xts
-    # end
 
-    def update(self, i, y_pred):
-        self.yp[i] = y_pred[0]
-        return i+1
+    def update(self, i, y_pred, t=None):
+        return super().update(i, y_pred, t)
 # end

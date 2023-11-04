@@ -165,9 +165,15 @@ class LagSlots:
     # -----------------------------------------------------------------------
 
     @property
-    def lags(self):
+    def lags(self) -> dict:
         """Lags as normalized dictionary"""
         return self._lags
+
+    # -- input/xlags
+
+    @property
+    def xlags(self) -> list[int]:
+        return self._islots
 
     @property
     def input(self) -> list[int]:
@@ -175,19 +181,37 @@ class LagSlots:
         return self._islots
 
     @property
-    def target(self) -> list[int]:
-        """Flatten list of target lags"""
-        return self._tslots
+    def xlags_lists(self):
+        """List of input lags organized by multiplier"""
+        return self._islots_lists
 
     @property
     def input_lists(self):
         """List of input lags organized by multiplier"""
         return self._islots_lists
 
+    # -- target/ylags
+
+    @property
+    def ylags(self) -> list[int]:
+        return self._tslots
+
+    @property
+    def target(self) -> list[int]:
+        """Flatten list of target lags"""
+        return self._tslots
+
+    @property
+    def ylags_lists(self):
+        """List of target lags organized by multiplier"""
+        return self._tslots_lists
+
     @property
     def target_lists(self):
         """List of target lags organized by multiplier"""
         return self._tslots_lists
+
+    # -- other properties
 
     def __len__(self) -> int:
         """Window length containing all lags"""
@@ -197,9 +221,9 @@ class LagSlots:
         # self[0] -> input
         # self[1] -> target
         if item == 0:
-            return self.input
+            return self._islots
         else:
-            return self.target
+            return self._tslots
 
     def __repr__(self):
         return f"slots[input={self.input}, target={self.target}, len={len(self)}]"
@@ -228,7 +252,7 @@ class LagSlots:
 
 class LagsResolver:
     def __init__(self, lags):
-        assert isinstance(lags, (int, tuple, list, dict)), "'lags' is not int | (int, int) | (int,int,bool) | dict"
+        assert isinstance(lags, (int, tuple, list, dict)), "'lags' is not int | (int,int) | (int,int,bool) | dict"
 
         if isinstance(lags, (int, tuple, list)):
             lags = {
@@ -279,7 +303,7 @@ class LagsResolver:
             del lags[LAGS_LENGTH]
 
             if isinstance(lags_length, int):
-                lags[LAGS_INPUT] = {1: lags_length}
+                lags[LAGS_INPUT] = {1: 0}
                 lags[LAGS_TARGET] = {1: lags_length}
             elif len(lags_length) == 2:
                 lags[LAGS_INPUT] = {1: lags_length[0]}
@@ -289,7 +313,7 @@ class LagsResolver:
                 lags[LAGS_TARGET] = {1: lags_length[1]}
                 lags[LAGS_CURRENT] = lags_length[2]
             else:
-                raise f"'{lags}': invalid configuration, 'lags' must be: int | (int, int) | (int, int, bool) | dict(...)"
+                raise f"'{lags}': invalid configuration, 'lags' must be: int | (int,int) | (int,int,bool) | dict(...)"
         # end
 
         # check if it is present 'input' and or 'target'
@@ -539,6 +563,11 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
     :param current: if to consider the current timeslot
     :return LagSlots: an object containing the timeslots to select for the input and target features.
     """
+    assert lags is not None
+
+    if isinstance(lags, LagSlots):
+        return lags
+
     lr = LagsResolver(lags)
     res: LagSlots = lr.resolve()
     return res

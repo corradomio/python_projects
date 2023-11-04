@@ -60,7 +60,7 @@ class Seq2SeqNetwork(nn.Module):
 
         # it must return the state and just the last prediction
         self.encoder = _create_rnn(flavour, kwargs | {'input_size': input_size, 'hidden_size': hidden_size,
-                                                      'return_state': True, 'return_sequences': False},
+                                                      'return_state': True, 'return_sequence': False},
                                    "encoder__")
         self.decoder = _create_rnn(flavour, kwargs | {'input_size': hidden_size, 'hidden_size': hidden_size},
                                    "decoder__")

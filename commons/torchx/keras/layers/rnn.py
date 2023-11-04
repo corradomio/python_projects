@@ -29,7 +29,7 @@ from ... import nn as nnx
 #     dropout=0.0,
 #     recurrent_dropout=0.0,
 #
-#     return_sequences=False,
+#     return_sequence=False,
 #     return_state=False,
 #
 #     go_backwards=False,
@@ -76,18 +76,18 @@ class LSTM(nnx.LSTM):
     #
     # nn_keras.LSTM has 2 (+1) parameters that permits to specify what to return
     #
-    #   1) return_sequences: if to return the complete sequence or just the last value
+    #   1) return_sequence: if to return the complete sequence or just the last value
     #   2) return_state: if to return the hidden state
     #   3) it is possible to specify directly the activation function
     #
 
     def __init__(self, input, units,
-                 return_sequences=True,
+                 return_sequence=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequences=return_sequences,
+            return_sequence=return_sequence,
             **kwargs)
 
     def forward(self,
@@ -113,12 +113,12 @@ class GRU(nnx.GRU):
     """
 
     def __init__(self, input, units,
-                 return_sequences=True,
+                 return_sequence=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequences=return_sequences,
+            return_sequence=return_sequence,
             **kwargs)
 
     def forward(self,
@@ -144,12 +144,12 @@ class RNN(nnx.RNN):
     """
 
     def __init__(self, input, units,
-                 return_sequences=True,
+                 return_sequence=True,
                  **kwargs):
         super().__init__(
             input_size=input,
             hidden_size=units,
-            return_sequences=return_sequences,
+            return_sequence=return_sequence,
             **kwargs)
 
     def forward(self,

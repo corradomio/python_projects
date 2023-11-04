@@ -1,7 +1,12 @@
 from .linear import LinearForecaster
 from .scikit import ScikitForecaster
-from .cnn import SimpleCNNForecaster, MultiLagsCNNForecaster
-from .rnn import SimpleRNNForecaster, MultiLagsRNNForecaster
+
+try:
+    # available only if 'torch/skorch are available
+    from .cnn import SimpleCNNForecaster, MultiLagsCNNForecaster
+    from .rnn import SimpleRNNForecaster, MultiLagsRNNForecaster
+except:
+    pass
 
 #
 # Extensions/compatibility

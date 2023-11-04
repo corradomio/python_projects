@@ -72,7 +72,7 @@ class OutlierTransformer(GroupsEncoder):
 
             means[col] = x.mean()
             sdevs[col] = x.std()
-            medians = x.median()
+            medians[col] = x.median()
 
             # x = X[col].to_numpy(dtype=float)
             # vmin, vmax = min(x), max(x)
@@ -100,7 +100,7 @@ class OutlierTransformer(GroupsEncoder):
 
         columns = self._get_columns(X)
         for col in columns:
-            x: Series = X[col]
+            x: Series = X[col].copy()
 
             mean = means[col]
             sdev = sdevs[col]

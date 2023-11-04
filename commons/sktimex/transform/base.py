@@ -1,9 +1,11 @@
 from typing import Optional
 
 import numpy as np
+import pandas as pd
+from sktime.forecasting.base import ForecastingHorizon
 
 from ..lags import LagSlots, resolve_lags, resolve_tlags
-from ..utils import NoneType
+from ..utils import NoneType, to_matrix, lrange
 
 
 # ---------------------------------------------------------------------------
@@ -12,56 +14,83 @@ from ..utils import NoneType
 #       ModePredictTransform
 # ---------------------------------------------------------------------------
 
-class ModelTransform:
+class TimeseriesTransform:
 
-    def _check_X_y(self, X, y=None):
+    def _check_X(self, X):
+        X = to_matrix(X)
+        assert isinstance(X, (NoneType, np.ndarray))
+        return X
+
+    def _check_Xy(self, X, y=None):
+        X = to_matrix(X)
+        y = to_matrix(y)
         assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, (NoneType, np.ndarray))
+        return X, y
+
+    def _check_Xfh(self, X, fh):
+        # Note: to be compatible with 'sktime' fh MUST starts 1 timeslot after the
+        # 'cutoff', that is, the LAST timestamp used in training. This means that
+        # If specified as list of as a ForecastingHorizon, it MUST be:
+        #
+        #   [1,2,3.....]
+        #
+        # Then, the LAST value is the 'prediction_length'.
+        #
+        X = to_matrix(X)
+        if fh is None or fh <= 0:
+            assert X is not None, "If fh is not specified, X must be not None"
+            fh = len(X)
+        elif isinstance(fh, list):
+            assert len(fh) > 0 and fh[0] >= 1, f'fh can not start with a value < 1 with ({fh[0]})'
+            fh = fh[-1]
+        elif isinstance(fh, ForecastingHorizon):
+            assert fh.is_relative, f'fh must be a relative ForecastingHorizon'
+            assert len(fh) > 0 and fh[0] >= 1, f'fh can not start with a value < 1 with ({fh[0]})'
+            fh = fh[-1]
+
+        assert isinstance(X, (NoneType, np.ndarray))
+        assert isinstance(fh, int)
+        return X, fh
 # end
 
 
-class ModelTrainTransform(ModelTransform):
+class ModelTrainTransform(TimeseriesTransform):
 
     def __init__(self, slots, tlags=(0,)):
-        if isinstance(slots, (list, tuple, dict)):
+        if not isinstance(slots, LagSlots):
             slots = resolve_lags(slots)
         if isinstance(tlags, int):
-            tlags = list(range(tlags))
+            tlags = resolve_tlags(tlags)
 
         assert isinstance(slots, LagSlots)
         assert isinstance(tlags, (tuple, list))
 
         self.slots = slots
-        self.xlags: list = slots.input
-        self.ylags: list = slots.target
+        self.xlags: list = slots.xlags
+        self.ylags: list = slots.ylags
         self.tlags: list = list(tlags)
     # end
 
-    def fit(self, X: Optional[np.ndarray], y: np.ndarray):
-        self._check_X_y(X, y)
+    def fit(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+        X, y = self._check_Xy(X, y)
         return self
     # end
 
-    def transform(self, X: np.ndarray, y: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-        self._check_X_y(X, y)
-
-        if X is not None and len(X.shape) == 1:
-            X = X.reshape((-1, 1))
-        if len(y.shape) == 1:
-            y = y.reshape((-1, 1))
-
-        return X, y
+    def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
+        X, y = self._check_Xy(X, y)
+        return y, X
     # end
 
-    def fit_transform(self, X, y):
-        return self.fit(X, y).transform(X, y)
+    def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+        return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
 
-class ModelPredictTransform(ModelTransform):
+class ModelPredictTransform(TimeseriesTransform):
 
     def __init__(self, slots, tlags=(0,)):
-        if isinstance(slots, (list, tuple, dict)):
+        if not isinstance(slots, LagSlots):
             slots = resolve_lags(slots)
         if isinstance(tlags, int):
             tlags = resolve_tlags(tlags)
@@ -69,31 +98,28 @@ class ModelPredictTransform(ModelTransform):
         assert isinstance(slots, LagSlots)
         assert isinstance(tlags, (tuple, list)), f"Parameter tlags not of type list|tuple: {tlags}"
 
-        self.slots = slots
-        self.xlags = slots.input
-        self.ylags = slots.target
-        self.tlags = tlags
+        self.slots: LagSlots = slots
+        self.xlags: list[int] = slots.xlags
+        self.ylags: list[int] = slots.ylags
+        self.tlags: list[int] = tlags
 
         self.Xh = None  # X history
         self.yh = None  # y history
 
         self.Xt = None  # X transform
         self.yt = None  # y transform
+        self.fh = None  # fh transform
 
         self.Xp = None  # X prediction
         self.yp = None  # y prediction
     # end
 
-    def fit(self, X: np.ndarray, y: np.ndarray):
-        assert isinstance(X, (NoneType, np.ndarray))
-        assert isinstance(y, np.ndarray)
+    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None):
+        # used to support the implementation of 'self.to_pandas()'
+        self.y_pandas = y
 
-        if X is None:
-            pass
-        elif len(X.shape) == 1:
-            X = X.reshape((-1, 1))
-        if len(y.shape) == 1:
-            y = y.reshape((-1, 1))
+        # This method must be used to pass 'y_train' and 'X_train'
+        X, y = self._check_Xy(X, y)
 
         self.Xh = X
         self.yh = y
@@ -101,16 +127,54 @@ class ModelPredictTransform(ModelTransform):
         return self
     # end
 
-    def transform(self, X: np.ndarray, fh: int):
-        assert isinstance(X, (NoneType, np.ndarray))
-        assert isinstance(fh, int)
-        assert X is None and fh > 0 or X is not None and fh == 0 or len(X) == fh
+    def transform(self, fh: int, X: Optional[np.ndarray] = None):
+        # This method must e used with 'fh' and 'X_test'/'X_predict'
+        X, fh = self._check_Xfh(X, fh)
 
-        if X is not None and len(X.shape) == 1:
-            X = X.reshape((-1, 1))
-        if X is not None and fh == 0:
-            fh = len(X)
+        self.Xt = X
+        self.fh = fh
 
-        return X, fh
+        return fh, X
     # end
+
+    def update(self, i, y_pred, t=None):
+        tlags = [t] if t is not None else self.tlags
+        st = len(tlags)
+        mt = max(tlags)
+        nfh = len(self.yp)
+        my = self.yp.shape[1]
+
+        if len(y_pred.shape) == 1:
+            y_pred = y_pred.reshape((1, 1, my))
+        elif len(y_pred.shape) == 2:
+            y_pred = y_pred.reshape((1, -1, my))
+
+        assert len(y_pred.shape) == 3
+
+        for j in range(st):
+            k = i + tlags[j]
+            if k < nfh:
+                self.yp[k] = y_pred[0, j]
+
+        return i + mt + 1
+    # end
+
+    def fit_transform(self, y, X=None):
+        # It is not correct to use 'fit_transform(y, X)' because
+        # 1) with 'fit(y,X)' it is passed y_train and X_train
+        # 2) with 'transform(fh, X)' it is passed the forecasting horizon and X_prediction
+        # that is, different information
+        raise NotImplemented()
+
+    def to_pandas(self, yp):
+        if not isinstance(self.y_pandas, (pd.DataFrame, pd.Series)):
+            return yp
+
+        n = len(yp)
+        cutoff = self.y_pandas.index[-1]
+        fh = ForecastingHorizon(lrange(1, n+1), is_relative=True).to_absolute(cutoff)
+        if isinstance(self.y_pandas, pd.DataFrame):
+            return pd.DataFrame(data=yp, columns=self.y_pandas.columns, index=fh.to_pandas())
+        else:
+            return pd.Series(data=yp, name=self.y_pandas.name, index=fh.to_pandas())
 # end
