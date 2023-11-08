@@ -37,7 +37,7 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
         self.ylags = slots.ylags_lists
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[list[np.ndarray], np.ndarray]:
-        y, X = super().transform(y, X)
+        X, y = super().transform(y=y, X=X)
 
         # Note: self.xlags and self.ylags ARE list of timeslots!
         #   xlags = [[0], [1,2,3,4,5], [2,4,6]]
@@ -98,9 +98,6 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
 
         return Xts, yt
     # end
-
-    # def fit_transform(self, X: np.ndarray, y: np.ndarray) -> tuple[list[np.ndarray], np.ndarray]:
-    #     return self.fit(X, y).transform(X, y)
 # end
 
 

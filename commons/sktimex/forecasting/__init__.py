@@ -9,7 +9,7 @@ except:
     pass
 
 #
-# Extensions/compatibility
+# Compatibility
 #
 from .linear import LinearForecastRegressor
 from .scikit import ScikitForecastRegressor

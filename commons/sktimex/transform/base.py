@@ -79,7 +79,7 @@ class ModelTrainTransform(TimeseriesTransform):
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
         X, y = self._check_Xy(X, y)
-        return y, X
+        return X, y
     # end
 
     def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):

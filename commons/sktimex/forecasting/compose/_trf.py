@@ -6,7 +6,7 @@ from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.compose._reduce import _Reducer
 
-from ...lags import resolve_lag
+from ...lags import resolve_lags
 from ...transform import LinearTrainTransform, LinearPredictTransform
 
 
@@ -181,9 +181,10 @@ class TabularRegressorForecaster(_Reducer):
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
-        slots = resolve_lag([xlags, ylags])
+        slots = resolve_lags([xlags, ylags])
         # tlags = list(fh - 1)
         tlags = _to_tlags(fh)
+
         lt = LinearTrainTransform(slots=slots, tlags=tlags)
 
         Xt, yt = lt.fit_transform(y=y, X=X)
@@ -222,7 +223,7 @@ class TabularRegressorForecaster(_Reducer):
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
-        slots = resolve_lag([xlags, ylags])
+        slots = resolve_lags([xlags, ylags])
         tlags = _to_tlags(self._fh)
 
         pt = LinearPredictTransform(slots=slots, tlags=tlags)

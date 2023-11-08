@@ -1,4 +1,4 @@
-from sktime.forecasting.base import ForecastingHorizon
+import logging
 from torch import nn as nn
 
 from .nn import *
@@ -156,16 +156,17 @@ class SimpleRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = (1,)):
+        # self._save_history(X, y)
+
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))
-        self._save_history(Xh, yh)
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        tt = RNNTrainTransform(slots=self._slots)
-        Xt, yt = tt.fit_transform(Xh, yh)
+        tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
+        Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(Xt, yt)
         return self
@@ -178,20 +179,23 @@ class SimpleRNNForecaster(BaseRNNForecaster):
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
         Xs = to_matrix(X)
-        pt = RNNPredictTransform(slots=self._slots, tlags=[0])
-        ys = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)
+        pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
+        ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
-        for i in range(nfh):
+        i = 0
+        while i < nfh:
             Xt = pt.step(i)
 
             y_pred = self._model.predict(Xt)
 
-            pt.update(i, y_pred)
+            i = pt.update(i, y_pred)
         # end
 
         ys = self._inverse_scale(ys)
@@ -232,7 +236,9 @@ class SimpleRNNForecaster(BaseRNNForecaster):
             module=rnn,
             **self._skt_args
         )
-        model.set_params(callbacks__print_log=PrintLog(delay=3))
+        model.set_params(callbacks__print_log=PrintLog(
+            sink=logging.getLogger(str(self)).info,
+            delay=3))
 
         return model
     # end
@@ -256,16 +262,17 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
+        # self._save_history(X, y)
+
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))
-        self._save_history(Xh, yh)
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        tt = RNNSlotsTrainTransform(slots=self._slots)
-        Xt, yt = tt.fit_transform(Xh, yh)
+        tt = RNNSlotsTrainTransform(slots=self._slots, tlags=self._tlags)
+        Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(Xt, yt)
         return self
@@ -279,19 +286,23 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
 
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
+
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
         Xs = to_matrix(X)
         pt = RNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
-        ys = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)
+        ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
-        for i in range(nfh):
+        i = 0
+        while i < nfh:
             Xt = pt.step(i)
 
             y_pred = self._model.predict(Xt)
 
-            pt.update(i, y_pred)
+            i = pt.update(i, y_pred)
         # end
 
         ys = self._inverse_scale(ys)
@@ -304,11 +315,15 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        Xh = self.Xh
-        yh = self.yh
-        mx = Xh.shape[1] if Xh is not None else 0
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
+
+        sx = len(self._slots.xlags)
+        st = len(self._tlags)
+
+        mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
         my = yh.shape[1]
-        return (mx, my), my
+        return (mx, my), my*st
 
     def _create_skorch_model(self, input_size, output_size):
         mx, my = input_size
@@ -376,7 +391,9 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
             warm_start=True,
             **self._skt_args
         )
-        model.set_params(callbacks__print_log=PrintLog(delay=3))
+        model.set_params(callbacks__print_log=PrintLog(
+            sink=logging.getLogger(str(self)).info,
+            delay=3))
 
         return model
     # end

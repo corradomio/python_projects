@@ -256,9 +256,9 @@ def read_data(file: str,
     if dtype is not None:
         categorical, boolean = _parse_dtype(list(df.columns), dtype)
 
-    if binary == ['auto']:
-        binary = find_binary(df, onehot)
-        onehot = set(onehot).difference(binary)
+    # if binary == ['auto']:
+    #     binary = find_binary(df, onehot)
+    #     onehot = set(onehot).difference(binary)
 
     # pandas categorical
     for col in categorical:

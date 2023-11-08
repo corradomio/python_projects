@@ -38,6 +38,7 @@ __all__ = [
     "xy_split",
     "nan_split",
     "train_test_split",
+    "cutoff_split",
 
     "series_argmax",
     "series_argmin",
@@ -125,7 +126,7 @@ def onehot_encode(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFr
     Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
 
     :param pd.DataFrame df:
-    :param list[str] columns: list of columns to convert using 'pd,get_dummies'
+    :param list[str] columns: list of columns to convert using 'pd.get_dummies'
     :return pd.DataFrame: new dataframe
     """
     assert isinstance(df, pd.DataFrame)
@@ -794,13 +795,15 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
 
 def nan_split(*data_list,
               ignore: Union[None, str, list[str]] = None,
-              columns: Union[None, str, list[str]] = None) -> list[PANDAS_TYPE]:
+              columns: Union[None, str, list[str]] = None,
+              empty=True) -> list[PANDAS_TYPE]:
     """
     Remove the columns of the dataframe containing nans
 
     :param data_list: list of dataframe to analyze
     :param ignore: list of columns to ignore from the analysis (alternative to 'columns')
     :param columns: list of columns to analyze (alternative to 'ignore')
+    :param empty: return an empty dataset (True) or None
     :return:
     """
 
@@ -818,9 +821,63 @@ def nan_split(*data_list,
         invalid = data.loc[invalid_rows]
         valid = data.loc[data.index.difference(invalid.index)]
 
+        if not empty:
+            invalid = invalid if len(invalid) > 0 else None
+            valid = valid if len(valid) > 0 else None
+
         vi_list += [valid, invalid]
     # end
     return vi_list
+# end
+
+
+# ---------------------------------------------------------------------------
+# cutoff_split
+# ---------------------------------------------------------------------------
+
+def _cutoff_split(df, cutoff, datetime):
+    if isinstance(cutoff, pd.PeriodIndex):
+        cutoff = cutoff[0]
+    if datetime is not None:
+        past = df[df[datetime] <= cutoff]
+        future = df[df[datetime] > cutoff]
+    else:
+        past = df[df.index <= cutoff]
+        future = df[df.index > cutoff]
+
+    return past, future
+
+
+def cutoff_split(*data_list, cutoff,
+                 datetime: Optional[str] = None,
+                 empty=True,
+                 groups=None) -> list[PANDAS_TYPE]:
+
+    groups = as_list(groups, 'groups')
+    cl = []
+    for data in data_list:
+        if len(groups) > 0 or isinstance(data.index, pd.MultiIndex):
+            df_dict = groups_split(data, groups=groups)
+            past_dict = {}
+            future_dict = {}
+            for key in df_dict:
+                df = df_dict[key]
+                past, future = _cutoff_split(df, cutoff, datetime)
+
+                past_dict[key] = past
+                future_dict[key] = future
+            # end
+            past = groups_merge(past_dict, groups=groups)
+            future = groups_merge(future_dict, groups=groups)
+        else:
+            past, future = _cutoff_split(data, cutoff, datetime)
+
+        if not empty:
+            past = past if len(past) > 0 else None
+            future = future if len(future) > 0 else None
+
+        cl += [past, future]
+    return cl
 # end
 
 

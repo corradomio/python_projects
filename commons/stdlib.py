@@ -1,6 +1,6 @@
-from path import Path as path
-from datetime import datetime
 from typing import Any, Union, Optional
+
+from path import Path as path
 
 NoneType = type(None)
 CollectionType = (list, tuple)
@@ -424,54 +424,6 @@ def is_filesystem(datasource: str) -> bool:
         return False
     else:
         raise ValueError(f"Unsupported datasource '{datasource}'")
-
-
-# ---------------------------------------------------------------------------
-# autoparse_datetime
-# ---------------------------------------------------------------------------
-#   yyyy
-#   yyyy/mm             yyyy-mm
-#   yyyy/mm/dd          yyyy-mm-dd
-#   yyyy/mm/dd HH:MM    yyyy-mm-dd HH:MM
-#   yyyy/mm/dd HH:MM:SS yyyy-mm-dd HH:MM:SS
-#
-#   <date>T<time>
-#
-
-def autoparse_datetime(dt: Optional[str]) -> Optional[datetime]:
-
-    if dt is None:
-        return None
-
-    n_slashs = dt.count('/')
-    n_dashes = dt.count('-')
-    n_colons = dt.count(':')
-
-    if 'T' in dt:
-        dt = dt.replace('T', ' ')
-
-    if n_dashes == 2 and n_colons == 2:
-        return datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
-    if n_dashes == 2 and n_colons == 1:
-        return datetime.strptime(dt, '%Y-%m-%d %H:%M')
-    if n_dashes == 2 and n_colons == 0:
-        return datetime.strptime(dt, '%Y-%m-%d')
-
-    if n_slashs == 2 and n_colons == 2:
-        return datetime.strptime(dt, '%Y/%m/%d %H:%M:%S')
-    if n_slashs == 2 and n_colons == 1:
-        return datetime.strptime(dt, '%Y/%m/%d %H:%M')
-    if n_slashs == 2 and n_colons == 0:
-        return datetime.strptime(dt, '%Y/%m/%d')
-
-    if n_dashes == 1:
-        return datetime.strptime(dt, '%Y-%m')
-    if n_slashs == 1:
-        return datetime.strptime(dt, '%Y/%m')
-
-    else:
-        return datetime.strptime(dt, '%Y')
-# end
 
 
 # ---------------------------------------------------------------------------

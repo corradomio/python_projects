@@ -47,7 +47,6 @@ class LSTMLinear(nn.LSTM):
                          batch_first=batch_first,
                          **kwargs)
         self.steps = steps
-        self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
@@ -60,13 +59,7 @@ class LSTMLinear(nn.LSTM):
             self.output_size = f * hidden_size * steps
 
     def forward(self, input, hx=None):
-        L = input.shape[0 if self.batch_first else 1]
-
-        if L not in self.hidden:
-            self.hidden[L] = None
-
-        hidden = self.hidden[L]
-        t, h = super().forward(input, hidden)
+        t, h = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t) if self.V else t
@@ -114,7 +107,6 @@ class GRULinear(nn.GRU):
                          batch_first=batch_first,
                          **kwargs)
         self.steps = steps
-        self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
@@ -127,13 +119,7 @@ class GRULinear(nn.GRU):
             self.output_size = f * hidden_size * steps
 
     def forward(self, input, hx=None):
-        L = input.shape[0 if self.batch_first else 1]
-
-        if L not in self.hidden:
-            self.hidden[L] = None
-
-        hidden = self.hidden[L]
-        t, h = super().forward(input, hidden)
+        t, h = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t) if self.V else t
@@ -183,7 +169,6 @@ class RNNLinear(nn.RNN):
         self.hidden_size = hidden_size
         self.output_size = output_size
         self.num_layers = num_layers
-        self.hidden = {}
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
@@ -196,13 +181,7 @@ class RNNLinear(nn.RNN):
             self.output_size = f*hidden_size*steps
 
     def forward(self, input, hx=None):
-        L = input.shape[0 if self.batch_first else 1]
-
-        if L not in self.hidden:
-            self.hidden[L] = None
-
-        hidden = self.hidden[L]
-        t, h = super().forward(input, hidden)
+        t, h = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
         t = torch.reshape(t, (len(input), -1))
         output = self.V(t) if self.V else t

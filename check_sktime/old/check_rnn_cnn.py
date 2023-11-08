@@ -10,7 +10,7 @@ from sktimex import SimpleRNNForecaster, SimpleCNNForecaster
 
 
 def main():
-    os.makedirs("./plots", exist_ok=True)
+    os.makedirs("../plots", exist_ok=True)
 
     data = pdx.read_data('stallion_all.csv',
                          datetime=('date', "%Y-%m-%d", 'M'),

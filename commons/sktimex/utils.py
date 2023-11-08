@@ -22,14 +22,49 @@ PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]
 
 
 # ---------------------------------------------------------------------------
+# clear_yX
+# ---------------------------------------------------------------------------
+
+def _has_xyfh(model):
+    return hasattr(model, "_X") and hasattr(model, "_y") and hasattr(model, "_fh")
+
+
+def clear_yX(model):
+    if isinstance(model, list):
+        estimators_list = model
+        for estimator in estimators_list:
+            clear_yX(estimator)
+
+    elif isinstance(model, dict):
+        estimators_dict = model
+        for key in estimators_dict:
+            clear_yX(estimators_dict[key])
+
+    elif _has_xyfh(model):
+        model._X = None
+        model._y = None
+
+        for attr in [
+            "estimators", "_estimators", "estimators_",
+            "forecasters", "_forecasters", "forecasters_",
+            "estimator", "_estimator", "estimator_",
+            "forecaster", "_forecaster", "forecaster_",
+        ]:
+            if hasattr(model, attr):
+                clear_yX(getattr(model, attr))
+    return
+# end
+
+
+# ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 
-def lmax(l: list) -> int:
-    if l is None or len(l) == 0:
-        return 0
-    else:
-        return max(l)
+# def lmax(l: list) -> int:
+#     if l is None or len(l) == 0:
+#         return 0
+#     else:
+#         return max(l)
 
 
 def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=np.float32) -> Optional[np.ndarray]:
@@ -48,8 +83,21 @@ def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=
     return data
 
 
-def fh_range(n: int) -> ForecastingHorizon:
-    return ForecastingHorizon(list(range(1, n+1)))
+# def fh_range(n: int) -> ForecastingHorizon:
+#     return ForecastingHorizon(list(range(1, n+1)))
+
+
+def make_lags(lags, current):
+    if current is None:
+        return lags
+    if isinstance(lags, int):
+        return 0, lags, current
+    elif len(lags) == 1:
+        return 0, lags[0], current
+    elif isinstance(lags, list):
+        return tuple(lags) + (current,)
+    else:
+        return tuple(lags) + (current,)
 
 
 # ---------------------------------------------------------------------------

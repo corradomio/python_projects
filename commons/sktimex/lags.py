@@ -20,8 +20,7 @@ LAGS_DAY = 'day'
 TYPE = 'type'
 PERIOD_TYPE = 'period_type'
 LAGS_LENGTH = 'length'
-LAGS_CURRENT = 'input_current'
-LAGS_CURRENT_OLD = 'current'
+LAGS_CURRENT = 'current'
 DAY_SECONDS = 3600 * 24
 
 LAG_FACTORS: dict[str, int] = {
@@ -273,17 +272,9 @@ class LagsResolver:
     # end
 
     def _normalize(self):
-        self._normalize_current()
         self._normalize_lags()
         self._normalize_entry(LAGS_INPUT)
         self._normalize_entry(LAGS_TARGET)
-    # end
-
-    def _normalize_current(self):
-        lags = self._lags
-        if LAGS_CURRENT_OLD in lags:
-            lags[LAGS_CURRENT] = lags[LAGS_CURRENT_OLD]
-            del lags[LAGS_CURRENT_OLD]
     # end
 
     def _normalize_lags(self):
@@ -574,10 +565,6 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
 # end
 
 
-# compatibility with the previous implementation
-resolve_lag = resolve_lags
-
-
 def resolve_tlags(tlags: Union[int, tuple, list]) -> list[int]:
     """
     Resolve t)arget lags.
@@ -585,7 +572,10 @@ def resolve_tlags(tlags: Union[int, tuple, list]) -> list[int]:
     """
     if isinstance(tlags, int):
         return list(range(tlags))
+    elif isinstance(tlags, type(range(0))):
+        return list(tlags)
     else:
+        assert isinstance(tlags, (list, tuple))
         return list(tlags)
 
 # ---------------------------------------------------------------------------

@@ -8,11 +8,11 @@ from sktime.forecasting.base import ForecastingHorizon
 from .base import ExtendedBaseForecaster
 from ..lags import resolve_lags, resolve_tlags
 from ..transform.linear import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, to_matrix, import_from, qualified_name
+from ..utils import PD_TYPES, to_matrix, import_from, qualified_name, make_lags
 
 __all__ = [
     "LinearForecaster",
-    "LinearForecastRegressor"
+    # "LinearForecastRegressor"
 ]
 
 
@@ -99,8 +99,9 @@ class LinearForecaster(ExtendedBaseForecaster):
     def __init__(self,
                  lags: Union[int, list, tuple, dict] = (0, 1),
                  tlags=(0,),
-                 estimator: Union[str, Any]="sklearn.linear_model.LinearRegression",
+                 estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
                  flatten=True,
+                 current=None,  # DEPRECATED
                  **kwargs):
         """
 
@@ -132,6 +133,9 @@ class LinearForecaster(ExtendedBaseForecaster):
         """
         super().__init__()
 
+        if current is not None:
+            lags = make_lags(lags, current)
+
         # Unmodified parameters [readonly]
         self.lags = lags
         self.tlags = tlags
@@ -144,34 +148,34 @@ class LinearForecaster(ExtendedBaseForecaster):
         self._tlags = resolve_tlags(tlags)
         self._slots = resolve_lags(lags)
 
-        self._models = {}       # one model for each 'tlag'
-        self._model = None      # a single model for all 'tlags'
+        self._estimators = {}       # one model for each 'tlag'
+        self._estimator = None      # a single model for all 'tlags'
 
         if isinstance(estimator, str):
-            self._class_name = estimator
-            self._create_estimators(import_from(self._class_name))
+            self.estimator = estimator
+            self._create_estimators(import_from(self.estimator))
         elif isinstance(estimator, type):
-            self._class_name = qualified_name(estimator)
+            self.estimator = qualified_name(estimator)
             self._create_estimators(estimator)
         else:
-            self._class_name = qualified_name(type(estimator))
+            self.estimator = qualified_name(type(estimator))
             self._kwargs = estimator.get_params()
             self._create_estimators(type(estimator))
 
-        self.Xh: Optional[np.ndarray] = None
-        self.yh: Optional[np.ndarray] = None
+        self._X = None
+        self._y = None
 
-        name = self._class_name[self._class_name.rfind('.')+1:]
+        name = self.estimator[self.estimator.rfind('.')+1:]
         self._log = logging.getLogger(f"LinearForecaster.{name}")
         # self._log.info(f"Created {self}")
     # end
 
     def _create_estimators(self, estimator=None):
         if self.flatten:
-            self._model = estimator(**self._kwargs)
+            self._estimator = estimator(**self._kwargs)
         else:
             for t in self._tlags:
-                self._models[t] = estimator(**self._kwargs)
+                self._estimators[t] = estimator(**self._kwargs)
     # end
 
     # -----------------------------------------------------------------------
@@ -194,14 +198,11 @@ class LinearForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
-        # DataFrame/Series -> np.ndarray
-        # save only the s last slots (used in prediction)
-        # yh, Xh = self._validate_data_lfr(y, X)
-        # self._save_history(Xh, yh)
+        self._X = X
+        self._y = y
 
         Xh = to_matrix(X)
         yh = to_matrix(y)
-        self._save_history(Xh, yh)
 
         if self.flatten:
             self._fit_flatten(Xh, yh)
@@ -213,7 +214,7 @@ class LinearForecaster(ExtendedBaseForecaster):
     def _fit_flatten(self, Xh, yh):
         tt = LinearTrainTransform(slots=self._slots, tlags=self._tlags)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
-        self._model.fit(Xt, yt)
+        self._estimator.fit(Xt, yt)
 
     def _fit_tlags(self, Xh, yh):
         tlags = self._tlags
@@ -224,12 +225,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         for i in range(st):
             t = tlags[i]
             yt = ytt[:, i:i+1]
-            self._models[t].fit(Xt, yt)
-
-    def _save_history(self, Xh, yh):
-        s = len(self._slots)
-        self.Xh = Xh[-s:] if Xh is not None else None
-        self.yh = yh[-s:] if yh is not None else None
+            self._estimators[t].fit(Xt, yt)
 
     # -----------------------------------------------------------------------
     # predict
@@ -262,15 +258,19 @@ class LinearForecaster(ExtendedBaseForecaster):
     # end
 
     def _predict_flatten(self, Xs, nfh, fhp):
-        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
-        yp = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
+        yh = to_matrix(self._y)
+        Xh = to_matrix(self._X)
 
-        for i in range(nfh):
+        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
+        yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
+
+        i = 0
+        while i < nfh:
             Xt = pt.step(i)
 
-            y_pred: np.ndarray = self._model.predict(Xt)
+            y_pred: np.ndarray = self._estimator.predict(Xt)
 
-            pt.update(i, y_pred)
+            i = pt.update(i, y_pred)
         # end
 
         # add the index
@@ -278,15 +278,18 @@ class LinearForecaster(ExtendedBaseForecaster):
         return y_series
 
     def _predict_tlags(self, Xs, nfh, fhp):
+        yh = to_matrix(self._y)
+        Xh = to_matrix(self._X)
+
         pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
-        yp = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
+        yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
         tlags = self._tlags
 
         i = 0
         while i < nfh:
             it = i
             for t in tlags:
-                model = self._models[t]
+                model = self._estimators[t]
 
                 Xt = pt.step(i)
 
@@ -313,73 +316,18 @@ class LinearForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def _update(self, y, X=None, update_params=True):
+        if self._estimator is not None:
+            self._update_estimator(self._estimator, y=y, X=X, update_params=False)
+        for key in self._estimators:
+            self._update_estimator(self._estimators[key], y=y, X=X, update_params=False)
         return super()._update(y=y, X=X, update_params=False)
 
-    # -----------------------------------------------------------------------
-    # Implementation
-    # -----------------------------------------------------------------------
-    # # _validate_data is already defined in the superclass
-    #
-    # def _validate_data_lfr(self, y=None, X=None, predict: bool = False):
-    #     # validate the data and converts it:
-    #     #
-    #     #   y in a np.array with rank 1
-    #     #   X in a np.array with rank 2 OR None
-    #     #  fh in a ForecastingHorizon
-    #     #
-    #     # Prediction cases
-    #     #
-    #     #   params      past        future      pred len
-    #     #   fh          yh          -           |fh|
-    #     #   X           Xh, yh      X           |X|
-    #     #   fh, X       Xh, yh      X           |fh|
-    #     #   fh, y       y           -           |fh|
-    #     #   y, X        X[:y], y    X[y:]       |X|-|y|
-    #     #   fh, y, X    X[:y], y    X[y:]       |fh|
-    #     #
-    #
-    #     if predict and self.yh is None:
-    #         raise ValueError(f'{self.__class__.__name__} not fitted yet')
-    #
-    #     # X to np.array
-    #     if X is not None:
-    #         if isinstance(X, pd.DataFrame):
-    #             X = X.to_numpy()
-    #         assert isinstance(X, np.ndarray)
-    #         assert len(X.shape) == 2
-    #
-    #     # y to np.array
-    #     if y is not None:
-    #         if isinstance(y, pd.Series):
-    #             y = y.to_numpy()
-    #         elif isinstance(y, pd.DataFrame):
-    #             assert y.shape[1] == 1
-    #             self._cutoff = y.index[-1]
-    #             y = y.to_numpy()
-    #         assert isinstance(y, np.ndarray)
-    #         if len(y.shape) == 2:
-    #             y = y.reshape(-1)
-    #         assert len(y.shape) == 1
-    #
-    #     if X is None and self.Xh is not None:
-    #         raise ValueError(f"predict needs X")
-    #
-    #     # yf, Xf
-    #     if not predict:
-    #         return y, X
-    #
-    #     # Xf, yh, Xh
-    #     if y is None:
-    #         Xf = X
-    #         yh = self.yh
-    #         Xh = self.Xh
-    #     else:
-    #         n = len(y)
-    #         yh = y
-    #         Xh = X[:n]
-    #         Xf = X[n:]
-    #     return Xf, yh, Xh
-    # # end
+    def _update_estimator(self, estimator, y, X=None, update_params=True):
+        try:
+            estimator.update(y=y, X=X, update_params=update_params)
+        except:
+            pass
+    # end
 
     # -----------------------------------------------------------------------
     # Support
@@ -391,7 +339,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         return state
 
     def __repr__(self, **kwargs):
-        return f"LinearForecaster[{self._class_name}]"
+        return f"LinearForecaster[{self.estimator}]"
 
     # -----------------------------------------------------------------------
     # End
@@ -399,6 +347,7 @@ class LinearForecaster(ExtendedBaseForecaster):
 # end
 
 
+# Compatibility
 LinearForecastRegressor = LinearForecaster
 
 # ---------------------------------------------------------------------------

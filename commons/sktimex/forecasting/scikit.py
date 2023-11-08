@@ -12,7 +12,7 @@ from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
 
 __all__ = [
     'ScikitForecaster',
-    "ScikitForecastRegressor"
+    # "ScikitForecastRegressor"
 ]
 
 
@@ -53,7 +53,7 @@ def _to_prediction_length(tlags: Union[NoneType, int, list[int], range]):
     elif len(tlags) == ((tlags[-1]) + 1):
         return 1 + tlags[-1]
     else:
-        raise ValueError("Parameter 'tlags' is not: None, int, list(range(n))")
+        raise ValueError("Parameter 'tlags' is not: None, int, range(n), list(range(n))")
 
 
 # ---------------------------------------------------------------------------
@@ -113,39 +113,40 @@ class ScikitForecaster(ExtendedBaseForecaster):
     #   4) a sklearn instance   -> wrap it with make_reduction
 
     def __init__(self,
-                 prediction_length=None,
                  estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
+                 prediction_length=None,
                  **kwargs):
         super().__init__()
         self.estimator = estimator
         self.prediction_length = _to_prediction_length(prediction_length)
+        self._estimator = None
 
         kwargs = _replace_lags(kwargs)
 
         if isinstance(estimator, str):
-            self._class_name = estimator
+            self.estimator = estimator
             self._kwargs = kwargs
             self._create_estimator()
         elif isinstance(estimator, type):
-            self._class_name = qualified_name(estimator)
+            self.estimator = qualified_name(estimator)
             self._kwargs = kwargs
             self._create_estimator(estimator)
         else:
-            self._class_name = qualified_name(type(estimator))
+            self.estimator = qualified_name(type(estimator))
             self._kwargs = kwargs | estimator.get_params()
             self._wrap_estimator(estimator)
 
-        name = self._class_name[self._class_name.rfind('.')+1:]
+        name = self.estimator[self.estimator.rfind('.')+1:]
         self._log = logging.getLogger(f"ScikitForecaster.{name}")
     # end
 
     def _create_estimator(self, estimator=None):
         if estimator is None:
-            estimator = import_from(self._class_name)
+            estimator = import_from(self.estimator)
 
         kwargs = self._kwargs
 
-        ns = _ns_of(self._class_name)
+        ns = _ns_of(self.estimator)
         if ns in SCIKIT_NAMESPACES:
             window_length = kwval(kwargs, "window_length", 5)
             strategy = kwval(kwargs, "strategy", "recursive")
@@ -154,10 +155,10 @@ class ScikitForecaster(ExtendedBaseForecaster):
             # create the regressor
             regressor = estimator(**kwargs)
             # create the forecaster
-            self.forecaster_ = make_reduction(regressor, window_length=window_length, strategy=strategy)
+            self._estimator = make_reduction(regressor, window_length=window_length, strategy=strategy)
         elif ns in SKTIME_NAMESPACES:
             # create the forecaster
-            self.forecaster_ = estimator(**kwargs)
+            self._estimator = estimator(**kwargs)
         else:
             raise ValueError(f"Unsupported estimator '{estimator}'")
             pass
@@ -166,16 +167,15 @@ class ScikitForecaster(ExtendedBaseForecaster):
     def _wrap_estimator(self, regressor):
         kwargs = self._kwargs
 
-        ns = _ns_of(self._class_name)
+        ns = _ns_of(self.estimator)
         if ns in SCIKIT_NAMESPACES:
             window_length = kwval(kwargs, "window_length", 5)
             strategy = kwval(kwargs, "strategy", "recursive")
 
-            self.forecaster_ = make_reduction(regressor, window_length=window_length, strategy=strategy)
+            self._estimator = make_reduction(regressor, window_length=window_length, strategy=strategy)
         elif ns in SKTIME_NAMESPACES:
-            self.forecaster_ = regressor
+            self._estimator = regressor
         else:
-            # raise ValueError(f"Unsupported class_name '{class_name}'")
             pass
     # end
 
@@ -211,7 +211,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
         # ensure fh relative AND NOT None for tabular models
         fh = self._compose_tabular_fh(fh)
 
-        self.forecaster_.fit(y=y, X=X, fh=fh)
+        self._estimator.fit(y=y, X=X, fh=fh)
         return self
     # end
 
@@ -258,7 +258,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
         # using 'sktimex.forecasting.compose.make_reduction'
         # it is resolved the problems with predict horizon larger than the train horizon
 
-        y_pred = self.forecaster_.predict(fh=fh, X=X)
+        y_pred = self._estimator.predict(fh=fh, X=X)
 
         assert isinstance(y_pred, (pd.DataFrame, pd.Series))
         return y_pred
@@ -269,6 +269,10 @@ class ScikitForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def _update(self, y, X=None, update_params=True):
+        try:
+            self._estimator.update(y=y, X=X, update_params=False)
+        except:
+            pass
         return super()._update(y=y, X=X, update_params=False)
 
     # -----------------------------------------------------------------------
@@ -322,7 +326,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
         return state
 
     def __repr__(self):
-        return f"ScikitForecaster[{self._class_name}]"
+        return f"ScikitForecaster[{self.estimator}]"
 
     # -----------------------------------------------------------------------
     # end
@@ -330,6 +334,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
 # end
 
 
+# Compatibility
 ScikitForecastRegressor = ScikitForecaster
 
 # ---------------------------------------------------------------------------

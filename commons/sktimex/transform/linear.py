@@ -37,7 +37,7 @@ class LinearTrainTransform(ModelTrainTransform):
         return self
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
-        y, X = super().transform(y, X)
+        X, y = super().transform(y=y, X=X)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags
@@ -77,53 +77,6 @@ class LinearTrainTransform(ModelTrainTransform):
 
         return Xt, yt
     # end
-
-    # def transform_tlag(self, at):
-    #     X = self.Xh
-    #     y = self.yh
-    #     y, X = super().transform(y, X)
-    #
-    #     xlags = self.xlags if X is not None else []
-    #     ylags = self.ylags
-    #     tlags = self.tlags
-    #
-    #     sx = len(xlags)
-    #     sy = len(ylags)
-    #     st = len(tlags)
-    #     t = len(self.slots)
-    #
-    #     s = max(tlags)
-    #     r = s + t
-    #
-    #     mx = X.shape[1] if X is not None else 0
-    #     my = y.shape[1]
-    #     mt = sx * mx + sy * my
-    #     mu = st * my
-    #     n = y.shape[0] - r
-    #
-    #     Xt = np.zeros((n, mt), dtype=y.dtype)
-    #
-    #     for i in range(n):
-    #         c = 0
-    #         for j in reversed(ylags):
-    #             Xt[i, c:c + my] = y[t + i - j]
-    #             c += my
-    #         for j in reversed(xlags):
-    #             Xt[i, c:c + mx] = X[t + i - j]
-    #             c += mx
-    #     # end
-    #
-    #     yt = np.zeros((n, mu), dtype=y.dtype)
-    #
-    #     for i in range(n):
-    #         c = 0
-    #         for j in tlags:
-    #             yt[i, c:c + my] = y[t + i + j]
-    #             c += my
-    #     # end
-    #
-    #     return Xt, yt
-    # # end
 # end
 
 

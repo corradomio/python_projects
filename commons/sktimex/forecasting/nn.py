@@ -8,8 +8,8 @@ from sktime.forecasting.base import ForecastingHorizon
 from torchx import nnlin as nnx
 from numpyx.scalers import MinMaxScaler
 from .base import ExtendedBaseForecaster
-from ..lags import resolve_lags, LagSlots
-from ..utils import import_from
+from ..lags import resolve_lags, resolve_tlags, LagSlots
+from ..utils import import_from, to_matrix
 
 # ---------------------------------------------------------------------------
 # Optimizers
@@ -56,6 +56,10 @@ NNX_CNN_FLAVOURS = {
 }
 
 
+def NoLog(*args, **kwargs):
+    pass
+
+
 class EarlyStopping(skorch.callbacks.EarlyStopping):
 
     def __init__(self,
@@ -64,7 +68,7 @@ class EarlyStopping(skorch.callbacks.EarlyStopping):
                  threshold=1e-4,
                  threshold_mode='rel',
                  lower_is_better=True,
-                 sink=(lambda x: None),
+                 sink=NoLog,
                  load_best=False):
         super().__init__(monitor, patience, threshold, threshold_mode, lower_is_better, sink, load_best)
     # end
@@ -145,7 +149,7 @@ class BaseNNForecaster(ExtendedBaseForecaster):
     def __init__(self, *,
                  lags: Union[int, list, tuple, dict] = (0, 1),
                  tlags: Union[int, list, tuple] = (0,),
-                 scale: bool=False,
+                 scale=False,
 
                  # --
 
@@ -169,7 +173,8 @@ class BaseNNForecaster(ExtendedBaseForecaster):
 
         self._flavour = flavour.lower() if isinstance(flavour, str) else flavour
         self._lags = lags
-        self._tlags = tlags
+        self._slots: LagSlots = resolve_lags(lags)
+        self._tlags = resolve_tlags(tlags)
         self._scale = scale
 
         optimizer = parse_class(optimizer, torch.optim.Adam)
@@ -206,12 +211,11 @@ class BaseNNForecaster(ExtendedBaseForecaster):
         #
         #
         #
-        self._slots: LagSlots = resolve_lags(lags)
         self._model = None
 
         # index
-        self.Xh = None
-        self.yh = None
+        self._X = None
+        self._y = None
 
         # scalers
         self._y_scaler = None
@@ -222,23 +226,23 @@ class BaseNNForecaster(ExtendedBaseForecaster):
         return params
     # end
 
+    # def update(self, y, X=None, update_params=True):
+    #     self._save_history(X, y)
+
     # -----------------------------------------------------------------------
     # Support
     # -----------------------------------------------------------------------
 
-    def _save_history(self, Xh, yh):
-        s = len(self._slots)
-        self.Xh = Xh[-s:] if Xh is not None else None
-        self.yh = yh[-s:] if yh is not None else None
-
     def _compute_input_output_sizes(self):
-        Xh = self.Xh
-        yh = self.yh
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
+
         sx = len(self._slots.xlags)
+        st = len(self._tlags)
+
         mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
         my = yh.shape[1]
-        input_size = mx + my
-        return input_size, my
+        return mx + my, my*st
 
     def _from_numpy(self, ys, fhp):
         ys = ys.reshape(-1)

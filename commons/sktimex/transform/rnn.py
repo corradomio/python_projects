@@ -26,7 +26,7 @@ class RNNTrainTransform(ModelTrainTransform):
     # end
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:
-        y, X = super().transform(y, X)
+        X, y = super().transform(y=y, X=X)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags

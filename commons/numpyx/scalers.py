@@ -84,8 +84,6 @@ class MinMaxScaler(Scaler):
         if globally or rank == 1:
             self.minv = array.min()
             self.diffv = array.max() - self.minv
-            if abs(self.diffv) < 10e-6:
-                self.diffv = 1.
         elif rank == 2:
             self.minv = array.min(axis=0)
             self.diffv = array.max(axis=0) - self.minv
@@ -100,11 +98,17 @@ class MinMaxScaler(Scaler):
         assert self.rank == len(array.shape)
 
         if self.globally or self.rank == 1:
-            scaled = self.minr + (array - self.minv) / self.diffv * self.diffr
+            if self.diffv > 0:
+                scaled = self.minr + (array - self.minv) / self.diffv * self.diffr
+            else:
+                scaled = self.minr
         else:
             scaled = np.zeros_like(array)
             for i in range(array.shape[1]):
-                scaled[:, i] = self.minr + (array[:, i] - self.minv[i]) / self.diffv[i] * self.diffr
+                if self.diffv[i] > 0:
+                    scaled[:, i] = self.minr + (array[:, i] - self.minv[i]) / self.diffv[i] * self.diffr
+                else:
+                    scaled[:, i] = self.minr
         # end
         return scaled
 

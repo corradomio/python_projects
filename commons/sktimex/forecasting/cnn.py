@@ -1,9 +1,11 @@
+import logging
+
 from torch import nn as nn
 
+from .nn import *
 from ..transform.cnn import CNNTrainTransform, CNNPredictTransform
 from ..transform.cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
-from ..utils import FH_TYPES, PD_TYPES, to_matrix
-from .nn import *
+from ..utils import FH_TYPES, PD_TYPES
 
 __all__ = [
     "SimpleCNNForecaster",
@@ -120,7 +122,7 @@ class BaseCNNForecaster(BaseNNForecaster):
     def _update(self, y, X=None, update_params=True):
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))
-        self._save_history(Xh, yh)
+        # self._save_history(Xh, yh)
         return super()._update(y=y, X=X, update_params=False)
     # end
 
@@ -158,15 +160,16 @@ class SimpleCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
+        # self._save_history(X, y)
+
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))
-        self._save_history(Xh, yh)
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        tt = CNNTrainTransform(slots=self._slots)
+        tt = CNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(Xt, yt)
@@ -180,20 +183,23 @@ class SimpleCNNForecaster(BaseCNNForecaster):
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
         Xs = to_matrix(X)
-        pt = CNNPredictTransform(slots=self._slots, tlags=[0])
-        ys = pt.fit(y=self.yh, X=self.Xh).transform(fh=nfh, X=Xs)
+        pt = CNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
+        ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
-        for i in range(nfh):
+        i = 0
+        while i < nfh:
             Xt = pt.step(i)
 
             y_pred = self._model.predict(Xt)
 
-            pt.update(i, y_pred)
+            i = pt.update(i, y_pred)
         # end
 
         ys = self._inverse_scale(ys)
@@ -234,7 +240,9 @@ class SimpleCNNForecaster(BaseCNNForecaster):
             module=cnn,
             **self._skt_args
         )
-        model.set_params(callbacks__print_log=PrintLog(delay=3))
+        model.set_params(callbacks__print_log=PrintLog(
+            sink=logging.getLogger(str(self)).info,
+            delay=3))
 
         return model
     # end
@@ -258,15 +266,16 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
+        # self._save_history(X, y)
+
         Xh = to_matrix(X)
         yh = self._apply_scale(to_matrix(y))
-        self._save_history(Xh, yh)
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        tt = CNNSlotsTrainTransform(slots=self._slots)
+        tt = CNNSlotsTrainTransform(slots=self._slots, tlags=self._tlags)
         Xt, yt = tt.fit_transform(Xh, yh)
 
         self._model.fit(Xt, yt)
@@ -281,19 +290,23 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
 
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
+
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
         Xs = to_matrix(X)
-        pt = CNNSlotsPredictTransform(slots=self._slots, tlags=[0])
-        ys = pt.fit(y=self.yh, X=self.Xh, ).transform(fh=nfh, X=Xs)
+        pt = CNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
+        ys = pt.fit(y=yh, X=Xh, ).transform(fh=nfh, X=Xs)
 
-        for i in range(nfh):
+        i = 0
+        while i < nfh:
             Xt = pt.step(i)
 
             y_pred = self._model.predict(Xt)
 
-            pt.update(i, y_pred)
+            i = pt.update(i, y_pred)
         # end
 
         ys = self._inverse_scale(ys)
@@ -306,8 +319,9 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        Xh = self.Xh
-        yh = self.yh
+        Xh = to_matrix(self._X)
+        yh = self._apply_scale(to_matrix(self._y))
+
         mx = Xh.shape[1] if Xh is not None else 0
         my = yh.shape[1]
         return (mx, my), my
