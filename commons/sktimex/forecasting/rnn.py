@@ -1,6 +1,7 @@
 import logging
 from torch import nn as nn
 
+from stdlib import mul_
 from .nn import *
 from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
 from ..transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
@@ -117,6 +118,11 @@ class BaseRNNForecaster(BaseNNForecaster):
         return params
     # end
 
+    def _compute_input_output_sizes(self):
+        # (sx, mx+my), (st, my)
+        input_shape, ouput_shape = super()._compute_input_output_shapes()
+        return input_shape[1], mul_(ouput_shape)
+
     # -----------------------------------------------------------------------
     # end
     # -----------------------------------------------------------------------
@@ -156,14 +162,13 @@ class SimpleRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = (1,)):
-        # self._save_history(X, y)
-
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
+
+        Xh = to_matrix(X)
+        yh = self._apply_scale(to_matrix(y))
 
         tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
@@ -315,14 +320,21 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        # Xh = to_matrix(self._X)
+        # yh = self._apply_scale(to_matrix(self._y))
+        #
+        # sx = len(self._slots.xlags)
+        # st = len(self._tlags)
+        #
+        # mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
+        # my = yh.shape[1]
 
-        sx = len(self._slots.xlags)
-        st = len(self._tlags)
+        # (sx, mx+my), (st, my)
+        input_shape, ouput_shape = super()._compute_input_output_shapes()
 
-        mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
-        my = yh.shape[1]
+        st, my = ouput_shape
+        mx = input_shape[1] - my
+
         return (mx, my), my*st
 
     def _create_skorch_model(self, input_size, output_size):

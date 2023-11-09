@@ -2,6 +2,7 @@ import logging
 
 from torch import nn as nn
 
+from stdlib import mul_
 from .nn import *
 from ..transform.cnn import CNNTrainTransform, CNNPredictTransform
 from ..transform.cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
@@ -120,8 +121,8 @@ class BaseCNNForecaster(BaseNNForecaster):
     #     pass
 
     def _update(self, y, X=None, update_params=True):
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        # Xh = to_matrix(X)
+        # yh = self._apply_scale(to_matrix(y))
         # self._save_history(Xh, yh)
         return super()._update(y=y, X=X, update_params=False)
     # end
@@ -135,6 +136,11 @@ class BaseCNNForecaster(BaseNNForecaster):
         params = params | self._cnn_args
         return params
     # end
+
+    def _compute_input_output_sizes(self):
+        # (sx, mx+my), (st, my)
+        input_shape, ouput_shape = super()._compute_input_output_shapes()
+        return input_shape[1], mul_(ouput_shape)
 
     # -----------------------------------------------------------------------
     # end
@@ -160,14 +166,13 @@ class SimpleCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
-        # self._save_history(X, y)
-
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
 
         input_size, output_size = self._compute_input_output_sizes()
 
         self._model = self._create_skorch_model(input_size, output_size)
+
+        Xh = to_matrix(X)
+        yh = self._apply_scale(to_matrix(y))
 
         tt = CNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
@@ -319,11 +324,18 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        # Xh = to_matrix(self._X)
+        # yh = to_matrix(self._y)
+        #
+        # mx = Xh.shape[1] if Xh is not None else 0
+        # my = yh.shape[1]
 
-        mx = Xh.shape[1] if Xh is not None else 0
-        my = yh.shape[1]
+        # (sx, mx+my), (st, my)
+        input_shape, ouput_shape = super()._compute_input_output_shapes()
+
+        my = ouput_shape[1]
+        mx = input_shape[1] - my
+
         return (mx, my), my
 
     def _create_skorch_model(self, input_size, output_size):
@@ -392,7 +404,9 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
             warm_start=True,
             **self._skt_args
         )
-        model.set_params(callbacks__print_log=PrintLog(delay=3))
+        model.set_params(callbacks__print_log=PrintLog(
+            sink=logging.getLogger(str(self)).info,
+            delay=3))
 
         return model
     # end

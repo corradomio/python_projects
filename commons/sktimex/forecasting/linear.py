@@ -100,7 +100,7 @@ class LinearForecaster(ExtendedBaseForecaster):
                  lags: Union[int, list, tuple, dict] = (0, 1),
                  tlags=(0,),
                  estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
-                 flatten=True,
+                 flatten=False,
                  current=None,  # DEPRECATED
                  **kwargs):
         """
@@ -149,7 +149,6 @@ class LinearForecaster(ExtendedBaseForecaster):
         self._slots = resolve_lags(lags)
 
         self._estimators = {}       # one model for each 'tlag'
-        self._estimator = None      # a single model for all 'tlags'
 
         if isinstance(estimator, str):
             self.estimator = estimator
@@ -172,7 +171,7 @@ class LinearForecaster(ExtendedBaseForecaster):
 
     def _create_estimators(self, estimator=None):
         if self.flatten:
-            self._estimator = estimator(**self._kwargs)
+            self._estimators[0] = estimator(**self._kwargs)
         else:
             for t in self._tlags:
                 self._estimators[t] = estimator(**self._kwargs)
@@ -214,7 +213,7 @@ class LinearForecaster(ExtendedBaseForecaster):
     def _fit_flatten(self, Xh, yh):
         tt = LinearTrainTransform(slots=self._slots, tlags=self._tlags)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
-        self._estimator.fit(Xt, yt)
+        self._estimators[0].fit(Xt, yt)
 
     def _fit_tlags(self, Xh, yh):
         tlags = self._tlags
@@ -268,7 +267,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         while i < nfh:
             Xt = pt.step(i)
 
-            y_pred: np.ndarray = self._estimator.predict(Xt)
+            y_pred: np.ndarray = self._estimators[0].predict(Xt)
 
             i = pt.update(i, y_pred)
         # end
@@ -316,8 +315,6 @@ class LinearForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def _update(self, y, X=None, update_params=True):
-        if self._estimator is not None:
-            self._update_estimator(self._estimator, y=y, X=X, update_params=False)
         for key in self._estimators:
             self._update_estimator(self._estimators[key], y=y, X=X, update_params=False)
         return super()._update(y=y, X=X, update_params=False)

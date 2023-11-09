@@ -5,6 +5,7 @@ try:
     # available only if 'torch/skorch are available
     from .cnn import SimpleCNNForecaster, MultiLagsCNNForecaster
     from .rnn import SimpleRNNForecaster, MultiLagsRNNForecaster
+    from .lnn import LinearNNForecaster
 except:
     pass
 

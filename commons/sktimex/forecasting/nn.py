@@ -56,6 +56,11 @@ NNX_CNN_FLAVOURS = {
 }
 
 
+NNX_LIN_FLAVOURS = {
+    'lin': nnx.LinearEncoderDecoder
+}
+
+
 def NoLog(*args, **kwargs):
     pass
 
@@ -233,16 +238,29 @@ class BaseNNForecaster(ExtendedBaseForecaster):
     # Support
     # -----------------------------------------------------------------------
 
-    def _compute_input_output_sizes(self):
+    # def _compute_input_output_sizes(self):
+    #     Xh = to_matrix(self._X)
+    #     yh = self._apply_scale(to_matrix(self._y))
+    #
+    #     sx = len(self._slots.xlags)
+    #     st = len(self._tlags)
+    #
+    #     mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
+    #     my = yh.shape[1]
+    #     return mx + my, my*st
+
+    def _compute_input_output_shapes(self):
         Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh = to_matrix(self._y)
 
         sx = len(self._slots.xlags)
+        sy = len(self._slots.ylags)
         st = len(self._tlags)
 
         mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
         my = yh.shape[1]
-        return mx + my, my*st
+
+        return (sy, mx+my), (st, my)
 
     def _from_numpy(self, ys, fhp):
         ys = ys.reshape(-1)

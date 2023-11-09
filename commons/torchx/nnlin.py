@@ -1,7 +1,42 @@
 import torch
 import torch.nn as nn
+from . import nn as nnx
 
 from .activation import activation_function
+
+
+# ---------------------------------------------------------------------------
+# Linear
+# ---------------------------------------------------------------------------
+
+class LinearEncoderDecoder(nn.Module):
+
+    def __init__(self, *,
+                 input_shape,
+                 output_shape,
+                 hidden_size=None,
+                 activation=None,
+                 activation_params=None):
+        super().__init__()
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+        self.hidden_size = hidden_size
+
+        if hidden_size is None:
+            self.lin = nnx.Linear(in_features=input_shape, out_features=output_shape)
+        else:
+            self.enc = nnx.Linear(in_features=input_shape, out_features=hidden_size)
+            self.activation = activation_function(activation, activation_params)
+            self.dec = nnx.Linear(in_features=hidden_size, out_features=output_shape)
+
+    def forward(self, x):
+        if self.hidden_size is None:
+            return self.lin.forward(x)
+        else:
+            t = self.enc(x)
+            t = self.activation(t) if self.activation else t
+            return self.dec(t)
+# end
 
 
 # ---------------------------------------------------------------------------

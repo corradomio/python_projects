@@ -6,6 +6,7 @@ from sktime.utils import plot_series
 
 import pandasx as pdx
 import sktime.forecasting.naive
+import sktimex
 
 
 def main():
@@ -14,7 +15,8 @@ def main():
         datetime=['date', '%Y-%m-%d', 'M'],
         index=['agency', 'sku', 'date'],
         ignore=['timeseries', 'agency', 'sku', 'date'] + [
-            'industry_volume', 'soda-volume'
+            'industry_volume', 'soda-volume',
+            'avg_population_2017', 'avg_yearly_household_income_2017'
         ],
         binary=["easter_day",
                 "good_friday",
@@ -31,6 +33,9 @@ def main():
                 ]
     )
 
+    scaler = pdx.MinMaxScaler()
+    df_all = scaler.fit_transform(df_all)
+
     df_dict = pdx.groups_split(df_all)
     keys = list(sorted(df_dict.keys()))
     for key in keys:
@@ -39,14 +44,28 @@ def main():
 
         X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=12)
 
-        f = sktime.forecasting.naive.NaiveForecaster(sp=3, strategy='last')
+        # f = sktimex.forecasting.linear.LinearForecaster(
+        #     lags=(3, 3),
+        #     tlags=3
+        # )
+
+        f = sktimex.forecasting.lnn.LinearNNForecaster(
+            lags=(3, 3),
+            tlags=3,
+        )
+
         f.fit(y=y_train, X=X_train)
 
-        y_predict = f.predict(fh=y_test.index, X=X_test)
+        # Xh, yh = None, None
+        Xh = X_train
+        yh = y_train
+        sktimex.clear_yX(f)
+
+        y_predict = f.predict_history(fh=y_test.index, X=X_test, yh=yh, Xh=Xh)
 
         plot_series(y_train['volume'], y_test['volume'], y_predict['volume'])
         plt.show()
-        pass
+        break
 
 
     pass
