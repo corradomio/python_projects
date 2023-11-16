@@ -7,3 +7,5 @@ from .rnn import LSTM, GRU, RNN
 from .pos import PositionalEncoder
 from .t2v import Time2Vec
 from .xnn import RepeatVector, TimeDistributed, ChannelDistributed, ReshapeVector, Clip
+from .activ import Snake
+from .rbf import RBFLayer

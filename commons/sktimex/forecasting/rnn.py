@@ -1,12 +1,13 @@
 import logging
+
 from torch import nn as nn
 
+from skorchx.callbacks import PrintLog
 from stdlib import mul_
 from .nn import *
 from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
 from ..transform.rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
-from ..utils import FH_TYPES, PD_TYPES, to_matrix
-from skorchx.callbacks import PrintLog
+from ..utils import FH_TYPES, PD_TYPES
 
 __all__ = [
     "SimpleRNNForecaster",
@@ -113,8 +114,7 @@ class BaseRNNForecaster(BaseNNForecaster):
     # -----------------------------------------------------------------------
 
     def get_params(self, deep=True):
-        params = super().get_params(deep=deep)
-        params = params | self._rnn_args
+        params = super().get_params(deep=deep) | self._rnn_args
         return params
     # end
 
@@ -167,8 +167,7 @@ class SimpleRNNForecaster(BaseRNNForecaster):
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        yh, Xh = self.transform(y, X)
 
         tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
@@ -184,13 +183,12 @@ class SimpleRNNForecaster(BaseRNNForecaster):
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs = self.transform(None, X)
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
         pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
@@ -203,7 +201,7 @@ class SimpleRNNForecaster(BaseRNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self._inverse_scale(ys)
+        ys = self.inverse_transform(ys)
         yp = self._from_numpy(ys, fhp)
         return yp
     # end
@@ -269,8 +267,7 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
         # self._save_history(X, y)
 
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        yh, Xh = self.transform(y, X)
 
         input_size, output_size = self._compute_input_output_sizes()
 
@@ -291,13 +288,12 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
 
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs = self.transform(None, X)
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
         pt = RNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
@@ -310,7 +306,7 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self._inverse_scale(ys)
+        ys = self.inverse_transform(ys)
         yp = self._from_numpy(ys, fhp)
         return yp
     # end
@@ -320,15 +316,6 @@ class MultiLagsRNNForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        # Xh = to_matrix(self._X)
-        # yh = self._apply_scale(to_matrix(self._y))
-        #
-        # sx = len(self._slots.xlags)
-        # st = len(self._tlags)
-        #
-        # mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
-        # my = yh.shape[1]
-
         # (sx, mx+my), (st, my)
         input_shape, ouput_shape = super()._compute_input_output_shapes()
 

@@ -121,9 +121,6 @@ class BaseCNNForecaster(BaseNNForecaster):
     #     pass
 
     def _update(self, y, X=None, update_params=True):
-        # Xh = to_matrix(X)
-        # yh = self._apply_scale(to_matrix(y))
-        # self._save_history(Xh, yh)
         return super()._update(y=y, X=X, update_params=False)
     # end
 
@@ -132,8 +129,7 @@ class BaseCNNForecaster(BaseNNForecaster):
     # -----------------------------------------------------------------------
 
     def get_params(self, deep=True):
-        params = super().get_params(deep=deep)
-        params = params | self._cnn_args
+        params = super().get_params(deep=deep) | self._cnn_args
         return params
     # end
 
@@ -171,8 +167,7 @@ class SimpleCNNForecaster(BaseCNNForecaster):
 
         self._model = self._create_skorch_model(input_size, output_size)
 
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        yh, Xh = self.transform(y, X)
 
         tt = CNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
@@ -188,13 +183,12 @@ class SimpleCNNForecaster(BaseCNNForecaster):
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs = self.transform(None, X)
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
         pt = CNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
@@ -207,7 +201,7 @@ class SimpleCNNForecaster(BaseCNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self._inverse_scale(ys)
+        ys = self.inverse_transform(ys)
         yp = self._from_numpy(ys, fhp)
         return yp
     # end
@@ -273,8 +267,7 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
         # self._save_history(X, y)
 
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        yh, Xh = self.transform(y, X)
 
         input_size, output_size = self._compute_input_output_sizes()
 
@@ -295,13 +288,12 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
 
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs = self.transform(None, X)
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
         pt = CNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
         ys = pt.fit(y=yh, X=Xh, ).transform(fh=nfh, X=Xs)
 
@@ -314,7 +306,7 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self._inverse_scale(ys)
+        ys = self.inverse_transform(ys)
         yp = self._from_numpy(ys, fhp)
         return yp
     # end
@@ -324,12 +316,6 @@ class MultiLagsCNNForecaster(BaseCNNForecaster):
     # -----------------------------------------------------------------------
 
     def _compute_input_output_sizes(self):
-        # Xh = to_matrix(self._X)
-        # yh = to_matrix(self._y)
-        #
-        # mx = Xh.shape[1] if Xh is not None else 0
-        # my = yh.shape[1]
-
         # (sx, mx+my), (st, my)
         input_shape, ouput_shape = super()._compute_input_output_shapes()
 

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Self
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,11 @@ class TimeseriesTransform:
         X = to_matrix(X)
         assert isinstance(X, (NoneType, np.ndarray))
         return X
+
+    def _check_y(self, y):
+        y = to_matrix(y)
+        assert isinstance(y, np.ndarray)
+        return y
 
     def _check_Xy(self, X, y=None):
         X = to_matrix(X)
@@ -52,6 +57,15 @@ class TimeseriesTransform:
         assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(fh, int)
         return X, fh
+
+    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> Self:
+        return self
+
+    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:
+        return X, y
+
+    def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+        return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
 
@@ -72,18 +86,16 @@ class ModelTrainTransform(TimeseriesTransform):
         self.tlags: list = list(tlags)
     # end
 
-    def fit(self, y: np.ndarray, X: Optional[np.ndarray]=None):
-        X, y = self._check_Xy(X, y)
-        return self
-    # end
+    # def fit(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+    #     return self
+    # # end
 
-    def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
-        X, y = self._check_Xy(X, y)
-        return X, y
-    # end
+    # def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
+    #     return X, y
+    # # end
 
-    def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
-        return self.fit(y=y, X=X).transform(y=y, X=X)
+    # def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+    #     return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
 

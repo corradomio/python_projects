@@ -182,13 +182,12 @@ class LinearForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def get_params(self, deep=True):
-        params = {
+        params = super().get_params(deep=deep) | {
             'lags': self.lags,
             'tlags': self.tlags,
             'flatten': self.flatten,
             'estimator': self.estimator
-        }
-        params = params | self._kwargs
+        } | self._kwargs
         return params
     # end
 
@@ -200,14 +199,12 @@ class LinearForecaster(ExtendedBaseForecaster):
         self._X = X
         self._y = y
 
-        Xh = to_matrix(X)
-        yh = to_matrix(y)
+        yh, Xh = self.transform(y, X)
 
         if self.flatten:
             self._fit_flatten(Xh, yh)
         else:
             self._fit_tlags(Xh, yh)
-        # end
         return self
 
     def _fit_flatten(self, Xh, yh):
@@ -246,19 +243,18 @@ class LinearForecaster(ExtendedBaseForecaster):
             fh = fhp.to_relative(self.cutoff)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
 
         if self.flatten:
-            y_pred = self._predict_flatten(Xs, nfh, fhp)
+            y_pred = self._predict_flatten(X, nfh, fhp)
         else:
-            y_pred = self._predict_tlags(Xs, nfh, fhp)
+            y_pred = self._predict_tlags(X, nfh, fhp)
 
         return y_pred
     # end
 
-    def _predict_flatten(self, Xs, nfh, fhp):
-        yh = to_matrix(self._y)
-        Xh = to_matrix(self._X)
+    def _predict_flatten(self, X, nfh, fhp):
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs  = self.transform(None, X)
 
         pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
         yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
@@ -273,12 +269,13 @@ class LinearForecaster(ExtendedBaseForecaster):
         # end
 
         # add the index
+        yp = self.inverse_transform(yp)
         y_series: pd.Series = self._from_numpy(yp, fhp)
         return y_series
 
-    def _predict_tlags(self, Xs, nfh, fhp):
-        yh = to_matrix(self._y)
-        Xh = to_matrix(self._X)
+    def _predict_tlags(self, X, nfh, fhp):
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs = self.transform(None, X)
 
         pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
         yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
@@ -299,6 +296,7 @@ class LinearForecaster(ExtendedBaseForecaster):
         # end
 
         # add the index
+        yp = self.inverse_transform(yp)
         y_series: pd.Series = self._from_numpy(yp, fhp)
         return y_series
 

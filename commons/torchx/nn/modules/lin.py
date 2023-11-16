@@ -1,5 +1,6 @@
 from typing import Union
 
+import torch
 import torch.nn as nn
 from torch import Tensor
 from stdlib import mul_
@@ -35,6 +36,8 @@ class Linear(nn.Linear):
             device=device,
             dtype=dtype
         )
+        self.input_shape = in_features
+        self.output_shape = out_features
 
         self.flatten = None if isinstance(in_features, int) \
             else nn.Flatten()
@@ -43,10 +46,20 @@ class Linear(nn.Linear):
 
     def forward(self, input: Tensor) -> Tensor:
         t = input
-        if self.flatten:
-            t = self.flatten.forward(t)
+
+        n = len(t)
+        if not isinstance(self.input_shape, int):
+            t = torch.flatten(t, start_dim=1)
         t = super().forward(t)
-        if self.unflatten:
-            t = self.unflatten.forward(t)
+        if not isinstance(self.output_shape, int):
+            # t = torch.reshape(t, (n,) + self.output_shape)
+            t = t.view((n,) + self.output_shape)
+
+        # if self.flatten:
+        #     t = self.flatten.forward(t)
+        # t = super().forward(t)
+        # if self.unflatten:
+        #     t = self.unflatten.forward(t)
+
         return t
 # end

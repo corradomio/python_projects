@@ -184,11 +184,10 @@ class ScikitForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def get_params(self, deep=True):
-        params = {
+        params = super().get_params(deep=deep) | {
             'estimator': self.estimator,
             'prediction_length': self.prediction_length
-        }
-        params = params | self._kwargs
+        } | self._kwargs
         return params
     # end
 

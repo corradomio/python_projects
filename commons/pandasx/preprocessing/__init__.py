@@ -11,3 +11,4 @@ from .periodic import PERIODIC_ALL, \
 from .lagst import LagsTransformer
 from .arryt import LagsArrayTransformer, LagsArrayForecaster, ArrayTransformer
 from .pipeline import Pipeline
+from .detrend import DetrendTransform, SeasonalityTransform

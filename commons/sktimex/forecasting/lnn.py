@@ -72,8 +72,7 @@ class LinearNNForecaster(BaseNNForecaster):
 
         self._model = self._create_skorch_model(input_shape, output_shape)
 
-        Xh = to_matrix(X)
-        yh = self._apply_scale(to_matrix(y))
+        yh, Xh = self.transform(y, X)
 
         tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=False)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
@@ -89,13 +88,12 @@ class LinearNNForecaster(BaseNNForecaster):
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         # [BUG]
         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-        Xh = to_matrix(self._X)
-        yh = self._apply_scale(to_matrix(self._y))
+        yh, Xh = self.transform(self._y, self._X)
+        _, Xs  = self.transform(None, X)
 
         fh, fhp = self._make_fh_relative_absolute(fh)
 
         nfh = int(fh[-1])
-        Xs = to_matrix(X)
         pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
@@ -108,7 +106,7 @@ class LinearNNForecaster(BaseNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self._inverse_scale(ys)
+        ys = self.inverse_transform(ys)
         yp = self._from_numpy(ys, fhp)
         return yp
     # end

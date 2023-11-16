@@ -37,7 +37,7 @@ class LinearTrainTransform(ModelTrainTransform):
         return self
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
-        X, y = super().transform(y=y, X=X)
+        X, y = self._check_Xy(X, y)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags

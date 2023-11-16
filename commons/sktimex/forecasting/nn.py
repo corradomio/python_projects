@@ -6,8 +6,7 @@ import torch
 from sktime.forecasting.base import ForecastingHorizon
 
 from torchx import nnlin as nnx
-from numpyx.scalers import MinMaxScaler
-from .base import ExtendedBaseForecaster
+from .base import TransformForecaster
 from ..lags import resolve_lags, resolve_tlags, LagSlots
 from ..utils import import_from, to_matrix
 
@@ -97,7 +96,7 @@ def parse_class(aclass, default_class):
 
 
 # ---------------------------------------------------------------------------
-# SimpleNNForecaster
+# BaseNNForecaster
 # ---------------------------------------------------------------------------
 #
 # Note: the configuration
@@ -109,7 +108,7 @@ def parse_class(aclass, default_class):
 #       lags = [12, 12]
 #
 
-class BaseNNForecaster(ExtendedBaseForecaster):
+class BaseNNForecaster(TransformForecaster):
     _tags = {
         # to list all valid tags with description, use sktime.registry.all_tags
         #   all_tags(estimator_types="forecaster", as_dataframe=True)
@@ -222,12 +221,10 @@ class BaseNNForecaster(ExtendedBaseForecaster):
         self._X = None
         self._y = None
 
-        # scalers
-        self._y_scaler = None
     # end
 
     def get_params(self, deep=True):
-        params = {} | self._skt_args | self._nn_args
+        params = {} | super().get_params(deep=deep) | self._skt_args | self._nn_args
         return params
     # end
 
@@ -270,23 +267,23 @@ class BaseNNForecaster(ExtendedBaseForecaster):
         yp = yp.loc[fhp.to_pandas()]
         return yp.astype(float)
 
-    def _apply_scale(self, y):
-        if not self._scale:
-            return y
-
-        if self._y_scaler is None:
-            self._y_scaler = MinMaxScaler()
-            self._y_scaler.fit(y)
-
-        if y is not None:
-            y = self._y_scaler.transform(y)
-
-        return y
-
-    def _inverse_scale(self, y):
-        if self._y_scaler is not None:
-            y = self._y_scaler.inverse_transform(y)
-        return y
+    # def _apply_scale(self, y):
+    #     if not self._scale:
+    #         return y
+    #
+    #     if self._y_scaler is None:
+    #         self._y_scaler = MinMaxScaler()
+    #         self._y_scaler.fit(y)
+    #
+    #     if y is not None:
+    #         y = self._y_scaler.transform(y)
+    #
+    #     return y
+    #
+    # def _inverse_scale(self, y):
+    #     if self._y_scaler is not None:
+    #         y = self._y_scaler.inverse_transform(y)
+    #     return y
 
     def _make_fh_relative_absolute(self, fh: ForecastingHorizon) -> tuple[ForecastingHorizon, ForecastingHorizon]:
         fhp = fh
