@@ -8,7 +8,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from torchx import nnlin as nnx
 from .base import TransformForecaster
 from ..lags import resolve_lags, resolve_tlags, LagSlots
-from ..utils import import_from, to_matrix
+from ..utils import import_from, to_matrix, kwexclude
 
 # ---------------------------------------------------------------------------
 # Optimizers
@@ -204,7 +204,7 @@ class BaseNNForecaster(TransformForecaster):
             patience=patience
         )
 
-        self._skt_args = {} | kwargs
+        self._skt_args = kwexclude(kwargs, 'method')
         self._skt_args["criterion"] = criterion
         self._skt_args["optimizer"] = optimizer
         self._skt_args["lr"] = lr

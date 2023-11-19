@@ -3,11 +3,12 @@ import os
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from sktime.forecasting.trend import PolynomialTrendForecaster
 from sktime.transformations.series.detrend import Detrender
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from pandasx.preprocessing import MinMaxNormalizer
+from pandasx.preprocessing import LinearMinMaxScaler
 from sktimex import SimpleRNNForecaster
 
 
@@ -20,15 +21,14 @@ def main():
                          index="Period")
     y_orig = data
 
-    # det = Detrender(forecaster=PolynomialTrendForecaster(degree=1))
     det = Detrender()
-    y = det.fit_transform(y_orig)
+    # y = det.fit_transform(y_orig)
 
-    plot_series(y_orig, y, labels=["y_orig", "y"], title="airline")
-    plt.show()
+    # plot_series(y_orig, y, labels=["y_orig", "y"], title="airline")
+    # plt.show()
 
-    y_orig = y
-    mmn = MinMaxNormalizer()
+    # y_orig = y
+    mmn = LinearMinMaxScaler(method="piecewise")
     y = mmn.fit_transform(y_orig)
 
     # plot_series(y_orig, y, labels=["y_orig", "y"], title="airline")
@@ -73,10 +73,10 @@ def main():
     y_pred = mmn.inverse_transform(y_pred)
     y_fore = mmn.inverse_transform(y_fore)
 
-    y_train = det.inverse_transform(y_train)
-    y_test = det.inverse_transform(y_test)
-    y_pred = det.inverse_transform(y_pred)
-    y_fore = det.inverse_transform(y_fore)
+    # y_train = det.inverse_transform(y_train)
+    # y_test = det.inverse_transform(y_test)
+    # y_pred = det.inverse_transform(y_pred)
+    # y_fore = det.inverse_transform(y_fore)
 
     plot_series(y_train, y_test, y_pred, y_fore, labels=["y_train", "y_test", "y_pred", "y_fore"], title="airline")
     plt.show()

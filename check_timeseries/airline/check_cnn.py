@@ -2,10 +2,10 @@ import logging.config
 import os
 
 import matplotlib.pyplot as plt
+from sktime.transformations.series.detrend import Detrender
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from pandasx import MinMaxEncoder
 from sktimex import SimpleCNNForecaster
 
 
@@ -16,9 +16,13 @@ def main():
                          datetime=('Period', "%Y-%m", 'M'),
                          ignore='Period',
                          index="Period")
-    y = data
-    # mms = MinMaxEncoder('Number of airline passengers', feature_range=(0, 10))
-    # y = mms.fit_transform(data)
+    y_orig = data
+
+    det = Detrender()
+    y = det.fit_transform(y_orig)
+
+    plot_series(y_orig, y, labels=["y_orig", "y"], title="airline")
+    plt.show()
 
     y_train, y_test = pdx.train_test_split(y, test_size=12)
 

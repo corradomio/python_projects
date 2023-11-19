@@ -1,4 +1,6 @@
+from joblibx import Parallel, delayed
 import logging
+import os.path
 import warnings
 import pandasx as pdx
 import matplotlib.pyplot as plt
@@ -10,10 +12,25 @@ warnings.filterwarnings("ignore")
 LOGGER = logging.getLogger("root")
 
 DATA_DIR = "./data"
+PLOTS_DIR = "D:/Projects.github/python_projects/check_timeseries_nn/plots"
 
 DATETIME = ["imp_date", "[%Y/%m/%d %H:%M:%S]", "M"]
 TARGET = "import_kg"
 GROUPS = ['item_country']
+
+
+def plot(i, n, g, df):
+    print(f"[{i:4}/{n}]", g)
+    item = g[0].replace('/', '_')
+    fname = f"{PLOTS_DIR}/{TARGET}/{item}.png"
+    if os.path.exists(fname):
+        return
+
+    plot_series(df[TARGET], labels=[TARGET], title=str(g))
+
+    plt.savefig(fname, dpi=300)
+    plt.tight_layout()
+    plt.close()
 
 
 def main():
@@ -45,18 +62,21 @@ def main():
                        )
 
     dfg = pdx.groups_split(df_all)
+    n = len(dfg)
 
-    for g in dfg:
-        print(g)
-        df = dfg[g]
+    Parallel(n_jobs=12)(delayed(plot)(i, n, g, dfg[g]) for i, g in enumerate(dfg.keys()))
 
-        plot_series(df[TARGET], labels=[TARGET], title=str(g))
-
-        item = g[0].replace('/', '_')
-        fname = f"./plots/import_kg/{item}.png"
-        plt.savefig(fname, dpi=300)
-        plt.tight_layout()
-        plt.close()
+    # for g in dfg:
+    #     print(g)
+    #     df = dfg[g]
+    #
+    #     plot_series(df[TARGET], labels=[TARGET], title=str(g))
+    #
+    #     item = g[0].replace('/', '_')
+    #     fname = f"./plots/import_kg/{item}.png"
+    #     plt.savefig(fname, dpi=300)
+    #     plt.tight_layout()
+    #     plt.close()
     pass
 
 

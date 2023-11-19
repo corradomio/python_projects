@@ -1,4 +1,4 @@
-from typing import Optional, Self
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -58,7 +58,7 @@ class TimeseriesTransform:
         assert isinstance(fh, int)
         return X, fh
 
-    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> Self:
+    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> "TimeseriesTransform":
         return self
 
     def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:

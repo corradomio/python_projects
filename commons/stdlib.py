@@ -10,20 +10,6 @@ CollectionType = (list, tuple)
 # Generic utilities
 # ---------------------------------------------------------------------------
 
-def to_area(ts) -> str:
-    if len(ts) == 0:
-        return "root"
-    else:
-        return "/".join(list(ts))
-
-
-def from_area(tsname) -> tuple[str]:
-    if tsname == 'root':
-        return tuple()
-    else:
-        return tuple(tsname.split('/'))
-
-
 def to_name(ts) -> str:
     if len(ts) == 0:
         return "root"
@@ -143,7 +129,7 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
 # Numerical aggregation functions
 # ---------------------------------------------------------------------------
 # sum_  as Python 'sum([...])'
-# mul_  as Pythin 'sum([...]) but with multiplication
+# mul_  as Pythin 'sum([...]) but for multiplication
 #
 
 def sum_(x):
@@ -274,6 +260,29 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
             params[n] = kwargs[kw]
     return params
 # end
+
+
+def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
+    """
+    Create a new dictionary without keys having as prefix a strin in exclude
+    :param kwargs:
+    :param keys:
+    :return:
+    """
+    exclude = as_list(exclude, 'exclude')
+
+    def has_prefix(k: str):
+        for p in exclude:
+            if k.startswith(p):
+                return True
+        return False
+
+    filtered = {}
+    for kw in kwargs:
+        if not has_prefix(kw):
+            filtered[kw] = kwargs[kw]
+
+    return filtered
 
 
 # ---------------------------------------------------------------------------

@@ -1,8 +1,8 @@
-from typing import List, Tuple, Union, Optional, Set, Dict
-import joblib
-import multiprocessing
 import random as rnd
 from typing import Iterable
+from typing import Tuple, Union
+
+import joblib
 
 delayed = joblib.delayed
 Memory = joblib.Memory
@@ -17,7 +17,7 @@ Memory = joblib.Memory
 # This library extends 'joblib' in this way:
 #
 # 1) the iterable is converted into a list
-# 2) the list is splitted into n_job parts
+# 2) the list is split into n_job parts
 # 3) n_job processes execute SEQUENTIALLY each list's part
 # 4) the results will be collected into a list as in the original library
 #
@@ -25,14 +25,14 @@ Memory = joblib.Memory
 #
 # 1) because the time of execution can be depend on the element position inside the list,
 #    the original list is shuffled, and the results reordered at the end
-# 2) the list is NOT splitted in n_jobs parts, but in n_jobs*n_splits parts. This to obtain
+# 2) the list is NOT split in n_jobs parts, but in n_jobs*n_splits parts. This to obtain
 #    a little better distribution of the computation inside the processes
 #
 
 
 class Parallel:
     
-    def __init__(self, n_jobs: Union[None, int, Tuple[int, int]]=None, **kwargs):
+    def __init__(self, n_jobs: Union[None, int, Tuple[int, int]] = None, **kwargs):
         """
         :param int n_jobs: n of parallel processes to use.
                 Can be None, 0, 1, or a integer greater than 1
@@ -41,7 +41,7 @@ class Parallel:
 
                     (n_jobs, n_splits)
 
-                in this case, the list is subdivided in n_jobs*n_plits parts
+                in this case, the list is subdivided in n_jobs*n_splits parts
                 and submitted to 'n_job' jobs
         """
         n_splits = 1
