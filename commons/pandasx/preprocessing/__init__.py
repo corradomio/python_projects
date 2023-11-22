@@ -1,6 +1,5 @@
 from .encoders import OneHotEncoder, BinaryLabelsEncoder
 from .encoderx import PandasCategoricalEncoder, OrderedLabelsEncoder, DTypeEncoder
-from .scalers import StandardScaler, MinMaxScaler
 from .time import DatetimeEncoder
 from .transformers import IgnoreTransformer
 from .outliers import OutlierTransformer, QuantileTransformer
@@ -11,5 +10,6 @@ from .periodic import PERIODIC_ALL, \
 from .lagst import LagsTransformer
 from .arryt import LagsArrayTransformer, LagsArrayForecaster, ArrayTransformer
 from .pipeline import Pipeline
-from .detrender import DetrendTransform
-from .detrender import LinearMinMaxScaler
+from .detrend import DetrendTransformer
+from .scalers import StandardScaler
+from .minmax import MinMaxScaler

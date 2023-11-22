@@ -1,8 +1,8 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from sktime.utils.plotting import plot_series
-from pandasx.preprocessing import DetrendTransform, SeasonalityTransform
+from sktimex.utils.plotting import plot_series
+from pandasx.preprocessing import DetrendTransformer
 from scipy import signal
 
 
@@ -22,7 +22,7 @@ def main():
     train = df[0:80]
     test = df[80:]
 
-    dtt = DetrendTransform(columns="y")
+    dtt = DetrendTransformer(columns="y")
     train_t = dtt.fit_transform(train)
     test_t = dtt.transform(test)
 

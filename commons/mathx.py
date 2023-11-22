@@ -9,8 +9,6 @@ from typing import Union, Iterable, Tuple
 INF: float = float('inf')
 IINF: int = 9223372036854775807     # 2^63-1
 
-EPS: float = 1.e-6
-
 
 # ---------------------------------------------------------------------------
 # chop
@@ -23,17 +21,19 @@ def chop(x: float, l: float, u: float) -> float:
     return x
 # end
 
+
 # ---------------------------------------------------------------------------
 # argsort
 # ---------------------------------------------------------------------------
 
 def argsort(values: Iterable, descending: bool = False) -> List[int]:
     """Sort the values in ascending (ore descending) order and return the indices"""
-    n = len(values)
+    n = len(list(values))
     pairs = [(i, values[i]) for i in range(n)]
     pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
     return [p[0] for p in pairs]
 # end
+
 
 # ---------------------------------------------------------------------------
 # to_float
@@ -58,6 +58,9 @@ def to_float(x) -> Union[float, List[float]]:
 # ---------------------------------------------------------------------------
 # Real comparisons with error
 # ---------------------------------------------------------------------------
+
+EPS: float = 1.e-6
+
 
 def zero(x, eps: float = EPS) -> float:
     """return 0 if the value is smaller than an epsilon"""

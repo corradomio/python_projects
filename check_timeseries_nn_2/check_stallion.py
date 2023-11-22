@@ -2,7 +2,7 @@ import warnings
 import logging.config
 
 from matplotlib import pyplot as plt
-from sktime.utils import plot_series
+from sktimex.utils import plot_series
 
 import pandasx as pdx
 import sktime.forecasting.naive

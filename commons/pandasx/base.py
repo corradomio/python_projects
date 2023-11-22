@@ -478,8 +478,8 @@ def _groups_select_by_index(df, values, drop):
     return selected
 
 
-def groups_select(df: pd.DataFrame, *,
-                  values: Union[None, str, list[str], tuple[str]],
+def groups_select(df: pd.DataFrame,
+                  values: Union[None, str, list[str], tuple[str]], *,
                   groups: Union[None, str, list[str], tuple[str]] = None,
                   drop=True):
     """

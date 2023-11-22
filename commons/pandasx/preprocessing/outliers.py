@@ -25,77 +25,106 @@ class OutlierTransformer(GroupsEncoder):
 
     """
 
-    def __init__(self, columns, outlier_std=4, strategy='clip', *, groups=None, copy=True):
+    def __init__(self, columns, *,
+                 outlier_std=3, sp=None, strategy='median',
+                 groups=None, copy=True):
         super().__init__(columns, groups, copy)
+        self.sp = sp
         self.outlier_std = outlier_std
         self.strategy = strategy
 
         self._means = {}
-        self._sdevs = {}
+        self._stds = {}
         self._medians = {}
 
     # -----------------------------------------------------------------------
 
     def _get_params(self, g):
         if g is None:
-            return self._means, self._sdevs, self._medians
+            return self._means, self._stds, self._medians
         else:
-            return self._means[g], self._sdevs[g], self._medians[g]
+            return self._means[g], self._stds[g], self._medians[g]
 
     def _set_params(self, g, params):
-        means, sdevs, medians = params
+        means, stds, medians = params
         if g is None:
             self._means = means
-            self._sdevs = sdevs
+            self._stds = stds
             self._medians = medians
         else:
             self._means[g] = means
-            self._sdevs[g] = sdevs
+            self._stds[g] = stds
             self._medians[g] = medians
         pass
 
     def _compute_params(self, X):
-        return self._compute_means_sdevs(X)
+        if self.sp is None:
+            return self._compute_means_stds(X)
+        else:
+            return self._compute_seasonal_means_stds(X)
 
     def _apply_transform(self, X, params):
-        means, sdevs, medians = params
-        return self._transform(X, means, sdevs, medians)
+        means, stds, medians = params
+        if self.sp is None:
+            return self._transform(X, means, stds, medians)
+        else:
+            return self._seasonal_transform(X, means, stds, medians)
 
     # -----------------------------------------------------------------------
 
-    def _compute_means_sdevs(self, X: DataFrame):
+    def _compute_means_stds(self, X: DataFrame) -> tuple[dict, dict, dict]:
         means = {}
-        sdevs = {}
+        stds = {}
         medians = {}
         for col in self._get_columns(X):
             x = X[col]
 
             means[col] = x.mean()
-            sdevs[col] = x.std()
+            stds[col] = x.std()
             medians[col] = x.median()
+        return means, stds, medians
+    # end
 
-            # x = X[col].to_numpy(dtype=float)
-            # vmin, vmax = min(x), max(x)
-            #
-            # # if the values are already in a reasonable small range, don't scale
-            # if -NO_SCALE_LIMIT <= vmin <= vmax <= +NO_SCALE_LIMIT:
-            #     continue
-            #
-            # if (vmax - vmin) <= NO_SCALE_EPS:
-            #     means[col] = x.mean()
-            #     sdevs[col] = 0.
-            # else:
-            #     means[col] = x.mean()
-            #     sdevs[col] = x.std()
-            # # end
-        return means, sdevs, medians
+    def _compute_seasonal_means_stds(self, X: DataFrame) -> tuple[dict, dict, dict]:
+        sp = self.sp
+
+        means = {}
+        stds = {}
+        medians = {}
+        for col in self._get_columns(X):
+            x = X[col]
+
+            n = len(x)
+            s = n % sp
+
+            means_s = []
+            stds_s = []
+            medians_s = []
+
+            for i in range(s, n, sp):
+                if i == s:
+                    xs = x[0:i+sp]
+                else:
+                    xs = x[i:i + sp]
+
+                means_s.append(xs.mean())
+                stds_s.append(xs.std())
+                medians_s.append(xs.median())
+            # end
+
+            means[col] = means_s
+            stds[col] = stds_s
+            medians[col] = medians_s
+        return means, stds, medians
+    # end
 
     # -----------------------------------------------------------------------
 
-    def _transform(self, X: DataFrame, means, sdevs, medians) -> DataFrame:
+    def _transform(self, X: DataFrame, means, stds, medians) -> DataFrame:
         X = self._check_X(X)
+        ostd = self.outlier_std
 
-        if self.outlier_std in [None, 0]:
+        if ostd in [None, 0]:
             return X
 
         columns = self._get_columns(X)
@@ -103,15 +132,17 @@ class OutlierTransformer(GroupsEncoder):
             x: Series = X[col].copy()
 
             mean = means[col]
-            sdev = sdevs[col]
+            std = stds[col]
             median = medians[col]
 
-            min_value = mean - sdev
-            max_value = mean + sdev
+            min_value = mean - ostd*std
+            max_value = mean + ostd*std
             mean_value = mean
             median_value = median
 
-            if self.strategy == 'median':
+            if min_value <= x.min() <= x.max() <= max_value:
+                pass
+            elif self.strategy == 'median':
                 x[(x <= min_value) | (x >= max_value)] = median_value
             elif self.strategy == 'mean':
                 x[(x <= min_value) | (x >= max_value)] = mean_value
@@ -127,6 +158,66 @@ class OutlierTransformer(GroupsEncoder):
             X[col] = x
         return X
     # end
+
+    def _seasonal_transform(self, X: DataFrame, means, stds, medians) -> DataFrame:
+        X = self._check_X(X)
+        sp = self.sp
+        ostd = self.outlier_std
+
+        if ostd in [None, 0]:
+            return X
+
+        columns = self._get_columns(X)
+        for col in columns:
+            x_: Series = X[col].copy()
+
+            means_s = means[col]
+            stds_s = stds[col]
+            medians_s = medians[col]
+
+            n = len(x_)
+            s = n % sp
+
+            for i in range(s, n, sp):
+                if i == s:
+                    j = 0
+                    x = x_[0:i+sp]
+                else:
+                    j = (i-s)//sp
+                    x = x_[i:i+sp]
+
+                mean = means_s[j]
+                std = stds_s[j]
+                median = medians_s[j]
+
+                min_value = mean - ostd*std
+                max_value = mean + ostd*std
+                mean_value = mean
+                median_value = median
+
+                if min_value <= x.min() <= x.max() <= max_value:
+                    pass
+                elif self.strategy == 'median':
+                    x[(x <= min_value) | (x >= max_value)] = median_value
+                elif self.strategy == 'mean':
+                    x[(x <= min_value) | (x >= max_value)] = mean_value
+                elif self.strategy == 'min':
+                    x[(x <= min_value) | (x >= max_value)] = min_value
+                elif self.strategy == 'max':
+                    x[(x <= min_value) | (x >= max_value)] = max_value
+                elif self.strategy == 'clip':
+                    x[(x <= min_value)] = min_value
+                    x[(x >= max_value)] = max_value
+                else:
+                    raise ValueError(f'Unsupported strategy {self.strategy}')
+
+                if i == s:
+                    x_[0:i+sp] = x
+                else:
+                    x_[i:i+sp] = x
+            # end
+            X[col] = x_
+        return X
 # end
 
 
