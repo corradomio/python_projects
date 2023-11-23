@@ -8,8 +8,13 @@
 #   SqrtTransformer
 #
 #   ScaledAsinhTransformer
-#       Known as variance stabilizing transformation, Combined with an sktime.forecasting.compose.
-#       TransformedTargetForecaster, can be useful in time series that exhibit spikes
+#       Known as variance stabilizing transformation, Combined with an
+#
+#       sktime.forecasting.compose.TransformedTargetForecaster
+#
+#       can be useful in time series that exhibit spikes
+#
+#   SlopeTransform
 # .
 
 import numpy as np
@@ -17,7 +22,7 @@ import pandas as pd
 import logging
 import scipy.optimize as spo
 
-from mathx import isgt, islt
+from mathx import isgt, islt, sq, sqrt
 from .base import GroupsEncoder
 
 ARRAY = np.ndarray[float]
@@ -218,9 +223,24 @@ def fit_offset(fun: FUNCTION, x: ARRAY, y: ARRAY, upper=False) -> float:
     return offset
 
 
-def fit_bound(fun: FUNCTION, x: ARRAY, y: ARRAY, upper=False) -> FUNCTION:
+def fit_offset_by_variance(fun: FUNCTION, x: ARRAY, y: ARRAY, k=1., upper=False) -> float:
+    n = len(y)
+    yt = fun(x)
+    std = sqrt(sum(sq(y-yt))/n)
+    return k*std if upper else -k*std
+
+
+def fit_function(fun: FUNCTION, x: ARRAY, y: ARRAY) -> FUNCTION:
     params = spo.curve_fit(fun, x, y)[0]
-    offset = fit_offset(lambda x: fun(x, *params), x, y, upper=upper)
+    return lambda x: fun(x, *params)
+
+
+def fit_bound(fun: FUNCTION, x: ARRAY, y: ARRAY, k=None, upper=False) -> FUNCTION:
+    params = spo.curve_fit(fun, x, y)[0]
+    if k is None:
+        offset = fit_offset(lambda x: fun(x, *params), x, y, upper=upper)
+    else:
+        offset = fit_offset_by_variance(lambda x: fun(x, *params), x, y, k=k, upper=upper)
     return lambda x: fun(x, *params) + offset
 
 
@@ -234,6 +254,35 @@ def linear_interpolate(y: ARRAY, lb: ARRAY, ub: ARRAY) -> ARRAY:
 def inverse_linear_interpolate(y: ARRAY, lb: ARRAY, ub: ARRAY) -> ARRAY:
     yt = y * (ub - lb) + lb
     return yt
+
+
+# ---------------------------------------------------------------------------
+
+def select_seasonal_values(sp: int, x: ARRAY, y: ARRAY, method='mean', centered=False) -> ARRAY:
+    n = len(x)
+    m = n//sp
+    s = n % sp
+
+    xy = np.zeros((m, 2), dtype=float)
+
+    j = 0
+    for i in range(s, n, sp):
+        xy[j, 0] = i
+        if method == 'mean':
+            xy[j, 1] = y[i:i + sp].mean()
+        elif method == 'median':
+            xy[j, 1] = y[i:i + sp].median()
+        elif method == 'min':
+            xy[j, 1] = y[i:i + sp].min()
+        elif method == 'max':
+            xy[j, 1] = y[i:i + sp].max()
+        else:
+            raise ValueError(f"Unsupported method {method}")
+        j += 1
+
+    if centered:
+        xy[:, 0] += sp//2
+    return xy
 
 
 # ---------------------------------------------------------------------------

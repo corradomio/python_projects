@@ -26,7 +26,7 @@ class OutlierTransformer(GroupsEncoder):
     """
 
     def __init__(self, columns, *,
-                 outlier_std=3, sp=None, strategy='median',
+                 outlier_std=3, sp=None, strategy='clip',
                  groups=None, copy=True):
         super().__init__(columns, groups, copy)
         self.sp = sp
@@ -146,10 +146,6 @@ class OutlierTransformer(GroupsEncoder):
                 x[(x <= min_value) | (x >= max_value)] = median_value
             elif self.strategy == 'mean':
                 x[(x <= min_value) | (x >= max_value)] = mean_value
-            elif self.strategy == 'min':
-                x[(x <= min_value) | (x >= max_value)] = min_value
-            elif self.strategy == 'max':
-                x[(x <= min_value) | (x >= max_value)] = max_value
             elif self.strategy == 'clip':
                 x[(x <= min_value)] = min_value
                 x[(x >= max_value)] = max_value
@@ -201,10 +197,6 @@ class OutlierTransformer(GroupsEncoder):
                     x[(x <= min_value) | (x >= max_value)] = median_value
                 elif self.strategy == 'mean':
                     x[(x <= min_value) | (x >= max_value)] = mean_value
-                elif self.strategy == 'min':
-                    x[(x <= min_value) | (x >= max_value)] = min_value
-                elif self.strategy == 'max':
-                    x[(x <= min_value) | (x >= max_value)] = max_value
                 elif self.strategy == 'clip':
                     x[(x <= min_value)] = min_value
                     x[(x >= max_value)] = max_value

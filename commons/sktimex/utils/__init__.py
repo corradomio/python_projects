@@ -3,11 +3,6 @@ from typing import Union, Any, Optional
 import numpy as np
 import pandas as pd
 
-# DON'T REMOVE!!!!
-# They are used in other modules to avoid the direct dependency with 'stdlib'
-from stdlib import NoneType, kwval, kwparams, kwexclude, dict_del, import_from, qualified_name, lrange   # DON'T REMOVE!!!!
-# DON'T REMOVE!!!!
-
 from sktime.forecasting.base import ForecastingHorizon
 
 
@@ -15,10 +10,12 @@ from sktime.forecasting.base import ForecastingHorizon
 # Imports
 # ---------------------------------------------------------------------------
 # DON'T REMOVE!!!!
+# They are used in other modules to avoid the direct dependency with 'stdlib'
 
+from stdlib import NoneType, kwval, kwparams, kwexclude, dict_del, import_from, qualified_name, lrange
 from .plotting import plot_series
 
-
+# DON'T REMOVE!!!!
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------

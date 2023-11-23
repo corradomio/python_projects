@@ -11,7 +11,7 @@ import scipy.optimize as spo
 from stdlib import kwparams
 from .base import GroupsEncoder
 from .minmax import poly1, poly3, power1
-from .minmax import period_diff, interpolate_bound, select_bound
+from .minmax import period_diff, interpolate_bounds, select_bounds, fit_function, select_seasonal_values
 
 
 #
@@ -44,22 +44,25 @@ class FunctionTrend(Trend):
     def __init__(self, fun):
         super().__init__()
         self.fun = fun
-        self.params = None
+        self._trend = None
 
     def fit(self, x, y):
         x = x.astype(float)
         y = y.astype(float)
-        self.params = spo.curve_fit(self.fun, x, y)[0]
+        # self.params = spo.curve_fit(self.fun, x, y)[0]
+        self._trend = fit_function(self.fun, x, y)
         return self
 
     def transform(self, x, y):
         x = x.astype(float)
         y = y.astype(float)
-        trend = self.fun(x, *self.params)
+        # trend = self.fun(x, *self.params)
+        trend = self._trend(x)
         return y - trend
 
     def inverse_transform(self, x, y):
-        trend = self.fun(x, *self.params)
+        # trend = self.fun(x, *self.params)
+        trend = self._trend(x)
         return y + trend
 
 
@@ -92,39 +95,18 @@ class PiecewiseTrend(Trend):
         super().__init__()
         self.sp = sp
         self.method = method
-        self.x = []
-        self.y = []
+        self.xy = None
 
     def fit(self, x, y):
-        n = len(x)
-        sp = self.sp
-        s = n % sp
-        for i in range(s, n, sp):
-            self.x.append(i)
-            if self.method == 'mean':
-                self.y.append(y[i:i+sp].mean())
-            elif self.method == 'median':
-                self.y.append(y[i:i + sp].median())
-            elif self.method == 'min':
-                self.y.append(y[i:i + sp].min())
-            elif self.method == 'max':
-                self.y.append(y[i:i + sp].max())
-            else:
-                raise ValueError(f"Unsupported method {self.method}")
+        self.xy = select_seasonal_values(self.sp, x, y, method=self.method, centered=True)
         return self
 
     def transform(self, x, y):
-        n = len(x)
-        trend = np.zeros_like(x, dtype=float)
-        for i in range(n):
-            trend[i] = interpolate_bound(x[i], self.x, self.y)
+        trend = interpolate_bounds(self.xy, x)
         return y - trend
 
     def inverse_transform(self, x, y):
-        n = len(x)
-        trend = np.zeros_like(x, dtype=float)
-        for i in range(n):
-            trend[i] = interpolate_bound(x[i], self.x, self.y)
+        trend = interpolate_bounds(self.xy, x)
         return y + trend
 
 
@@ -138,39 +120,18 @@ class StepwiseTrend(Trend):
         super().__init__()
         self.sp = sp
         self.method = method
-        self.x = []
-        self.y = []
+        self.xy = None
 
     def fit(self, x, y):
-        n = len(x)
-        sp = self.sp
-        s = n % sp
-        for i in range(s, n, sp):
-            self.x.append(i + sp//2)
-            if self.method == 'mean':
-                self.y.append(y[i:i+sp].mean())
-            elif self.method == 'median':
-                self.y.append(y[i:i + sp].median())
-            elif self.method == 'min':
-                self.y.append(y[i:i + sp].min())
-            elif self.method == 'max':
-                self.y.append(y[i:i + sp].max())
-            else:
-                raise ValueError(f"Unsupported method {self.method}")
+        self.xy = select_seasonal_values(self.sp, x, y, method=self.method)
         return self
 
     def transform(self, x, y):
-        n = len(x)
-        trend = np.zeros_like(x, dtype=float)
-        for i in range(n):
-            trend[i] = select_bound(x[i], self.x, self.y)
+        trend = select_bounds(self.xy, x)
         return y - trend
 
     def inverse_transform(self, x, y):
-        n = len(x)
-        trend = np.zeros_like(x, dtype=float)
-        for i in range(n):
-            trend[i] = select_bound(x[i], self.x, self.y)
+        trend = select_bounds(self.xy, x)
         return y + trend
 
 
