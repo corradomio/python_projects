@@ -50,8 +50,8 @@ def plot_bounds(df_all, method):
             tsid += 1
             tsname = g[0].replace('/', '-')
             fname = f'{plot_dir}/{tsname}.png'
-            if os.path.exists(fname):
-                continue
+            # if os.path.exists(fname):
+            #     continue
 
             df = dfg[g].reset_index()
             ys = df[TARGET]
@@ -139,7 +139,7 @@ def main():
         index=GROUPS + DATETIME[0:1]
     )
 
-    df_all = pdx.preprocessing.OutlierTransformer(columns=TARGET, sp=12, outlier_std=3).fit_transform(df_all)
+    df_all = pdx.preprocessing.OutlierTransformer(columns=TARGET, sp=12, outlier_std=2, strategy='median').fit_transform(df_all)
 
     methods = ['linear', 'poly1', 'poly3', 'poly5', 'power']
 

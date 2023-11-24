@@ -16,6 +16,7 @@
 #
 #   SlopeTransform
 # .
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -235,7 +236,7 @@ def fit_function(fun: FUNCTION, x: ARRAY, y: ARRAY) -> FUNCTION:
     return lambda x: fun(x, *params)
 
 
-def fit_bound(fun: FUNCTION, x: ARRAY, y: ARRAY, k=None, upper=False) -> FUNCTION:
+def fit_bound(fun: FUNCTION, x: ARRAY, y: ARRAY, k=1, upper=False) -> FUNCTION:
     params = spo.curve_fit(fun, x, y)[0]
     if k is None:
         offset = fit_offset(lambda x: fun(x, *params), x, y, upper=upper)
@@ -283,6 +284,44 @@ def select_seasonal_values(sp: int, x: ARRAY, y: ARRAY, method='mean', centered=
     if centered:
         xy[:, 0] += sp//2
     return xy
+
+
+# ---------------------------------------------------------------------------
+
+def has_valid_pattern(y, tau) -> bool:
+    """
+    Check if the TS has a 'reasonable' behavior
+
+    1) it subdivides the TS in 2 ot 3 parts
+    2) for each part computes the difference between the maximum and the minimum values
+    3) if the tau times the minimum difference is smaller than the maximum difference
+       the TS is considered NOT valid
+    """
+    if tau is None:
+        return True
+
+    n = len(y)
+
+    # split in 3
+    n3 = n//3
+    nm = 2*n3
+    y31 = y[:n3]
+    y32 = y[n3:nm]
+    y33 = y[nm:]
+    y31diff, y32diff, y33diff = list(sorted([y31.max() - y31.min(), y32.max() - y32.min(), y33.max() - y33.min()]))
+    if tau*y31diff < y32diff or tau*y32diff < y33diff:
+        return False
+
+    # split in 2
+    tau *= 1.5
+    n2 = n//2
+    y21 = y[:n2]
+    y22 = y[n2:]
+    y21diff, y22diff = list(sorted([y21.max() - y21.min(),  y22.max() - y22.min()]))
+    if tau*y21diff < y22diff:
+        return False
+
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -600,12 +639,25 @@ class FunctionMinMax(MinMax):
 class MinMaxScaler(GroupsEncoder):
 
     def __init__(self, columns=None, feature_range=(0, 1), *,
-                 method=None, sp=12,
+                 method=None, sp=12, tau=None,
                  groups=None, copy=True, **kwargs):
+        """
+
+        :param columns: columns where to apply the minimum maximum scaling
+        :param feature_range: mapped values range
+        :param method: method to use to compute the bounds
+        :param sp: seasonality period
+        :param tau: if not None, the TS is validated. If the TS is not valid (has a wrong pattern) no
+                transformation is applied
+        :param groups: columns used to identify the TD ina multi-TS dataset
+        :param copy:
+        :param kwargs:
+        """
         super().__init__(columns=columns, groups=groups, copy=copy)
         self.feature_range = feature_range
         self.method = method
         self.sp = sp  # seasonality period
+        self.tau = tau
         self.kwargs = kwargs
         self._minmax: dict[tuple, MinMax] = {}
         self._start = {}
@@ -627,9 +679,13 @@ class MinMaxScaler(GroupsEncoder):
         for col in self._get_columns(X):
             yc = X[col].to_numpy()
 
-            mmi = self._create_mmi()
-            mmi.fit(xc, yc)
+            if not has_valid_pattern(yc, self.tau):
+                logging.getLogger("MinMaxScaler").warning(f"TS column {col} doesn't present a valid pattern")
+                mmi = GlobalMinMax()
+            else:
+                mmi = self._create_mmi()
 
+            mmi.fit(xc, yc)
             minmax[col] = mmi
         # end
         return minmax, start

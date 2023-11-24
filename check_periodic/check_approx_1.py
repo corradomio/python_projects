@@ -23,11 +23,11 @@ def main():
     # y_scaler = npx.MinMaxScaler()
     # y = y_scaler.fit_transform(y)
 
-    # x_train = x[:80]
-    # x_test = x[80:]
+    x_train = x[:80]
+    x_test = x[80:]
 
-    # y_train = y[:80]
-    # y_test = y[80:]
+    y_train = y[:80]
+    y_test = y[80:]
 
     n = 10
 

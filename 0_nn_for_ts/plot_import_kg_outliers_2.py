@@ -1,15 +1,12 @@
-from joblibx import Parallel, delayed
 import logging.config
 import os
 import warnings
 
 import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
 
 import pandasx as pdx
-from sktimex.utils import plot_series
 from pandasx.preprocessing.minmax import *
+from sktimex.utils import plot_series
 
 # hide warnings
 warnings.filterwarnings("ignore")
@@ -34,7 +31,7 @@ def plot_points(y, idiff, ax):
 
 def plot_outliers(df_all):
 
-    m_glob = 'mean'
+    m_glob = 'median'
     m_seas = 'mean'
 
     plot_dir = f'./plots/import_kg/outliers/{m_glob}-{m_seas}'
@@ -49,10 +46,10 @@ def plot_outliers(df_all):
         tsid += 1
         tsname = g[0].replace('/', '-')
         fname = f'{plot_dir}/{tsname}.png'
-        # if os.path.exists(fname):
-        #     continue
+        if os.path.exists(fname):
+            continue
 
-        fig, axs = plt.subplots(3)
+        fig, axs = plt.subplots(3, figsize=plt.figaspect(2*0.25))
         # fig.suptitle(f"TS-{tsid}")
         fig.suptitle(f"TS-{tsid} (g={m_glob}, s={m_seas})")
 
@@ -101,7 +98,7 @@ def plot_outliers(df_all):
             # plot_series(y, y_glob, y_seas, labels=['target', 'global', 'seasonal'], title=f"TS-{tsid})")
             plt.tight_layout()
 
-            plt.savefig(fname)
+            plt.savefig(fname, dpi=300)
             plt.close()
 
             # break

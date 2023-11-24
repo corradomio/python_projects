@@ -101,7 +101,7 @@ def plot_bounds(df_all, method):
             plot_sp(sp, x)
 
             plt.tight_layout()
-            plt.savefig(fname)
+            plt.savefig(fname, dpi=300)
             plt.close()
         except Exception as e:
             print(e)

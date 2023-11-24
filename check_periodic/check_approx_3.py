@@ -9,17 +9,17 @@ from matplotlib import pyplot as plt
 
 
 def main():
-    x = np.arange(100, dtype=np.float32)
-    y = np.sin(2*np.pi*x/48).astype(np.float32)
-    y = np.power((x-33)/25, 2)
+    x = np.arange(10000, dtype=np.float32)
+    y = np.sin(2*np.pi*x/4800).astype(np.float32)
+    # y = np.power((x-33)/250, 2)
     # y = 1 + 0.1*x
 
-    # plt.plot(x, y)
-    # plt.show()
+    plt.plot(x, y)
+    plt.show()
 
-    n = 128
+    n = 512
 
-    AF = nn.Hardswish
+    AF = nn.ELU
 
     early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0, monitor="valid_loss")
     print_log = skorchx.callbacks.PrintLog(delay=3)
