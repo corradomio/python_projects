@@ -2,7 +2,7 @@ from typing import Optional
 
 import numpy as np
 
-from .base import ModelTrainTransform, ModelPredictTransform
+from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
 from ..lags import lmax
 
 
@@ -13,20 +13,34 @@ from ..lags import lmax
 
 class RNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, flatten=False):
-        # lags is an alternative to slots
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False, ytrain=False):
+        """
+
+        :param slots:
+        :param tlags:
+        :param lags:    alternative to slots
+        :param xlags:   alternative to slots (with ylags)
+        :param ylags:   alternative to slots (with xlags)
+        :param flatten: it to return yt as 2D tensor
+        :param ytrain:  if to return y used in train
+        """
+        if ylags is not None:
+            slots = [xlags, ylags]
+        elif lags is not None:
+            slots = lags
         super().__init__(
-            slots=lags if lags is not None else slots,
+            slots=slots,
             tlags=tlags)
 
         self.flatten = flatten
+        self.ytrain = ytrain
         xlags = self.xlags
         ylags = self.ylags
         assert len(xlags) == 0 or xlags == ylags, "Supported only [0, n], [n, n]"
     # end
 
-    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:
-        X, y = self._check_Xy(X, y)
+    def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple:
+        X, y = self._check_Xy(X, y, fh)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags
@@ -73,23 +87,30 @@ class RNNTrainTransform(ModelTrainTransform):
         if self.flatten:
             yt = yt.reshape((yt.shape[0], -1))
 
-        return Xt, yt
+        if self.ytrain:
+            yx = Xt[:, :, :my]
+            return Xt, (yx, yt)
+        else:
+            return Xt, yt
     # end
 # end
 
 
 class RNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, flatten=False):
-        # lags is an alternative to slots
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+        if ylags is not None:
+            slots = [xlags, ylags]
+        elif lags is not None:
+            slots = lags
         super().__init__(
-            slots=lags if lags is not None else slots,
+            slots=slots,
             tlags=tlags)
 
         self.flatten = flatten
 
-    def transform(self, fh: int = 0, X: Optional[np.ndarray] = None) -> np.ndarray:
-        fh, X = super().transform(fh, X)
+    def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
+        fh, X = super().transform(fh, X, y)
 
         xlags = self.xlags if X is not None else []
         ylags = self.ylags

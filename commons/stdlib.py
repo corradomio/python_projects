@@ -90,6 +90,14 @@ def lrange(start, stop=None, step=None):
         return list(range(start, stop, step))
 
 
+def lrange1(length):
+    return list(range(1, length+1))
+
+
+def lrange0(length):
+    return list(range(0, length))
+
+
 def tobool(s: str) -> bool:
     """
     Convert the string into a boolean value.
@@ -264,7 +272,7 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
 
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
-    Create a new dictionary without keys having as prefix a strin in exclude
+    Create a new dictionary without keys having as prefix a string in exclude
     :param kwargs:
     :param keys:
     :return:

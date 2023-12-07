@@ -48,3 +48,8 @@ def to_polar(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
 
 def from_polar(ro, phi):
     return ro*(np.cos(phi) + np.sin(phi)*1j)
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

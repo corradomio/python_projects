@@ -7,6 +7,7 @@ from .base import GroupsEncoder
 # ---------------------------------------------------------------------------
 # OutlierTransformer
 # ---------------------------------------------------------------------------
+#
 
 NO_SCALE_LIMIT = 10
 NO_SCALE_EPS = 0.0000001
@@ -19,10 +20,9 @@ class OutlierTransformer(GroupsEncoder):
 
         median  replace with the median value
         mean    replace with the mean value
-        min     replace with (mean - outlier_std*std)
-        max     replace with (mean + outlier_std*std)
         clip    clip the values in the range (mean +- outlier_std*std)
 
+    If is is specified 'sp', the outliers ar computed on a season based.
     """
 
     def __init__(self, columns, *,

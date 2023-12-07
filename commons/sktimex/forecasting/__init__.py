@@ -12,5 +12,6 @@ except:
 #
 # Compatibility
 #
+from .nn import compute_input_output_shapes
 from .linear import LinearForecastRegressor
 from .scikit import ScikitForecastRegressor

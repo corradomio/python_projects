@@ -102,6 +102,13 @@ def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=
     return data
 
 
+def to_matrices(*dlist) -> list[np.ndarray]:
+    mlist = []
+    for d in dlist:
+        mlist.append(to_matrix(d))
+    return mlist
+
+
 # def fh_range(n: int) -> ForecastingHorizon:
 #     return ForecastingHorizon(list(range(1, n+1)))
 

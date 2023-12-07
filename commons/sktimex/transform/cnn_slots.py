@@ -1,8 +1,9 @@
-import numpy as np
 from typing import Optional
 
-from .base import ModelTrainTransform, ModelPredictTransform
-from ..lags import resolve_lags, flatten_max
+import numpy as np
+
+from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
+from ..lags import flatten_max
 
 
 # ---------------------------------------------------------------------------
@@ -25,8 +26,8 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
         self.xlags = slots.xlags_lists
         self.ylags = slots.ylags_lists
 
-    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[list[np.ndarray], np.ndarray]:
-        X, y = self._check_Xy(X, y)
+    def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple[list[np.ndarray], np.ndarray]:
+        X, y = self._check_Xy(X, y, fh)
 
         # Note: self.xlags and self.ylags ARE list of timeslots!
         #   xlags = [[0], [1,2,3,4,5], [2,4,6]]
@@ -80,10 +81,13 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
 
 class CNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None):
-        # lags is an alternative to slots
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+        if ylags is not None:
+            slots = [xlags, ylags]
+        elif lags is not None:
+            slots = lags
         super().__init__(
-            slots=lags if lags is not None else slots,
+            slots=slots,
             tlags=tlags)
 
         #
@@ -93,8 +97,8 @@ class CNNSlotsPredictTransform(ModelPredictTransform):
         self.xlags = self.slots.xlags_lists
         self.ylags = self.slots.ylags_lists
 
-    def transform(self, fh: int = 0, X: Optional[np.ndarray] = None) -> np.ndarray:
-        fh, X = super().transform(fh, X)
+    def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
+        fh, X = super().transform(fh, X, y)
 
         xlags_list = self.xlags if X is not None else []
         ylags_list = self.ylags

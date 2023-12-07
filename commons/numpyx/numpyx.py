@@ -31,9 +31,6 @@ def ashuffle(*arr_list):
     return res
 
 
-# end
-
-
 # ---------------------------------------------------------------------------
 # fzeros
 # fones
@@ -104,118 +101,6 @@ def shape_size(s: ShapeType) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Extras
-# ---------------------------------------------------------------------------
-
-# def cross_product(x: ndarray, y: ndarray) -> ndarray:
-#     """
-#     Compute the cross product of the two vectors
-#     Note: the cross product is a MATRIX where the dot product is a scalar
-#
-#     :param x: the column vector
-#     :param y: the row vector
-#     :return: a matrix
-#     """
-#     n = len(x)
-#     m = len(y)
-#     p = zeros((n, m))
-#
-#     for i in range(n):
-#         for j in range(m):
-#             p[i, j] = x[i]*y[j]
-#     return p
-
-
-# def compose_eigenvectors(v: ndarray, w: ndarray, inverse=False) -> ndarray:
-#     """
-#     Compute
-#
-#             v_i*cross(w_i, w_i)
-#
-#     note that 'cross(w_i, w_i)' is a MATRIX, not a vector
-#
-#     :param v: eugenvalues
-#     :param w: eigenvectors as columns of the matrix
-#     :param inverse: if to compute the inverse of the matrix
-#     :return:
-#     """
-#     n = len(v)
-#     p = zeros((n, n))
-#
-#     for i in range(n):
-#         li = 1 / v[i] if inverse else v[i]
-#         ui = w[:, i]
-#         p += li*cross_product(ui, ui)
-#     return p
-
-
-# def correlation_matrix(X: ndarray, m: ndarray=None) -> ndarray:
-#     """
-#     Compute the correlation matrix between the columns in the matrix X
-#
-#         cij = E[Xi - E[Xi]]*E[Xj - E[Xj]]
-#
-#         E[X] = 1/n * SUM ( x_i : i=1..n )
-#
-#     :param X: matrix (n rows x d columns)
-#     :param m: mean, if already computed
-#     :return: correlation matrix
-#     """
-#     assert isinstance(X, ndarray)
-#     assert len(X.shape) == 2
-#
-#     if m is None:
-#         m = X.mean(0)
-#
-#     n, d = X.shape
-#
-#     y = X - m
-#     cm = zeros((d, d))
-#     for i in range(d):
-#         yi = y[:, i]
-#         for j in range(d):
-#             yj = y[:, j]
-#             cij = dot(yi, yj)
-#             cm[i, j] += cij
-#     cm /= n
-#     return cm
-
-
-# ---------------------------------------------------------------------------
-# Mean
-# ---------------------------------------------------------------------------
-
-# def mean(X: ndarray) -> ndarray:
-#     """
-#     Compute the column mean of the matrix X
-#
-#     :param X: matrix (n rows x d columns)
-#     :return: column mean
-#     """
-#     assert isinstance(X, ndarray)
-#     assert len(X.shape) == 2
-#     return X.mean(0)
-
-
-# def gaussian(X: ndarray) -> ndarray:
-#     """
-#     'x' is the dataset, a matrix 'n x m', where n is the number of
-#     records, and m the number of features
-#
-#     :param X:
-#     :return:
-#     """
-#
-#     m = mean(X)
-#     S = correlation_matrix(X, m)
-#     v, w = eig(S)
-#     U = compose_eigenvectors(v, w, inverse=True)
-#
-#     y = dot(X-m, w)
-#     return y
-
-
-# ---------------------------------------------------------------------------
 # Other
 # ---------------------------------------------------------------------------
 
@@ -277,36 +162,6 @@ def xym2vec(x, y, m):
             zs[k] = m[i, j]
             k += 1
     return xs, ys, zs
-
-# ---------------------------------------------------------------------------
-# filter_outliers
-# ---------------------------------------------------------------------------
-
-# def filter_outliers(array: np.ndarray, outlier_std: float) -> np.ndarray:
-#     """
-#     Replace all values in the dataset that exceed 'outlier_std' with
-#     the median
-#
-#     :param array: array to analyze
-#     :param outlier_std: n of Standard Deviation to use to decide if a value is
-#         an outlier
-#     :return: a copy of the array with the outliers removed
-#     """
-#     # if outlier_std is 0 , no test is executed
-#     if outlier_std == 0:
-#         return array
-#
-#     # because data is modified, it is better to create a copy
-#     array = array.copy()
-#     mean = np.mean(array, axis=0)
-#     std = np.std(array, axis=0)
-#     max_value = mean + (outlier_std * std)
-#     min_value = mean - (outlier_std * std)
-#     median = np.median(array, axis=0)
-#
-#     array[(array <= min_value) | (array >= max_value)] = median
-#     return array
-# # end
 
 
 # ---------------------------------------------------------------------------

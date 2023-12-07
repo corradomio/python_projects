@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -14,6 +14,9 @@ from ..utils import NoneType, to_matrix, lrange
 #       ModePredictTransform
 # ---------------------------------------------------------------------------
 
+ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
+
+
 class TimeseriesTransform:
 
     def _check_X(self, X):
@@ -26,14 +29,16 @@ class TimeseriesTransform:
         assert isinstance(y, np.ndarray)
         return y
 
-    def _check_Xy(self, X, y=None):
+    def _check_Xy(self, X, y=None, fh=None):
         X = to_matrix(X)
         y = to_matrix(y)
+        assert fh is None
         assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, (NoneType, np.ndarray))
         return X, y
 
-    def _check_Xfh(self, X, fh):
+    def _check_Xfh(self, X, fh, y):
+        assert y is None
         # Note: to be compatible with 'sktime' fh MUST starts 1 timeslot after the
         # 'cutoff', that is, the LAST timestamp used in training. This means that
         # If specified as list of as a ForecastingHorizon, it MUST be:
@@ -58,13 +63,13 @@ class TimeseriesTransform:
         assert isinstance(fh, int)
         return X, fh
 
-    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> "TimeseriesTransform":
+    def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None) -> "TimeseriesTransform":
         return self
 
-    def transform(self, y: np.ndarray, X: Optional[np.ndarray] = None) -> tuple[np.ndarray, np.ndarray]:
+    def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple:
         return X, y
 
-    def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
+    def fit_transform(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF=None, fh=None):
         return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
@@ -90,7 +95,7 @@ class ModelTrainTransform(TimeseriesTransform):
     #     return self
     # # end
 
-    # def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple[np.ndarray, np.ndarray]:
+    # def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple:
     #     return X, y
     # # end
 
@@ -126,7 +131,7 @@ class ModelPredictTransform(TimeseriesTransform):
         self.yp = None  # y prediction
     # end
 
-    def fit(self, y: np.ndarray, X: Optional[np.ndarray] = None):
+    def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None):
         # used to support the implementation of 'self.to_pandas()'
         self.y_pandas = y
 
@@ -139,9 +144,9 @@ class ModelPredictTransform(TimeseriesTransform):
         return self
     # end
 
-    def transform(self, fh: int, X: Optional[np.ndarray] = None):
+    def transform(self, fh: int, X: ARRAY_OR_DF = None, y=None):
         # This method must e used with 'fh' and 'X_test'/'X_predict'
-        X, fh = self._check_Xfh(X, fh)
+        X, fh = self._check_Xfh(X, fh, y)
 
         self.Xt = X
         self.fh = fh

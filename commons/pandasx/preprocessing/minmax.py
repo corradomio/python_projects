@@ -16,7 +16,7 @@
 #
 #   SlopeTransform
 # .
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -331,6 +331,7 @@ def has_valid_pattern(y, tau) -> bool:
 class MinMax:
 
     def __init__(self, sp):
+        self.name = 'none'
         self.sp = sp if sp > 0 else 1
         self._lower_bound = None
         self._upper_bound = None
@@ -365,8 +366,8 @@ class MinMax:
 
         yt = (y - lb) / (ub - lb)
         if yt.min() < -.1 or yt.max() > 1.1:
-            (logging.getLogger(self.__class__.__name__)
-             .warning(f'Interpolation exceed the range [0,1]: [{yt.min():.3},{yt.max():.3}]'))
+            # (logging.getLogger(self.__class__.__name__)
+            #  .warning(f'[{self.name}] Interpolation exceeds the range [0,1]: [{yt.min():.3},{yt.max():.3}]'))
             self._invalid = True
             self._ymin = y.min()
             self._ymax = y.max()
@@ -639,7 +640,7 @@ class FunctionMinMax(MinMax):
 class MinMaxScaler(GroupsEncoder):
 
     def __init__(self, columns=None, feature_range=(0, 1), *,
-                 method=None, sp=12, tau=None,
+                 method='linear', sp=None, tau=None,
                  groups=None, copy=True, **kwargs):
         """
 
@@ -685,6 +686,8 @@ class MinMaxScaler(GroupsEncoder):
             else:
                 mmi = self._create_mmi()
 
+            # set the column name
+            mmi.name = col
             mmi.fit(xc, yc)
             minmax[col] = mmi
         # end
@@ -699,6 +702,9 @@ class MinMaxScaler(GroupsEncoder):
             ratio = self.method
             return RatioMinMax(ratio)
         elif self.method in "global":
+            return GlobalMinMax()
+
+        elif self.sp is None:
             return GlobalMinMax()
 
         # linear

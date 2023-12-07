@@ -5,6 +5,12 @@ import torch.nn as nn
 from torch.nn.common_types import _size_1_t
 
 
+def create_cnn(flavour: str, **kwargs):
+    if flavour == 'cnn':
+        return Conv1d(**kwargs)
+    else:
+        raise ValueError(f"Unsupported CNN flavour {flavour}")
+
 # ---------------------------------------------------------------------------
 # Conv1d
 # ---------------------------------------------------------------------------

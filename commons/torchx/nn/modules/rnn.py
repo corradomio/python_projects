@@ -5,6 +5,17 @@ import torch.nn as nn
 from torch import Tensor
 
 
+def create_rnn(flavour: str, **kwargs):
+    if flavour == 'lstm':
+        return LSTM(**kwargs)
+    elif flavour == 'gru':
+        return GRU(**kwargs)
+    elif flavour == 'rnn':
+        return RNN(**kwargs)
+    else:
+        raise ValueError(f"Unsupported RNN flavour {flavour}")
+
+
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
 # ---------------------------------------------------------------------------

@@ -54,24 +54,11 @@ def time_repeat(x: Tensor, n: int) -> Union[Tensor, list[Tensor]]:
 
 
 def expand_dims(t: Tensor, dim=-1) -> Tensor:
-    """
-    Add a dimension with value 1 in the specified position.
-    If dim=-1, it is added as last dimension
-
-    :param t: tensor
-    :param dim: where the dimension must be added
-    :return: the tensor with an extra dimension
-    """
-    # if dim == -1:
-    #     # return t.reshape(list(t.shape) + [1])
-    #     return t[:, None]
-    # elif dim == 0:
-    #     # return t.reshape([0] + list(t.shape))
-    #     return t[None, :]
-    # else:
-    #     shape = list(t.shape)
-    #     return t.reshape(shape[:dim] + [1] + shape[dim:])
     return torch.unsqueeze(t, dim)
+
+
+def remove_dims(t: Tensor, dim=-1) -> Tensor:
+    return torch.squeeze(t, dim)
 
 
 def cast(t: Tensor, dtype) -> Tensor:

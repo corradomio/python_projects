@@ -1,5 +1,6 @@
 from typing import Union
 
+import numpy as np
 import pandas as pd
 import skorch
 import torch
@@ -27,6 +28,24 @@ from ..utils import import_from, to_matrix, kwexclude
 # Pprop
 # SGD
 # .
+
+
+# ---------------------------------------------------------------------------
+# compute_input_output_shapes
+# ---------------------------------------------------------------------------
+
+def compute_input_output_shapes(X: np.ndarray, y: np.ndarray,
+                                xlags: list[int], ylags: list[int], tlags: list[int]) \
+    -> tuple[tuple[int, int], tuple[int, int]]:
+    sx = len(xlags)
+    sy = len(ylags)
+    st = len(tlags)
+
+    mx = X.shape[1] if X is not None and sx > 0 else 0
+    my = y.shape[1]
+
+    return (sy, mx + my), (st, my)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -250,14 +269,16 @@ class BaseNNForecaster(TransformForecaster):
         Xh = to_matrix(self._X)
         yh = to_matrix(self._y)
 
-        sx = len(self._slots.xlags)
-        sy = len(self._slots.ylags)
-        st = len(self._tlags)
+        return compute_input_output_shapes(Xh, yh, self._slots.xlags, self._slots.ylags, self._tlags)
 
-        mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
-        my = yh.shape[1]
-
-        return (sy, mx+my), (st, my)
+        # sx = len(self._slots.xlags)
+        # sy = len(self._slots.ylags)
+        # st = len(self._tlags)
+        #
+        # mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
+        # my = yh.shape[1]
+        #
+        # return (sy, mx+my), (st, my)
 
     def _from_numpy(self, ys, fhp):
         ys = ys.reshape(-1)
