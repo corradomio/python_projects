@@ -10,8 +10,8 @@ from ...utils import expand_dims, cast, max
 
 
 # ---------------------------------------------------------------------------
-# SelfAttention
 # MultiheadAttention
+# SelfAttention
 # ---------------------------------------------------------------------------
 #
 
@@ -26,18 +26,41 @@ class MultiheadAttention(nn.MultiheadAttention):
     """
 
     def __init__(self,
+                 embed_dim, num_heads,
+                 dropout=0., bias=True,
+                 add_bias_kv=False, add_zero_attn=False,
+                 kdim=None, vdim=None,
                  batch_first=True,
                  return_attention=False,
-                 **kwargs):
-        super().__init__(batch_first=batch_first, **kwargs)
+                 device=None, dtype=None):
+        super().__init__(embed_dim=embed_dim, num_heads=num_heads,
+                         dropout=dropout, bias=bias,
+                         add_bias_kv=add_bias_kv, add_zero_attn=add_zero_attn,
+                         batch_first=batch_first,
+                         kdim=kdim, vdim=vdim,
+                         device=device, dtype=dtype)
         self.return_attention = return_attention
 
-    def forward(self, query: Tensor, key: Tensor, value: Tensor) -> Tuple[Tensor, Optional[Tensor]]:
-        t, a = super().forward(query, key, value)
+    def forward(self, query: Tensor, key: Tensor, value: Tensor,
+                # key_padding_mask: Optional[Tensor] = None,
+                # need_weights: bool = True,
+                # attn_mask: Optional[Tensor] = None,
+                # average_attn_weights: bool = True,
+                # is_causal: bool = False
+        ) -> Tuple[Tensor, Optional[Tensor]]:
+        t, a = super().forward(
+            query=query, key=key, value=value,
+            # key_padding_mask=key_padding_mask,
+            # need_weights=need_weights,
+            # attn_mask=attn_mask,
+            # average_attn_weights=average_attn_weights,
+            # is_causal=is_causal
+        )
         if self.return_attention:
             return t, a
         else:
             return t
+# end
 
 
 class SelfAttention(MultiheadAttention):
@@ -53,10 +76,11 @@ class SelfAttention(MultiheadAttention):
     def forward(self, input: Tensor) -> Tensor:
         t = super().forward(input, input, input)
         return t
+# end
 
 
 # ---------------------------------------------------------------------------
-# SequentialSelfAttention
+# SeqSelfAttention
 # ---------------------------------------------------------------------------
 #
 # keras.layers.SeqSelfAttention
@@ -236,14 +260,3 @@ class SeqSelfAttention(nn.Module):
         return e
 # end
 
-
-# ---------------------------------------------------------------------------
-# Another implementation
-# ---------------------------------------------------------------------------
-# https://github.com/philipperemy/keras-attention/blob/master/attention/attention.py
-#
-# scores
-#   https://arxiv.org/pdf/1508.04025.pdf (Luong).
-#   https://arxiv.org/pdf/1409.0473.pdf (Bahdanau).
-#   https://machinelearningmastery.com/the-bahdanau-attention-mechanism/ (Some more explanation).
-#

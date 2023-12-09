@@ -1,15 +1,20 @@
 from diffusers import StableDiffusionPipeline
 import torch
 
-model_id = "plasmo/vox2"
+model = "plasmo/vox2"
+# model = "plasmo/voxel-ish"
 
-pipeline = StableDiffusionPipeline.from_pretrained(model_id, torch_dtype=torch.float16)
+pipeline = StableDiffusionPipeline.from_pretrained(model, torch_dtype=torch.float16)
 pipeline = pipeline.to("cuda")
 
-prompt = "beautiful young girl, high resolution"
+prompt = "beautiful young girl, high resolution, intricate detail, voxel-ish"
 image = pipeline(prompt).images[0]
-image.save("./images/plasmo-1.jpg")
+image.save("./images/plasmo-1.1.jpg")
 
-prompt = "beautiful young girl, high resolution, voxel-ish"
+prompt = "wizard, high resolution, intricate detail, voxel-ish"
 image = pipeline(prompt).images[0]
-image.save("./images/plasmo-2.jpg")
+image.save("./images/plasmo-wizard-1.1.jpg")
+
+prompt = "wonder woman, high resolution, intricate detail, voxel-ish"
+image = pipeline(prompt).images[0]
+image.save("./images/plasmo-ww-1.1.jpg")

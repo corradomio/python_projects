@@ -14,6 +14,7 @@ stablediffusionapi
     stablediffusionapi/mix-appfactory
 
 plasmo
+    belle immage voxelized
     plasmo/clayitization-sd1-5-768px
 
 MirageML
