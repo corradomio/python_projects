@@ -7,7 +7,7 @@ print(device)
 
 # model = "gpt2-xl"
 model = "bigscience/bloom-560m"
-model = ""
+
 
 tokenizer = AutoTokenizer.from_pretrained(model)
 text_gen = AutoModelForCausalLM.from_pretrained(model).to(device)
