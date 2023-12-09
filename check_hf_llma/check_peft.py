@@ -1,9 +1,12 @@
 #
 # https://huggingface.co/docs/peft/task_guides/image_classification_lora
 #
+import jsonx
+HF_TOKEN = jsonx.load("../tokens.json")['hf']
+
 
 from huggingface_hub import login
-login(token='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')
+login(token=HF_TOKEN)
 
 
 import transformers

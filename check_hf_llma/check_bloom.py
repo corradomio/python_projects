@@ -1,10 +1,11 @@
+import jsonx
 import transformers
 from transformers import BloomForCausalLM
 from transformers import BloomTokenizerFast
 import torch
 print("CUDA available:", torch.cuda.is_available())
 
-HF_TOKEN = "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"
+HF_TOKEN = jsonx.load("../tokens.json")['hf']
 
 # model_id = "bigscience/bloom-1b7"
 # model_id = "bigscience/bloom-560m"

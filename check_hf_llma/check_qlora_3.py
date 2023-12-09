@@ -6,9 +6,11 @@
 # !pip install -q -U git+https://github.com/huggingface/peft.git
 # !pip install -q -U git+https://github.com/huggingface/accelerate.git
 # !pip install -q datasets
+import jsonx
+HF_TOKEN = jsonx.load("../tokens.json")['hf']
 
 from huggingface_hub import login
-login(token='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')
+login(token=HF_TOKEN)
 
 import wandb
 wandb.login(key='7274eee0761eab797e17f4c28deba2a96748709b')

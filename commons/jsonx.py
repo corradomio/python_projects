@@ -13,3 +13,7 @@ def json_load(file: str) -> dict:
 def json_save(obj, file: str):
     with open(file, mode="w") as fp:
         return json.dump(obj, fp)
+
+
+load = json_load
+save = json_save
