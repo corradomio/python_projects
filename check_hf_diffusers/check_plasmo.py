@@ -13,8 +13,8 @@ image.save("./images/plasmo-1.1.jpg")
 
 prompt = "wizard, high resolution, intricate detail, voxel-ish"
 image = pipeline(prompt).images[0]
-image.save("./images/plasmo-wizard-1.1.jpg")
+image.save("./images/plasmo-wizard-1.2.jpg")
 
 prompt = "wonder woman, high resolution, intricate detail, voxel-ish"
 image = pipeline(prompt).images[0]
-image.save("./images/plasmo-ww-1.1.jpg")
+image.save("./images/plasmo-ww-1.3.jpg")
