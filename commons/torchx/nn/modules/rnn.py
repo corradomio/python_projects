@@ -352,3 +352,7 @@ RNNX_PARAMS = [
     'input_size', 'hidden_size', 'num_layers', 'bidirectional', 'bias', 'dropout',
     'return_sequence', 'return_state'
 ]
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

@@ -43,6 +43,7 @@ class ReshapeVector(nn.Module):
 
         t = torch.reshape(input, shape)
         return t
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +155,7 @@ class Clip(nn.Module):
         x[x < cmin] = cmin
         x[x > cmax] = cmax
         return x
-
+# end
 
 # ---------------------------------------------------------------------------
 # End

@@ -9,4 +9,4 @@ from .t2v import Time2Vec
 from .xnn import RepeatVector, TimeDistributed, ChannelDistributed, ReshapeVector, Clip
 from .activ import Snake
 from .rbf import RBFLayer
-from .loss import MSELossTuple, L1LossTuple
+from .losstuple import MSELossTuple, L1LossTuple

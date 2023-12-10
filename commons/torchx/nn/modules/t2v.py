@@ -51,4 +51,4 @@ class Time2Vec(nn.Module):
         #
         sin_trans = torch.sin(kdot(x, self.W) + self.P)
         return torch.cat([sin_trans, original], dim=-1)
-
+# end
