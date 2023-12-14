@@ -15,9 +15,8 @@ from stdlib import mul_
 
 class Linear(nn.Linear):
     """
-    Extends nn.Linear
-
-    It applies flatten/unflatten if ``in_features``/``out_features`` are tuples.
+    Extends nn.Linear to accept ``in_feature`` and ``out_features`` as tuples.
+    If a parameter is a tuple, it applies a flatten/unflatten transformation
 
     Args:
         in_features: can be a tuple
@@ -47,19 +46,14 @@ class Linear(nn.Linear):
     def forward(self, input: Tensor) -> Tensor:
         t = input
 
-        n = len(t)
         if not isinstance(self.input_shape, int):
             t = torch.flatten(t, start_dim=1)
-        t = super().forward(t)
-        if not isinstance(self.output_shape, int):
-            # t = torch.reshape(t, (n,) + self.output_shape)
-            t = t.view((n,) + self.output_shape)
 
-        # if self.flatten:
-        #     t = self.flatten.forward(t)
-        # t = super().forward(t)
-        # if self.unflatten:
-        #     t = self.unflatten.forward(t)
+        t = super().forward(t)
+
+        if not isinstance(self.output_shape, int):
+            n = len(t)
+            t = t.view((n,) + self.output_shape)
 
         return t
 # end

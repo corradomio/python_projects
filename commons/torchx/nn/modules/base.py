@@ -4,8 +4,7 @@ import torch.nn as nn
 # ---------------------------------------------------------------------------
 # Probe
 # ---------------------------------------------------------------------------
-# Used to insert breakpoints during the training/prediction and to print the
-# tensor shapes (ONLY the first time)
+#
 
 def print_shape(what, x, i=0):
     if isinstance(x, (tuple, list)):
@@ -23,6 +22,10 @@ def print_shape(what, x, i=0):
 
 
 class Probe(nn.Module):
+    """
+    Used to insert breakpoints during the training/prediction and to print the
+    tensor shapes (ONLY the first time)
+    """
 
     def __init__(self, name="probe"):
         super().__init__()
@@ -44,10 +47,19 @@ class Probe(nn.Module):
 # ---------------------------------------------------------------------------
 # Select
 # ---------------------------------------------------------------------------
-# If the input is a tuple/list o an hierarchical structure, it permits to
-# select an element
+#
 
 class Select(nn.Module):
+    """
+    If  'input' is a tuple/list o an hierarchical structure, it permits to
+    select an element based on a sequence of indices:
+
+        select=(3,2,4,1)
+
+    is converted into
+
+        input[3][2][4][1]
+    """
 
     def __init__(self, select=()):
         super().__init__()

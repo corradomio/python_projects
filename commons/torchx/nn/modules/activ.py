@@ -4,7 +4,18 @@ import torch.nn.functional as F
 from torch import pow, sin, cos
 
 
+# ---------------------------------------------------------------------------
+# Snake activation function
+# ---------------------------------------------------------------------------
+
 class Snake(nn.Module):
+    """
+    Compute the Snake activation function. There are multiple definitions:
+
+        'sin':    x + 1/a sin(a x)
+        'cos':    x + 1/a cos(a x)
+        'sin2':   x + 1/a sin(a x)^2
+    """
 
     def __init__(self, a=1, method=None):
         super().__init__()
@@ -23,6 +34,10 @@ class Snake(nn.Module):
         return self._fun(x)
 # end
 
+
+# ---------------------------------------------------------------------------
+# Non Negative Exponential Linear Unit activation function
+# ---------------------------------------------------------------------------
 
 ONE = torch.tensor(1, requires_grad=False)
 

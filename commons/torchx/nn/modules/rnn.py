@@ -34,7 +34,8 @@ def create_rnn(flavour: str, **kwargs):
 
 class LSTM(nn.LSTM):
     """
-    Extends nn.LSTM
+    Extends nn.LSTM to accept the parameters 'return_sequence' and 'return_state'.
+    It changes 'batch_first' to ``True`` as default
 
     Args:
         input_size
@@ -145,7 +146,8 @@ class LSTM(nn.LSTM):
 
 class GRU(nn.GRU):
     """
-    Extends nn.GRU
+    Extends nn.GRU to accept the parameters 'return_sequence' and 'return_state'.
+    It changes 'batch_first' to ``True`` as default
 
     Args:
         input_size
@@ -242,7 +244,8 @@ class GRU(nn.GRU):
 
 class RNN(nn.RNN):
     """
-    Extends nn.RNN
+    Extends nn.RNN to accept the parameters 'return_sequence' and 'return_state'.
+    It changes 'batch_first' to ``True`` as default
 
     Args:
         input_size

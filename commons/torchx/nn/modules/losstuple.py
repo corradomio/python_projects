@@ -4,6 +4,12 @@ from torch import Tensor
 from torch.nn import functional as F
 
 
+# ---------------------------------------------------------------------------
+# Loss function on tuples
+# ---------------------------------------------------------------------------
+# Compute the loss function on tuples
+#
+
 class MSELossTuple(nn.MSELoss):
 
     def forward(self, input: tuple[Tensor], target: tuple[Tensor]) -> Tensor:

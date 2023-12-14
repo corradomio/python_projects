@@ -15,7 +15,7 @@ def create_cnn(flavour: str, **kwargs):
 # ---------------------------------------------------------------------------
 # Conv1d
 # ---------------------------------------------------------------------------
-# Extends nn.Conv1d to accept
+# Extends nn.Conv1d to accept 'channel_last' parameter
 #
 #       (batch, channels, seq)      channel_last=False
 #       (batch, seq, channels)      channel_last=True
@@ -23,7 +23,7 @@ def create_cnn(flavour: str, **kwargs):
 #
 class Conv1d(nn.Conv1d):
     """
-    Extends nn.Conv1d
+    Extends nn.Conv1d to accept 'channel_last' parameter
 
     Args:
         kernel_size: Default 1
@@ -63,11 +63,10 @@ class Conv1d(nn.Conv1d):
         t = input
         if self.channels_last:
             t = torch.swapaxes(t, 1, 2)
-
-        t = super().forward(t)
-
-        if self.channels_last:
+            t = super().forward(t)
             t = torch.swapaxes(t, 1, 2)
+        else:
+            t = super().forward(t)
 
         return t
     # end

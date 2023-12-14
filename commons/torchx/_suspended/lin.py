@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from ... import nn as nnx
+from torchx import nn as nnx
 
 
 def assert_shape_2d(shape):

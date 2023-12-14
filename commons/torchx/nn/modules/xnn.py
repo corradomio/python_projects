@@ -53,16 +53,20 @@ class ReshapeVector(nn.Module):
 #
 
 class RepeatVector(nn.Module):
+    """
+    Repeat a vector v in R^n, r times, generating a vector in R^(r,n)
+    """
 
     def __init__(self, n_repeat=1):
         super().__init__()
         self.n_repeat = n_repeat
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: Tensor) -> Tensor:
         n_repeat = self.n_repeat
-        # rep_list = [x for i in range(self.n_repeat)]
-        # repeated = torch.stack(rep_list, 1)
-        repeated = x.repeat((n_repeat, 1))
+        if n_repeat == 1:
+            repeated = x
+        else:
+            repeated = x.repeat((n_repeat, 1))
         return repeated
 # end
 
@@ -103,6 +107,58 @@ class TimeDistributed(nn.Module):
         t = torch.reshape(t, shape=new_dims)
         return t
 # end
+
+
+# ---------------------------------------------------------------------------
+# TimeRepeat
+# ---------------------------------------------------------------------------
+#
+
+class TimeRepeat(nn.Module):
+    """
+    Repeat a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
+    with shape (batch, seq, r*input).
+    If 'n_zeros' is greater than 0, it extends the tensor with zeros in front. If 'n_zeros' is
+    less than 0, it extends the input tensor with zeros in back
+    """
+
+    def __init__(self, n_repeat=1, n_expand=0):
+        """
+        
+        :param n_repeat: n of times the tensor is repeated along the 'input' dimension
+        :param n_expand: if to add extra zeros in front (n_expand > 0) or at back (n_expand < 0)
+            of the tensor.
+        """
+        super().__init__()
+        self.n_repeat = n_repeat
+        self.n_zeros = n_expand
+        assert n_repeat > 0, "n_repeat needs to be an integer > 0"
+        assert isinstance(n_expand, int), "n_zeros needs to be an integer"
+
+    def forward(self, x: Tensor) -> Tensor:
+        n_repeat = self.n_repeat
+        n_zeros = self.n_zeros
+
+        if n_zeros > 0:
+            # add zeros in front
+            shape = list(x.shape)
+            shape[2] += n_zeros
+            z = torch.zeros(shape)
+            z[:, :, n_zeros:] += x
+        elif n_zeros < 0:
+            # add zeros at the back
+            shape = list(x.shape)
+            shape[2] += n_zeros
+            z = torch.zeros(shape)
+            z[:, :, :-n_zeros:] += x
+        else:
+            pass
+
+        if n_repeat > 1:
+            x = x.repeat(1, 1, n_repeat)
+
+        return x
+    # end
 
 
 # ---------------------------------------------------------------------------
