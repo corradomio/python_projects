@@ -1,21 +1,18 @@
-import os
 import logging.config
-import matplotlib.pyplot as plt
+import os
 import warnings
-import pandasx as pdx
-import skorch
-import skorchx
-import torch
-import torchx
-import torch.nn as nn
-import torchx.nn as nnx
-import sktime
-import sktimex
-from tsmodels import *
-from stdlib import lrange, lrange1
-from sktimex.utils.plotting import plot_series
-from skorchx.callbacks.logging import PrintLog
 
+import matplotlib.pyplot as plt
+import skorch
+
+import pandasx as pdx
+import sktimex
+import torchx
+import torchx.nn as nnx
+from skorchx.callbacks.logging import PrintLog
+from sktimex.utils.plotting import plot_series
+from stdlib import lrange, lrange1
+from torchx.nn.timeseries import *
 
 # hide warnings
 warnings.filterwarnings("ignore")

@@ -1,21 +1,18 @@
-import os
 import logging.config
-import matplotlib.pyplot as plt
+import os
 import warnings
-import pandasx as pdx
-import skorch
-import skorchx
-import torch
-import torchx
-import torch.nn as nn
-import torchx.nn as nnx
-import sktime
-import sktimex
-from tsmodels import *
-from stdlib import lrange, lrange1
-from sktimex.utils.plotting import plot_series
-from skorchx.callbacks.logging import PrintLog
 
+import matplotlib.pyplot as plt
+import skorch
+
+import pandasx as pdx
+import sktimex
+import torchx
+import torchx.nn as nnx
+from skorchx.callbacks.logging import PrintLog
+from sktimex.utils.plotting import plot_series
+from stdlib import lrange, lrange1
+from torchx.nn.timeseries import *
 
 # hide warnings
 warnings.filterwarnings("ignore")
@@ -95,15 +92,14 @@ def analyze(g, df):
     #
     # Models
     #
-    MODEL = 'seq2seq3'
+    MODEL = 'seq2seqattn1'
 
     os.makedirs(f"./plots/{MODEL}/", exist_ok=True)
     fname = f"./plots/{MODEL}/{name}.png"
     # if os.path.exists(fname):
     #     return
 
-    tsmodel = create_model(MODEL, input_shape, output_shape,
-                           hidden_size=128)
+    tsmodel = create_model(MODEL, input_shape, output_shape)
 
     #
     # End
@@ -125,7 +121,7 @@ def analyze(g, df):
     tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, ytrain=True)
     Xt, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
 
-    model.fit((Xt, yt[1]), yt)
+    model.fit(Xt, yt)
 
     pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
     y_pred_s = pt.fit(y=y_train_s, X=X_train_s).transform(fh=fh, X=X_test_s)

@@ -5,17 +5,6 @@ import torch.nn as nn
 from torch import Tensor
 
 
-def create_rnn(flavour: str, **kwargs):
-    if flavour == 'lstm':
-        return LSTM(**kwargs)
-    elif flavour == 'gru':
-        return GRU(**kwargs)
-    elif flavour == 'rnn':
-        return RNN(**kwargs)
-    else:
-        raise ValueError(f"Unsupported RNN flavour {flavour}")
-
-
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
 # ---------------------------------------------------------------------------
@@ -342,7 +331,7 @@ class RNN(nn.RNN):
 
 
 # ---------------------------------------------------------------------------
-# Constants
+# create_rnn
 # ---------------------------------------------------------------------------
 
 RNNX_FLAVOURS = {
@@ -355,6 +344,15 @@ RNNX_PARAMS = [
     'input_size', 'hidden_size', 'num_layers', 'bidirectional', 'bias', 'dropout',
     'return_sequence', 'return_state'
 ]
+
+
+def create_rnn(flavour: str, **kwargs):
+    if flavour not in RNNX_FLAVOURS:
+        raise ValueError(f"Unsupported RNN flavour {flavour}")
+    else:
+        return RNNX_FLAVOURS[flavour](**kwargs)
+# end
+
 
 # ---------------------------------------------------------------------------
 # End

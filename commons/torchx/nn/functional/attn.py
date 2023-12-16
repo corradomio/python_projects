@@ -40,7 +40,7 @@ from torch.nn.functional import tanh
 #
 
 def t(x):
-    return transpose(x, -2, 1)
+    return transpose(x, -2, -1)
 
 #
 # @: matrix      multiplication
@@ -56,11 +56,11 @@ def _weighted_value(attn_weight: Tensor, value: Tensor) -> Tensor:
 #   softmax(1/sqrt(dk) * Q @ K^T) @ V
 #   1/sqrt(dk) * Q @ K^T
 def scaled_dot_product_attention(query: Tensor, key: Tensor, value: Tensor, scale=None) -> Tensor:
-    scale_factor = 1 / sqrt(query.size(-1)) if scale is None else scale
-    if scale != 1:
-        attn_weight = query @ t(key) * scale_factor
-    else:
+    scale = 1 / sqrt(query.size(-1)) if scale is None else scale
+    if scale == 1:
         attn_weight = query @ t(key)
+    else:
+        attn_weight = query @ t(key) * scale
     return _weighted_value(attn_weight, value)
 
 

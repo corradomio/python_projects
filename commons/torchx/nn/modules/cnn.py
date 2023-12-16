@@ -5,13 +5,6 @@ import torch.nn as nn
 from torch.nn.common_types import _size_1_t
 
 
-def create_cnn(flavour: str, **kwargs):
-    if flavour == 'cnn':
-        return Conv1d(**kwargs)
-    else:
-        raise ValueError(f"Unsupported CNN flavour {flavour}")
-
-
 # ---------------------------------------------------------------------------
 # Conv1d
 # ---------------------------------------------------------------------------
@@ -71,6 +64,33 @@ class Conv1d(nn.Conv1d):
         return t
     # end
 # end
+
+
+# ---------------------------------------------------------------------------
+# create_cnn
+# ---------------------------------------------------------------------------
+
+CNNX_FLAVOURS = {
+    'cnn': Conv1d,
+}
+
+CNNX_PARAMS = [
+    'in_channels', 'out_channels',
+    'kernel_size', 'stride', 'dilation',
+    'groups', 'bias',
+    'padding', 'padding_mode',
+    'device', 'dtype',
+    'channels_last'
+]
+
+
+def create_cnn(flavour: str, **kwargs):
+    if flavour not in CNNX_FLAVOURS:
+        raise ValueError(f"Unsupported CNN flavour {flavour}")
+    else:
+        return CNNX_FLAVOURS[flavour](**kwargs)
+# end
+
 
 # ---------------------------------------------------------------------------
 # End

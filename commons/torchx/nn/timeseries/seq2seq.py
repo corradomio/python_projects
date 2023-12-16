@@ -1,224 +1,19 @@
-#
-# seq2seq + teacher forcing/scheduler sampling
-# https://medium.com/@maxbrenner-ai/implementing-seq2seq-models-for-efficient-time-series-forecasting-88dba1d66187
-#
-# Time Series Cross-validation — a walk forward approach in python
-# https://medium.com/eatpredlove/time-series-cross-validation-a-walk-forward-approach-in-python-8534dd1db51a
-#
-# model based on Linear layer
-# 2023 - Are Transformers Effective for Time Series Forecasting
-#
-
-# Some extensions on 'fit(X, y)'
-#
-#   TSLinear        fit(Xt, yp)
-#   TSRNNLinear     fit(Xt, yp)
-#   TSCNNLinear     fit(Xt, yp)
-#   TSSeq2SeqV1     fit(Xt, yp)
-#   TSSeq2SeqV2     fit(Xt, (yt, yp))
-#   TSSeq2SeqV3     fit((Xt, yp), (yt, yp))
-#
-
-
-import torch
-
-import torchx.nn as nnx
-import torchx
-from stdlib import kwparams, kwexclude, kwval
-from is_instance import is_instance
 from math import exp
 from random import random
 
+import torch
 
-# ---------------------------------------------------------------------------
-# create_model
-# ---------------------------------------------------------------------------
-
-def create_model(name: str, input_shape, output_shape, **kwargs):
-
-    if name == 'linear':
-        return TSLinear(input_shape, output_shape, **kwargs)
-    if name == 'rnnlin':
-        return TSRNNLinear(input_shape, output_shape, **kwargs)
-    if name == 'cnnlin':
-        return TSCNNLinear(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq1':
-        return TSSeq2SeqV1(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq2':
-        return TSSeq2SeqV2(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq3':
-        return TSSeq2SeqV3(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq_attn1':
-        return TSSeq2SeqAttnV1(input_shape, output_shape, **kwargs)
-
-
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def is_shape(s):
-    # return isinstance(s, tuple) and (len(s) == 2)
-    return is_instance(s, tuple[int, int])
-
-
-# ---------------------------------------------------------------------------
-# TimeSeriesModel
-# ---------------------------------------------------------------------------
-# Tags
-#   x-use-ypredict == True      fit((Xt, yp), ...)
-#   y-use-ytrain   == True      fit(..., (yt, yp))
-# Parameters
-#   target_first   == True      X = [yt, xt]
-#   target_first   == False     X = [xt, yt]
-#
-
-class TimeSeriesModel(nnx.Module):
-    _tags = {
-        "x-use-ypredict": False,
-        "y-use-ytrain": False
-    }
-
-    def __init__(self, input_shape, output_shape, **kwargs):
-        super().__init__()
-        assert is_shape(input_shape), "input_shape"
-        assert is_shape(output_shape), "output_shape"
-
-        self.input_shape = input_shape
-        self.output_shape = output_shape
-        self.kwargs = kwargs
-# end
-
-
-# ---------------------------------------------------------------------------
-# TSLinearModel
-# ---------------------------------------------------------------------------
-
-class TSLinear(TimeSeriesModel):
-
-    def __init__(self, input_shape, output_shape,
-                 hidden_size=None,
-                 activation='relu', **kwargs):
-        """
-        Time series Linear model.
-
-        :param input_shape: sequence_length x n_input_features
-        :param output_shape: sequence_length x n_target_features
-        :param hidden_size: hidden size
-        :param activation: activation function to use
-        :param kwargs: parameters to use for the activation function.
-                       They must be 'activation__<parameter_name>'
-        """
-        super().__init__(input_shape, output_shape, hidden_size=hidden_size)
-        self.hidden_size = hidden_size
-        self.activation = activation
-        self.activation_params = kwparams(kwargs, 'activation')
-
-        if hidden_size is not None:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=hidden_size)
-            self.relu = torchx.activation_function(self.activation, self.activation_params)
-            self.decoder = nnx.Linear(in_features=hidden_size, out_features=output_shape)
-        else:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=output_shape)
-            self.decoder = None
-            self.relu = None
-        # end
-
-    def forward(self, x):
-        if self.hidden_size is None:
-            t = self.encoder(x)
-        else:
-            t = self.encoder(x)
-            t = self.relu(t)
-            t = self.decoder(t)
-        return t
-# end
-
-
-# ---------------------------------------------------------------------------
-# TSRecurrentLinear
-# ---------------------------------------------------------------------------
-
-class TSRNNLinear(TimeSeriesModel):
-    def __init__(self, input_shape, output_shape,
-                 hidden_size=None,
-                 flavour='lstm', activation='relu', **kwargs):
-        super().__init__(input_shape, output_shape,
-                         flavour=flavour,
-                         activation=activation,
-                         hidden_size=hidden_size,
-                         **kwargs)
-        self.hidden_size = hidden_size
-        self.flavour = flavour
-
-        if hidden_size is None:
-            hidden_size = input_shape[1]
-
-        activation_params = kwparams(kwargs, 'activation')
-
-        rnn_params = kwexclude(kwargs, 'activation')
-        rnn_params['input_size'] = input_shape[1]
-        rnn_params['hidden_size'] = hidden_size
-
-        input_seqlen = input_shape[0]
-
-        self.rnn = nnx.create_rnn(flavour, **rnn_params)
-        self.relu = torchx.activation_function(activation, activation_params)
-        self.linear = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=output_shape)
-    # end
-
-    def forward(self, x):
-        t = self.rnn(x)
-        t = self.relu(t) if self.relu is not None else t
-        t = self.linear(t)
-        return t
-# end
-
-
-# ---------------------------------------------------------------------------
-# TSConvolutionalLinear
-# ---------------------------------------------------------------------------
-
-class TSCNNLinear(TimeSeriesModel):
-    def __init__(self, input_shape, output_shape,
-                 hidden_size=None,
-                 flavour='cnn', activation='relu', **kwargs):
-        super().__init__(input_shape, output_shape,
-                         flavour=flavour,
-                         activation=activation,
-                         hidden_size=hidden_size,
-                         **kwargs)
-
-        self.hidden_size = hidden_size
-        self.flavour = flavour
-
-        if hidden_size is None:
-            hidden_size = input_shape[1]
-
-        activation_params = kwparams(kwargs, 'activation')
-        cnn_params = kwexclude(kwargs, 'activation')
-        # Force the tensor layout equals to the RNN layers
-        cnn_params['in_channels'] = input_shape[1]
-        cnn_params['out_channels'] = hidden_size
-        cnn_params['channels_last'] = True
-
-        input_seqlen = input_shape[0]
-
-        self.cnn = nnx.create_cnn(flavour, **cnn_params)
-        self.relu = torchx.activation_function(activation, activation_params)
-        self.linear = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=output_shape)
-    # end
-
-    def forward(self, x):
-        t = self.cnn(x)
-        t = self.relu(t) if self.relu is not None else t
-        t = self.linear(t)
-        return t
-# end
+from .ts import TimeSeriesModel
+from ... import nn as nnx
+from ...utils import time_repeat
 
 
 # ---------------------------------------------------------------------------
 # TSSeq2SeqV1
 # ---------------------------------------------------------------------------
+# encoder -[hidden_state]-> decoder
+#
+# the decoder receives in input zeros.
 
 class TSSeq2SeqV1(TimeSeriesModel):
 
@@ -231,7 +26,6 @@ class TSSeq2SeqV1(TimeSeriesModel):
                          **kwargs)
 
         self.hidden_size = hidden_size
-        self.flavour = flavour
 
         if hidden_size is None:
             hidden_size = output_shape[1]
@@ -268,6 +62,7 @@ class TSSeq2SeqV1(TimeSeriesModel):
         return t
 
     def _zero(self, batch_size, t):
+        # t: tensor used to retrieve dtype and device
         if batch_size not in self._zero_cache:
             # input_size = self.input_shape[1]
             input_size = 1
@@ -313,7 +108,6 @@ class TSSeq2SeqV2(TimeSeriesModel):
                          **kwargs)
 
         self.hidden_size = hidden_size
-        self.flavour = flavour
         self.use_encoder_sequence = use_encoder_sequence
 
         if hidden_size is None:
@@ -351,7 +145,7 @@ class TSSeq2SeqV2(TimeSeriesModel):
         e, h = self.enc(x)
         t = e.reshape(batch_size, -1)
 
-        z = torchx.time_repeat(t, output_seqlen)
+        z = time_repeat(t, output_seqlen)
         t = self.dec(z, h)
 
         t = t if self.adapter is None else self.adapter(t)
@@ -402,7 +196,6 @@ class TSSeq2SeqV3(TimeSeriesModel):
                          **kwargs)
 
         self.hidden_size = hidden_size
-        self.flavour = flavour
         self.target_first = target_first
         self.teacher_forcing = teacher_forcing
 
@@ -496,18 +289,4 @@ class TSSeq2SeqV3(TimeSeriesModel):
 
         t = torch.cat(ylist, dim=1)
         return t
-
 # end
-
-
-# ---------------------------------------------------------------------------
-# TSSeq2SeqAttnV1
-# ---------------------------------------------------------------------------
-
-class TSSeq2SeqAttnV1(TimeSeriesModel):
-    pass
-
-
-# ---------------------------------------------------------------------------
-# End
-# ---------------------------------------------------------------------------

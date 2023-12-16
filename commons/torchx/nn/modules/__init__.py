@@ -1,5 +1,4 @@
 # from .attn2 import SelfAttention, SeqSelfAttention, MultiheadAttention
-from .attn import Attention, DotProductAttention, ScaledDotProductAttention, GeneralDotProductAttention
 from .base import Select, Probe
 from .lin import Linear
 from .mdn import MixtureDensityNetwork, MixtureDensityNetworkLoss, MixtureDensityNetworkPredictor
@@ -11,3 +10,5 @@ from .xnn import TimeDistributed, TimeRepeat
 from .activ import Snake
 from .rbf import RBFLayer
 from .losstuple import MSELossTuple, L1LossTuple
+from .attn import Attention, DotProductAttention, ScaledDotProductAttention, GeneralDotProductAttention
+from .attn import AdditiveAttention, CosineAttention, create_attention

@@ -3,6 +3,7 @@ from typing import Union, Any, Optional
 import numpy as np
 import torch
 from torch import Tensor
+# from is_instance import is_instance
 
 
 # ---------------------------------------------------------------------------
@@ -16,6 +17,11 @@ def dim_of(dim: Union[int, list[int]]):
 # ---------------------------------------------------------------------------
 # Assertions
 # ---------------------------------------------------------------------------
+
+def is_shape(s):
+    return isinstance(s, tuple) and (len(s) == 2)
+    # return is_instance(s, tuple[int, int])
+
 
 def is_tuple(v, name, len=None):
     assert isinstance(v, (list, tuple)), f"The parameter {name} must be a tuple list: {v}"

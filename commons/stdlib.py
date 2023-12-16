@@ -269,6 +269,8 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
     return params
 # end
 
+kwselect = kwparams
+
 
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
