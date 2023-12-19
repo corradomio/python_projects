@@ -7,6 +7,7 @@ from torch.nn import Parameter
 from torch.nn.init import xavier_uniform_, xavier_normal_
 
 from ..functional.attn import *
+from ...utils import expand_dims, remove_dims
 
 
 # ---------------------------------------------------------------------------
@@ -28,11 +29,18 @@ class Attention(nn.Module):
         self.vdim = vdim
         self.num_heads = num_heads
 
-    def forward(self, query: Tensor, key: Tensor, value: Tensor) -> Tensor:
+    def forward(self, query:Tensor, key:Tensor, value: Tensor) -> Tensor:
+        # check if query is [N, L, Hout] or [N, Hout] (converted in [N, 1, Hout]
+        single_q = (len(query.shape) == 2)
+        if single_q:
+            query = expand_dims(query, dim=1)
+
         score = self.score(query, key, value)
+        if single_q:
+            score = remove_dims(score, dim=1)
         return score
 
-    def score(self, query: Tensor, key: Tensor, value: Tensor) -> Tensor:
+    def score(self, query:Tensor, key:Tensor, value: Tensor) -> Tensor:
         ...
 
 

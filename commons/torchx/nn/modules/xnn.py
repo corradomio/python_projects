@@ -115,16 +115,16 @@ class TimeDistributed(nn.Module):
 #
 
 class TimeRepeat(nn.Module):
-    """
-    Repeat a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
-    with shape (batch, seq, r*input).
-    If 'n_zeros' is greater than 0, it extends the tensor with zeros in front. If 'n_zeros' is
-    less than 0, it extends the input tensor with zeros in back
-    """
 
     def __init__(self, n_repeat=1, n_expand=0):
         """
-        
+        Repeat a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
+        with shape (batch, seq, r*input).
+
+        The tensor can be 'expanded' with extra features, initialized to 0, if 'n_expand' is not 0.
+        If 'n_expand' is greater than 0, it extends the tensor with zeros in front ([0...,  X])
+        If 'n_expand' is less than 0, it extends the input tensor with zeros in back ([X, 0...])
+
         :param n_repeat: n of times the tensor is repeated along the 'input' dimension
         :param n_expand: if to add extra zeros in front (n_expand > 0) or at back (n_expand < 0)
             of the tensor.
@@ -159,6 +159,7 @@ class TimeRepeat(nn.Module):
 
         return x
     # end
+# end
 
 
 # ---------------------------------------------------------------------------

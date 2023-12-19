@@ -80,6 +80,7 @@ CNNX_PARAMS = [
     'groups', 'bias',
     'padding', 'padding_mode',
     'device', 'dtype',
+    # extended parameters
     'channels_last'
 ]
 

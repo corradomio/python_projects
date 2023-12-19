@@ -86,10 +86,9 @@ def analyze(g, df):
 
     input_shape, output_shape = sktimex.forecasting.compute_input_output_shapes(X_train, y_train, xlags, ylags, tlags)
 
-    #
-    # Prepare the data
-    #
-    tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, ytrain=True)
+    # prepare the data
+
+    tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, yprev=True)
     Xt, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
 
     pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
@@ -98,15 +97,15 @@ def analyze(g, df):
     #
     # Model
     #
-    MODEL = 'seq2seq3'
+    MODEL = 'attn1'
 
     os.makedirs(f"./plots/{MODEL}/", exist_ok=True)
     fname = f"./plots/{MODEL}/{name}.png"
     # if os.path.exists(fname):
     #     return
 
-    tsmodel = create_model(MODEL, input_shape, output_shape,
-                           hidden_size=128)
+    tsmodel = create_model(MODEL, input_shape, output_shape, nhead=3)
+
     #
     # End
     #
@@ -124,10 +123,12 @@ def analyze(g, df):
         callbacks__print_log=PrintLog
     )
 
-    model.fit((Xt, yt[1]), yt)
+    # ([35,36,19], [35,2,1]), [35,2,1]
+    model.fit(Xt, yt)
 
     i = 0
     while i < fh:
+        # [1,36,19]
         Xp = pt.step(i)
         y_pred = model.predict(Xp)
         i = pt.update(i, y_pred)
@@ -143,6 +144,7 @@ def analyze(g, df):
     plt.savefig(fname, dpi=300)
 
     pass
+# end
 
 
 def main():
@@ -152,6 +154,7 @@ def main():
     for g in sorted(dfg.keys()):
         analyze(g, dfg[g])
     pass
+# end
 
 
 if __name__ == "__main__":
@@ -160,3 +163,5 @@ if __name__ == "__main__":
     log = logging.getLogger("root")
     log.info("Logging system configured")
     main()
+
+

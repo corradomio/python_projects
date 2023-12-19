@@ -35,6 +35,7 @@ def module_path():
     import sys
     this_path = path(sys.modules[__name__].__file__)
     return this_path.parent
+# end
 
 
 def qualified_name(klass: Any):
@@ -78,6 +79,24 @@ def list_map(f, l):
     return list(map(f, l))
 
 
+def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
+    """
+    Convert parameter 'l' in a list.
+    If 'l' is None, the empty list, if a string, in a singleton list
+
+    :param l: value to convert
+    :param param: parameter's name, used in the error message
+    :return: a list
+    """
+    tl = type(l)
+    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
+    return [] if l is None else \
+            [l] if tl == str else \
+            list(l) if tl == tuple else l
+
+
+# ---------------------------------------------------------------------------
+
 def lrange(start, stop=None, step=None):
     """
     Same as 'list(range(...))'
@@ -98,6 +117,8 @@ def lrange0(length):
     return list(range(0, length))
 
 
+# ---------------------------------------------------------------------------
+
 def tobool(s: str) -> bool:
     """
     Convert the string into a boolean value.
@@ -115,22 +136,6 @@ def tobool(s: str) -> bool:
         return True
     else:
         raise ValueError(f"Unsupported boolean value '{s}'")
-
-
-def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
-    """
-    Convert parameter 'l' in a list.
-    If 'l' is None, the empty list, if a string, in a singleton list
-
-    :param l: value to convert
-    :param param: parameter's name, used in the error message
-    :return: a list
-    """
-    tl = type(l)
-    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
-    return [] if l is None else \
-            [l] if tl == str else \
-            list(l) if tl == tuple else l
 
 
 # ---------------------------------------------------------------------------
@@ -178,11 +183,9 @@ def as_kwargs(locals):
                 'self', '__class__']:
         del kwargs[key]
     return kwargs
-# end
 
 
-def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None,
-          keys=None) -> Any:
+def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None, keys=None) -> Any:
     """
     Return the value in the dictionary with key 'name' or the default value
 
@@ -232,7 +235,6 @@ def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, lis
         return _parse_val(kwargs[key])
     else:
         return defval
-# end
 
 
 def kwparams(kwargs: dict, prefix: str) -> dict:
@@ -267,7 +269,6 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
             n = kw[l:]
             params[n] = kwargs[kw]
     return params
-# end
 
 kwselect = kwparams
 

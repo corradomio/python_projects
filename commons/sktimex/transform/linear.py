@@ -20,17 +20,14 @@ from ..lags import resolve_lags, lmax
 
 class LinearTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
         self.Xh = None
         self.yh = None
+    # end
 
     def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None):
         super().fit(y, X)
@@ -85,14 +82,12 @@ class LinearTrainTransform(ModelTrainTransform):
 
 class LinearPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
         elif lags is not None:
             slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None):
         fh, X = super().transform(fh, X, y)

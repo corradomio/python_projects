@@ -13,16 +13,12 @@ from ..lags import lmax
 
 class CNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
-        self.flatten = flatten
+        # self.flatten = flatten
         xlags = self.xlags
         ylags = self.ylags
         assert len(xlags) == 0 or xlags == ylags, "Supported only [0, n], [n, n]"
@@ -75,8 +71,8 @@ class CNNTrainTransform(ModelTrainTransform):
             # end
         # end
 
-        if self.flatten:
-            yt = yt.reshape((yt.shape[0], -1))
+        # if self.flatten:
+        #     yt = yt.reshape((yt.shape[0], -1))
 
         return Xt, yt
     # end
@@ -85,16 +81,12 @@ class CNNTrainTransform(ModelTrainTransform):
 
 class CNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
         elif lags is not None:
             slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
-
-        self.flatten = flatten
+        super().__init__(slots=slots, tlags=tlags)
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
         fh, X = super().transform(fh, X, y)

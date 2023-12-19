@@ -13,11 +13,11 @@ from ..lags import flatten_max
 
 class CNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None):
+    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
         # lags is an alternative to slots
-        super().__init__(
-            slots=lags if lags is not None else slots,
-            tlags=tlags)
+        if ylags is not None:
+            slots = [xlags, ylags]
+        super().__init__(slots=slots, tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags
@@ -25,6 +25,7 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
         #
         self.xlags = slots.xlags_lists
         self.ylags = slots.ylags_lists
+    # end
 
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple[list[np.ndarray], np.ndarray]:
         X, y = self._check_Xy(X, y, fh)
@@ -81,14 +82,12 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
 
 class CNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
         elif lags is not None:
             slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
         #
         # force the initialization of self.xlags, self.ylags

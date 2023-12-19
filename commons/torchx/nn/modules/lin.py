@@ -9,8 +9,7 @@ from stdlib import mul_
 # ---------------------------------------------------------------------------
 # Linear
 # ---------------------------------------------------------------------------
-# It extends nn.Linear with an Integrated Flatten and Unflatten layers
-#
+# It extends nn.Linear with an integrated Flatten and Unflatten layers
 #
 
 class Linear(nn.Linear):

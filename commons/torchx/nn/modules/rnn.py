@@ -4,6 +4,25 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
+class RNNComposer:
+
+    def __init__(self, return_sequence, return_state):
+        self.return_sequence = return_sequence
+        self.return_state = return_state
+
+    def compose_result(self, seq, state):
+        if self.return_sequence is True and self.return_state:
+            return seq, state
+        elif self.return_sequence is True and self.return_state is False:
+            return seq
+        elif self.return_sequence is False and self.return_state:
+            return seq[:, -1], state
+        elif self.return_sequence is None and self.return_state:
+            return state
+        else:
+            return seq[:, -1]
+# end
+
 
 # ---------------------------------------------------------------------------
 # RNN/GRU/LSTM
@@ -12,13 +31,19 @@ from torch import Tensor
 #
 #   (sequence, hidden_state)
 #
-# these classes extend the original implementation adding two parameters to
+# The following classes extend the original ones adding two parameters to
 # decide the result type;
 #
 #       return_state:       if to return the hidden state
+#                           False: no  hidden state is returned
+#                           True:  it is returned the hidden state of the last cell
+#                           'all': it is returned a tensor with the hidden state of all cells
 #       return_sequence:    if to return the sequence, the last value or none
+#                           False: it is returned just the last sequence value
+#                           True:  it is returned all sequence values
+#                           None:  no sequence value is returned
 #
-# The default value to 'batch_first' is changed to ``True``
+# It is changed the default value for 'batch_first': now it is ``True``
 #
 
 class LSTM(nn.LSTM):
@@ -79,6 +104,7 @@ class LSTM(nn.LSTM):
         )
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
                 input: Tensor,
@@ -102,16 +128,17 @@ class LSTM(nn.LSTM):
         else:
             seq, state = super().forward(input, hx)
 
-        if self.return_sequence is True and self.return_state:
-            return seq, state
-        elif self.return_sequence is True and self.return_state is False:
-            return seq
-        elif self.return_sequence is False and self.return_state:
-            return seq[:, -1], state
-        elif self.return_sequence is None and self.return_state:
-            return state
-        else:
-            return seq[:, -1]
+        # if self.return_sequence is True and self.return_state:
+        #     return seq, state
+        # elif self.return_sequence is True and self.return_state is False:
+        #     return seq
+        # elif self.return_sequence is False and self.return_state:
+        #     return seq[:, -1], state
+        # elif self.return_sequence is None and self.return_state:
+        #     return state
+        # else:
+        #     return seq[:, -1]
+        return self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
         n = x.shape[1]
@@ -177,6 +204,7 @@ class GRU(nn.GRU):
         )
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
                 input: Tensor,
@@ -200,34 +228,30 @@ class GRU(nn.GRU):
         else:
             seq, state = super().forward(input, hx)
 
-        if self.return_sequence is True and self.return_state is True:
-            return seq, state
-        elif self.return_sequence is True and self.return_state is False:
-            return seq
-        elif self.return_sequence is False and self.return_state is True:
-            return seq[:, -1], state
-        elif self.return_sequence is None and self.return_state is True:
-            return state
-        else:
-            return seq[:, -1]
+        # if self.return_sequence is True and self.return_state is True:
+        #     return seq, state
+        # elif self.return_sequence is True and self.return_state is False:
+        #     return seq
+        # elif self.return_sequence is False and self.return_state is True:
+        #     return seq[:, -1], state
+        # elif self.return_sequence is None and self.return_state is True:
+        #     return state
+        # else:
+        #     return seq[:, -1]
+        return self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
         n = x.shape[1]
         outs = []
         hs = []
-        cs = []
         for i in range(n):
             out, hx = super().forward(x[:, i:i+1], hx)
             outs.append(out)
-            h0, c0 = hx
-            h0 = h0.unsqueeze(2)
-            c0 = c0.unsqueeze(2)
+            h0 = hx.unsqueeze(2)
             hs.append(h0)
-            cs.append(c0)
         out = torch.cat(outs, dim=1)
         h0 = torch.cat(hs, dim=2)
-        c0 = torch.cat(cs, dim=2)
-        return out, (h0, c0)
+        return out, h0
 # end
 
 
@@ -276,6 +300,7 @@ class RNN(nn.RNN):
         )
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
                 input: Tensor,
@@ -299,34 +324,30 @@ class RNN(nn.RNN):
         else:
             seq, state = super().forward(input, hx)
 
-        if self.return_sequence is True and self.return_state is True:
-            return seq, state
-        elif self.return_sequence is True and self.return_state is False:
-            return seq
-        elif self.return_sequence is False and self.return_state is True:
-            return seq[:, -1], state
-        elif self.return_sequence is None and self.return_state is True:
-            return state
-        else:
-            return seq[:, -1]
+        # if self.return_sequence is True and self.return_state is True:
+        #     return seq, state
+        # elif self.return_sequence is True and self.return_state is False:
+        #     return seq
+        # elif self.return_sequence is False and self.return_state is True:
+        #     return seq[:, -1], state
+        # elif self.return_sequence is None and self.return_state is True:
+        #     return state
+        # else:
+        #     return seq[:, -1]
+        self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
         n = x.shape[1]
         outs = []
         hs = []
-        cs = []
         for i in range(n):
             out, hx = super().forward(x[:, i:i+1], hx)
             outs.append(out)
-            h0, c0 = hx
-            h0 = h0.unsqueeze(2)
-            c0 = c0.unsqueeze(2)
+            h0 = hx.unsqueeze(2)
             hs.append(h0)
-            cs.append(c0)
         out = torch.cat(outs, dim=1)
         h0 = torch.cat(hs, dim=2)
-        c0 = torch.cat(cs, dim=2)
-        return out, (h0, c0)
+        return out, h0
 # end
 
 
@@ -342,6 +363,7 @@ RNNX_FLAVOURS = {
 
 RNNX_PARAMS = [
     'input_size', 'hidden_size', 'num_layers', 'bidirectional', 'bias', 'dropout',
+    # extended parameters
     'return_sequence', 'return_state'
 ]
 

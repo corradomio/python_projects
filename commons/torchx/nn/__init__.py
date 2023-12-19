@@ -2,3 +2,4 @@
 from torch.nn import *
 from .modules import *
 from .networks import *
+from .timeseries import *

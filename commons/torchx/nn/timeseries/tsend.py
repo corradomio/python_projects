@@ -1,6 +1,8 @@
 from .tslin import TSLinear, TSRNNLinear, TSCNNLinear
 from .seq2seq import TSSeq2SeqV1, TSSeq2SeqV2, TSSeq2SeqV3
-from .seq2seqattn import TSSeq2SeqAttnV1
+from .seq2seqattn import TSSeq2SeqAttnV1, TSSeq2SeqAttnV3, TSSeq2SeqAttnV2, TSSeq2SeqAttnV4
+from .tstran import TSTransformerV1
+
 
 # ---------------------------------------------------------------------------
 # create_model
@@ -24,6 +26,18 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
         return TSSeq2SeqV3(input_shape, output_shape, **kwargs)
     if name == 'seq2seqattn1':
         return TSSeq2SeqAttnV1(input_shape, output_shape, **kwargs)
+    if name == 'seq2seqattn3':
+        return TSSeq2SeqAttnV3(input_shape, output_shape, **kwargs)
+    if name == 'attn1':
+        return TSTransformerV1(input_shape, output_shape, **kwargs)
+
+    # unimplemented (for now)
+    if name == 'seq2seqattn2':
+        return TSSeq2SeqAttnV2(input_shape, output_shape, **kwargs)
+    if name == 'seq2seqattn4':
+        return TSSeq2SeqAttnV4(input_shape, output_shape, **kwargs)
+    else:
+        raise ValueError(f"Unknown model '{name}'")
 
 # ---------------------------------------------------------------------------
 # end

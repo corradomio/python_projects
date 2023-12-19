@@ -24,14 +24,10 @@ from ..lags import lmax
 
 class RNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
         #
         # override the initialization of self.xlags, self.ylags
@@ -39,6 +35,7 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
         #
         self.xlags = slots.xlags_lists
         self.ylags = slots.ylags_lists
+    # end
 
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple[list[np.ndarray], np.ndarray]:
         X, y = self._check_Xy(X, y, fh)
@@ -107,14 +104,12 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
 
 class RNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None, flatten=False):
+    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
         if ylags is not None:
             slots = [xlags, ylags]
         elif lags is not None:
             slots = lags
-        super().__init__(
-            slots=slots,
-            tlags=tlags)
+        super().__init__(slots=slots, tlags=tlags)
 
         #
         # override the initialization of self.xlags, self.ylags

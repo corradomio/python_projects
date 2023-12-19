@@ -21,7 +21,7 @@ def main():
 
 if __name__ == "__main__":
     warnings.filterwarnings("ignore")
-    logging.config.fileConfig('logging_config.ini')
+    logging.config.fileConfig('../logging_config.ini')
     log = logging.getLogger("root")
     log.info("Logging system configured")
     main()

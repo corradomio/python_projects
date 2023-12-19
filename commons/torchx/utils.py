@@ -59,12 +59,21 @@ def time_repeat(x: Tensor, n: int) -> Union[Tensor, list[Tensor]]:
     return r
 
 
-def expand_dims(t: Tensor, dim=-1) -> Tensor:
-    return torch.unsqueeze(t, dim)
+def expand_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
+    if is_instance(dim, int):
+        return torch.unsqueeze(t, dim)
+    for d in dim:
+        t = torch.unsqueeze(t, d)
+    return t
 
 
-def remove_dims(t: Tensor, dim=-1) -> Tensor:
-    return torch.squeeze(t, dim)
+
+def remove_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
+    if is_instance(dim, int):
+        return torch.squeeze(t, dim)
+    for d in dim:
+        t = torch.squeeze(t, d)
+    return t
 
 
 def cast(t: Tensor, dtype) -> Tensor:

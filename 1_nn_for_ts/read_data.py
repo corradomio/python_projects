@@ -87,26 +87,17 @@ def analyze(g, df):
     input_shape, output_shape = sktimex.forecasting.compute_input_output_shapes(X_train, y_train, xlags, ylags, tlags)
 
     #
-    # Prepare the data
+    # Models
     #
-    tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, ytrain=True)
-    Xt, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
-
-    pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
-    y_pred_s = pt.fit(y=y_train_s, X=X_train_s).transform(fh=fh, X=X_test_s)
-
-    #
-    # Model
-    #
-    MODEL = 'seq2seq3'
+    MODEL = 'seq2seqattn3'
 
     os.makedirs(f"./plots/{MODEL}/", exist_ok=True)
     fname = f"./plots/{MODEL}/{name}.png"
     # if os.path.exists(fname):
     #     return
 
-    tsmodel = create_model(MODEL, input_shape, output_shape,
-                           hidden_size=128)
+    tsmodel = create_model(MODEL, input_shape, output_shape)
+
     #
     # End
     #
@@ -124,7 +115,13 @@ def analyze(g, df):
         callbacks__print_log=PrintLog
     )
 
-    model.fit((Xt, yt[1]), yt)
+    tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags)
+    Xt, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
+
+    model.fit(Xt, yt)
+
+    pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
+    y_pred_s = pt.fit(y=y_train_s, X=X_train_s).transform(fh=fh, X=X_test_s)
 
     i = 0
     while i < fh:
@@ -136,6 +133,7 @@ def analyze(g, df):
     y_pred = yscaler.inverse_transform(y_pred_s)
 
     plot_series(y_train, y_test, y_pred, labels=['train', 'test', 'pred'])
+
 
     # name = g[0].replace('/', '-')
     # os.makedirs(f"./plots/{MODEL}/", exist_ok=True)

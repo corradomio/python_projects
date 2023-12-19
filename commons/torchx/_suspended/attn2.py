@@ -5,8 +5,8 @@ import torch.nn as nn
 from torch import Tensor
 from torch.nn.init import xavier_uniform_
 
-from ...activation import activation_function
-from ...utils import expand_dims, cast, max
+from torchx.activation import activation_function
+from torchx.utils import expand_dims, cast, max
 
 
 # ---------------------------------------------------------------------------
