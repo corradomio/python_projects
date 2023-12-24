@@ -38,8 +38,8 @@ class MDN(nn.Module):
 
     def forward(self, inputs):
         t = inputs
-        t = self.mus.forward(t)
-        t = self.sigma.forward(t)
+        t = self.mus(t)
+        t = self.sigma(t)
         t = self.activation(t)
-        t = self.pi.forward(t)
+        t = self.pi(t)
         return t

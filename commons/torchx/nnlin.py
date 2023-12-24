@@ -302,13 +302,13 @@ class MultiInputs(nn.Module):
             input = input_list[i]
             model = self.input_models[i]
 
-            inner_result = model.forward(input)
+            inner_result = model(input)
             inner_results.append(inner_result)
 
         # concatenate the inner results
         inner = torch.concatenate(inner_results, dim=1)
 
-        result = self.output_model.forward(inner)
+        result = self.output_model(inner)
         return result
     # end
 

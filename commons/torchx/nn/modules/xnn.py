@@ -97,7 +97,7 @@ class TimeDistributed(nn.Module):
 
         t_list = []
         for i in range(n_repeat):
-            t = self.model.forward(input[:, i, :])
+            t = self.model(input[:, i, :])
             t_list.append(t)
         t = torch.cat(t_list, dim=1)
 
@@ -188,7 +188,7 @@ class ChannelDistributed(nn.Module):
 
         y_list = []
         for i in range(n_repeat):
-            y = self.model.forward(input[:, :, i])
+            y = self.model(input[:, :, i])
             y_list.append(y)
 
         out = torch.cat(y_list, dim=1)

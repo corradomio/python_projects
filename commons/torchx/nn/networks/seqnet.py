@@ -69,7 +69,7 @@ class Seq2SeqNetwork(nn.Module):
         self.apply(init_seq2seq)
 
     def forward(self, input):
-        context1, state1 = self.encoder.forward(input)
+        context1, state1 = self.encoder(input)
         if self.output_seq:
             output_seq = self.output_seq
         elif self.encoder.batch_first:
@@ -87,6 +87,6 @@ class Seq2SeqNetwork(nn.Module):
 
         contextn = time_repeat(context1, output_seq)
         staten = time_repeat(state1, batch_len)
-        output = self.decoder.forward(contextn, staten)
+        output = self.decoder(contextn, staten)
         return output
 

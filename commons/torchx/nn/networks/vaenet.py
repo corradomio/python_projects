@@ -189,13 +189,13 @@ class LinearVAE(nn.Module):
 
     def forward(self, x):
         # assert 0. <= x.min() <= x.max() <= 1., "The data must be in range [0, 1]"
-        t = self.encoder.forward(x)
+        t = self.encoder(x)
 
-        mean = self.mean.forward(t)
-        log_var = self.log_var.forward(t)
+        mean = self.mean(t)
+        log_var = self.log_var(t)
         z = self.reparameterization(mean, log_var)
 
-        x_hat = self.decoder.forward(z)
+        x_hat = self.decoder(z)
         return x_hat, mean, log_var
 
     @staticmethod
@@ -217,9 +217,9 @@ class LinearVAE(nn.Module):
         if isinstance(x, np.ndarray):
             x = torch.tensor(x)
         with torch.no_grad():
-            t = self.encoder.forward(x)
-            mean = self.mean.forward(t)
-            log_var = self.log_var.forward(t)
+            t = self.encoder(x)
+            mean = self.mean(t)
+            log_var = self.log_var(t)
             sigma = torch.exp(0.5 * log_var)
             z = mean + sigma
             # z = self.reparameterization(mean, log_var)
@@ -233,7 +233,7 @@ class LinearVAE(nn.Module):
         if isinstance(latent_coords, np.ndarray):
             latent_coords = torch.tensor(latent_coords)
         with torch.no_grad():
-            pred = self.decoder.forward(latent_coords)
+            pred = self.decoder(latent_coords)
             return pred.numpy()
 # end
 

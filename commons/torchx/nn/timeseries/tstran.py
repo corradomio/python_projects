@@ -2,6 +2,7 @@
 # Transformers for Time Series
 #
 import torch
+import torch.nn as nn
 
 from stdlib import kwexclude, kwselect
 from .ts import TimeSeriesModel
@@ -69,7 +70,10 @@ class TSTransformerV1(TimeSeriesModel):
             dropout=dropout,
             **kwargs
         )
-        self.adapter = nnx.TimeDistributed(nnx.Linear(d_model, output_size))
+        self.adapter = nnx.TimeDistributed(
+            nnx.Linear(d_model, output_size)
+            # , nn.Sigmoid()
+        )
         pass
     # end
 
@@ -100,8 +104,7 @@ class TSTransformerV1(TimeSeriesModel):
         x_dec = x[:, -1:, -output_size:]    # [N, 1,  Hout]
 
         x_enc = self.repl(x_enc)
-        x_dec = self.repl(x_dec)
-
+        # x_dec = self.repl(x_dec)
         y_enc = self.tran.encoder(x_enc)
 
         ylist = []

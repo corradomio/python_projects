@@ -19,8 +19,8 @@ class AE(nn.Module):
         self.decoder_net = decoder_net
 
     def forward(self, x):
-        t = self.encoder.forward(x)
-        y = self.decoder.forward(t)
+        t = self.encoder(x)
+        y = self.decoder(t)
         return y
 
 
@@ -45,14 +45,14 @@ class Autoencoder(AE):
         assert isinstance(x, np.ndarray)
         x = torch.tensor(x)
         with torch.no_grad():
-            t = self.encoder.forward(x)
+            t = self.encoder(x)
             return t.numpy()
 
     def decode(self, t):
         assert isinstance(t, np.ndarray)
         t = torch.tensor(t)
         with torch.no_grad():
-            x = self.decoder.forward(t)
+            x = self.decoder(t)
             return x.numpy()
 # end
 
