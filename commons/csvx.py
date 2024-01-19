@@ -5,6 +5,7 @@ import gzip
 from path import Path
 from datetime import datetime, time
 from bag import bag
+from stdlib import tobool
 
 #
 # We suppose that:
@@ -332,17 +333,6 @@ def load_csv_column_names(fname, skiprows=0):
 # end
 
 
-def tobool(s: str) -> bool:
-    assert isinstance(s, str)
-    s = s.lower()
-    if s in ['', '0', 'f', 'false', 'off', 'no', 'close', 'closed']:
-        return False
-    if s in ['1', 't', 'true', 'on', 'open', 'opened']:
-        return True
-    raise ValueError(f"invalid literal for tobool(): '{s}'")
-# end
-
-
 def guess_value_type(s: str) -> str:
     # if s is None -> None
     if s is None:
@@ -377,7 +367,6 @@ def guess_value_type(s: str) -> str:
     
     return 'str'
 # end
-
 
 
 # def csv_column_types(fname, comment='#', separator=',', nrows=1, max_values = 32) -> list[tuple]:

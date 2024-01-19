@@ -116,7 +116,6 @@ class DatasourceLoader:
 
     def _load(self, dsdict: dict) -> pd.DataFrame:
         ...
-
 # end
 
 

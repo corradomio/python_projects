@@ -12,7 +12,7 @@ from typing import Collection, Iterator, Iterable
 # argsort
 # ---------------------------------------------------------------------------
 
-def argsort(l: list, reverse: bool = False) -> list:
+def argsort(l: Iterable, reverse: bool = False) -> list:
     """
     Order the list and return the list of indices ordered by data values
 
@@ -21,7 +21,7 @@ def argsort(l: list, reverse: bool = False) -> list:
     :param reverse: if ordering in reverse order
     :return: list of ordered indices
     """
-
+    l = list(l)
     n = len(l)
     ipairs = [(i, l[i]) for i in range(n)]
     opairs = sorted(ipairs, key=lambda p: p[1], reverse=reverse)
@@ -130,6 +130,7 @@ def flatten(l) -> list:
         return [l]
 # end
 
+
 # ---------------------------------------------------------------------------
 # Subsets
 # ---------------------------------------------------------------------------
@@ -142,7 +143,6 @@ def flatten(l) -> list:
 #   powersetn(n, empty=True, full=True)
 #   subsetsn(n, k=None)
 #
-
 
 def issubset(S1: Collection, S2: Collection) -> bool:
     """

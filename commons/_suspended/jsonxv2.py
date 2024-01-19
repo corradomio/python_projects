@@ -55,6 +55,7 @@ def json_save(data, path, encoder=JSONEncoderEx()):
 
 read_json = json_load
 
+
 # ---------------------------------------------------------------------------
 
 
@@ -87,6 +88,7 @@ def d2m2(d, n):
         data[i, j] = d[k]
         data[j, i] = d[k]
     return data
+
 
 def m2d(d):
     h, w = d.shape

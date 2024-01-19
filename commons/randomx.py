@@ -365,7 +365,7 @@ class RandomSets:
     @property
     def p_items(self):
         n = self.n
-        return _normalize_pitems(m, None)
+        return _normalize_pitems(n, None)
 
     # -----------------------------------------------------------------------
     # Implementation
@@ -489,7 +489,7 @@ class RandomPermutations:
         """:type: int"""
 
         # last permutation
-        _self._perm = list(range(n))
+        self._perm = list(range(n))
         """:type: list"""
     # end
 

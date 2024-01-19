@@ -25,14 +25,15 @@ def chop(x: float, l: float, u: float) -> float:
 # ---------------------------------------------------------------------------
 # argsort
 # ---------------------------------------------------------------------------
-
-def argsort(values: Iterable, descending: bool = False) -> List[int]:
-    """Sort the values in ascending (ore descending) order and return the indices"""
-    n = len(list(values))
-    pairs = [(i, values[i]) for i in range(n)]
-    pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
-    return [p[0] for p in pairs]
-# end
+# @replaced by itertoolsx::argsort()
+# def argsort(values: Iterable, descending: bool = False) -> List[int]:
+#     """Sort the values in ascending (ore descending) order and return the indices"""
+#     values = list(values)
+#     n = len(values)
+#     pairs = [(i, values[i]) for i in range(n)]
+#     pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
+#     return [p[0] for p in pairs]
+# # end
 
 
 # ---------------------------------------------------------------------------

@@ -10,6 +10,8 @@ def locations(x, y, closed=False, scatter=dict(), arrow=dict()):
     # del scatter["s"]
     # plt.plot(x, y, **scatter)
 # end
+
+
 def locations_start(x, y, closed=False, scatter=dict(), arrow=dict()):
     scatter["c"] = "red"
     plt.scatter(x[0:1], y[0:1], **scatter)
