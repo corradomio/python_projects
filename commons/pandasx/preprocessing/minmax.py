@@ -330,8 +330,8 @@ def has_valid_pattern(y, tau) -> bool:
 
 class MinMax:
 
-    def __init__(self, sp):
-        self.name = 'none'
+    def __init__(self, sp, name="none"):
+        self.name = name
         self.sp = sp if sp > 0 else 1
         self._lower_bound = None
         self._upper_bound = None
@@ -386,7 +386,7 @@ class MinMax:
 
 class IdentityMinMax(MinMax):
     def __init__(self):
-        super().__init__(0)
+        super().__init__(0, "identity")
 
     def fit(self, x, y):
         return self
@@ -405,7 +405,7 @@ class IdentityMinMax(MinMax):
 
 class StepwiseMinMax(MinMax):
     def __init__(self, sp):
-        super().__init__(sp)
+        super().__init__(sp, "stepwise")
 
     def fit(self, x, y):
         lb, ub = compute_bounds(self.sp, x, y)
@@ -439,7 +439,7 @@ class StepwiseMinMax(MinMax):
 class PiecewiseMinMax(MinMax):
 
     def __init__(self, sp):
-        super().__init__(sp)
+        super().__init__(sp, "piecewise")
 
     def fit(self, x, y):
         lb, ub = compute_bounds(self.sp, x, y)
@@ -478,7 +478,7 @@ class PiecewiseMinMax(MinMax):
 class LinearMinMax(MinMax):
 
     def __init__(self, sp):
-        super().__init__(sp)
+        super().__init__(sp, "linear")
 
     def fit(self, x, y):
         lb, ub = compute_bounds(self.sp, x, y)
@@ -516,8 +516,8 @@ class LinearMinMax(MinMax):
 
 class RatioMinMax(MinMax):
 
-    def __init__(self, ratio):
-        super().__init__(0)
+    def __init__(self, ratio=(0, 1)):
+        super().__init__(0, "ratio")
         if isinstance(ratio, (int, float)):
             min_ratio, max_ratio = 0, ratio
         else:
@@ -568,11 +568,11 @@ class RatioMinMax(MinMax):
 # GlobalMinMax
 # ---------------------------------------------------------------------------
 
-class GlobalMinMax(RatioMinMax):
-
-    def __init__(self):
-        super().__init__((0, 1))
-# end
+# class GlobalMinMax(RatioMinMax):
+#
+#     def __init__(self):
+#         super().__init__((0, 1))
+# # end
 
 
 # ---------------------------------------------------------------------------
@@ -585,7 +585,7 @@ class GlobalMinMax(RatioMinMax):
 class FunctionMinMax(MinMax):
 
     def __init__(self, fun, sp):
-        super().__init__(sp)
+        super().__init__(sp, f"function[{fun}]")
         self.fun = fun
 
     def fit(self, x, y):
@@ -627,14 +627,18 @@ class FunctionMinMax(MinMax):
 # supported methods
 #   None            identity
 #   identity        identity
-#   linear          linear (global)
+#   global          single min/max values (global)
 #   float           ratio  (global)
 #   (float, float)  ratio  (global)
+#   linear          linear (global)
+#
 #   piecewise       linear   (by seasonality)
 #   stepwise        constant (by seasonality)
-#   global          single min/max values (global)
-#   poly1           polynomial (linear) interpolation   a0 + a1 x
-#   power           exponential interpolation           a0 + a1 x^a2
+#
+#   poly1           polynomial  interpolation       a0 + a1 x
+#   poly3           polynomial  interpolation       a0 + a1 x + a2 x^2 + a3 x^3
+#   power           exponential interpolation       a0 + a1 x^a2
+#   exp             exponential interpolation
 #
 
 class MinMaxScaler(GroupsEncoder):
@@ -682,7 +686,7 @@ class MinMaxScaler(GroupsEncoder):
 
             if not has_valid_pattern(yc, self.tau):
                 logging.getLogger("MinMaxScaler").warning(f"TS column {col} doesn't present a valid pattern")
-                mmi = GlobalMinMax()
+                mmi = RatioMinMax()
             else:
                 mmi = self._create_mmi()
 
@@ -694,40 +698,48 @@ class MinMaxScaler(GroupsEncoder):
         return minmax, start
 
     def _create_mmi(self):
-        if self.method in [None, 'identity']:
+        sp = self.sp
+        method = self.method
+
+        if method not in [None, 'identity', 'global'] and sp in [0, None]:
+            print(f"[WARNING: specified 'method' '{method}', but 'sp' is not specified. Forced to 12 (months)")
+            sp = 12
+
+        # no scaling
+        if method in [None, 'identity']:
             return IdentityMinMax()
 
         # ratio based
-        elif isinstance(self.method, (int, float, list, tuple)):
-            ratio = self.method
+        elif isinstance(method, (int, float, list, tuple)):
+            ratio = method
             return RatioMinMax(ratio)
-        elif self.method in "global":
-            return GlobalMinMax()
+        elif method in ["global"]:
+            return RatioMinMax()
 
-        elif self.sp is None:
-            return GlobalMinMax()
+        # elif sp is None:
+        #     return RatioMinMax()
 
         # linear
-        elif self.method == 'linear':
-            return LinearMinMax(self.sp)
-        elif self.method == 'piecewise':
-            return PiecewiseMinMax(self.sp)
-        elif self.method == 'stepwise':
-            return StepwiseMinMax(self.sp)
+        elif method == 'linear':
+            return LinearMinMax(sp)
+        elif method == 'piecewise':
+            return PiecewiseMinMax(sp)
+        elif method == 'stepwise':
+            return StepwiseMinMax(sp)
 
         # function based
-        elif self.method == 'poly1':
-            return FunctionMinMax(poly1, self.sp)
-        elif self.method == 'poly3':
-            return FunctionMinMax(poly3, self.sp)
-        elif self.method == 'power':
-            return FunctionMinMax(power1, self.sp)
-        elif self.method == 'exp':
-            return FunctionMinMax(exp1, self.sp)
+        elif method == 'poly1':
+            return FunctionMinMax(poly1, sp)
+        elif method == 'poly3':
+            return FunctionMinMax(poly3, sp)
+        elif method == 'power':
+            return FunctionMinMax(power1, sp)
+        elif method == 'exp':
+            return FunctionMinMax(exp1, sp)
 
         # error
         else:
-            raise ValueError(f"Unsupported method {self.method}")
+            raise ValueError(f"Unsupported method '{method}'/{sp}")
 
     def _apply_transform(self, X, params):
         minmax, start = params

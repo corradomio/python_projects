@@ -7,8 +7,8 @@ from sktime.forecasting.base import ForecastingHorizon
 
 from .base import ExtendedBaseForecaster
 from ..lags import resolve_lags, resolve_tlags
-from ..transform.linear import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, to_matrix, import_from, qualified_name, make_lags
+from ..transform.lin import LinearTrainTransform, LinearPredictTransform
+from ..utils import PD_TYPES, import_from, qualified_name, make_lags
 
 __all__ = [
     "LinearForecaster",

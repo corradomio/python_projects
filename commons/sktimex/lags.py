@@ -132,13 +132,13 @@ def _is_integer(s: str) -> bool:
 
 class LagSlots:
 
-    def __init__(self, lags=None):
-        if lags is None:
-            # X[0] -> y[0]
-            lags = {
-                'input': {0: 1},
-                'target': {}
-            }
+    def __init__(self, lags):
+        # if lags is None:
+        #     # X[0] -> y[0]
+        #     lags = {
+        #         'input': {0: 1},
+        #         'target': {}
+        #     }
         assert isinstance(lags, dict)
         assert LAGS_INPUT in lags
         assert isinstance(lags[LAGS_INPUT], dict)
@@ -147,17 +147,17 @@ class LagSlots:
         assert LAGS_CURRENT not in lags
 
         self._lags = lags
-        self._islots_lists = []
-        self._tslots_lists = []
-        self._islots = []
-        self._tslots = []
+        self._xlags_lists = []
+        self._ylags_lists = []
+        self._xlags = []
+        self._ylags = []
 
-        self._islots_lists = _resolve_lags(LAGS_INPUT, lags[LAGS_INPUT])
-        self._tslots_lists = _resolve_lags(LAGS_TARGET, lags[LAGS_TARGET])
-        self._islots = _flatten(self._islots_lists)
-        self._tslots = _flatten(self._tslots_lists)
+        self._xlags_lists = _resolve_lags(LAGS_INPUT, lags[LAGS_INPUT])
+        self._ylags_lists = _resolve_lags(LAGS_TARGET, lags[LAGS_TARGET])
+        self._xlags = _flatten(self._xlags_lists)
+        self._ylags = _flatten(self._ylags_lists)
 
-        self._len = max(lmax(self._islots), lmax(self._tslots))
+        # self._len = max(lmax(self._xlags), lmax(self._ylags))
 
     # -----------------------------------------------------------------------
     # Properties
@@ -172,60 +172,61 @@ class LagSlots:
 
     @property
     def xlags(self) -> list[int]:
-        return self._islots
+        return self._xlags
 
-    @property
-    def input(self) -> list[int]:
-        """Flatten list of input lags"""
-        return self._islots
+    # @property
+    # def input(self) -> list[int]:
+    #     """Flatten list of input lags"""
+    #     return self._xlags
 
     @property
     def xlags_lists(self):
         """List of input lags organized by multiplier"""
-        return self._islots_lists
+        return self._xlags_lists
 
-    @property
-    def input_lists(self):
-        """List of input lags organized by multiplier"""
-        return self._islots_lists
+    # @property
+    # def input_lists(self):
+    #     """List of input lags organized by multiplier"""
+    #     return self._xlags_lists
 
     # -- target/ylags
 
     @property
     def ylags(self) -> list[int]:
-        return self._tslots
+        return self._ylags
 
-    @property
-    def target(self) -> list[int]:
-        """Flatten list of target lags"""
-        return self._tslots
+    # @property
+    # def target(self) -> list[int]:
+    #     """Flatten list of target lags"""
+    #     return self._ylags
 
     @property
     def ylags_lists(self):
         """List of target lags organized by multiplier"""
-        return self._tslots_lists
+        return self._ylags_lists
 
-    @property
-    def target_lists(self):
-        """List of target lags organized by multiplier"""
-        return self._tslots_lists
+    # @property
+    # def target_lists(self):
+    #     """List of target lags organized by multiplier"""
+    #     return self._ylags_lists
 
     # -- other properties
 
     def __len__(self) -> int:
         """Window length containing all lags"""
-        return self._len
+        # return self._len
+        return max(lmax(self._xlags), lmax(self._ylags))
 
     def __getitem__(self, item):
         # self[0] -> input
         # self[1] -> target
         if item == 0:
-            return self._islots
+            return self._xlags
         else:
-            return self._tslots
+            return self._ylags
 
     def __repr__(self):
-        return f"slots[input={self.input}, target={self.target}, len={len(self)}]"
+        return f"slots[input={self.xlags}, target={self.ylags}, len={len(self)}]"
 # end
 
 
@@ -551,7 +552,6 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
         1. a single integer value
         2. two integer values
         3. a dictionary
-    :param current: if to consider the current timeslot
     :return LagSlots: an object containing the timeslots to select for the input and target features.
     """
     assert lags is not None
@@ -565,18 +565,45 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
 # end
 
 
+RangeType = type(range(0))
+
+
+def resolve_ilags(ilags: Union[int, tuple, list]) -> list[int]:
+    """
+    Resolve i)input lags (xlags & ylags).
+    Note: the list must be ordered in increase way BUT processed in the
+          opposite way
+    """
+    if isinstance(ilags, int):
+        # [1, ilags]
+        return list(range(1, ilags+1))
+    elif isinstance(ilags, RangeType):
+        return sorted(list(ilags))
+    else:
+        assert isinstance(ilags, (list, tuple))
+        return sorted(list(ilags))
+
+
 def resolve_tlags(tlags: Union[int, tuple, list]) -> list[int]:
     """
     Resolve t)arget lags.
-    A target lag can be specified as integer, a tuple or a list
     """
     if isinstance(tlags, int):
+        # [0, tlags-1]
         return list(range(tlags))
-    elif isinstance(tlags, type(range(0))):
-        return list(tlags)
+    elif isinstance(tlags, RangeType):
+        return sorted(list(tlags))
     else:
         assert isinstance(tlags, (list, tuple))
-        return list(tlags)
+        return sorted(list(tlags))
+
+
+def tlags_start(tlags: list[int]):
+    n = len(tlags)
+    for i in range(n):
+        if tlags[i] >= 0:
+            return i
+    raise ValueError(f"Parameter 'tlags' doesnt' contain positive timeslots: {tlags}")
 
 # ---------------------------------------------------------------------------
 # end

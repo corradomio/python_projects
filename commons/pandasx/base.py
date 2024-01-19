@@ -771,7 +771,7 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
 
     :param data_list: df list
     :param target: target column name
-    :param shared: the columns mus be present in 'X' and 'y'
+    :param shared: columns shared between 'X' and 'y' (they will be present in both parts)
     :return: list of split dataframes
     """
     target = as_list(target, 'target')
@@ -886,21 +886,21 @@ def cutoff_split(*data_list, cutoff,
 # ---------------------------------------------------------------------------
 
 def _train_test_split_single(data, train_size, test_size) -> tuple[pd.DataFrame, pd.DataFrame]:
-    def _train_size(data) -> int:
-        n = len(data)
+
+    def _tsize(n) -> int:
         tsize = train_size
         if 0 < test_size < 1:
             tsize = 1 - test_size
         elif test_size > 1:
             tsize = n - test_size
         if 0 < tsize < 1:
-            return int(tsize * n)
+            return int(n*tsize)
         elif tsize > 1:
             return tsize
         else:
             return 1
 
-    t = _train_size(data)
+    t = _tsize(len(data))
     trn = data[:t]
     tst = data[t:]
     return trn, tst
@@ -976,7 +976,9 @@ def train_test_split(*data_list, train_size=0, test_size=0,
             # end
             trn = groups_merge(d_trn, groups=groups)
             tst = groups_merge(d_tst, groups=groups)
-        elif type(data.index) == pd.MultiIndex:
+        # elif isinstance(data, np.ndarray):
+        #     trn, tst = _train_test_split_single(data, train_size=train_size, test_size=test_size)
+        elif isinstance(data, pd.DataFrame) and isinstance(data.index, pd.MultiIndex):
             trn, tst = _train_test_split_multiindex(data, train_size=train_size, test_size=test_size)
         else:
             trn, tst = _train_test_split_single(data, train_size=train_size, test_size=test_size)

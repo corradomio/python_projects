@@ -1,7 +1,6 @@
-from typing import Optional
-
 import numpy as np
 
+from deprecated import deprecated
 from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
 from ..lags import lmax
 
@@ -11,9 +10,10 @@ from ..lags import lmax
 # CNNPredictTransform
 # ---------------------------------------------------------------------------
 
+@deprecated(reason="You should use LagsTrainTransform")
 class CNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
         super().__init__(slots=slots, tlags=tlags)
@@ -35,28 +35,29 @@ class CNNTrainTransform(ModelTrainTransform):
         sy = len(ylags)
         st = len(tlags)
 
-        t = len(self.slots)
-        v = lmax(tlags)
+        s = len(self.slots)
+        t = lmax(tlags) + 1
+        r = s + t
 
-        mx = X.shape[1] if X is not None and sx > 0 else 0
+        mx = X.shape[1] if sx > 0 else 0
         my = y.shape[1]
         mt = mx + my
 
-        n = y.shape[0] - (t + v)
+        n = y.shape[0] - r
 
         Xt = np.zeros((n, mt, sy), dtype=y.dtype)
 
         for i in range(n):
             for j in range(sy):
                 k = ylags[sy - 1 - j]   # reversed
-                Xt[i, 0:my, j] = y[i + t - k]
+                Xt[i, 0:my, j] = y[i + s - k]
             # end
         # end
 
         for i in range(n):
             for j in range(sx):
                 k = xlags[sx - 1 - j]   # reversed
-                Xt[i, my:, j] = X[i + t - k]
+                Xt[i, my:, j] = X[i + s - k]
             # end
         # end
 
@@ -66,7 +67,7 @@ class CNNTrainTransform(ModelTrainTransform):
             # pass
             for j in range(st):
                 k = tlags[j]
-                yt[i, :, j] = y[i + t + k]
+                yt[i, :, j] = y[i + s + k]
                 # pass
             # end
         # end
@@ -79,14 +80,14 @@ class CNNTrainTransform(ModelTrainTransform):
 # end
 
 
+@deprecated(reason="You should use LagsPredictTransform")
 class CNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
         super().__init__(slots=slots, tlags=tlags)
+    # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
         fh, X = super().transform(fh, X, y)
@@ -99,7 +100,7 @@ class CNNPredictTransform(ModelPredictTransform):
 
         y = self.yh
 
-        mx = X.shape[1] if X is not None and sx > 0 else 0
+        mx = X.shape[1] if sx > 0 else 0
         my = y.shape[1]
         mt = mx + my
         #

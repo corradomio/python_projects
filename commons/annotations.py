@@ -1,5 +1,5 @@
 #
-# Some annotations to extend a class definitng methods outside them
+# Some annotations to extend a class definiting methods outside them
 #
 
 def add_to_class(Class): #@save

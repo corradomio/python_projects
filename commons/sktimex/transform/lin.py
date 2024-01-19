@@ -1,9 +1,8 @@
-from typing import Optional
-
 import numpy as np
 
+from deprecated import deprecated
 from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
-from ..lags import resolve_lags, lmax
+from ..lags import lmax
 
 
 # ---------------------------------------------------------------------------
@@ -18,23 +17,14 @@ from ..lags import resolve_lags, lmax
 #   y[-1],X[-1],X[0]  -> y[0]
 #
 
+@deprecated(reason="You should use LagsTrainTransform")
 class LinearTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
         super().__init__(slots=slots, tlags=tlags)
-
-        self.Xh = None
-        self.yh = None
     # end
-
-    def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None):
-        super().fit(y, X)
-        X, y = self._check_Xy(X, y)
-        self.Xh = X
-        self.yh = y
-        return self
 
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF=None, fh=None) -> tuple:
         X, y = self._check_Xy(X, y, fh)
@@ -46,12 +36,11 @@ class LinearTrainTransform(ModelTrainTransform):
         sx = len(xlags)
         sy = len(ylags)
         st = len(tlags)
-        t = len(self.slots)
+        s = len(self.slots)
+        t = lmax(tlags) + 1
+        r = t + s
 
-        s = lmax(tlags)
-        r = s + t
-
-        mx = X.shape[1] if X is not None else 0
+        mx = X.shape[1] if sx > 0 else 0
         my = y.shape[1]
         mt = sx * mx + sy * my
         mu = st * my
@@ -63,15 +52,15 @@ class LinearTrainTransform(ModelTrainTransform):
         for i in range(n):
             c = 0
             for j in reversed(ylags):
-                Xt[i, c:c + my] = y[t + i - j]
+                Xt[i, c:c + my] = y[s + i - j]
                 c += my
             for j in reversed(xlags):
-                Xt[i, c:c + mx] = X[t + i - j]
+                Xt[i, c:c + mx] = X[s + i - j]
                 c += mx
 
             c = 0
             for j in tlags:
-                yt[i, c:c + my] = y[t + i + j]
+                yt[i, c:c + my] = y[s + i + j]
                 c += my
         # end
 
@@ -80,14 +69,14 @@ class LinearTrainTransform(ModelTrainTransform):
 # end
 
 
+@deprecated(reason="You should use LagsPredictTransform")
 class LinearPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
         super().__init__(slots=slots, tlags=tlags)
+    # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None):
         fh, X = super().transform(fh, X, y)
@@ -103,7 +92,7 @@ class LinearPredictTransform(ModelPredictTransform):
         sy = len(ylags)
         st = len(tlags)
 
-        mx = Xh.shape[1] if Xh is not None else 0
+        mx = Xh.shape[1] if sx > 0 else 0
         my = yh.shape[1]
         mt = sx * mx + sy * my
         mu = st * my

@@ -1,11 +1,13 @@
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
-from ..lags import LagSlots, resolve_lags, resolve_tlags
-from ..utils import NoneType, to_matrix, lrange
+from ..lags import LagSlots, resolve_lags, resolve_tlags, tlags_start, RangeType
+from ..utils import NoneType, RangeType, to_matrix, lrange
+
+ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
 
 
 # ---------------------------------------------------------------------------
@@ -13,9 +15,6 @@ from ..utils import NoneType, to_matrix, lrange
 #       ModelTrainTransform
 #       ModePredictTransform
 # ---------------------------------------------------------------------------
-
-ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
-
 
 class TimeseriesTransform:
 
@@ -59,8 +58,13 @@ class TimeseriesTransform:
             assert len(fh) > 0 and fh[0] >= 1, f'fh can not start with a value < 1 with ({fh[0]})'
             fh = fh[-1]
 
-        assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(fh, int)
+
+        # check if X has valid type and fh < |X|
+        if X is not None:
+            assert isinstance(X, np.ndarray)
+            assert fh <= len(X), f'fh larger than |X|'
+
         return X, fh
 
     def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None) -> "TimeseriesTransform":
@@ -76,16 +80,16 @@ class TimeseriesTransform:
 
 class ModelTrainTransform(TimeseriesTransform):
 
-    def __init__(self, slots, tlags=(0,)):
+    def __init__(self, slots, tlags):
         if not isinstance(slots, LagSlots):
             slots = resolve_lags(slots)
-        if isinstance(tlags, int):
+        if isinstance(tlags, (int, RangeType)):
             tlags = resolve_tlags(tlags)
 
         assert isinstance(slots, LagSlots)
-        assert isinstance(tlags, (tuple, list))
+        assert isinstance(tlags, (tuple, list, RangeType))
 
-        self.slots = slots
+        self.slots: LagSlots = slots
         self.xlags: list = slots.xlags
         self.ylags: list = slots.ylags
         self.tlags: list = list(tlags)
@@ -106,19 +110,20 @@ class ModelTrainTransform(TimeseriesTransform):
 
 class ModelPredictTransform(TimeseriesTransform):
 
-    def __init__(self, slots, tlags=(0,)):
+    def __init__(self, slots, tlags):
         if not isinstance(slots, LagSlots):
             slots = resolve_lags(slots)
-        if isinstance(tlags, int):
+        if not isinstance(tlags, (list, tuple)):
             tlags = resolve_tlags(tlags)
 
         assert isinstance(slots, LagSlots)
-        assert isinstance(tlags, (tuple, list)), f"Parameter tlags not of type list|tuple: {tlags}"
+        assert isinstance(tlags, (list, tuple)), f"Parameter tlags not of type list|tuple: {tlags}"
 
         self.slots: LagSlots = slots
         self.xlags: list[int] = slots.xlags
         self.ylags: list[int] = slots.ylags
         self.tlags: list[int] = tlags
+        self.tstart: int = tlags_start(tlags)
 
         self.Xh = None  # X history
         self.yh = None  # y history
@@ -127,8 +132,10 @@ class ModelPredictTransform(TimeseriesTransform):
         self.yt = None  # y transform
         self.fh = None  # fh transform
 
-        self.Xp = None  # X prediction
-        self.yp = None  # y prediction
+        self.Xp = None  # X prediction past
+        self.yy = None  # y prediction past
+        self.Xf = None  # X prediction future
+        self.yp = None  # y prediction future
     # end
 
     def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None):
@@ -155,20 +162,31 @@ class ModelPredictTransform(TimeseriesTransform):
     # end
 
     def update(self, i, y_pred, t=None):
-        tlags = [t] if t is not None else self.tlags
-        st = len(tlags)
-        mt = max(tlags)
-        nfh = len(self.yp)
-        my = self.yp.shape[1]
+        # Note:
+        #   the parameter 't' is used to override tlags
+        #   'tlags' is at minimum [0]
+        #
+        # Extension:
+        #   it is possible to use tlags=[-3,-2,-1,0,1]
+        #   in this case, it is necessary to start with the position '3'
+        #   and advance 'i' ONLY of 2 slots.
+        #   Really usable slots: [0,1]
 
+        tlags = [t] if t is not None else self.tlags
+        tstart = 0 if t is not None else self.tstart
+        st = len(tlags)         # length of tlags
+        mt = max(tlags)         # max tlags index
+        nfh = len(self.yp)      # length of fh
+        my = self.yp.shape[1]   # predicted data size |y[i]|
+
+        # convert y_pred as a 3D tensor
         if len(y_pred.shape) == 1:
             y_pred = y_pred.reshape((1, 1, my))
         elif len(y_pred.shape) == 2:
             y_pred = y_pred.reshape((1, -1, my))
-
         assert len(y_pred.shape) == 3
 
-        for j in range(st):
+        for j in range(tstart, st):
             k = i + tlags[j]
             if k < nfh:
                 self.yp[k] = y_pred[0, j]
@@ -176,7 +194,7 @@ class ModelPredictTransform(TimeseriesTransform):
         return i + mt + 1
     # end
 
-    def fit_transform(self, y, X=None):
+    def fit_transform(self, y, X=None, fh=None):
         # It is not correct to use 'fit_transform(y, X)' because
         # 1) with 'fit(y,X)' it is passed y_train and X_train
         # 2) with 'transform(fh, X)' it is passed the forecasting horizon and X_prediction

@@ -6,12 +6,11 @@
 #       PolynomialTrendForecaster(degree=1)
 #
 import numpy as np
-import scipy.optimize as spo
 
 from stdlib import kwparams
 from .base import GroupsEncoder
-from .minmax import poly1, poly3, power1
 from .minmax import period_diff, interpolate_bounds, select_bounds, fit_function, select_seasonal_values
+from .minmax import poly1, poly3, power1
 
 
 #

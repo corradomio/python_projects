@@ -3,7 +3,7 @@ import numpy as np
 
 def argsort(a: np.ndarray, axis=-1, kind=None, order=None, desc=False) -> np.ndarray:
     """
-    Extends np.argsort with 'desc' (descendent)
+    Extends np.argsort with 'desc' (descendent) parameter
     """
     s = np.argsort(a, axis=axis, kind=kind, order=order)
     return np.flip(s) if desc else s

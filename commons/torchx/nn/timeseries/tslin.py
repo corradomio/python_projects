@@ -3,12 +3,22 @@ from .ts import TimeSeriesModel
 from ... import nn as nnx
 from ...activation import activation_function
 
+__all__ = [
+    "TSLinear",
+    "TSRNNLinear",
+    "TSCNNLinear"
+]
 
 # ---------------------------------------------------------------------------
 # TSLinearModel
 # ---------------------------------------------------------------------------
 
 class TSLinear(TimeSeriesModel):
+    """
+    Simple model based on one or two linear layers.
+    To use two linear layers, it is necessary to specify the 'hidden_size' greater
+    than 0 (zero)
+    """
 
     def __init__(self, input_shape, output_shape,
                  hidden_size=None,
@@ -28,7 +38,7 @@ class TSLinear(TimeSeriesModel):
         self.activation = activation
         self.activation_params = kwparams(kwargs, 'activation')
 
-        if hidden_size is not None:
+        if hidden_size is not None and hidden_size > 0:
             self.encoder = nnx.Linear(in_features=input_shape, out_features=hidden_size)
             self.relu = activation_function(self.activation, self.activation_params)
             self.decoder = nnx.Linear(in_features=hidden_size, out_features=output_shape)
@@ -54,6 +64,9 @@ class TSLinear(TimeSeriesModel):
 # ---------------------------------------------------------------------------
 
 class TSRNNLinear(TimeSeriesModel):
+    """
+    Simple RNN + Linear model
+    """
     def __init__(self, input_shape, output_shape,
                  hidden_size=None,
                  flavour='lstm', activation='relu', **kwargs):
@@ -94,6 +107,14 @@ class TSRNNLinear(TimeSeriesModel):
 # ---------------------------------------------------------------------------
 
 class TSCNNLinear(TimeSeriesModel):
+    """
+    Simple CNN + Linear model
+    Note: the 3D tensor to use must have the same structure than TSRNNLayer:
+
+        (batch, sequence_length, data_size)
+
+    """
+
     def __init__(self, input_shape, output_shape,
                  hidden_size=None,
                  flavour='cnn', activation='relu', **kwargs):

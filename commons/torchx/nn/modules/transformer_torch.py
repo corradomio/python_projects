@@ -1,3 +1,15 @@
+#
+# Copy of 'Pytorch Transformer' locate at
+#
+#   [ENVIRONMENT]\Lib\site-packages\torch\nn\modules\transformer.py
+#
+# It differs only for:
+#
+#   1) the imports (obviously), because the file is in another module
+#   2) the implementation of 'forward(...)' because, for debugging, the complex formulas
+#      are split in separated lines. Note that the original lines are commented
+#   3) some useless Python directive ('__all__')
+#
 import copy
 from typing import Optional, Any, Union, Callable
 
@@ -13,7 +25,7 @@ from torch.nn import Dropout
 from torch.nn import Linear
 from torch.nn import LayerNorm
 
-# __all__ = ['TransformerTorch', 'TransformerEncoder', 'TransformerDecoder', 'TransformerEncoderLayer', 'TransformerDecoderLayer']
+__all__ = ['Transformer', 'TransformerEncoder', 'TransformerDecoder', 'TransformerEncoderLayer', 'TransformerDecoderLayer']
 
 def _generate_square_subsequent_mask(
         sz: int,
@@ -47,7 +59,7 @@ def _get_seq_len(
             return src_size[seq_len_pos]
 
 
-class TransformerTorch(Module):
+class Transformer(Module):
     r"""A transformer model. User is able to modify the attributes as needed. The architecture
     is based on the paper "Attention Is All You Need". Ashish Vaswani, Noam Shazeer,
     Niki Parmar, Jakob Uszkoreit, Llion Jones, Aidan N Gomez, Lukasz Kaiser, and
@@ -701,11 +713,29 @@ class TransformerEncoderLayer(Module):
 
         x = src
         if self.norm_first:
-            x = x + self._sa_block(self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal)
-            x = x + self._ff_block(self.norm2(x))
+            t = self.norm1(x)
+            # sa_block: Attn/Dropout
+            t = self._sa_block(t, src_mask, src_key_padding_mask, is_causal=is_causal)
+            x = x + t
+            t = self.norm2(x)
+            # ff_block: Linear/ReLU/Dropout/Lin/Dropout
+            t = self._ff_block(t)
+            x = x + t
+
+            # x = x + self._sa_block(self.norm1(x), src_mask, src_key_padding_mask, is_causal=is_causal)
+            # x = x + self._ff_block(self.norm2(x))
         else:
-            x = self.norm1(x + self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal))
-            x = self.norm2(x + self._ff_block(x))
+            # sa_block: Attn/Dropout
+            t = self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal)
+            x = x + t
+            x = self.norm1(x)
+            # ff_block: Linear/ReLU/Dropout/Lin/Dropout
+            t = self._ff_block(x)
+            x = x + t
+            x = self.norm2(x)
+
+            # x = self.norm1(x + self._sa_block(x, src_mask, src_key_padding_mask, is_causal=is_causal))
+            # x = self.norm2(x + self._ff_block(x))
 
         return x
 
@@ -716,12 +746,20 @@ class TransformerEncoderLayer(Module):
                            attn_mask=attn_mask,
                            key_padding_mask=key_padding_mask,
                            need_weights=False, is_causal=is_causal)[0]
-        return self.dropout1(x)
+        x = self.dropout1(x)
+        return x
+        # return self.dropout1(x)
 
     # feed forward block
     def _ff_block(self, x: Tensor) -> Tensor:
-        x = self.linear2(self.dropout(self.activation(self.linear1(x))))
-        return self.dropout2(x)
+        x = self.linear1(x)
+        x = self.activation(x)
+        x = self.dropout(x)
+        x = self.linear2(x)
+        x = self.dropout2(x)
+        return x
+        # x = self.linear2(self.dropout(self.activation(self.linear1(x))))
+        # return self.dropout2(x)
 
 
 class TransformerDecoderLayer(Module):
@@ -839,13 +877,33 @@ class TransformerDecoderLayer(Module):
 
         x = tgt
         if self.norm_first:
-            x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal)
-            x = x + self._mha_block(self.norm2(x), memory, memory_mask, memory_key_padding_mask, memory_is_causal)
-            x = x + self._ff_block(self.norm3(x))
+            t = self.norm1(x)
+            t = self._sa_block(t, tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+            x = x + t
+            t = self.norm2(x)
+            t = self._mha_block(t, memory, memory_mask, memory_key_padding_mask, memory_is_causal)
+            x = x + t
+            t = self.norm3(x)
+            t = self._ff_block(t)
+            x = x + t
+
+            # x = x + self._sa_block(self.norm1(x), tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+            # x = x + self._mha_block(self.norm2(x), memory, memory_mask, memory_key_padding_mask, memory_is_causal)
+            # x = x + self._ff_block(self.norm3(x))
         else:
-            x = self.norm1(x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal))
-            x = self.norm2(x + self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal))
-            x = self.norm3(x + self._ff_block(x))
+            t = self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal)
+            x = x + t
+            x = self.norm1(x)
+            t = self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal)
+            x = x + t
+            x = self.norm2(x)
+            t = self._ff_block(x)
+            x = x + t
+            x = self.norm3(x)
+
+            # x = self.norm1(x + self._sa_block(x, tgt_mask, tgt_key_padding_mask, tgt_is_causal))
+            # x = self.norm2(x + self._mha_block(x, memory, memory_mask, memory_key_padding_mask, memory_is_causal))
+            # x = self.norm3(x + self._ff_block(x))
 
         return x
 
@@ -857,7 +915,9 @@ class TransformerDecoderLayer(Module):
                            key_padding_mask=key_padding_mask,
                            is_causal=is_causal,
                            need_weights=False)[0]
-        return self.dropout1(x)
+        x = self.dropout1(x)
+        return x
+        # return self.dropout1(x)
 
     # multihead attention block
     def _mha_block(self, x: Tensor, mem: Tensor,
@@ -867,12 +927,20 @@ class TransformerDecoderLayer(Module):
                                 key_padding_mask=key_padding_mask,
                                 is_causal=is_causal,
                                 need_weights=False)[0]
-        return self.dropout2(x)
+        x = self.dropout2(x)
+        return x
+        # return self.dropout2(x)
 
     # feed forward block
     def _ff_block(self, x: Tensor) -> Tensor:
-        x = self.linear2(self.dropout(self.activation(self.linear1(x))))
-        return self.dropout3(x)
+        x = self.linear1(x)
+        x = self.activation(x)
+        x = self.dropout(x)
+        x = self.linear2(x)
+        x = self.dropout3(x)
+        return x
+        # x = self.linear2(self.dropout(self.activation(self.linear1(x))))
+        # return self.dropout3(x)
 
 
 def _get_clones(module, N):

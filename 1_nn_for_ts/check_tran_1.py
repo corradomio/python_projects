@@ -7,11 +7,12 @@ import skorch
 
 import pandasx as pdx
 import sktimex
+import torch
 import torchx
 import torchx.nn as nnx
+import skorchx
 from skorchx.callbacks.logging import PrintLog
 from sktimex.utils.plotting import plot_series
-from stdlib import lrange, lrange1
 from torchx.nn.timeseries import *
 
 DATA_DIR = "./data"
@@ -59,9 +60,9 @@ def analyze(g, df):
     print(g)
     name = g[0].replace('/', '-')
 
-    xlags = lrange1(36)
-    ylags = lrange1(36)
-    tlags = lrange(2)
+    xlags = range(1, 36)
+    ylags = range(1, 36)
+    tlags = range(2)
 
     X, y = pdx.xy_split(df, target=TARGET)
 
@@ -97,30 +98,39 @@ def analyze(g, df):
     #
     # Model
     #
-    MODEL = 'attn1'
+    # MODEL = 'attn1'
+    MODEL = 'attn3'
 
     os.makedirs(f"./plots/{MODEL}/", exist_ok=True)
     fname = f"./plots/{MODEL}/{name}.png"
     # if os.path.exists(fname):
     #     return
 
-    tsmodel = create_model(MODEL, input_shape, output_shape, nhead=3)
+    tsmodel = create_model(
+        MODEL, input_shape, output_shape,
+        d_model=24,                         # to use ONLY with 'attn2/attn3'
+        nhead=4,
+        dim_feedforward=32,                 # to use ONLY with 'attn2/attn3'
+        num_encoder_layers=1,
+        # num_decoder_layers=1,             # not used in 'attn3'
+        # layer_norm=False,
+    )
 
     #
     # End
     #
 
-    early_stop = skorch.callbacks.EarlyStopping(patience=10, threshold=0, monitor="valid_loss")
+    early_stop = skorchx.callbacks.EarlyStopping(warmup=50, patience=10, threshold=0, monitor="valid_loss")
 
     model = skorch.NeuralNetRegressor(
         module=tsmodel,
-        # criterion=torchx.nn.MSELossTuple,
-        criterion=torchx.nn.L1LossTuple,
-        batch_size=16,
-        max_epochs=10000,
-        lr=0.25,
-        callbacks=[early_stop],
-        callbacks__print_log=PrintLog
+        optimizer=torch.optim.Adam,
+        criterion=torch.nn.MSELoss,
+        batch_size=12,
+        max_epochs=250,
+        lr=0.0001,
+        # callbacks=[early_stop],
+        # callbacks__print_log=PrintLog
     )
 
     # ([35,36,19], [35,2,1]), [35,2,1]
@@ -151,8 +161,11 @@ def main():
     df_all = load_data()
 
     dfg = pdx.groups_split(df_all)
+    n = 0
     for g in sorted(dfg.keys()):
         analyze(g, dfg[g])
+        n += 1
+        if n >= 3: break
     pass
 # end
 

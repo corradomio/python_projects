@@ -1,9 +1,10 @@
-from typing import Union, Any, Optional
+from typing import Union, Optional
 
 import numpy as np
 import pandas as pd
-
 from sktime.forecasting.base import ForecastingHorizon
+
+from .plotting import plot_series, show
 
 
 # ---------------------------------------------------------------------------
@@ -11,10 +12,10 @@ from sktime.forecasting.base import ForecastingHorizon
 # ---------------------------------------------------------------------------
 # DON'T REMOVE!!!!
 # They are used in other modules to avoid the direct dependency with 'stdlib'
-
-from stdlib import NoneType, kwval, kwparams, kwexclude, dict_del, import_from, qualified_name, lrange
-from .plotting import plot_series
-
+# from stdlib import NoneType, RangeType
+# from stdlib import lrange, import_from, qualified_name, kwval, kwexclude, dict_del
+from stdlib import NoneType, RangeType
+from stdlib import lrange, import_from, qualified_name, kwval, kwexclude, dict_del
 # DON'T REMOVE!!!!
 # ---------------------------------------------------------------------------
 # Constants
@@ -79,13 +80,6 @@ def clear_yX(model):
 # Utilities
 # ---------------------------------------------------------------------------
 
-# def lmax(l: list) -> int:
-#     if l is None or len(l) == 0:
-#         return 0
-#     else:
-#         return max(l)
-
-
 def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=np.float32) -> Optional[np.ndarray]:
     if data is None:
         return None
@@ -96,9 +90,10 @@ def to_matrix(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], dtype=
     elif len(data.shape) == 1:
         assert isinstance(data, np.ndarray)
         data = data.astype(dtype).reshape((-1, 1))
-    else:
-        assert isinstance(data, np.ndarray)
-        data = data.astype(dtype)
+    # elif isinstance(data, np.ndarray) and dtype is not None and data.dtype != dtype:
+    #     data = data.astype(dtype)
+    elif isinstance(data, np.ndarray):
+        pass
     return data
 
 

@@ -11,7 +11,6 @@ import torchx
 import torchx.nn as nnx
 from skorchx.callbacks.logging import PrintLog
 from sktimex.utils.plotting import plot_series
-from stdlib import lrange, lrange1
 from torchx.nn.timeseries import *
 
 DATA_DIR = "./data"
@@ -59,9 +58,9 @@ def analyze(g, df):
     print(g)
     name = g[0].replace('/', '-')
 
-    xlags = lrange1(36)
-    ylags = lrange1(36)
-    tlags = lrange(2)
+    xlags = range(1, 36)
+    ylags = range(1, 36)
+    tlags = range(2)
 
     X, y = pdx.xy_split(df, target=TARGET)
 

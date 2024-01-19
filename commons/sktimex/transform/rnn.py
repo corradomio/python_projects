@@ -1,7 +1,6 @@
-from typing import Optional
-
 import numpy as np
 
+from deprecated import deprecated
 from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
 from ..lags import lmax
 
@@ -16,17 +15,16 @@ from ..lags import lmax
 # y_pred: y[tlags  ]
 # y_prev: y[tlags-1]
 
+@deprecated(reason="You should use LagsTrainTransform")
 class RNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None, yprev=False, ytrain=False):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,), yprev=False, ytrain=False):
         """
 
         :param slots:   combine xlags and ylags
-        :param tlags:
-        :param lags:    alternative to slots
         :param xlags:   alternative to slots (with ylags)
         :param ylags:   alternative to slots (with xlags)
-        :param flatten: it to return yt as 2D tensor
+        :param tlags:
         :param ytrain:  if to return y used in train (yx)
         :param yprev:   if to return y[t-1]
         """
@@ -66,29 +64,29 @@ class RNNTrainTransform(ModelTrainTransform):
         sx = len(xlags)
         sy = len(ylags)
         st = len(tlags)
+        s = len(self.slots)
+        t = lmax(tlags) + 1
+        r = s + t
 
-        t = len(self.slots)
-        v = lmax(tlags)
-
-        mx = X.shape[1] if X is not None and sx > 0 else 0
+        mx = X.shape[1] if sx > 0 else 0
         my = y.shape[1]
         mt = mx + my
 
-        n = y.shape[0] - (t + v)
+        n = y.shape[0] - r
 
         Xt = np.zeros((n, sy, mt), dtype=y.dtype)
 
         for i in range(n):
             for j in range(sy):
                 k = ylags[sy - 1 - j]  # reversed
-                Xt[i, j, 0:my] = y[i + t - k]
+                Xt[i, j, 0:my] = y[i + s - k]
             # end
         # end
 
         for i in range(n):
             for j in range(sx):
                 k = xlags[sx - 1 - j]  # reversed
-                Xt[i, j, my:] = X[i + t - k]
+                Xt[i, j, my:] = X[i + s - k]
             # end
         # end
 
@@ -99,7 +97,7 @@ class RNNTrainTransform(ModelTrainTransform):
         for i in range(n):
             for j in range(st):
                 k = tlags[j]
-                yt[i, j, :] = y[i + t + k]
+                yt[i, j, :] = y[i + s + k]
             # end
         # end
 
@@ -120,7 +118,7 @@ class RNNTrainTransform(ModelTrainTransform):
             for i in range(n):
                 for j in range(st):
                     k = plags[j]
-                    yp[i, j, :] = y[i + t + k]
+                    yp[i, j, :] = y[i + s + k]
                 # end
             # end
         # end
@@ -149,13 +147,12 @@ class RNNTrainTransform(ModelTrainTransform):
 # end
 
 
+@deprecated(reason="You should use LagsPredictTransform")
 class RNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
         super().__init__(slots=slots, tlags=tlags)
     # end
 
@@ -170,10 +167,9 @@ class RNNPredictTransform(ModelPredictTransform):
 
         y = self.yh
 
-        mx = X.shape[1] if X is not None and sx > 0 else 0
+        mx = X.shape[1] if sx > 0 else 0
         my = y.shape[1]
         mt = mx + my
-        #
 
         Xt = np.zeros((1, sy, mt), dtype=y.dtype)
         yp = np.zeros((fh, my), dtype=y.dtype)

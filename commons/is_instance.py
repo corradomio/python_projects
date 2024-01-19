@@ -299,23 +299,51 @@ def _len(obj):
 
 
 class IsCollection(IsInstance):
+    # supported:  collection[T], collection[T1,T2,...]
     def __init__(self, tp, collection_type=Collection):
         super().__init__(tp)
         self.collection_type = collection_type
 
     def is_instance(self, obj) -> bool:
+        # Problem: how to check a collection with arbitrary length vs a collection with a specified length?
+        # A possibility is:
+        #   collection[T, ...]
+        #       collection composed by 0+ elements of type T
+        #   collection[T1] | collection[T1,T2] etc
+        #       collection composed exactly of n elements of the selected types (in the specified order)
+
         if not isinstance(obj, self.collection_type):
             return False
         # if not isinstance(obj, self.origin):
         #     return False
 
+        # is_instance(x, collection)
         if len(self.args) == 0:
             return True
 
+        # is_instance(x, collection[T1, T2, ...])
+        #   check if x contains 0+ items of type T
+        if len(self.args) > 0 and self.args[-1] == ...:
+            ntypes = len(self.args)-1
+            for i, item in enumerate(obj):
+                element_type = self.args[i] if i < ntypes else self.args[ntypes-1]
+                if not is_instance(item, element_type):
+                    return False
+            return True
+
+        # if collection[T]
+        #   check if x contains 0+ items of type T
+        # if collection[T1,...Tn]
+        #   check if x contains exactly n items of type Ti
+
+        # length of collection is different than the number of parameters
         n = len(obj)
         if len(self.args) > 1 and len(self.args) != n:
             return False
 
+        # a collection of a single element is not very useful.
+        # the, if specified 'collection[T]', it will check for
+        # collection with 0+ elements of type T
         elif len(self.args) == 1:
             element_type = self.args[0]
             for item in obj:
@@ -324,18 +352,20 @@ class IsCollection(IsInstance):
         else:
             i = 0
             for item in obj:
-                element_type = self.args[i]; i += 1;
+                element_type = self.args[i]; i += 1
                 if not is_instance(item, element_type):
                     return False
         return True
 
 
 class IsList(IsCollection):
+    # supported:  list[T], list[T1,T2,...]
     def __init__(self, tp):
         super().__init__(tp, list)
 
 
 class IsTuple(IsCollection):
+    # supported:  tuple[T], tuple[T1,T2,...]
     def __init__(self, tp):
         super().__init__(tp, tuple)
 
@@ -477,7 +507,7 @@ class IsConst(IsInstance):
 class HasAttribute(IsInstance):
 
     def __init__(self, *attrs):
-        super().__init__(NoneType)
+        super().__init__(type(None))
         self.attrs = attrs
         
     def __call__(self, *args, **kwargs):

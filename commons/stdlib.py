@@ -3,6 +3,7 @@ from typing import Any, Union, Optional
 from path import Path as path
 
 NoneType = type(None)
+RangeType = type(range(0))
 CollectionType = (list, tuple)
 
 
@@ -97,28 +98,6 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
 
 # ---------------------------------------------------------------------------
 
-def lrange(start, stop=None, step=None):
-    """
-    Same as 'list(range(...))'
-    """
-    if stop is None:
-        return list(range(start))
-    elif step is None:
-        return list(range(start, stop))
-    else:
-        return list(range(start, stop, step))
-
-
-def lrange1(length):
-    return list(range(1, length+1))
-
-
-def lrange0(length):
-    return list(range(0, length))
-
-
-# ---------------------------------------------------------------------------
-
 def tobool(s: str) -> bool:
     """
     Convert the string into a boolean value.
@@ -130,12 +109,23 @@ def tobool(s: str) -> bool:
     :param s: string
     :return: boolean value
     """
-    if s in [0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no', 'close']:
+    if isinstance(s, str):
+        s = s.lower()
+    if s in [0, False, '', 'f', 'false', 'off', 'no', 'close', '0']:
         return False
-    if s in [1, True, 't', 'true', 'T', 'True', 'TRUE', 'on', 'yes', 'open']:
+    if s in [1, True, 't', 'true', 'on', 'yes', 'open', '1']:
         return True
     else:
         raise ValueError(f"Unsupported boolean value '{s}'")
+
+
+def lrange(start, stop=None, step=1) -> list[int]:
+    """As range but it returns a list"""
+    if stop is None:
+        return list(range(start))
+    else:
+        return list(range(start, stop, step))
+# end
 
 
 # ---------------------------------------------------------------------------

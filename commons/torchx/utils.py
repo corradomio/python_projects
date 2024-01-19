@@ -3,7 +3,7 @@ from typing import Union, Any, Optional
 import numpy as np
 import torch
 from torch import Tensor
-# from is_instance import is_instance
+from is_instance import is_instance
 
 
 # ---------------------------------------------------------------------------
@@ -19,11 +19,13 @@ def dim_of(dim: Union[int, list[int]]):
 # ---------------------------------------------------------------------------
 
 def is_shape(s):
+    """Check if s is a 2-elements tuple """
     return isinstance(s, tuple) and (len(s) == 2)
     # return is_instance(s, tuple[int, int])
 
 
-def is_tuple(v, name, len=None):
+def assert_is_tuple(v, name, len=None):
+    """Check if v is a tuple with the specified number of elements"""
     assert isinstance(v, (list, tuple)), f"The parameter {name} must be a tuple list: {v}"
     if len is not None:
         assert len(v) == len, f"The parameter {name} must be a tuple of length {len}: {v}"
@@ -65,7 +67,6 @@ def expand_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
     for d in dim:
         t = torch.unsqueeze(t, d)
     return t
-
 
 
 def remove_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:

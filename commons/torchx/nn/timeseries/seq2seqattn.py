@@ -9,6 +9,14 @@ from ... import nn as nnx
 from ...utils import expand_dims
 
 
+__all__ = [
+    "TSSeq2SeqAttnV1",
+    "TSSeq2SeqAttnV3",
+    # not implemented
+    "TSSeq2SeqAttnV2",
+    "TSSeq2SeqAttnV4"
+]
+
 #
 # Native RNN returned hidden state:
 #           last cell                   all cells (collected)

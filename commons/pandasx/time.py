@@ -181,9 +181,9 @@ def infer_freq(index, steps=5, ntries=3) -> str:
 def periodic_encode(df: pd.DataFrame,
                     datetime: Optional[str] = None,
                     method: str = 'onehot',
-                    columns: Optional[list[str]] = None,
                     freq: Optional[str] = None,
-                    year_scale=None) -> pd.DataFrame:
+                    year_scale=None,
+                    columns: Optional[list[str]] = None) -> pd.DataFrame:
     """
     Add some extra column to represent a periodic time
 
@@ -195,6 +195,7 @@ def periodic_encode(df: pd.DataFrame,
         circle      year/month/day/h    year, month, day, cos(h/24), sin(h/24)
                     year/month/day      year, month, cos(day/30), sin(day/30)
                     year/month          year, cos(month/12), sin(month/12)
+        sincos|cossin: as circle
 
     :param df: dataframe to process
     :param datetime: if to use a datetime column. If None, it is used the index
@@ -214,7 +215,9 @@ def periodic_encode(df: pd.DataFrame,
     :param freq: frequency ('H', 'D', 'W', 'M')
     :return:
     """
-    if method == 'onehot':
+    if method in ['circle', 'sincos', 'cossin']:
+        df = _sincos_encoder(df, datetime, columns, year_scale, freq)
+    elif method == 'onehot':
         df = _onehot_encode(df, datetime, columns, freq, year_scale)
     elif method == 'order' and freq == 'M':
         df = _order_month_encoder(df, datetime, columns, year_scale)
@@ -393,6 +396,38 @@ def _daily_encoder(df, datetime, columns, year_scale):
     df[columns[5]] = dtsin
 
     return df
+
+
+def _sincos_encoder(df, datetime, columns, year_scale, freq):
+    if datetime is None:
+        dt = df.index.to_series()
+        index_name = df.index.name
+        datetime = index_name if index_name else "dt"
+    else:
+        dt = df[datetime]
+
+    columns = _columns_name(columns, datetime, ["_c", "_s"])
+
+    if freq == 'M':
+        FREQ = 2 * math.pi / 12
+        dtcos = dt.apply(lambda x: math.cos(FREQ * (x.month - 1)))
+        dtsin = dt.apply(lambda x: math.sin(FREQ * (x.month - 1)))
+    elif freq == 'W':
+        FREQ = 2 * math.pi / 7
+        dtcos = dt.apply(lambda x: math.cos(FREQ * (x.weekday)))
+        dtsin = dt.apply(lambda x: math.sin(FREQ * (x.weekday)))
+    elif freq == 'D':
+        FREQ = 2 * math.pi / 24
+        dtcos = dt.apply(lambda x: math.cos(FREQ * (x.hour)))
+        dtsin = dt.apply(lambda x: math.sin(FREQ * (x.hour)))
+    else:
+        raise ValueError(f"Unsupported frequency '{freq}'")
+
+    df[columns[0]] = dtcos
+    df[columns[1]] = dtsin
+
+    return df
+
 
 # ---------------------------------------------------------------------------
 # End

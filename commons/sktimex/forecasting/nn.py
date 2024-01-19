@@ -36,8 +36,8 @@ from ..utils import import_from, to_matrix, kwexclude
 
 def compute_input_output_shapes(X: np.ndarray, y: np.ndarray,
                                 xlags: list[int], ylags: list[int], tlags: list[int]) \
-    -> tuple[tuple[int, int], tuple[int, int]]:
-    sx = len(xlags)
+        -> tuple[tuple[int, int], tuple[int, int]]:
+    sx = len(xlags) if X is not None else []
     sy = len(ylags)
     st = len(tlags)
 
@@ -254,31 +254,11 @@ class BaseNNForecaster(TransformForecaster):
     # Support
     # -----------------------------------------------------------------------
 
-    # def _compute_input_output_sizes(self):
-    #     Xh = to_matrix(self._X)
-    #     yh = self._apply_scale(to_matrix(self._y))
-    #
-    #     sx = len(self._slots.xlags)
-    #     st = len(self._tlags)
-    #
-    #     mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
-    #     my = yh.shape[1]
-    #     return mx + my, my*st
-
     def _compute_input_output_shapes(self):
         Xh = to_matrix(self._X)
         yh = to_matrix(self._y)
 
         return compute_input_output_shapes(Xh, yh, self._slots.xlags, self._slots.ylags, self._tlags)
-
-        # sx = len(self._slots.xlags)
-        # sy = len(self._slots.ylags)
-        # st = len(self._tlags)
-        #
-        # mx = Xh.shape[1] if Xh is not None and sx > 0 else 0
-        # my = yh.shape[1]
-        #
-        # return (sy, mx+my), (st, my)
 
     def _from_numpy(self, ys, fhp):
         ys = ys.reshape(-1)
@@ -287,24 +267,6 @@ class BaseNNForecaster(TransformForecaster):
         yp = pd.Series(ys, index=index)
         yp = yp.loc[fhp.to_pandas()]
         return yp.astype(float)
-
-    # def _apply_scale(self, y):
-    #     if not self._scale:
-    #         return y
-    #
-    #     if self._y_scaler is None:
-    #         self._y_scaler = MinMaxScaler()
-    #         self._y_scaler.fit(y)
-    #
-    #     if y is not None:
-    #         y = self._y_scaler.transform(y)
-    #
-    #     return y
-    #
-    # def _inverse_scale(self, y):
-    #     if self._y_scaler is not None:
-    #         y = self._y_scaler.inverse_transform(y)
-    #     return y
 
     def _make_fh_relative_absolute(self, fh: ForecastingHorizon) -> tuple[ForecastingHorizon, ForecastingHorizon]:
         fhp = fh
@@ -316,7 +278,7 @@ class BaseNNForecaster(TransformForecaster):
         return fh, fhp
 
     def _create_skorch_model(self, input_size, output_size):
-        # Implemented in derivated classes
+        # Implemented in derived classes
         ...
 
     # -----------------------------------------------------------------------

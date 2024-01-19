@@ -25,7 +25,7 @@ class StandardScaler(GroupsEncoder):
 
         :param columns: column or columns where to apply the scaling.
             If None, the scaling is applied to all columns
-        :param feature_range: tuple (mean, std) values to use
+        :param feature_range: tuple (mean, standard_deviation) values to use
         :param groups: if the dataset contains groups, column(s) used to identify each group
         """
         super().__init__(columns, groups, copy)

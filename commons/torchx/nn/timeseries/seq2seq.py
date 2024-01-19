@@ -8,6 +8,12 @@ from ... import nn as nnx
 from ...utils import time_repeat
 
 
+__all__ = [
+    "TSSeq2SeqV1",
+    "TSSeq2SeqV1",
+    "TSSeq2SeqV3"
+]
+
 # ---------------------------------------------------------------------------
 # TSSeq2SeqV1
 # ---------------------------------------------------------------------------
@@ -16,6 +22,10 @@ from ...utils import time_repeat
 # the decoder receives in input zeros.
 
 class TSSeq2SeqV1(TimeSeriesModel):
+    """
+    Simple model:
+        [X_train] -> encoder -> [hidden_state] -> decoder -> [y_predict]
+    """
 
     def __init__(self, input_shape, output_shape,
                  hidden_size=None,
@@ -80,6 +90,13 @@ class TSSeq2SeqV1(TimeSeriesModel):
 #
 
 class TSSeq2SeqV2(TimeSeriesModel):
+    """
+    Simple model:
+        [X_train] -> encoder -> [hidden_state] -> decoder -> [y_predict]
+                             -> [y_encoder]
+
+    but the encoder output [y_encoder] is compared [y_train]
+    """
 
     _tags = {
         "x-use-ypredict": False,
@@ -165,6 +182,14 @@ class TSSeq2SeqV2(TimeSeriesModel):
 #
 
 class TSSeq2SeqV3(TimeSeriesModel):
+    """
+    Simple model:
+        [X_train] -> encoder -> [hidden_state] -> decoder -> [y_predict]
+                             -> [y_encoder]
+
+    but the encoder output [y_encoder] is compared [y_train] AND it is used
+    the mechanism 'teacher forcing'
+    """
 
     _tags = {
         "x-use-ypredict": True,

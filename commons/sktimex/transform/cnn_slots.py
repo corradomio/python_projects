@@ -1,7 +1,6 @@
-from typing import Optional
-
 import numpy as np
 
+from deprecated import deprecated
 from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
 from ..lags import flatten_max
 
@@ -13,8 +12,7 @@ from ..lags import flatten_max
 
 class CNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
-        # lags is an alternative to slots
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
         super().__init__(slots=slots, tlags=tlags)
@@ -82,11 +80,9 @@ class CNNSlotsTrainTransform(ModelTrainTransform):
 
 class CNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
         super().__init__(slots=slots, tlags=tlags)
 
         #
@@ -95,6 +91,7 @@ class CNNSlotsPredictTransform(ModelPredictTransform):
         #
         self.xlags = self.slots.xlags_lists
         self.ylags = self.slots.ylags_lists
+    # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
         fh, X = super().transform(fh, X, y)

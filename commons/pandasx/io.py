@@ -4,14 +4,14 @@ from stdlib import NoneType
 from .base import datetime_encode, onehot_encode, binary_encode, \
     set_index, ignore_columns, datetime_reindex, as_list, \
     find_unnamed_columns, find_binary, dataframe_sort
-from .time import periodic_encode
+from .time import periodic_encode, infer_freq
 
 
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _parse_dtype(columns, dtype):
+def _select_categorical_bool_columns(columns, dtype):
     categorical = []
     boolean = []
 
@@ -51,6 +51,21 @@ def _pandas_dtype(columns, dtype) -> dict:
     return dt
 # end
 
+
+def _parse_datetime(datetime) -> tuple:
+    if datetime is None:
+        datetime_name, datetime_format, datetime_freq = None, None, None
+    elif isinstance(datetime, str):
+        datetime_name, datetime_format, datetime_freq = datetime, None, None
+    elif len(datetime) == 1:
+        datetime_name, datetime_format, datetime_freq = datetime[0], None, None
+    elif len(datetime) == 2:
+        datetime_name, datetime_format, datetime_freq = datetime[0], datetime[1], None
+    elif len(datetime) == 3:
+        datetime_name, datetime_format, datetime_freq = datetime
+    else:
+        raise ValueError("Invalid 'datetime' parameter format")
+    return datetime_name, datetime_format, datetime_freq
 
 # ---------------------------------------------------------------------------
 # read_database
@@ -206,6 +221,8 @@ def read_data(file: str,
     :param dict kwargs: extra parameters passed to pd.read_*()
     :return pd.DataFrame: a Pandas DataFrame
     """
+
+    # check parameter types
     assert isinstance(file, str), "'file' must be a str"
     assert isinstance(datetime, (NoneType, str, list, tuple)), \
         "'datetime' must be (None, str, (str, str), (str, str, str))"
@@ -213,6 +230,7 @@ def read_data(file: str,
         "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
 
+    # convert list parameters passed as single value in a singleton list
     categorical = as_list(categorical, 'categorical')
     boolean = as_list(boolean, 'boolean')
     numeric = as_list(numeric, 'numeric')
@@ -221,19 +239,22 @@ def read_data(file: str,
     ignore = as_list(ignore, 'ignore')
     index = as_list(index, 'index')
 
+    # parse the 'datetime' parameter
+    datetime_name, datetime_format, datetime_freq = _parse_datetime(datetime)
+
     # move 'na_values' in kwargs
     if na_values is not None:
         kwargs['na_values'] = na_values
 
-    # if dtype is defined, compose the dictionary {col:dtype}
+    # if 'dtype' is defined, compose the dictionary {col:dtype}
     if dtype is not None:
         h = _read_header(file)
         dt = _pandas_dtype(h, dtype)
     else:
         dt = None
 
+    # load the file based on extension
     print("Loading {} ...".format(file))
-
     if file.endswith(".csv"):
         df = pd.read_csv(file, dtype=dt, **kwargs)
     elif file.endswith(".json"):
@@ -253,8 +274,9 @@ def read_data(file: str,
     else:
         raise TypeError("File extension unsupported: " + file)
 
+    # select categorical/boolean columns
     if dtype is not None:
-        categorical, boolean = _parse_dtype(list(df.columns), dtype)
+        categorical, boolean = _select_categorical_bool_columns(list(df.columns), dtype)
 
     # if binary == ['auto']:
     #     binary = find_binary(df, onehot)
@@ -279,10 +301,18 @@ def read_data(file: str,
     # convert the datetime column
     if datetime is not None:
         df = datetime_encode(df, datetime)
+        if datetime_freq is None:
+            datetime_freq = infer_freq(df.index)
 
     # encode the periodic column
     if periodic is not None:
-        df = periodic_encode(df, *periodic)
+        # (*periodic): remaining parameters: method, freq, year_scale, columns
+        if isinstance(periodic, dict):
+            df = periodic_encode(df, datetime_name, freq=datetime_freq, **periodic)
+        elif isinstance(periodic, (list, tuple)):
+            df = periodic_encode(df, datetime_name, *periodic, freq=datetime_freq)
+        else:
+            df = periodic_encode(df, datetime_name, periodic, freq=datetime_freq)
 
     # onehot encoding
     if len(onehot) > 0:

@@ -17,6 +17,7 @@ class Time2Vec(nn.Module):
         if isinstance(input_size, (list, tuple)):
             sequence_len = input_size[0]
             input_size = input_size[1]
+        assert isinstance(sequence_len, int)
         self.input_size = input_size
         self.output_size = output_size
         self.sequence_len = sequence_len

@@ -1,7 +1,6 @@
-from typing import Optional
-
 import numpy as np
 
+from deprecated import deprecated
 from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
 from ..lags import lmax
 
@@ -22,9 +21,10 @@ from ..lags import lmax
 # that is, in the first case, [2,4,6] are replicated 2 times, because present
 # in two sub-lists, instead in the second case, they are present a single time
 
+@deprecated(reason="You should use LagsTrainTransform")
 class RNNSlotsTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, tlags=(0,), xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
         super().__init__(slots=slots, tlags=tlags)
@@ -47,14 +47,13 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
         ylags_list: list[list[int]] = self.ylags
         tlags = self.tlags
 
-        t = len(self.slots)
-
-        u = len(tlags)
-        v = lmax(tlags)
+        st = len(tlags)
+        s = len(self.slots)
+        t = lmax(tlags)
 
         mx = X.shape[1] if X is not None else 0
         my = y.shape[1]
-        n = y.shape[0] - (t + v)
+        n = y.shape[0] - (s + t)
 
         Xts: list[np.ndarray] = []
 
@@ -66,7 +65,7 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
             for i in range(n):
                 for j in range(s):
                     k = xlags[s - 1 - j]
-                    Xt[i, j, :] = X[i + t - k]
+                    Xt[i, j, :] = X[i + s - k]
 
             Xts.append(Xt)
         # end
@@ -79,7 +78,7 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
             for i in range(n):
                 for j in range(s):
                     k = ylags[s - 1 - j]
-                    Xt[i, j, :] = y[i + t - k]
+                    Xt[i, j, :] = y[i + s - k]
                 # end
             # end
 
@@ -90,9 +89,9 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
 
         for i in range(n):
             c = 0
-            for j in range(u):
+            for j in range(st):
                 k = tlags[j]
-                yt[i, c:c + my] = y[i + t + k]
+                yt[i, c:c + my] = y[i + s + k]
                 c += my
             # end
         # end
@@ -104,11 +103,9 @@ class RNNSlotsTrainTransform(ModelTrainTransform):
 
 class RNNSlotsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, tlags=(0,), lags=None, xlags=None, ylags=None):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
         if ylags is not None:
             slots = [xlags, ylags]
-        elif lags is not None:
-            slots = lags
         super().__init__(slots=slots, tlags=tlags)
 
         #
@@ -117,6 +114,7 @@ class RNNSlotsPredictTransform(ModelPredictTransform):
         #
         self.xlags = self.slots.xlags_lists
         self.ylags = self.slots.ylags_lists
+    # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:
         fh, X = super().transform(fh, X, y)
@@ -124,7 +122,7 @@ class RNNSlotsPredictTransform(ModelPredictTransform):
         xlags_list = self.xlags if X is not None else []
         ylags_list = self.ylags
         y = self.yh
-
+        
         mx = X.shape[1] if X is not None else 0
         my = y.shape[1]
 

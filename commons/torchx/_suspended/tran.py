@@ -3,7 +3,7 @@
 #
 import torch
 import torch.nn as nn
-from ... import nn as nnx
+from torchx import nn as nnx
 import math
 from torch import Tensor
 
@@ -37,67 +37,6 @@ def masked_softmax(X, valid_lens):
         # value, whose exponentiation outputs 0
         X = _sequence_mask(X.reshape(-1, shape[-1]), valid_lens, value=-1e6)
         return nn.functional.softmax(X.reshape(shape), dim=-1)
-
-
-class PositionalReplicate(nn.Module):
-
-    def __init__(self, n_repeat=1, input_size=0, normalize=True):
-        """
-        Repeat a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
-        with shape (batch, seq, r*input).
-
-        The tensor can be 'expanded' (along 'input' dimension) if 'input_size' is not zero and it is not equals to
-        the current input size. If 'input_size' is > 0, some zeores are added in front, otherwise at the back
-
-
-        :param n_repeat: n of times the tensor is repeated along the 'input' dimension
-        :param input_size: if to add extra zeros in front (input_size > 0) or at back (input_size < 0)
-            of the tensor, to made it with exactly 'input_size' features
-        :param normalize: if to 'normalize' the vector.
-        """
-        super().__init__()
-        self.n_repeat = n_repeat
-        self.input_size = input_size
-        self.normalize = normalize
-        assert n_repeat > 0, "'n_repeat' needs to be an integer > 0"
-        assert isinstance(input_size, int), "'input_size' needs to be an integer"
-
-    def forward(self, x: Tensor) -> Tensor:
-        n_repeat = self.n_repeat
-        data_size = x.shape[-1]
-        input_size = self.input_size
-
-        if input_size != 0 and data_size != abs(input_size):
-            n_expand = input_size + data_size if input_size < 0 else input_size - data_size
-        else:
-            n_expand = 0
-
-        if n_expand > 0:
-            # add zeros in front
-            shape = list(x.shape)
-            shape[2] += n_expand
-            z = torch.zeros(shape)
-            z[:, :, n_expand:] = x
-            x = z
-        elif n_expand < 0:
-            # add zeros at the back
-            shape = list(x.shape)
-            shape[2] -= n_expand
-            z = torch.ones(shape)
-            z[:, :, :n_expand] = x
-            x = z
-        else:
-            pass
-
-        if n_repeat > 1:
-            x = x.repeat(1, 1, n_repeat)
-
-        if input_size != 0 and self.normalize:
-            factor = n_repeat*input_size
-            x = x / factor
-
-        return x
-    # end
 
 
 class PositionalEncoding(nn.Module):

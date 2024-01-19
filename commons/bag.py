@@ -129,7 +129,6 @@ from collections import Counter
 #       a - b  :=   for e in a: r[e] = a[e] - b[e]
 #                   for e in b: r[e] = a[e] - b[e]
 
-
 class bag(dict):
 
     def __init__(self, seq=()):
