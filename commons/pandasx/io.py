@@ -1,19 +1,21 @@
 from typing import List
 import pandas as pd
-from stdlib import NoneType
 from .base import datetime_encode, onehot_encode, binary_encode, \
     set_index, ignore_columns, datetime_reindex, as_list, \
-    find_unnamed_columns, find_binary, dataframe_sort
+    find_unnamed_columns, find_binary, dataframe_sort, rename_columns, \
+    NoneType
 from .time import periodic_encode, infer_freq
+from .io_arff import read_arff
 
 
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _select_categorical_bool_columns(columns, dtype):
+def _select_typed_columns(columns, dtype):
     categorical = []
     boolean = []
+    ignore = []
 
     i = -1
     for t in dtype:
@@ -22,8 +24,10 @@ def _select_categorical_bool_columns(columns, dtype):
             boolean.append(columns[i])
         if t in ["senum", "enum", "ienum", enumerate]:
             categorical.append(columns[i])
+        if t is None:
+            ignore.append(columns[i])
     # end
-    return categorical, boolean
+    return categorical, boolean, ignore
 # end
 
 
@@ -66,6 +70,8 @@ def _parse_datetime(datetime) -> tuple:
     else:
         raise ValueError("Invalid 'datetime' parameter format")
     return datetime_name, datetime_format, datetime_freq
+# end
+
 
 # ---------------------------------------------------------------------------
 # read_database
@@ -116,6 +122,35 @@ def read_database(url: str, dtype, **kwargs):
 # ---------------------------------------------------------------------------
 # read_data
 # ---------------------------------------------------------------------------
+# Extended version pf Pandas read_XXX to read files based on the file extension
+# and to apply several transformations directly on the readed data.
+#
+# File types supported:
+#
+#   CSV
+#   ARFF (used by Weka)
+#   JSON
+#   HTML
+#   EXCEL
+#   HDF
+#   SPL table/query
+#
+# Transformations available:
+#
+#   conversion of datetime string into datetime object
+#   conversion of categorical columns into
+#       'category' Pandas data type
+#       'boolean' Python value (supporting several way to represent boolean values)
+#       'onehot' encoding, with automatic support for binary values (one single column)
+#   conversion of integer columns into float
+#   automatic creation fo the index based on one or multiple columns
+#   dropping of NAN values
+#   'ignore' columns (remove them from DF) or Pandas unnamed columns (with prefix 'Unnamed')
+#   'rename' columns
+#   'reindex' DF based on DF index
+#
+
+#
 # dtype,
 # categorical, boolean, numeric, onehot, binary,
 # datetime, periodic,
@@ -144,6 +179,8 @@ def read_data(file: str,
               count=False,      # [EXPERIMENTAL] if to add the column 'count' with value 1
               reindex=False,    # [EXPERIMENTAL] if to reindex the dataset
               sort=False,       # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+
+              rename=None,      # [EXPERIMENTAL] rename some columns
 
               dropna=False,     # if to drop the rows containing NaN values
               na_values=None,   # strings to consider NaN values
@@ -210,14 +247,21 @@ def read_data(file: str,
             Used to specify the index for a dataset multi-time series.
             The datetime index must be the last index in the list
             The columns are not automatically ignored
-    :param ignore: column(s) to ignore
-    :param ignore_unnamed: if to ignore 'Unnamed: *' columns, created automatically by pandas read_*
-            routines
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
     :param periodic: if to add 'periodic' information (EXPERIMENTAL)
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
     :param sort: resort the dataframe based on index or column(s) (EXPERIMENTAL)
+    :param rename: rename some columns. The columns can be specified by position (starting from 0)
+            or by name. The parameter can be a list (column specified inmplicitly by the position) or
+            using a dictionary. As dictionary, the key if the original column name (an integer or a string)
+            and the value, the new column name
+            The column renaming is applied immediately after the reading.
+    :param ignore_unnamed: if to ignore 'Unnamed: *' columns, created automatically by pandas read_*
+            routines
+    :param ignore: column(s) to ignore. The columns are removed as last step.
+            This means that the columns are available for other processes before to remove them
+            This means that the name to use must be consistent with the renaming.
     :param dict kwargs: extra parameters passed to pd.read_*()
     :return pd.DataFrame: a Pandas DataFrame
     """
@@ -229,6 +273,9 @@ def read_data(file: str,
     assert isinstance(periodic, (NoneType, str, list, tuple)), \
         "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
+
+    assert isinstance(rename, (NoneType, list, tuple, dict)), \
+        "'rename' must be (None, [str,...], {str:str...}"
 
     # convert list parameters passed as single value in a singleton list
     categorical = as_list(categorical, 'categorical')
@@ -254,7 +301,8 @@ def read_data(file: str,
         dt = None
 
     # load the file based on extension
-    print("Loading {} ...".format(file))
+    print(f"Loading {file} ...")
+
     if file.endswith(".csv"):
         df = pd.read_csv(file, dtype=dt, **kwargs)
     elif file.endswith(".json"):
@@ -267,16 +315,22 @@ def read_data(file: str,
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
         df = pd.read_hdf(file, dtype=dt, **kwargs)
-    # elif file.endswith(".arff"):
-    #     df = read_arff(file, dtype=dt, **kwargs)
+    elif file.endswith(".arff"):
+        # extension
+        df = read_arff(file, dtype=dt, **kwargs)
     elif "://" in file:
+        # extension
         df = read_database(file, dtype=dt, **kwargs)
     else:
-        raise TypeError("File extension unsupported: " + file)
+        raise ValueError(f"Unsupported file format: {file}")
 
     # select categorical/boolean columns
     if dtype is not None:
-        categorical, boolean = _select_categorical_bool_columns(list(df.columns), dtype)
+        categorical_, boolean_, ignore_ = _select_typed_columns(list(df.columns), dtype)
+        categorical += categorical_
+        boolean += boolean_
+        ignore += ignore_
+    # end
 
     # if binary == ['auto']:
     #     binary = find_binary(df, onehot)
@@ -304,15 +358,9 @@ def read_data(file: str,
         if datetime_freq is None:
             datetime_freq = infer_freq(df.index)
 
-    # encode the periodic column
+    # encode periodicity columns
     if periodic is not None:
-        # (*periodic): remaining parameters: method, freq, year_scale, columns
-        if isinstance(periodic, dict):
-            df = periodic_encode(df, datetime_name, freq=datetime_freq, **periodic)
-        elif isinstance(periodic, (list, tuple)):
-            df = periodic_encode(df, datetime_name, *periodic, freq=datetime_freq)
-        else:
-            df = periodic_encode(df, datetime_name, periodic, freq=datetime_freq)
+        df = periodic_encode(df, periodic, datetime_name, datetime_freq)
 
     # onehot encoding
     if len(onehot) > 0:
@@ -338,6 +386,10 @@ def read_data(file: str,
     # remove the 'ignore' columns
     if len(ignore) > 0:
         df = ignore_columns(df, ignore)
+
+    # rename the columns
+    if rename is not None:
+        df = rename_columns(df, rename)
 
     # remove the rows containing NaN
     # note: it is better to check for NaN ONLY AFTER ignored columns

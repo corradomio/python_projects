@@ -1,5 +1,38 @@
+#
+# Extension of 'isinstance' to support (partially) the Python type hints
+# It is possible to use
+#
+#       is_instance(obj, Type)
+#
+# as alternative than
+#
+#       isinstance(obj, Type)
+#
+# where 'Type' can be specified as in Python type hints
+#
+#       https://docs.python.org/3/library/typing.html
+#       https://peps.python.org/pep-0484/
+#
+
+#
+#   _Final (typing)
+#       _SpecialForm(_Final, _root=True) (typing)
+#           _LiteralSpecialForm(_SpecialForm, _root=True) (typing)
+#       ForwardRef(_Final, _root=True) (typing)
+#       TypeVar(_Final, _Immutable, _root=True) (typing)
+#       _BaseGenericAlias(_Final, _root=True) (typing)
+#           _GenericAlias(_BaseGenericAlias, _root=True) (typing)
+#               _CallableGenericAlias(_GenericAlias, _root=True) (typing)
+#               _UnionGenericAlias(_GenericAlias, _root=True) (typing)
+#               _LiteralGenericAlias(_GenericAlias, _root=True) (typing)
+#               _AnnotatedAlias(_GenericAlias, _root=True) (typing)
+#       _SpecialGenericAlias(_BaseGenericAlias, _root=True) (typing)
+#               _CallableType(_SpecialGenericAlias, _root=True) (typing)
+#               _TupleType(_SpecialGenericAlias, _root=True) (typing)
+# .
 from typing import *
-from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _type_check, _remove_dups_flatten
+from typing import _type_check, _remove_dups_flatten
+from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm
 from types import *
 from collections import *
 
@@ -9,7 +42,14 @@ __all__ = [
     'Const'     # equivalent to 'Final'
 ]
 
-# unsupported
+#
+# Supported
+# ---------
+# Final
+# Literal
+
+#
+# Unsupported
 # -----------
 # NoReturn
 # ClassVar
@@ -17,13 +57,8 @@ __all__ = [
 # Concatenate
 # TypeGuard
 # ForwardRef
-# TypeVar.
-
-
-# supported
-# ---------
-# Final
-# Literal
+# TypeVar
+# .
 
 
 # ---------------------------------------------------------------------------
@@ -41,30 +76,30 @@ __all__ = [
 #   Coroutine   ??
 #   AsyncIterable   __aiter__
 #   AsyncIterator   __aiter__, __anext__
-#   .
+# .
 
 
 # ---------------------------------------------------------------------------
 # from types
 # ---------------------------------------------------------------------------
-# FunctionType
-# LambdaType
-# CodeType
-# MappingProxyType
-# SimpleNamespace
-# CellType
-# GeneratorType
-# CoroutineType
-# AsyncGeneratorType
-# MethodType
-# BuiltinMethodType
-# WrapperDescriptorType
-# MethodWrapperType
-# MethodDescriptorType
-# ClassMethodDescriptorType
-# ModuleType
-# GetSetDescriptorType
-# MemberDescriptorType
+#   FunctionType
+#   LambdaType
+#   CodeType
+#   MappingProxyType
+#   SimpleNamespace
+#   CellType
+#   GeneratorType
+#   CoroutineType
+#   AsyncGeneratorType
+#   MethodType
+#   BuiltinMethodType
+#   WrapperDescriptorType
+#   MethodWrapperType
+#   MethodDescriptorType
+#   ClassMethodDescriptorType
+#   ModuleType
+#   GetSetDescriptorType
+#   MemberDescriptorType
 # .
 
 # ---------------------------------------------------------------------------
@@ -157,7 +192,8 @@ __all__ = [
 #     'overload',
 #     'runtime_checkable',
 #     'Text',
-#     'TYPE_CHECKING',.
+#     'TYPE_CHECKING',
+# .
 
 # ---------------------------------------------------------------------------
 # from 'collections'
@@ -171,9 +207,7 @@ __all__ = [
 #     'defaultdict',
 #     'deque',
 #     'namedtuple',
-#   
-# ---------------------------------------------------------------------------
-# end
+#  .
 # ---------------------------------------------------------------------------
 
 
@@ -197,20 +231,6 @@ def All(self, parameters):
 
 @_SpecialForm
 def Immutable(self, parameters=()):
-    # """Immutable type
-    # """
-    # # if parameters == ():
-    # #     raise TypeError("Cannot take a Immutable of no types.")
-    # if not isinstance(parameters, tuple):
-    #     parameters = (parameters,)
-    # msg = "Immutable[arg, ...]: each arg must be a type."
-    # parameters = tuple(_type_check(p, msg) for p in parameters)
-    # parameters = _remove_dups_flatten(parameters)
-    # if len(parameters) == 1:
-    #     return parameters[0]
-    # uga = _UnionGenericAlias(self, parameters)
-    # uga._name = "Immutable"
-    # return uga
     """Special typing construct to indicate  immutable to type checkers.
 
         A immutable object must be composed by only immutable objects
@@ -221,16 +241,6 @@ def Immutable(self, parameters=()):
 
 @_SpecialForm
 def Const(self, parameters):
-    # """Immutable type
-    # """
-    # if parameter != None:
-    #     msg = "Const[arg]: arg must be a type."
-    #     _type_check(parameter, "Const[arg]: arg must be a type.")
-    #     uga = _UnionGenericAlias(self, (parameter,))
-    # else:
-    #     uga = _UnionGenericAlias(self, ())
-    # uga._name = "Const"
-    # return uga
     """Special typing construct to indicate const names to type checkers.
 
         A const name cannot be re-assigned.
@@ -245,7 +255,16 @@ def Const(self, parameters):
 
 
 # ---------------------------------------------------------------------------
-#
+# IsInstance (root)
+#   IsAny
+#   IsAll
+#   IsNone
+#   IsCollection
+#       ...
+#   IsMapping
+#       ...
+#   ...
+#   HasAttribute
 # ---------------------------------------------------------------------------
 
 class IsInstance:
@@ -258,6 +277,8 @@ class IsInstance:
     def is_instance(self, obj) -> bool:
         ...
 
+
+# ---------------------------------------------------------------------------
 
 class IsAny(IsInstance):
     def is_instance(self, obj) -> bool:
@@ -300,7 +321,7 @@ def _len(obj):
 
 class IsCollection(IsInstance):
     # supported:  collection[T], collection[T1,T2,...]
-    def __init__(self, tp, collection_type=Collection):
+    def __init__(self, tp, collection_type=Union[Collection, namedtuple]):
         super().__init__(tp)
         self.collection_type = collection_type
 

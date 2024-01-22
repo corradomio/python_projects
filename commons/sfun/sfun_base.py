@@ -2,11 +2,23 @@
 #
 #
 # from joblibx import Parallel, delayed
-from numpy import ndarray, array, loadtxt, savetxt
-from numpyx import fzeros
+from numpy import ndarray, array, loadtxt, savetxt, zeros, ones
 from iset import *
-from mathx import sq, sqrt, pow, m1pow, INF
-from mathx import qfact, comb, bernoulli, icomb
+from mathx import sq, sqrt, pow, INF
+from imathx import qfact, comb, bernoulli, icomb, m1pow
+
+
+# ---------------------------------------------------------------------------
+# Numpy functions
+# ---------------------------------------------------------------------------
+
+ShapeType = Union[int, list[int], tuple[int]]
+
+
+def fzeros(n: ShapeType) -> ndarray: return zeros(n, dtype=float)
+
+
+def fones(n: ShapeType) -> ndarray: return ones(n, dtype=float)
 
 
 # ---------------------------------------------------------------------------

@@ -1,5 +1,4 @@
 from typing import Dict, Any
-
 #
 # Statistic distributions
 #
@@ -33,6 +32,8 @@ from typing import Dict, Any
 #     def value(self):
 #         x = self._rnd.random()
 #         return self._rnd.
+
+
 
 class Distrib:
 

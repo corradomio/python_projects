@@ -2,9 +2,9 @@ from typing import Any
 import pickle
 
 
-def save(obj: Any, file: str):
+def save(object: Any, file: str):
     with open(file, 'wb') as f:
-        pickle.dump(obj, f)
+        pickle.dump(object, f)
 
 
 def load(file: str) -> Any:

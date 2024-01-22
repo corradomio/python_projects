@@ -1,5 +1,5 @@
 import pandas as pd
-import arff
+from . import arff
 
 
 # ---------------------------------------------------------------------------

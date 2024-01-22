@@ -52,7 +52,8 @@ __all__ = [
     "index_labels",
     "find_unnamed_columns",
 
-    "ignore_columns"
+    "ignore_columns",
+    "rename_columns"
 ]
 
 
@@ -782,10 +783,10 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
         assert isinstance(data, pd.DataFrame)
 
         columns = data.columns.difference(target).union(shared)
-        X = data[columns]
+        X = data[columns] if len(columns) > 0 else None
 
         columns = data.columns.difference(columns).union(target).union(shared)
-        y = data[columns]
+        y = data[columns] if len(columns) > 0 else None
 
         xy_list += [X, y]
     # end
@@ -885,7 +886,8 @@ def cutoff_split(*data_list, cutoff,
 # train_test_split
 # ---------------------------------------------------------------------------
 
-def _train_test_split_single(data, train_size, test_size) -> tuple[pd.DataFrame, pd.DataFrame]:
+def _train_test_split_single(data, train_size, test_size) \
+    -> Union[tuple[pd.DataFrame, pd.DataFrame], tuple[NoneType, NoneType]]:
 
     def _tsize(n) -> int:
         tsize = train_size
@@ -899,6 +901,9 @@ def _train_test_split_single(data, train_size, test_size) -> tuple[pd.DataFrame,
             return tsize
         else:
             return 1
+
+    if data is None:
+        return None, None
 
     t = _tsize(len(data))
     trn = data[:t]
@@ -961,7 +966,7 @@ def train_test_split(*data_list, train_size=0, test_size=0,
         # correctly.
         # This means that X can be an EMPTY dataframe BUT with a correct index!
         #
-        assert data is not None
+        # assert data is not None
 
         if len(groups) > 0:
             dfdict = groups_split(data, groups=groups)
@@ -1256,6 +1261,59 @@ def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFr
 
 
 # dataframe_ignore = ignore_columns
+
+
+# ---------------------------------------------------------------------------
+# rename_columns
+# ---------------------------------------------------------------------------
+
+def _normalize_rename(columns, rename):
+    # clone 'rename' to obtain a local copy
+    rename = {} | rename
+
+    # convert list & tuple into a dictionary
+    if isinstance(rename, (list, tuple)):
+        n = len(rename)
+        rename = {
+            i: rename[i]
+            for i in range(n)
+        }
+
+    assert isinstance(rename, dict), "Parameter 'rename' is not a list or a dictionary"
+
+    # convert positional columns to column name
+    keys = list(rename.keys())
+    for old_c in keys:
+        if isinstance(old_c, int):
+            idx_c = old_c
+            old_c = columns[old_c]
+            rename[old_c] = rename[idx_c]
+            del rename[idx_c]
+
+        if old_c not in columns:
+            del rename[old_c]
+    # end
+
+    # it is NOT possible to rename a column with a name already present
+    for old_c in rename.keys():
+        new_c = rename[old_c]
+        if new_c in columns:
+            raise ValueError(f"Unable to rename '{old_c}' into '{new_c}' because already present as column")
+
+    return rename
+# end
+
+
+def rename_columns(df: pd.DataFrame, rename: Union[NoneType, list, dict], ignore_invalid=True) -> pd.DataFrame:
+    if rename is None or len(rename) == 0:
+        return df
+
+    df_columns = df.columns
+    rename = _normalize_rename(df_columns, rename)
+
+    df.rename(rename, axis=1, inplace=True)
+    return df
+# end
 
 
 # ---------------------------------------------------------------------------

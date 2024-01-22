@@ -1,18 +1,10 @@
 import numpy as np
+from .transf import Transformer
 
-class Scaler:
 
-    def fit(self, array) -> "Scaler":
-        ...
-
-    def transform(self, array: np.ndarray) -> np.ndarray:
-        ...
-
-    def inverse_transform(self, array: np.ndarray) -> np.ndarray:
-        ...
-
-    def fit_transform(self, array):
-        return self.fit(array).transform(array)
+class Scaler(Transformer):
+    def __init__(self):
+        super().__init__()
 
 
 class MinMaxScaler(Scaler):

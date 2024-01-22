@@ -42,7 +42,6 @@
 from tabulate import tabulate
 
 from mathx import EPS, iseq, isz, isnz, zero, isle, isgt, isge
-from numpyx import fones
 from iset import *
 from .sfun_base import *
 from .sfun_approx import *
@@ -413,7 +412,7 @@ class SFun:
             pass
         elif value is not None:
             self.info[info] = value
-        elif isinstance(info, (tuple, list)):
+        elif isinstance(info, (list, tuple)):
             self.info[info[0]] = info[1]
         elif isinstance(info, dict):
             self.info.update(info)

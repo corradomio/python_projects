@@ -3,31 +3,34 @@
 #
 # product
 # permutations
-# combinations.
+# combinations
+#
 from itertools import combinations, accumulate
 from typing import Collection, Iterator, Iterable
+from deprecated import deprecated
 
 
 # ---------------------------------------------------------------------------
 # argsort
 # ---------------------------------------------------------------------------
 
-def argsort(l: Iterable, reverse: bool = False) -> list:
-    """
-    Order the list and return the list of indices ordered by data values
-
-    :param l: data values
-    :param key: function to extract the value from the  list's element
-    :param reverse: if ordering in reverse order
-    :return: list of ordered indices
-    """
-    l = list(l)
-    n = len(l)
-    ipairs = [(i, l[i]) for i in range(n)]
-    opairs = sorted(ipairs, key=lambda p: p[1], reverse=reverse)
-    output = [p[0] for p in opairs]
-    return output
-# end
+# @deprecated: redefined in stdlib
+# def argsort(l: list, reverse: bool = False) -> list:
+#     """
+#     Order the list and return the list of indices ordered by data values
+#
+#     :param l: data values
+#     :param key: function to extract the value from the  list's element
+#     :param reverse: if ordering in reverse order
+#     :return: list of ordered indices
+#     """
+#
+#     n = len(l)
+#     ipairs = [(i, l[i]) for i in range(n)]
+#     opairs = sorted(ipairs, key=lambda p: p[1], reverse=reverse)
+#     output = [p[0] for p in opairs]
+#     return output
+# # end
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +39,10 @@ def argsort(l: Iterable, reverse: bool = False) -> list:
 
 def list_map(f, l: Iterable) -> list:
     """
-    Apply the function to all list's elements
+    Apply the function to all list's elements.
+
+    Note: this function is redefined in 'stdlib'.
+          It is here for historical reasons.
 
     :param lambda f: function to apply to all elements of the list
     :param list l: list of items to transform
@@ -92,7 +98,7 @@ def sublists(l: list) -> Iterator:
     """
     Generate the sequence [], [e1], [e1, e2], ...
     :param l: the list to scan
-    :return: iterato an all sublists
+    :return: iterator an all sublists
     """
     for i in range(len(l)+1):
         yield l[0:i]
@@ -100,7 +106,16 @@ def sublists(l: list) -> Iterator:
 # end
 
 
-def list_split(l, k):
+def list_split(l: list, k: int) -> Iterator[list]:
+    """
+    Split the list 'l' in segments of length 'k' and returns
+    an iterator on the segments.
+    Note: the last segment can be smoller than 'k'
+
+    :param l: list to split
+    :param k: segment length
+    :return: iterator on the segments
+    """
     n = len(l)
     if n % k == 0:
         d = n//k
@@ -119,8 +134,10 @@ def flatten(l) -> list:
 
         [[1,2],[3,[4,5]]] -> [1,2,3,4,5]
 
-    :param l:
-    :return:
+    Note: the flattened list can contain duplicated values.
+
+    :param l: list to flattent
+    :return: simple flatten list
     """
     if len(l) == 0:
         return l
@@ -129,7 +146,6 @@ def flatten(l) -> list:
     else:
         return [l]
 # end
-
 
 # ---------------------------------------------------------------------------
 # Subsets
@@ -143,6 +159,7 @@ def flatten(l) -> list:
 #   powersetn(n, empty=True, full=True)
 #   subsetsn(n, k=None)
 #
+
 
 def issubset(S1: Collection, S2: Collection) -> bool:
     """

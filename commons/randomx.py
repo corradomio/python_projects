@@ -1,7 +1,7 @@
 from typing import Iterator
 from sys import maxsize
 from random import Random, random
-from mathx import comb, failing_fact, EPS
+from imathx import comb, failing_fact
 
 MAXINT = maxsize
 
@@ -37,6 +37,7 @@ def _normalize_plevels(n, k, plevels):
     :param k: (kmin, kmax) levels to use
     """
     kmin, kmax = k
+    EPS = 1.e-6
 
     # normalize plevels length to be a list of n+1 elements
     if plevels is None:
@@ -365,7 +366,7 @@ class RandomSets:
     @property
     def p_items(self):
         n = self.n
-        return _normalize_pitems(n, None)
+        return _normalize_pitems(m, None)
 
     # -----------------------------------------------------------------------
     # Implementation
@@ -489,7 +490,7 @@ class RandomPermutations:
         """:type: int"""
 
         # last permutation
-        self._perm = list(range(n))
+        _self._perm = list(range(n))
         """:type: list"""
     # end
 

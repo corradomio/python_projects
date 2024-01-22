@@ -1,3 +1,6 @@
+from imathx import isqrt, ipow
+
+
 PRIMES = [
     2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 
     31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 
@@ -480,3 +483,77 @@ PRIMES = [
     46219, 46229, 46237, 46261, 46271, 46273, 46279, 46301, 46307, 46309, 
     46327, 46337, 46349, 46351, 46381, 46399, 46411, 46439, 
 ]
+
+
+# ---------------------------------------------------------------------------
+# Utility functions
+# ---------------------------------------------------------------------------
+
+# def ipow(b: Union[int, float], n: int) -> int:
+#     """b^n with b and n integers"""
+#     p = 1
+#     for e in range(n):
+#         p *= b
+#     return p
+
+
+# def isqrt(n: int) -> int:
+#     """integer square root"""
+#     x0 = 0
+#     x1 = n
+#     while abs(x0 - x1) >= 1:
+#         x0 = x1
+#         x1 = (x0 + n // x0) // 2
+#         if x1 > x0:
+#             return x0
+#     return x1
+
+
+# ---------------------------------------------------------------------------
+# prime numbers
+# ---------------------------------------------------------------------------
+
+def isprime(n: int) -> bool:
+    """check if n is prime"""
+    l = isqrt(n)
+    i = 0
+    while PRIMES[i] <= l:
+        if n % PRIMES[i] == 0:
+            return False
+        else:
+            i += 1
+    return True
+
+
+def ifactorize(n: int) -> list[tuple[int, int]]:
+    """factorize the number in [(p, e), ...]
+    where p is a prime number and e the exponent > 0"""
+    assert n >= 0
+    if n < 4:
+        return [(n, 1)]
+    f = []
+    l = isqrt(n)
+    i = 0
+    while n > l:
+        p = PRIMES[i]
+        e = 0
+        while n % p == 0:
+            e += 1
+            n //= p
+        if e > 0:
+            f.append((p, e))
+        i += 1
+    if n != 1:
+        f.append((n, 1))
+    return f
+
+
+def icompose(f: list[tuple[int, int]]) -> int:
+    """compose the integer from the factorization [(p, e), ...]"""
+    if len(f) == 0:
+        return 0
+
+    n = 1
+    for p, e in f:
+        n *= ipow(p, e)
+    return n

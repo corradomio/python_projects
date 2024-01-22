@@ -147,7 +147,7 @@
 # class ModelTrainTransform(TimeseriesTransform):
 #
 #     def __init__(self, slots, tlags):
-#         assert isinstance(slots, (tuple, list)) and len(slots) == 2
+#         assert isinstance(slots, (list, tuple)) and len(slots) == 2
 #         xlags = resolve_ilags(slots[0])
 #         ylags = resolve_ilags(slots[1])
 #         tlags = resolve_tlags(tlags)
@@ -174,7 +174,7 @@
 # class ModelPredictTransform(TimeseriesTransform):
 #
 #     def __init__(self, slots, tlags):
-#         assert isinstance(slots, (tuple, list)) and len(slots) == 2
+#         assert isinstance(slots, (list, tuple)) and len(slots) == 2
 #         xlags = resolve_ilags(slots[0])
 #         ylags = resolve_ilags(slots[1])
 #         tlags = resolve_tlags(tlags)

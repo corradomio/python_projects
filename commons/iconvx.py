@@ -3,6 +3,16 @@ _BASE64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 _EQ = ord('=')
 
 
+# def tob64(i: int):
+#     if i == 0:
+#         b64 = ['A']
+#     else:
+#         b64 = []
+#     while i > 0:
+#         b64.append(_BASE64[i % 64])
+#         i >>= 6
+#     return "".join(b64)
+
 def tob64(i: int):
     if i == 0:
         b64 = 'A'

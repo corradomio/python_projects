@@ -22,7 +22,7 @@ import scipy.interpolate as spi
 import numpy as np
 from random import random, gauss
 from iset import *
-from .sfun import SetFunction
+from .sfun_fun import SetFunction
 
 
 class SetFunctionRandom:

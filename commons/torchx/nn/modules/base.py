@@ -7,7 +7,7 @@ import torch.nn as nn
 #
 
 def print_shape(what, x, i=0):
-    if isinstance(x, (tuple, list)):
+    if isinstance(x, (list, tuple)):
         if i == 0:
             print("  "*i, what, "...")
         else:

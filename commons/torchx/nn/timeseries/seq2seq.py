@@ -253,7 +253,7 @@ class TSSeq2SeqV3(TimeSeriesModel):
     # end
 
     def forward(self, xytp):
-        if isinstance(xytp, (tuple, list)):
+        if isinstance(xytp, (list, tuple)):
             return self._forward_train(xytp)
         else:
             return self._forward_predict(xytp)

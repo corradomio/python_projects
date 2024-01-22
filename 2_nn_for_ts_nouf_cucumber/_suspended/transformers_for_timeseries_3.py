@@ -24,7 +24,7 @@ def convert_col_into_float(df, list_cols):
 #
 # Read the data
 #
-df = pd.read_csv("single_column_Cucumber.csv", index_col='Date', parse_dates=['Date'])
+df = pd.read_csv("../single_column_Cucumber.csv", index_col='Date', parse_dates=['Date'])
 list_cols = list(df.columns)
 df = convert_col_into_float(df, list_cols)
 data = df.values

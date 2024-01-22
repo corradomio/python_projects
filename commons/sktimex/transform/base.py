@@ -161,7 +161,7 @@ class ModelPredictTransform(TimeseriesTransform):
         return fh, X
     # end
 
-    def update(self, i, y_pred, t=None):
+    def update(self, i: int, y_pred, t=None):
         # Note:
         #   the parameter 't' is used to override tlags
         #   'tlags' is at minimum [0]
@@ -171,6 +171,7 @@ class ModelPredictTransform(TimeseriesTransform):
         #   in this case, it is necessary to start with the position '3'
         #   and advance 'i' ONLY of 2 slots.
         #   Really usable slots: [0,1]
+        assert isinstance(i, int), "The argument 'i' must be the location update (an integer)"
 
         tlags = [t] if t is not None else self.tlags
         tstart = 0 if t is not None else self.tstart

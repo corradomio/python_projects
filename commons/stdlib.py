@@ -1,5 +1,4 @@
-from typing import Any, Union, Optional
-
+from typing import Any, Union, Optional, Iterable
 from path import Path as path
 
 NoneType = type(None)
@@ -11,18 +10,18 @@ CollectionType = (list, tuple)
 # Generic utilities
 # ---------------------------------------------------------------------------
 
-def to_name(ts) -> str:
-    if len(ts) == 0:
-        return "root"
-    else:
-        return "/".join(list(ts))
+# def to_name(ts) -> str:
+#     if len(ts) == 0:
+#         return "root"
+#     else:
+#         return "/".join(list(ts))
 
 
-def from_name(tsname) -> tuple[str]:
-    if tsname == 'root':
-        return tuple()
-    else:
-        return tuple(tsname.split('/'))
+# def from_name(tsname) -> tuple[str]:
+#     if tsname == 'root':
+#         return tuple()
+#     else:
+#         return tuple(tsname.split('/'))
 
 
 # ---------------------------------------------------------------------------
@@ -96,35 +95,95 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
             list(l) if tl == tuple else l
 
 
+
+# ---------------------------------------------------------------------------
+# tobool
 # ---------------------------------------------------------------------------
 
-def tobool(s: str) -> bool:
+def to_bool(s: str) -> bool:
     """
-    Convert the string into a boolean value.
+    Convert the value (can be a boolean value, an integer or a string) into a boolean value.
     Supported conversions:
 
-        False: 0, False, '', 'f', 'false', 'F', 'False', 'FALSE', 'off', 'no',  'close'
-         True: 1, True,      't', 'true',  'T', 'True',  'TRUE',  'on',  'yes', 'open'
+        False: 0, False, '', 'f', 'false', 'off', 'no',  'close'
+         True: 1, True,      't', 'true',  'on',  'yes', 'open'
 
-    :param s: string
+    Note: it is a 'better' version of the Python's boolean conversion rules, because
+    it is based on a 'real boolean value' represented in different ways.
+    However it supports some 'extended' values:
+
+        None            -> False
+        integer != 0    -> True
+
+    :param s: a string or other compatible value
     :return: boolean value
     """
+    if s is None:
+        return False
     if isinstance(s, str):
         s = s.lower()
-    if s in [0, False, '', 'f', 'false', 'off', 'no', 'close', 'closed', '0']:
+    if s in [0, False, '', 'f', 'false', 'off', 'no', 'close', '0']:
         return False
-    if s in [1, True, 't', 'true', 'on', 'yes', 'open', 'opened', '1']:
+    if s in [1, True, 't', 'true', 'on', 'yes', 'open', '1']:
         return True
+    if isinstance(s, int):
+        return s != 0
     else:
-        raise ValueError(f"Unsupported boolean literal '{s}'")
+        raise ValueError(f"Unsupported boolean value '{s}'")
 
+
+# Alias
+tobool = to_bool
+
+
+# ---------------------------------------------------------------------------
+# to_float
+# ---------------------------------------------------------------------------
+
+def to_float(x) -> Union[float, list[float]]:
+    """
+    Convert, recursively, each object in a float:
+    1) int -> float
+    2) str -> float
+    3) collection -> list of floats
+    """
+    if isinstance(x, (int, float)):
+        return float(x)
+    if isinstance(x, (list, tuple)):
+        return [float(e) for e in x]
+    if isinstance(x, Iterable):
+        return list(map(lambda t: to_float(t), x))
+    else:
+        return float(x)
+# end
+
+# Alias
+tofloat = to_float
+
+
+# ---------------------------------------------------------------------------
+# lrange
+# ---------------------------------------------------------------------------
 
 def lrange(start, stop=None, step=1) -> list[int]:
-    """As range but it returns a list"""
+    """As 'range' but it returns a list"""
     if stop is None:
         return list(range(start))
     else:
         return list(range(start, stop, step))
+# end
+
+
+# ---------------------------------------------------------------------------
+# argsort
+# ---------------------------------------------------------------------------
+
+def argsort(values: Iterable, descending: bool = False) -> list[int]:
+    """Sort the values in ascending (ore descending) order and return the indices"""
+    n = len(list(values))
+    pairs = [(i, values[i]) for i in range(n)]
+    pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
+    return [p[0] for p in pairs]
 # end
 
 
@@ -136,6 +195,9 @@ def lrange(start, stop=None, step=1) -> list[int]:
 #
 
 def sum_(x):
+    """
+    A little more flexible variant of 'sum', supporting None and numerical values
+    """
     if x is None:
         return 0
     elif isinstance(x, (int, float)):
@@ -144,7 +206,10 @@ def sum_(x):
         return sum(x)
 
 
-def mul_(x):
+def prod_(x):
+    """
+    Multiplicative version of 'sum' supporting None and numerical values
+    """
     if x is None:
         return 1
     elif isinstance(x, (int, float)):
@@ -154,6 +219,9 @@ def mul_(x):
         for e in x:
             m *= e
         return m
+
+# compatibility
+mul_ = prod_
 
 
 # ---------------------------------------------------------------------------
@@ -167,12 +235,12 @@ def mul_(x):
 #
 #
 
-def as_kwargs(locals):
-    kwargs = {} | locals
-    for key in ['forecaster', 'window_length', 'reduction_strategy',
-                'self', '__class__']:
-        del kwargs[key]
-    return kwargs
+# def as_kwargs(locals):
+#     kwargs = {} | locals
+#     for key in ['forecaster', 'window_length', 'reduction_strategy',
+#                 'self', '__class__']:
+#         del kwargs[key]
+#     return kwargs
 
 
 def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None, keys=None) -> Any:
@@ -213,7 +281,6 @@ def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, lis
             return defval
         else:
             return _parse_val(kwargs[key])
-    # end
 
     if isinstance(key, CollectionType):
         altkeys = key
@@ -230,7 +297,7 @@ def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, lis
 def kwparams(kwargs: dict, prefix: str) -> dict:
     """
     Extract the parameters with prefix '<prefix>__<name>' returning
-    a dictionary using '<name>'
+    a dictionary containing the parameters with name '<name>'
 
     Example:
 
@@ -249,8 +316,7 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
     :param prefix: prefix to use
     :return:
     """
-    sep = "__"
-    p = f"{prefix}{sep}"
+    p = f"{prefix}__"
     l = len(p)
 
     params = {}
@@ -260,15 +326,16 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
             params[n] = kwargs[kw]
     return params
 
+# alias
 kwselect = kwparams
 
 
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
-    Create a new dictionary without keys having as prefix a string in exclude
-    :param kwargs:
-    :param keys:
-    :return:
+    Create a new dictionary without keys having as prefix a string in 'exclude'
+    :param kwargs: dictionary containing the parameters
+    :param keys: prefix(es) to exlude
+    :return: a new dictionary without the excluded parameters
     """
     exclude = as_list(exclude, 'exclude')
 
@@ -300,6 +367,234 @@ def is_filesystem(datasource: str) -> bool:
     else:
         raise ValueError(f"Unsupported datasource '{datasource}'")
 
+
+# ---------------------------------------------------------------------------
+# dict utilities
+# ---------------------------------------------------------------------------
+
+def dict_contains_some(d: dict, keys: Union[str, list[str]]):
+    """
+    Check if the dictionary contains some key in the list
+
+    :param d: dictionary
+    :param keys: key name or list of names
+    """
+    keys = as_list(keys, "keys")
+    for k in keys:
+        if k in d:
+            return True
+    return False
+
+
+def dict_union(d1: dict, d2: dict, inplace=False) -> dict:
+    """
+    Union of 2 dictionaries. The second dictionary will override the
+    common keys in the first one.
+
+    :param d1: first dictionary
+    :param d2: second dictionary
+    :return: merged dictionary (a new one)
+    """
+    if inplace:
+        for k in d2:
+            d1[k] = d2[k]
+        return d1
+    else:
+        return {} | d1 | d2
+
+
+def dict_select(d: dict, keys: list[str]) -> dict:
+    s = {}
+    for k in keys:
+        if k in d:
+            s[k] = d[k]
+    return s
+
+
+def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
+    """
+    Remove from the dictionary some keys (and values
+    :param d1: dictionary
+    :param keys: keys to remove
+    :return: the new dictionary
+    """
+    # keys is a string
+    if keys is None: keys = []
+    if isinstance(keys, str): keys = [keys]
+    assert isinstance(keys, CollectionType)
+
+    # keys is None/empty
+    if len(keys) == 0:
+        return d1
+    # dict doesn't contain keys
+    if len(set(keys).intersection(d1.keys())) == 0:
+        return d1
+
+    d = {}
+    for k in d1:
+        if k in keys:
+            continue
+        d[k] = d1[k]
+    return d
+
+
+def dict_rename(d: dict, k1: Union[str, list[str], dict[str, str]], k2: Optional[str]=None) -> dict:
+    """
+    Rename the key 'k1' in the dictionary as 'k2
+    :param d: dictionary
+    :param k1: key to rename, or a list of tuples [(kold, knew), ...)
+                or a dict {kold: knew, ...}
+    :param k2: new name to use
+    :return: the new dictionary
+    """
+    def _renk(kold, knew):
+        if kold in d:
+            v = d[kold]
+            del d[kold]
+            d[knew] = v
+
+    if isinstance(k1, str):
+        _renk(k1, k2)
+    elif isinstance(k1, CollectionType):
+        klist = k1
+        for k1, k2 in klist:
+            _renk(k1, k2)
+    elif isinstance(k1, dict):
+        kdict = k1
+        for k1 in kdict:
+            k2 = kdict[k1]
+            _renk(k1, k2)
+    return d
+
+
+def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
+    """
+    Remove the list of keys from the dictionary
+    :param d: dictionary
+    :param keys: key(s) to remove
+    :return: the updated dictionary
+    """
+    if isinstance(keys, str):
+        keys = list[keys]
+    for k in keys:
+        if k in d:
+            del d[k]
+    return d
+
+
+def dict_to_list(d: Union[dict, list, tuple]) -> list:
+    """
+    Convert a dictionary in a list of tuples
+
+        {k: v, ...} -> [(k, v), ...]
+
+    :param d: dictionary, or list or tuple
+    :return: the dictionary converted in a list of tuples
+    """
+    assert isinstance(d, (dict, list, tuple))
+    if isinstance(d, (list, tuple)):
+        return d
+    if len(d) == 0:
+        return []
+
+    l = []
+    for k in d.keys():
+        l.append((k, d[k]))
+    return l
+
+
+# ---------------------------------------------------------------------------
+# Real comparisons with error
+# ---------------------------------------------------------------------------
+# The following comparison predicates can be used for float values where it
+# is not possible to do 'safe' comparisons without consider rounding/accumulating
+# errors. In this case, it is possible to specify an 'eps' (that can be 'zero')
+# to absorb these errors.
+
+EPS: float = 1.e-6
+
+
+def sign(x, zero=False, eps: float = EPS) -> int:
+    """
+    Sign of the number:
+
+        -1 if in range (-inf, -eps)
+         0 if in range [-eps, +eps]
+        +1 if in range (+eps, +inf)
+
+    Note that 'eps' can be 0, in this case 'sign' is 0 only for exactly 0 (zero)
+
+    :param x: value to analyze
+    :param zero: if to return 0 (True) or 1 (False) for 'zero values'
+    :param eps: values interval to consider 'zero'
+    :return: the integer values -1, 0, 1, based on 'x' value
+    """
+    if x < -eps: return -1
+    if x > +eps: return +1
+    return 0 if zero else 1
+
+
+def zero(x, eps: float = EPS) -> float:
+    """return 0 if the value is smaller than an eps"""
+    return 0. if -eps <= x <= +eps else x
+
+
+def isz(x: float, eps: float = EPS) -> bool:
+    """is zero"""
+    return -eps <= x <= eps
+
+
+def isnz(x: float, eps: float = EPS) -> bool:
+    """is not zero"""
+    return not isz(x, eps=eps)
+
+
+def iseq(x: float, y: float, eps: float = EPS) -> bool:
+    """is equal to"""
+    return isz(x - y, eps=eps)
+
+
+def isgt(x: float, y: float, eps: float = EPS) -> bool:
+    """is greater than"""
+    return x > (y + eps)
+
+
+def islt(x: float, y: float, eps: float = EPS) -> bool:
+    """is less than"""
+    return x < (y - eps)
+
+
+def isge(x: float, y: float, eps: float = EPS) -> bool:
+    """is greater or equal than"""
+    return not islt(x, y, eps=EPS)
+
+
+def isle(x: float, y: float, eps: float = EPS) -> bool:
+    """is less or equal than"""
+    return not isgt(x, y, eps=EPS)
+
+
+# ---------------------------------------------------------------------------
+# Simple mathematica function
+# ---------------------------------------------------------------------------
+from math import sqrt       # DON'T REMOVE!!!
+
+
+# inverse with check
+def inv(x: float, eps: float = EPS) -> float:
+    """
+    Inverse of the number with check for zero.
+    If x is zero, return zero
+
+    :param x: value
+    :param eps: epserance
+    :return: 1/x or 0
+    """
+    return 0. if isz(x, eps=eps) else 1. / x
+
+
+# Square
+def sq(x: float) -> float: return x * x
 
 # ---------------------------------------------------------------------------
 # End

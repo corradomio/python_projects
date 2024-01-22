@@ -10,6 +10,9 @@ def argsort(a: np.ndarray, axis=-1, kind=None, order=None, desc=False) -> np.nda
 
 
 def chop(*alist, eps=1e-8):
+    """
+    Clip all values in range [-eps, +eps] to zero
+    """
     def _chop(a):
         if isinstance(a, list):
             return list(chop(e) for e in a)
@@ -28,26 +31,6 @@ def chop(*alist, eps=1e-8):
         return _chop(alist[0])
     else:
         return [_chop(a) for a in alist]
-
-
-# ---------------------------------------------------------------------------
-# Complex
-# ---------------------------------------------------------------------------
-
-def to_rect(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    return np.real(a), np.imag(a)
-
-
-def from_rect(re: np.ndarray, im: np.ndarray) -> np.ndarray:
-    return re + im*1j
-
-
-def to_polar(a: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-    return np.abs(a), np.angle(a)
-
-
-def from_polar(ro, phi):
-    return ro*(np.cos(phi) + np.sin(phi)*1j)
 
 
 # ---------------------------------------------------------------------------

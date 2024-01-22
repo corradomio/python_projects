@@ -45,7 +45,7 @@ class Parallel:
                 and submitted to 'n_job' jobs
         """
         n_splits = 1
-        if isinstance(n_jobs, (tuple, list)):
+        if isinstance(n_jobs, (list, tuple)):
             if len(n_jobs) >= 2:
                 n_splits = n_jobs[1]
                 n_jobs = n_jobs[0]

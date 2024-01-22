@@ -7,7 +7,7 @@ from typing import Tuple, Union
 from numpy import ndarray, zeros
 from randomx import RandomPermutations, RandomSets, WeightedRandomSets
 from iset import iset, imembers, iremove, iadd, idiff, icard
-from mathx import ilog2
+from imathx import ilog2
 
 
 # ---------------------------------------------------------------------------

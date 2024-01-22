@@ -11,7 +11,7 @@ def assert_in_range(x, xmin, xmax, msg=None):
 # ---------------------------------------------------------------------------
 
 def assert_list(l, elem_type_: type, msg=None):
-    assert isinstance(l, (tuple, list)), msg
+    assert isinstance(l, (list, tuple)), msg
     for e in l:
         assert isinstance(e, elem_type_)
 
@@ -207,7 +207,7 @@ def assert_sequence_equal(seq1, seq2, msg=None, seq_type=None):
     """An equality assertion for ordered sequences (like lists and tuples).
     """
     if seq_type is None:
-        seq_type = (tuple, list)
+        seq_type = (list, tuple)
     assert isinstance(seq1, seq_type)
     assert isinstance(seq2, seq_type)
     assert len(seq1) == len(seq2)

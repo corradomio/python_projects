@@ -1,9 +1,14 @@
 import numpy as np
+from .transf import Transformer
 
 
-def oversample2d(a: np.ndarray, nsamples=10) -> np.ndarray:
+def oversample2d(a: np.ndarray, nsamples=10, method='linear') -> np.ndarray:
     """
+    Split adjacent values in the mattrix 'a' into 'nsample-1' segments, using a linear interpolation
 
+    :param a' 2D array to analyze
+    :param nsamples: number of samples to use for each 2 adjacent values (along the axis 0/rows)
+    :param method: method to use (unsupported for now). For default: 'linear'
     """
     assert isinstance(a, np.ndarray) and len(a.shape) == 2, \
         "Parameter 'a' is not a 2D numpy array"
@@ -29,6 +34,10 @@ def oversample2d(a: np.ndarray, nsamples=10) -> np.ndarray:
 
 
 def undersample2d(a: np.ndarray, nsamples=10) -> np.ndarray:
+    """
+    Invert the oversampling applied with 'oversample2d', selecting a row in 'a'
+    each 'nsamples' rows.
+    """
     assert isinstance(a, np.ndarray) and len(a.shape) == 2, \
         "Parameter 'a' is not a 2D numpy array"
 
@@ -47,9 +56,13 @@ def undersample2d(a: np.ndarray, nsamples=10) -> np.ndarray:
 # end
 
 
-class Resampler:
+class Resampler(Transformer):
+    """
+    Apply the resample rules
+    """
 
     def __init__(self, nsamples=10):
+        super().__init__()
         self.nsamples = nsamples
 
     def fit(self, *data_list: np.ndarray):
@@ -65,10 +78,6 @@ class Resampler:
             oversampled.append(oversample2d(data, self.nsamples))
         # return oversample2d(data, self.nsamples)
         return oversampled
-
-
-    def fit_transform(self, *data: np.ndarray):
-        return self.fit(*data).transform(*data)
 
     def inverse_transform(self, *data_list: np.ndarray) -> list[np.ndarray]:
         undersampled = []

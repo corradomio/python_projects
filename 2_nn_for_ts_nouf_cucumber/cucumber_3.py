@@ -13,7 +13,7 @@ def main():
                          numeric='Production',
                          index='Date',
                          ignore='Date',
-                         periodic='sincos'
+                         # periodic='sincos'
                          )
 
     print(data.columns)
@@ -28,8 +28,8 @@ def main():
     # show()
 
     X, y = pdx.xy_split(data_s, target='Production')
-    X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=12)
 
+    X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=12)
 
     tt = sktx.LagsTrainTransform(xlags=12, ylags=12, tlags=range(-6, 6))
 
@@ -38,7 +38,7 @@ def main():
     # X_train, X_test, y_train, y_test = pdx.train_test_split(X_data, y_data, train_size=0.7)
 
     tsmodel = nnx.TSTransformerV3(
-        input_shape=(12, 3), output_shape=(12,1),
+        input_shape=(12, 1), output_shape=(12,1),
         d_model=32, nhead=4,
         num_encoder_layers=1,
         dim_feedforward=32,
@@ -82,7 +82,7 @@ def main():
     fh = len(y_test)
     y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
 
-    i=0
+    i = 0
     while i<fh:
         Xp,_,_ = pt.step(i)
         # Xp = X_test[i:i+1]

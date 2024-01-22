@@ -178,12 +178,24 @@ def infer_freq(index, steps=5, ntries=3) -> str:
 # periodic_encode
 # ---------------------------------------------------------------------------
 
-def periodic_encode(df: pd.DataFrame,
-                    datetime: Optional[str] = None,
-                    method: str = 'onehot',
-                    freq: Optional[str] = None,
-                    year_scale=None,
-                    columns: Optional[list[str]] = None) -> pd.DataFrame:
+def periodic_encode(df: pd.DataFrame, periodic, datetime_name, datetime_freq):
+    # (*periodic): remaining parameters: method, freq, year_scale, columns
+    if isinstance(periodic, dict):
+        df = _periodic_encode(df, datetime_name, freq=datetime_freq, **periodic)
+    elif isinstance(periodic, (list, tuple)):
+        df = _periodic_encode(df, datetime_name, *periodic, freq=datetime_freq)
+    else:
+        df = _periodic_encode(df, datetime_name, periodic, freq=datetime_freq)
+    return df
+# end
+
+
+def _periodic_encode(df: pd.DataFrame,
+                     datetime: Optional[str] = None,
+                     method: str = 'onehot',
+                     freq: Optional[str] = None,
+                     year_scale=None,
+                     columns: Optional[list[str]] = None) -> pd.DataFrame:
     """
     Add some extra column to represent a periodic time
 
@@ -206,19 +218,21 @@ def periodic_encode(df: pd.DataFrame,
                 1. None
                     no scale is applied
                 2. (y0, y1)
-                    the year y0 is scaled to correspond to 0
-                    the year y1 is scaled to correspond to 1
+                    the year y0 is scaled to 0
+                    the year y1 is scaled to 1
                 3. (y0, s0, y1, s1)
-                    the year y0 is scaled to correspond to s0
-                    the year y1 is scaled to correspond to s1
+                    the year y0 is scaled to to s0
+                    the year y1 is scaled to to s1
 
     :param freq: frequency ('H', 'D', 'W', 'M')
     :return:
     """
-    if method in ['circle', 'sincos', 'cossin']:
+    if method in [None, '']:
+        pass
+    elif method in ['circle', 'sincos', 'cossin']:
         df = _sincos_encoder(df, datetime, columns, year_scale, freq)
     elif method == 'onehot':
-        df = _onehot_encode(df, datetime, columns, freq, year_scale)
+        df = _onehot_encode(df, datetime, columns, year_scale, freq)
     elif method == 'order' and freq == 'M':
         df = _order_month_encoder(df, datetime, columns, year_scale)
     elif method == 'order' and freq == 'D':
@@ -259,7 +273,7 @@ def _scale_year(year, year_scale):
     return year
 
 
-def _onehot_encode(df, datetime, columns, freq, year_scale):
+def _onehot_encode(df, datetime, columns, year_scale, freq):
     if datetime is None:
         dt = df.index.to_series()
         datetime = "dt"

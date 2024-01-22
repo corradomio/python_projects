@@ -1,8 +1,5 @@
-from typing import Union
-
 import numpy as np
-from numpy import ndarray, ones, zeros, all, abs
-from numpy.linalg import eigvals
+from numpy import zeros
 
 
 # ---------------------------------------------------------------------------
@@ -32,39 +29,25 @@ def ashuffle(*arr_list):
 
 
 # ---------------------------------------------------------------------------
-# fzeros
-# fones
-# ---------------------------------------------------------------------------
-
-ShapeType = Union[int, list[int], tuple[int]]
-
-
-def fzeros(n: ShapeType) -> ndarray: return zeros(n, dtype=float)
-
-
-def fones(n: ShapeType) -> ndarray: return ones(n, dtype=float)
-
-
-# ---------------------------------------------------------------------------
 # Matrix operations
 # ---------------------------------------------------------------------------
 
-def is_pos_def(m: ndarray) -> bool:
-    """Check if the matrix is positive definite"""
-    ev = eigvals(m)
-    return all(ev > 0)
+# def is_pos_def(m: ndarray) -> bool:
+#     """Check if the matrix is positive definite"""
+#     ev = eigvals(m)
+#     return all(ev > 0)
 
 
-def is_symmetric(a: ndarray, tol=1e-8) -> bool:
-    """Check if the matrix is symmetric"""
-    return all(abs(a - a.T) < tol)
+# def is_symmetric(a: ndarray, tol=1e-8) -> bool:
+#     """Check if the matrix is symmetric"""
+#     return all(abs(a - a.T) < tol)
 
 
 # ---------------------------------------------------------------------------
 # Shape handling
 # ---------------------------------------------------------------------------
 
-def as_shape(s: ShapeType) -> tuple[int]:
+def as_shape(s) -> tuple:
     """Convert int, list[int] into tuple[int]"""
     if isinstance(s, int):
         return (s,)
@@ -74,7 +57,7 @@ def as_shape(s: ShapeType) -> tuple[int]:
         return s
 
 
-def shape_dim(s: ShapeType) -> int:
+def shape_dim(s) -> int:
     """Shepe dimension, as 'rank'"""
     if isinstance(s, int):
         return 1
@@ -82,14 +65,14 @@ def shape_dim(s: ShapeType) -> int:
         return len(s)
 
 
-def shape_concat(s1: ShapeType, s2: ShapeType) -> tuple[int]:
+def shape_concat(s1, s2) -> tuple:
     """Concatenate two shapes"""
     s1 = as_shape(s1)
     s2 = as_shape(s2)
     return s1 + s2
 
 
-def shape_size(s: ShapeType) -> int:
+def shape_size(s) -> int:
     """Compute the number of elements given the shape"""
     if isinstance(s, int):
         return s

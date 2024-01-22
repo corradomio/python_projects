@@ -2,9 +2,8 @@
 # SetFunction generators
 #
 import random as rnd
-import numpy as np
-from itertools import combinations
-from mathx import mean, to_float, isodd, iseven
+from stdlib import to_float
+from mathx import mean
 from .sfun_fun import *
 from .sfun_gen import *
 
