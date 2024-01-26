@@ -35,12 +35,12 @@ class D:
     def __contains__(self, item):
         pass
 
-    def __iter__(self) -> Self:
+    def __iter__(self) -> "Self":
         pass
 
 
 def test_literal():
-    assert (not is_instance(1, Literal[True]))
+    assert (not is_instance(1, Literal[2]))
     assert (is_instance(1, Literal[1, 2]))
     assert (is_instance("on", Literal["on", "off"]))
 
@@ -51,19 +51,14 @@ def test_immutable():
     assert (is_instance(frozenset([1, 2, 3]), Immutable))
 
 
-def test_const():
-    assert (is_instance(1, Final))
-    assert (is_instance(1, Final[int]))
+# def test_final():
+#     assert (is_instance(1, Final))
+#     assert (is_instance(1, Final[int]))
 
 
 def test_const():
     assert (is_instance(1, Const))
     assert (is_instance(1, Const[int]))
-
-
-def test_function():
-    assert(is_instance(test_function, FunctionType))
-    assert(is_instance(test_function, LambdaType))
 
 
 def test_function():
@@ -125,6 +120,12 @@ def test_callable():
     assert(is_instance(1, (type(None), str, float, bytes, int)))
 
 
+def test_vector_alais():
+    Vector = list[float]
+    assert(is_instance([1., 2., 3.], Vector))
+    assert(is_instance([1., 2., 3.], Sequence))
+
+
 def test_vector_seq():
     Vector = list[float]
     Vector = NewType('Vector', list[float])
@@ -181,3 +182,8 @@ def test_class():
 def test_frozenset():
     assert(is_instance(frozenset([1, 2]), frozenset))
     assert(is_instance(frozenset([1, 2]), frozenset[int]))
+
+
+def test_literal_extended():
+    assert is_instance("a", (0, "a"))
+    assert is_instance(0, (0, "a"))

@@ -270,7 +270,7 @@ def read_data(file: str,
     assert isinstance(file, str), "'file' must be a str"
     assert isinstance(datetime, (NoneType, str, list, tuple)), \
         "'datetime' must be (None, str, (str, str), (str, str, str))"
-    assert isinstance(periodic, (NoneType, str, list, tuple)), \
+    assert isinstance(periodic, (NoneType, bool, str, list, tuple)), \
         "'periodic' must be (None, str, (str, str), (str, dict))"
     assert isinstance(count, bool), "'count' bool"
 

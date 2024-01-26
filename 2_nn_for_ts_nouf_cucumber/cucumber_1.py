@@ -25,7 +25,7 @@ def main():
 
     X_train, X_test, y_train, y_test = pdx.train_test_split(X_data, y_data, train_size=0.7)
 
-    tsmodel = nnx.TSTransformerV3(
+    tsmodel = nnx.TSEncoderOnlyTransformer(
         input_shape=(12, 1), output_shape=(12,1),
         d_model=32, nhead=4,
         num_encoder_layers=1,

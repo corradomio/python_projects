@@ -30,18 +30,19 @@
 #               _CallableType(_SpecialGenericAlias, _root=True) (typing)
 #               _TupleType(_SpecialGenericAlias, _root=True) (typing)
 # .
-from typing import *
 from typing import _type_check, _remove_dups_flatten
-from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm
-from types import *
-from collections import *
+from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
 
 __all__ = [
     'is_instance',
     'All',
-    'Const'     # equivalent to 'Final'
+    'Const',        # equivalent to 'Final'
+    'Immutable'
 ]
 
+# ---------------------------------------------------------------------------
+# Typing types supported/unsupported
+# ---------------------------------------------------------------------------
 #
 # Supported
 # ---------
@@ -64,6 +65,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # from collections.abc, and available in typing
 # ---------------------------------------------------------------------------
+from collections import *
 #   Container   __contains__(
 #   Iterable    __iter__
 #   Hashable    __hash__
@@ -82,6 +84,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # from types
 # ---------------------------------------------------------------------------
+from types import *
 #   FunctionType
 #   LambdaType
 #   CodeType
@@ -105,6 +108,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # from typing
 # ---------------------------------------------------------------------------
+from typing import *
 #     # Super-special typing primitives.
 #     'Annotated',
 #     'Any',
@@ -198,6 +202,7 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # from 'collections'
 # ---------------------------------------------------------------------------
+from collections import *
 #     'ChainMap',
 #     'Counter',
 #     'OrderedDict',
@@ -210,6 +215,10 @@ __all__ = [
 #  .
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# Special forms
+# ---------------------------------------------------------------------------
 
 @_SpecialForm
 def All(self, parameters):
@@ -260,8 +269,13 @@ def Const(self, parameters):
 #   IsAll
 #   IsNone
 #   IsCollection
+#       IsList
+#       IsTuple
+#       IsSet
+#       IsDeque
 #       ...
 #   IsMapping
+#       IsDict
 #       ...
 #   ...
 #   HasAttribute
@@ -298,16 +312,18 @@ class IsLiteral(IsInstance):
         super().__init__(tp)
         self.targs = [type(arg) for arg in self.args]
         self.nargs = len(self.args)
+        self.values = tp.__args__
 
     def is_instance(self, obj) -> bool:
         # Problem:  1 == True and 0 == False
         # BUT, for type consistency, this is not a good idea
         # both values must have the same type
-        tobj = type(obj)
-        for i in range(self.nargs):
-            if obj == self.args[i] and tobj == self.targs[i]:
-                return True
-        return False
+        # tobj = type(obj)
+        # for i in range(self.nargs):
+        #     if obj == self.args[i] and tobj == self.targs[i]:
+        #         return True
+        # return False
+        return obj in self.values
 
 
 # ---------------------------------------------------------------------------
@@ -545,6 +561,17 @@ class HasAttribute(IsInstance):
 
 
 # ---------------------------------------------------------------------------
+
+class IsLiteralExtend(IsInstance):
+    def __init__(self, value):
+        super().__init__(type(None))
+        self.value = value
+
+    def is_instance(self, obj) -> bool:
+        return obj == self.value
+
+
+# ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
 
@@ -593,13 +620,21 @@ IS_INSTANCE_OF = {
     'typing.Awaitable': HasAttribute('__await__'),
     'typing.AsyncIterable': HasAttribute('__aiter__'),
     'typing.AsyncIterator': HasAttribute('__aiter__', '__anext__'),
+
+    'extend.Literal': IsLiteralExtend
 }
 
 
 def type_name(a_type: type) -> str:
     # if hasattr(a_type, '__origin__'):
     #     return str(a_type.__origin__)
-    if hasattr(a_type, '__supertype__'):
+    if a_type is None:
+        return 'builtins.NoneType'
+    elif isinstance(a_type, (int, str)):
+        return 'extend.Literal'
+    elif isinstance(a_type, _LiteralGenericAlias):
+        return 'typing.Literal'
+    elif hasattr(a_type, '__supertype__'):
         return f'typing.NewType'
 
     if hasattr(a_type, '_name'):

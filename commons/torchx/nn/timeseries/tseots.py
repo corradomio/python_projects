@@ -1,138 +1,95 @@
 #
-# Time Series - Encoder Only Transformer
+# Transformers for Time Series
 #
 import math
+from typing import Optional
+
 import torch
 import torch.nn as nn
+from torch import Tensor
+
+from .ts import TimeSeriesModel
 from .tstran import positional_encoding
+from ... import nn as nnx
+
+__all__ = [
+    "TSEncoderOnlyTransformer"
+]
 
 
-class MultiHeadAttention(nn.Module):
-    '''Multi-head self-attention module'''
-    def __init__(self, D, H):
-        super(MultiHeadAttention, self).__init__()
-        self.H = H # number of heads
-        self.D = D # dimension
+# ---------------------------------------------------------------------------
+# TSEncoderOnlyTransformer (ex TSTransformerV3)
+# ---------------------------------------------------------------------------
+# Used: EncoderOnlyTransformer
+#   Linear projection input features
+#   Linear projection output features
+#
 
-        self.wq = nn.Linear(D, D*H)
-        self.wk = nn.Linear(D, D*H)
-        self.wv = nn.Linear(D, D*H)
+class TSEncoderOnlyTransformer(TimeSeriesModel):
 
-        self.dense = nn.Linear(D*H, D)
+    def __init__(self, input_shape, output_shape,
+                 d_model: int=64,
+                 nhead: int=1,
+                 num_encoder_layers: int=1,
+                 dim_feedforward=None,
+                 dropout: float=0.1,
+                 layer_norm=True,
+                 positional_encode=True,
+                 device=None, dtype=None,
+                 **kwargs):
+        super().__init__(input_shape, output_shape,
+                         d_model=d_model, nhead=nhead,
+                         num_encoder_layers=num_encoder_layers,
+                         dim_feedforward=dim_feedforward,
+                         dropout=dropout, layer_norm=layer_norm,
+                         positional_encode=positional_encode,
+                         device=device, dtype=dtype, **kwargs)
 
-    def concat_heads(self, x):
-        '''(B, H, S, D) => (B, S, D*H)'''
-        B, H, S, D = x.shape
-        x = x.permute((0, 2, 1, 3)).contiguous()  # (B, S, H, D)
-        x = x.reshape((B, S, H*D))   # (B, S, D*H)
-        return x
-
-    def split_heads(self, x):
-        '''(B, S, D*H) => (B, H, S, D)'''
-        B, S, D_H = x.shape
-        x = x.reshape(B, S, self.H, self.D)    # (B, S, H, D)
-        x = x.permute((0, 2, 1, 3))  # (B, H, S, D)
-        return x
-
-    def forward(self, x, mask):
-
-        q = self.wq(x)  # (B, S, D*H)
-        k = self.wk(x)  # (B, S, D*H)
-        v = self.wv(x)  # (B, S, D*H)
-
-        q = self.split_heads(q)  # (B, H, S, D)
-        k = self.split_heads(k)  # (B, H, S, D)
-        v = self.split_heads(v)  # (B, H, S, D)
-
-        attention_scores = torch.matmul(q, k.transpose(-1, -2)) #(B,H,S,S)
-        attention_scores = attention_scores / math.sqrt(self.D)
-
-        # add the mask to the scaled tensor.
-        if mask is not None:
-            attention_scores += (mask * -1e9)
-
-        attention_weights = nn.Softmax(dim=-1)(attention_scores)
-        scaled_attention = torch.matmul(attention_weights, v)  # (B, H, S, D)
-        concat_attention = self.concat_heads(scaled_attention) # (B, S, D*H)
-        output = self.dense(concat_attention)  # (B, S, D)
-
-        return output, attention_weights
-
-
-class TransformerLayer(nn.Module):
-    def __init__(self, d_model, nhead, dim_feedforward, dropout):
-        super(TransformerLayer, self).__init__()
-        self.dropout = dropout
-        self.mlp_hidden = nn.Linear(d_model, dim_feedforward)
-        self.mlp_out = nn.Linear(dim_feedforward, d_model)
-        self.layernorm1 = nn.LayerNorm(d_model, eps=1e-9)
-        self.layernorm2 = nn.LayerNorm(d_model, eps=1e-9)
-        self.dropout1 = nn.Dropout(dropout)
-        self.dropout2 = nn.Dropout(dropout)
-        self.mha = MultiHeadAttention(d_model, nhead)
-
-
-    def forward(self, x, look_ahead_mask):
-
-        attn, attn_weights = self.mha(x, look_ahead_mask)  # (B, S, D)
-        attn = self.dropout1(attn) # (B,S,D)
-        attn = self.layernorm1(attn + x) # (B,S,D)
-
-        mlp_act = torch.relu(self.mlp_hidden(attn))
-        mlp_act = self.mlp_out(mlp_act)
-        mlp_act = self.dropout2(mlp_act)
-
-        output = self.layernorm2(mlp_act + attn)  # (B, S, D)
-
-        return output, attn_weights
-
-
-class Transformer(nn.Module):
-    '''Transformer Decoder Implementating several Decoder Layers.
-    '''
-    def __init__(self, inp_features, out_features, d_model=32, nhead=1, dim_feedforward=0,
-                 num_encoder_layers=1, dropout=0.1):
-        super().__init__()
-        self.sqrt_D = torch.tensor(math.sqrt(d_model))
-        self.num_encoder_layers = num_encoder_layers
+        input_length, input_size = input_shape
+        output_length, output_size = output_shape
 
         if dim_feedforward in [0, None]:
             dim_feedforward = d_model
 
-        self.input_projection  = nn.Linear(inp_features, d_model) # multivariate input
-        self.output_projection = nn.Linear(d_model, out_features) # multivariate output
-        self.pos_encoding = positional_encoding(128, d_model)
-        self.dec_layers = nn.ModuleList([TransformerLayer(d_model, nhead, dim_feedforward,
-                                                          dropout=dropout
-                                                          ) for _ in range(num_encoder_layers)])
+        self.sqrt_D = torch.tensor(math.sqrt(d_model))
+
+        # to convert input_size into d_model IT IS ENOUGH to use 'Linear(input_size, d_model)'
+        # it will be responsibility of the broadcasting mechanism to apply the transformation to
+        # ALL elements of the sequence.
+        # Note: the data dimension is the LAST dimension, the broadcasting mechanism apply everything
+        # following the PREVIOUS dimensions
+        self.input_projection = nnx.Linear(input_size, d_model)
+
+        # self.pos_encoding = positional_encoding(input_length, d_model) if positional_encode else None
+        self.pos_encoding = positional_encoding(input_length, d_model) if positional_encode else None
+
         self.dropout = nn.Dropout(dropout)
-        pass
 
-    def forward(self, x, mask):
-        B, S, D = x.shape
-        attention_weights = {}
-        x = self.input_projection(x)
-        x *= self.sqrt_D
-        x += self.pos_encoding[:, :S, :D]
-        x = self.dropout(x)
-
-        for i in range(self.num_encoder_layers):
-            x, block = self.dec_layers[i](x=x, look_ahead_mask=mask)
-            attention_weights['decoder_layer{}'.format(i + 1)] = block
-
-        x = self.output_projection(x)
-        return x, attention_weights # (B,S,S)
-
-
-class TSTransformerV4(Transformer):
-    def __init__(self, input_shape, output_shape, **kwargs):
-        super().__init__(
-            inp_features=input_shape[1],
-            out_features=output_shape[1],
-            **kwargs
+        self.transformer = nnx.EncoderOnlyTransformer(
+            d_model=d_model, nhead=nhead, num_encoder_layers=num_encoder_layers, dim_feedforward=dim_feedforward,
+            dropout=dropout, layer_norm=layer_norm
         )
 
-    def forward(self, x, mask=None):
-        y, _ = super().forward(x, mask)
-        return y
+        self.output_projection = nnx.Linear(d_model, output_size)
+
+        self.reset_parameters()
+        pass
+    # end
+
+    def reset_parameters(self):
+        pass
+
+    def forward(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+        # B, S, D = x.shape
+        t = self.input_projection(x)
+        t *= self.sqrt_D
+        t = t if self.pos_encoding is None else (t + self.pos_encoding)
+        t = self.dropout(t)
+        t = self.transformer(t, mask=mask)
+        t = self.output_projection(t)
+        return t
 # end
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

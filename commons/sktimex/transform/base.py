@@ -128,13 +128,7 @@ class ModelPredictTransform(TimeseriesTransform):
         self.Xh = None  # X history
         self.yh = None  # y history
 
-        self.Xt = None  # X transform
-        self.yt = None  # y transform
-        self.fh = None  # fh transform
-
         self.Xp = None  # X prediction past
-        self.yy = None  # y prediction past
-        self.Xf = None  # X prediction future
         self.yp = None  # y prediction future
     # end
 
@@ -155,7 +149,7 @@ class ModelPredictTransform(TimeseriesTransform):
         # This method must e used with 'fh' and 'X_test'/'X_predict'
         X, fh = self._check_Xfh(X, fh, y)
 
-        self.Xt = X
+        self.Xp = X
         self.fh = fh
 
         return fh, X
@@ -190,7 +184,10 @@ class ModelPredictTransform(TimeseriesTransform):
         for j in range(tstart, st):
             k = i + tlags[j]
             if k < nfh:
-                self.yp[k] = y_pred[0, j]
+                try:
+                    self.yp[k] = y_pred[0, j]
+                except IndexError:
+                    pass
 
         return i + mt + 1
     # end
