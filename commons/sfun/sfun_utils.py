@@ -1,5 +1,5 @@
 #
-# SetFcuntion utilities
+# SetFunction utilities
 #
 #   A union B       = A + B
 #   A intersect B   = A * B
@@ -147,7 +147,7 @@ def player_level(p, k:int) -> float:
     k = parse_k(k, n, 0)
 
     l = 0.
-    for S in isubsets_lex(N, k=k):
+    for S in ilexsubset(N, k=k):
         l += player_weight(p, S)
     return l
 

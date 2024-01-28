@@ -162,11 +162,11 @@ class PositionalEncoder(nn.Module):
 #
 #     def forward(self, x):
 #         if isinstance(x, (list, tuple)):
-#             return self._forward_train(x)
+#             return self._train_forward(x)
 #         else:
-#             return self._forward_predict(x)
+#             return self._predict_forward(x)
 #
-#     def _forward_train(self, x):
+#     def _train_forward(self, x):
 #         x_enc, x_dec = x
 #
 #         x_enc = self.replicate(x_enc)
@@ -181,7 +181,7 @@ class PositionalEncoder(nn.Module):
 #         return yp
 #     # end
 #
-#     def _forward_predict(self, x):
+#     def _predict_forward(self, x):
 #         output_seqlen, output_size = self.output_shape
 #
 #         x_enc = x                           # [N, Lin, Hin]

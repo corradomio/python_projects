@@ -22,8 +22,7 @@ def main():
         flatten=False,
         concat=None,
         encoder=None,
-        decoder=-1,
-        recursive=False
+        decoder=-1
     )
 
     Xt, yt = tt.fit_transform(y1, X1)

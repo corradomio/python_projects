@@ -1,7 +1,6 @@
 #
 #
 #
-# from joblibx import Parallel, delayed
 from numpy import ndarray, array, loadtxt, savetxt, zeros, ones
 from iset import *
 from mathx import sq, sqrt, pow, INF
@@ -1343,7 +1342,7 @@ def marginal_data_at(xi: ndarray, kmin: int, kmax: int, i: int) -> list:
 
     mi = []
     for k in range(kmin, kmax + 1):
-        for S in isubsets_lex(Ni, k=k):
+        for S in ilexsubset(Ni, k=k):
             Si = iadd(S, i)
 
             # marginal data
@@ -1385,7 +1384,7 @@ def best_set(xi, k) -> int:
 
     M = 0
     m = -INF
-    for S in isubsets_lex(N, k=k):
+    for S in ilexsubset(N, k=k):
         if xi[S] > m:
             m = xi[S]
             M = S
@@ -1406,7 +1405,7 @@ def worst_set(xi, k) -> int:
 
     M = 0
     m = +INF
-    for S in isubsets_lex(N, k=k):
+    for S in ilexsubset(N, k=k):
         if xi[S] < m:
             m = xi[S]
             M = S
@@ -1526,7 +1525,7 @@ def k_shapley_value(xi: ndarray, i: int, k: int) -> float:
     Ni = isub(N, i)
 
     sv = 0.
-    for S in isubsets_lex(Ni, k=k-1):
+    for S in ilexsubset(Ni, k=k-1):
         s = icard(S)
         Si = iadd(S, i)
         sv += qfact(n, s) * (xi[Si] - xi[S])
@@ -1541,7 +1540,7 @@ def k_banzhaf_value(xi: ndarray, i: int, k: int) -> float:
 
     bv = 0.
     c = 0
-    for S in isubsets_lex(Ni, k=k-1):
+    for S in ilexsubset(Ni, k=k-1):
         Si = iadd(S, i)
         bv += (xi[Si] - xi[S])
         c += 1
@@ -1557,7 +1556,7 @@ def k_chaining_value(xi: ndarray, i: int, k: int) -> float:
     S = iset([i])
     Ni = isub(N, i)
     cv = 0.
-    for T in isubsets_lex(Ni, k=k-1):
+    for T in ilexsubset(Ni, k=k-1):
         U = iunion(T, S)
         u = icard(U)
         cv += (s * idsign(S, T)) / (n * comb(n - 1, u - 1)) * xi[T]

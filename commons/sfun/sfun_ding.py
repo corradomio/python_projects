@@ -158,7 +158,7 @@ def mu_eval(S, xi, b):
     n = ilog2(p)
     o = ilexorder(len(b), n)
     f = 0
-    for T in isubsets_lex(S, n=n, k=[o]):
+    for T in ilexsubset(S, n=n, k=[o]):
         i = ilexidx(T, n)
         f *= b[i]*xi[T]
     return f

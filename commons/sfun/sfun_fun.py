@@ -36,15 +36,10 @@
 # ω omega
 #
 
-# from joblib import Parallel, delayed
-# from __future__ import annotations
-# from deprecated import deprecated
-from tabulate import tabulate
-
 from mathx import EPS, iseq, isz, isnz, zero, isle, isgt, isge
-from iset import *
-from .sfun_base import *
+from tabulate import tabulate
 from .sfun_approx import *
+from .sfun_base import *
 
 
 # ---------------------------------------------------------------------------
@@ -72,7 +67,7 @@ class SFun:
     #
 
     @staticmethod
-    def from_file(fname) -> "SetFun":
+    def from_file(fname) -> "SFun":
         """
         Load the function from the specified file.
         The content of the file must be a numpy array with 1 or 2 dimensione
@@ -82,7 +77,7 @@ class SFun:
         """
         pass
 
-    def to_file(self, fname) -> "SetFun":
+    def to_file(self, fname) -> "SFun":
         """Save the function data into the file as numpy array"""
         savetxt(fname, self.data, delimiter=',', fmt="%.8f")
         return self
@@ -92,11 +87,11 @@ class SFun:
         return to_dict(self.data)
 
     #
-    # Trasnformations
+    # Transformations
     #
 
     @staticmethod
-    def from_setfun(self) -> "SetFun":
+    def from_setfun(self) -> "SFun":
         """Create the transformed function from the specified set function"""
         pass
 
@@ -144,9 +139,9 @@ class SFun:
     #
     # Operations
     #
-    def chop(self, eps=EPS) -> "SetFun":
+    def chop(self, eps=EPS) -> "SFun":
         def _chop(x):
-            return 0 if x < EPS else x
+            return 0 if x < eps else x
         d = self.data
         for i in range(len(d)):
             d[i] = _chop(d[i])
@@ -196,7 +191,7 @@ class SFun:
         k = parse_k(k, n)
 
         diff = []
-        for S in isubsets_lex(N, k=k):
+        for S in ilexsubset(N, k=k):
             d = self.eval(S) - ofun.eval(S)
             diff.append(d)
         return array(diff)
@@ -384,7 +379,7 @@ class SFun:
         levels = []
         for k in range(kmin, kmax+1):
             klevel = []
-            for S in isubsets_lex(N, k=k):
+            for S in ilexsubset(N, k=k):
                 d = data[S]
                 klevel.append(d)
             levels.append(klevel)
@@ -447,7 +442,7 @@ class SFun:
         f = []
 
         if ordered:
-            for S in ipowerset_lex(N):
+            for S in ilexpowerset(N):
                 if zero or isnz(data[S]):
                     f.append([ilist(S), data[S]])
         else:
@@ -474,6 +469,8 @@ class SFun:
         self.dump_data(header=header, zero=False)
     # end
 
+    # -----------------------------------------------------------------------
+
 # end
 
 
@@ -483,17 +480,12 @@ class SFun:
 
 class SetFunction(SFun):
 
-    # @staticmethod
-    # def from_data(data: ndarray, info: dict=None) -> 'SetFunction':
-    #     """Create a set function from the a numpy array"""
-    #     return SetFunction(data).set_info(info).set_info({"from": "data"})
-
     @staticmethod
     def from_file(fname, info: dict=None) -> 'SetFunction':
         """Create a set function reading a .csv file"""
         name = fname.namebase
-        data = load_data(fname)
-        return SetFunction(data).set_info(info).set_info({"from": fname, "name": name})
+        xi = load_data(fname)
+        return SetFunction(xi).set_info(info).set_info({"from": fname, "name": name})
 
     @staticmethod
     def from_setfun(self, info: dict=None) -> 'SetFunction':
@@ -501,6 +493,10 @@ class SetFunction(SFun):
         xi = self.xi
         return SetFunction(xi).set_info(info).set_info({"from": self.info})
 
+    @staticmethod
+    def from_data(xi: ndarray):
+        assert isinstance(xi, ndarray)
+        return SetFunction(xi)
 
     """
     Set function
@@ -1141,14 +1137,17 @@ class MobiusTransform(SFun):
     def from_file(fname) -> "MobiusTransform":
         mt = load_data(fname)
         return MobiusTransform(mt)
-    # end
 
     @staticmethod
     def from_setfun(self: SetFunction) -> "MobiusTransform":
         xi = self.xi
         mt = mobius_transform(xi)
         return MobiusTransform(mt)
-    # end
+
+    @staticmethod
+    def from_data(mt: ndarray):
+        assert isinstance(mt, ndarray)
+        return MobiusTransform(mt)
 
     """
     Mobius Transform
@@ -1186,9 +1185,9 @@ class MobiusTransform(SFun):
     # end
 
     def as_setfunction(self) -> SetFunction:
-        """Convert the mobius coefficients as a set function"""
-        m = self.mt
-        return SetFunction(m).set_info(self.info)
+        """Interpret the mobius coefficients as a set function"""
+        mt = self.mt
+        return SetFunction(mt).set_info(self.info)
     # end
 
     def shapley_transform(self) -> "ShapleyTransform":
@@ -1199,7 +1198,7 @@ class MobiusTransform(SFun):
 
     def chaining_transform(self) -> "ChainingTransform":
         m = self.mt
-        ct= chaining_from_mobius_transform(m)
+        ct = chaining_from_mobius_transform(m)
         return ChainingTransform(ct)
     # end
 
@@ -1241,7 +1240,7 @@ class MobiusTransform(SFun):
     #         mk = []
     #
     #         f = 1 if k%2 and negate_even else -1
-    #         for S in isubsets_lex(N, k=k):
+    #         for S in ilexsubset(N, k=k):
     #             mk.append(f*m[S])
     #         mc.append(mk)
     #
@@ -1269,16 +1268,19 @@ class WalshTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return WalshTransform(data)
-    # end
+        wt = load_data(fname)
+        return WalshTransform(wt)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         wt = walsh_transform(xi)
         return WalshTransform(wt)
-    # end
+
+    @staticmethod
+    def from_data(wt: ndarray):
+        assert isinstance(wt, ndarray)
+        return WalshTransform(wt)
 
     """
     Mobius Transform
@@ -1329,22 +1331,19 @@ class ShapleyTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return ShapleyTransform(data)
-    # end
+        st = load_data(fname)
+        return ShapleyTransform(st)
 
     @staticmethod
-    def from_data(data: ndarray):
-        assert isinstance(data, ndarray)
-        return ShapleyTransform(data)
-    # end
+    def from_data(st: ndarray):
+        assert isinstance(st, ndarray)
+        return ShapleyTransform(st)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         st = shapley_transform(xi)
         return ShapleyTransform(st)
-    # end
 
     """
     Shapley Interaction Transform
@@ -1417,16 +1416,19 @@ class BanzhafTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return BanzhafTransform(data)
-    # end
+        bt = load_data(fname)
+        return BanzhafTransform(bt)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         bt = banzhaf_transform(xi)
         return BanzhafTransform(bt)
-    # end
+
+    @staticmethod
+    def from_data(bt: ndarray):
+        assert isinstance(bt, ndarray)
+        return BanzhafTransform(bt)
 
     """
     Banzhaf Transform
@@ -1493,16 +1495,19 @@ class CoMobiusTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return CoMobiusTransform(data)
-    # end
+        cm = load_data(fname)
+        return CoMobiusTransform(cm)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         cm = comobius_transform(xi)
         return CoMobiusTransform(cm)
-    # end
+
+    @staticmethod
+    def from_data(cm: ndarray):
+        assert isinstance(cm, ndarray)
+        return CoMobiusTransform(cm)
 
     """
     co-Mobius Transform
@@ -1511,7 +1516,7 @@ class CoMobiusTransform(SFun):
     def __init__(self, cm):
         super().__init__()
         if type(cm) in [list, tuple]:
-            bt = array(cm)
+            cm = array(cm)
         assert isinstance(cm, ndarray)
         self.cm = cm
     # end
@@ -1545,16 +1550,19 @@ class FourierTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return FourierTransform(data)
-    # end
+        ft = load_data(fname)
+        return FourierTransform(ft)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         ft = fourier_transform(xi)
         return FourierTransform(ft)
-    # end
+
+    @staticmethod
+    def from_data(ft: ndarray):
+        assert isinstance(ft, ndarray)
+        return FourierTransform(ft)
 
     """
     Fourier Transform
@@ -1597,16 +1605,19 @@ class ChainingTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return ChainingTransform(data)
-    # end
+        ct = load_data(fname)
+        return ChainingTransform(ct)
 
     @staticmethod
     def from_setfun(self: SetFunction):
         xi = self.xi
         ct = chaining_transform(xi)
         return ChainingTransform(ct)
-    # end
+
+    @staticmethod
+    def from_data(ct: ndarray):
+        assert isinstance(ct, ndarray)
+        return ChainingTransform(ct)
 
     """
     Chaining Transform
@@ -1667,16 +1678,19 @@ class PlayerProbabilisticTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return PlayerProbabilisticTransform(data)
-    # end
+        pt = load_data(fname)
+        return PlayerProbabilisticTransform(pt, None)
 
     @staticmethod
     def from_setfun_args(self: SetFunction, mu: ndarray):
         xi = self.xi
         pt = player_probabilistic_transform(xi, mu)
         return PlayerProbabilisticTransform(pt, mu)
-    # end
+
+    @staticmethod
+    def from_data(pt: ndarray, mu: ndarray):
+        assert isinstance(pt, ndarray)
+        return PlayerProbabilisticTransform(pt, mu)
 
     """
     Chaining Transform
@@ -1762,8 +1776,8 @@ class CardinalProbabilisticTransform(SFun):
 
     @staticmethod
     def from_file(fname):
-        data = load_data(fname)
-        return CardinalProbabilisticTransform(data)
+        pt = load_data(fname)
+        return CardinalProbabilisticTransform(pt, None)
     # end
 
     @staticmethod
@@ -1772,6 +1786,11 @@ class CardinalProbabilisticTransform(SFun):
         pt = cardinal_probabilistic_transform(xi, mu)
         return CardinalProbabilisticTransform(pt, mu)
     # end
+
+    @staticmethod
+    def from_data(pt: ndarray, mu: ndarray):
+        assert isinstance(pt, ndarray)
+        return CardinalProbabilisticTransform(pt, mu)
 
     """
     Cardinal Probabilistic Transform

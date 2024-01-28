@@ -43,7 +43,7 @@ class SparseSetFunction(SetFunction):
     def __init__(self, sxi: dict):
         super().__init__()
         assert isinstance(sxi, dict)
-        assert all(map(lambda e : isinstance(e, int), sxi.keys()))
+        assert all(map(lambda e: isinstance(e, int), sxi.keys()))
 
         self.sxi = defaultdict(lambda: 0)
         self.sxi.update(sxi)

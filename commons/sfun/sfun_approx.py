@@ -1,7 +1,6 @@
 #
 # Approximations of Shapley Value/Interaction Index, Banzhaf Value/Interaction Index
 #
-# from joblibx import Parallel, delayed
 from time import time
 from typing import Tuple, Union
 from numpy import ndarray, zeros
@@ -42,7 +41,7 @@ class ShapleyApproxInfo(ApproxInfo):
 # end
 
 
-def _shapley_approx_perm(xi, ndarray, P: tuple) -> (ndarray, ndarray):
+def _shapley_approx_perm(xi: ndarray, P: tuple) -> (ndarray, ndarray):
     n = len(P)
     sv = zeros(n, dtype=float)
     c = zeros(n, dtype=int)

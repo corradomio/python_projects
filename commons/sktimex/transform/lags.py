@@ -38,12 +38,91 @@ def _concat(*tlist):
 #
 
 class LagsTrainTransform(ModelTrainTransform):
+    """
+    Transformer used to prepare the tensors used in the model's training.
+    It receives in input 2 matrices (2D tensors), 'y' and 'X', and creates 2 object ('Xt', 'yt') that can
+    be used with 'model.fit(Xt, yt)'. The objects can be:
+
+        - 2D or 3D tensors
+        - tuples of 2D or 3D tensors
+
+    'xlags', 'ylags' and 'tlags'
+
+    1) y_past, based on ylags
+    2) X_past, based on xlags, if X and xlags are specified (X is not None, xlags is not None or the empty list)
+    3) y_future, based on tlags
+    4) X_future, based on tlags, if X and xlags are specified
+
+    having dimensions
+
+        (n_elements, seq_len, data_size)
+
+    All tensors are aligned such that the next timeslot of 'y_past' corresponds to the first timeslot of 'y_future'.
+    The same for 'X_past' vs 'X_future'
+
+    Let 'y' with dimensions (N, ny) and 'X' with dimensions (N, nx). The native dimensions of the tensors will be:
+
+        y_past:     (n, len(ylags), ny)
+        X_past:     (n, len(xlags), nx)
+        y_future:   (n, len(tlags), ny)
+        X_future:   (n, len(tlags), nx)
+
+    where n < N, is computed considering 'xlags', 'ylags' and 'tlags' (the formula is a little complex because
+    it doesn't depend on lags's sized but on the highest timeslot index used).
+
+    The parameter 'flatten' is used to return 2D tensors instead than 3D tensors, with dimensions:
+
+        y_past:     (n, len(ylags) * ny)
+        X_past:     (n, len(xlags) * nx)
+        y_future:   (n, len(tlags) * ny)
+        X_future:   (n, len(tlags) * nx)
+
+    The parameter 'concat' is used to specify how to compose X_past'. Possible values are:
+
+        False:      X_past as is
+        True:       concatenate [y_past, X_past]
+        'xonly':    concatenate [X_past, X_future]
+        'all':      concatenate [y_past, X_past, X_future]
+
+    Note: 'y_past' is located at the tensor's head and if 'X' is not available, 'X_past' is equal to 'y_past'
+
+    The concatenation depends on 'flatten': if 'flatten' is true, the 2D tensors are concatenated horizontally,
+    generating 'X_past' with dimensions:
+
+         True:      (n, len(ylags)*ny + len(xlags)*nx)
+         'xonly':   (n, len(xlags)*nx + len(tlags)*nx)
+         'all':     (n, llen(ylags)*ny + en(xlags)*nx + len(tlags)*nx)
+
+    If 'flatten' is false, the concatenation is possible only if 'xlags == ylags' or 'xlags == []' (the empty list).
+    Because 'tlags' will be different than 'ylags' (and 'xlags'), the concatenation modes 'xonly' and 'all'
+    will be invalid. In this case the 3D tensors are concatenated on the 3^rd axis:
+
+        True:       (n, len(xlags), ny+nx)      ('y_past' in front)
+        'xonly':    invalid
+        'all':      invalid
+
+    The parameter 'transpose' is valid only if 'flatten' is false. It is used to create tensors compatible with
+    CNN layers using tensors with dimensions (n, channels, channel_size). In this case, it swap the axes
+    'seq_len' with 'data_size', creating tensors with dimensions
+
+        (n_elements, data_size, seq_len)
+    """
 
     def __init__(self,
                  xlags=None, ylags=None, tlags=(0,),
                  transpose=False, flatten=False, concat=True,
-                 encoder=None, decoder=None,
-                 recursive=False):
+                 encoder=None, decoder=None):
+        """
+Initialize the transformer
+        :param xlags: lags used for X data. It can be None, an int, the empty list or a list of integers
+        :param ylags: lags used for y data. It must be specified
+        :param tlags: last used for predicted data. It must be specified
+        :param transpose: if to transpose the 3D tensors
+        :param flatten: if to flatten the 3D tensors into 2D
+        :param concat: if to concat y and X used for input, into a single tensor
+        :param encoder: if to create the output tensor for the encoder. In this case its value is the time offset (>= 0)
+        :param decoder: if to create the input tensor for the decoder. In this case its value is thetime offset (<=0)
+        """
 
         assert is_instance(xlags, (NoneType, int, list[int], RangeType)), f"Invalid 'xlags' value: {xlags}"
         assert is_instance(ylags, (int, list[int], RangeType)), f"Invalid 'ylags' value: {ylags}"
@@ -58,7 +137,6 @@ class LagsTrainTransform(ModelTrainTransform):
         self.transpose = transpose
         self.encoder = encoder
         self.decoder = decoder
-        self.recursive = recursive      # used ONLY in 'LagsPredictTransform'
     # end
 
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple:
@@ -233,8 +311,7 @@ class LagsTrainTransform(ModelTrainTransform):
             flatten=self.flatten,
             concat=self.concat,
             encoder=self.encoder,
-            decoder=self.decoder,
-            recursive=self.recursive
+            decoder=self.decoder
         )
     # end
 # end
@@ -244,8 +321,7 @@ class LagsPredictTransform(ModelPredictTransform):
 
     def __init__(self, xlags=None, ylags=None, tlags=(0,),
                  transpose=False, flatten=False, concat=True,
-                 encoder=None, decoder=None,
-                 recursive=False):
+                 encoder=None, decoder=None):
 
         assert is_instance(xlags, (NoneType, int, list[int], RangeType)), f"Invalid 'xlags' value: {xlags}"
         assert is_instance(ylags, (int, list[int], RangeType)), f"Invalid 'ylags' value: {ylags}"
@@ -260,7 +336,6 @@ class LagsPredictTransform(ModelPredictTransform):
         self.transpose = transpose
         self.encoder = encoder
         self.decoder = decoder
-        self.recursive = recursive
 
         self.X_past = None
         self.y_past = None
@@ -292,7 +367,7 @@ class LagsPredictTransform(ModelPredictTransform):
 
         sx = len(xlags)
         sy = len(ylags)
-        st = len(tlags) if not self.recursive else 1
+        st = len(tlags)
 
         mx = Xh.shape[1] if sx > 0 else 0
         my = yh.shape[1]
@@ -362,14 +437,6 @@ class LagsPredictTransform(ModelPredictTransform):
             y_past[0, c, :] = yat(i - j)
         for c, j in enumerate(reversed(xlags)):
             X_past[0, c, :] = xat(i - j)
-
-        # prepare y_encoder
-        # if self.encoder is None:
-        #     pass
-        # else:
-        #     shift = self.encoder
-        #     for c, j in enumerate(reversed(ylags)):
-        #         y_encoder[0, c, :] = yat(i - j + shift)
 
         # prepare X_decoder, y_decoder
         if self.decoder is None:

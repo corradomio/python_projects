@@ -242,11 +242,8 @@ class TSSeq2SeqV3(TimeSeriesModel):
 
         self.enc = nnx.create_rnn(flavour, **enc_params)
         self.dec = nnx.create_rnn(flavour, **dec_params)
-        if hidden_size != output_size:
-            adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
-            self.adapter = nnx.TimeDistributed(adapter)
-        else:
-            self.adapter = None
+        self.adapte = None if hidden_size == output_size \
+            else nnx.Linear(in_features=hidden_size, out_features=output_size)
 
         # n of times 'forward' is called
         self.iteach = 0
@@ -254,11 +251,11 @@ class TSSeq2SeqV3(TimeSeriesModel):
 
     def forward(self, xytp):
         if isinstance(xytp, (list, tuple)):
-            return self._forward_train(xytp)
+            return self._train_forward(xytp)
         else:
-            return self._forward_predict(xytp)
+            return self._predict_forward(xytp)
 
-    def _forward_train(self, xyp):
+    def _train_forward(self, xyp):
         # xyp = (X, y_pred)
         x, yp = xyp
         # n of features in y
@@ -294,7 +291,7 @@ class TSSeq2SeqV3(TimeSeriesModel):
         t = torch.cat(ylist, dim=1)
         return e, t
 
-    def _forward_predict(self, x):
+    def _predict_forward(self, x):
         e, h = self.enc(x)
         e = e if self.adapter is None else self.adapter(e)
         output_seqlen, my = self.output_shape

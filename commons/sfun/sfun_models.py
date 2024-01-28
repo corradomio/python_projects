@@ -1024,7 +1024,7 @@ class SetFunctionCollabOld(SFunBounds):
         xi = fzeros(p)
 
         b = self.bounds.set_limits(0, n)
-        for Si in isubsets_lex(N, k=[1, n]):
+        for Si in ilexsubset(N, k=[1, n]):
             i = ihighbit(Si)
             S = iremove(Si, i)
             s = icard(S)
@@ -1182,7 +1182,7 @@ class MobiusWeights(SFunGen):
         k = self.k
         w = self.w
 
-        v = 0. + sum(w[ilexidx(T, n)] for T in isubsets_lex(S, k=[0, k], n=n))
+        v = 0. + sum(w[ilexidx(T, n)] for T in ilexsubset(S, k=[0, k], n=n))
         return v
 
     def set_info(self, info: Union[dict, tuple, list] = None, value=None) -> "MobiusWeights":
@@ -1337,7 +1337,7 @@ class SetFunctionMinMax(SFunGen):
         N = isetn(n)
 
         xi = fzeros(p)
-        for S in ipowerset_lex(N, empty=False):
+        for S in ilexpowerset(N, empty=False):
             s = icard(S)
 
             b = lmin[s-1] if self.use_min else lmax[s-1]

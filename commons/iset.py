@@ -51,6 +51,7 @@ def _comb(n: int, k: int) -> int:
 def _iset(l: Iterable[int]) -> int:
     """list -> iset"""
     return sum(1 << i for i in l)
+# end
 
 
 def _isetm(m: int, l: Collection) -> int:
@@ -74,7 +75,7 @@ def _isetm(m: int, l: Collection) -> int:
 # ---------------------------------------------------------------------------
 
 def ipow(b: Union[int, float], n: int) -> int:
-    """b^n with b and n integers"""
+    """Integer power: b^n with b and n integers"""
     p = 1
     for e in range(n):
         p *= b
@@ -82,6 +83,7 @@ def ipow(b: Union[int, float], n: int) -> int:
 
 
 def ilog2(p: int) -> int:
+    """Integer logarithm based 2"""
     l = -1
     while p != 0:
         l += 1
@@ -91,11 +93,11 @@ def ilog2(p: int) -> int:
 
 def ihighbit(S: int) -> int:
     """
-    Select the position of the highest bit
+    Index of the highest bit
     For 0, return -1
 
     :param S: bit set
-    :return: bit positions or -1
+    :return: bit position or -1
     """
     h = -1
     while S != 0:
@@ -106,11 +108,11 @@ def ihighbit(S: int) -> int:
 
 def ilowbit(S: int) -> int:
     """
-    Select the position of the lowest bit
+    Index of the lowest bit
     For 0, return -1
 
     :param S: bit set
-    :return: bit positions or -1
+    :return: bit position or -1
     """
     if S == 0:
         return -1
@@ -123,13 +125,17 @@ def ilowbit(S: int) -> int:
 
 # ---------------------------------------------------------------------------
 
-def parse_k(k:Union[None,int,list,tuple], n: int, b: int=0) -> tuple:
+def parse_k(k: Union[None, int, list, tuple], n: int, b: int = 0) -> tuple:
     """
     Parse k
         None        -> [0, n]
         int         -> [k, k]
         [int]       -> [0, k]
         [int,int]   - [kmin, kmax]
+
+    :param k: what to parse
+    :param n: set's cardinality
+    :param b: initial value of the range
     """
     if k is None:
         kmin, kmax = 0, n
@@ -149,7 +155,7 @@ def parse_k(k:Union[None,int,list,tuple], n: int, b: int=0) -> tuple:
 # Function bases
 # ---------------------------------------------------------------------------
 
-def idsign(A: int, B: int=0) -> int:
+def idsign(A: int, B: int = 0) -> int:
     """(-1)^|A - B|    (difference sign)"""
     D = idiff(A, B)
     c = icard(D)
@@ -259,6 +265,63 @@ def ilexidx(S: int, n: int) -> int:
 
 
 # ---------------------------------------------------------------------------
+
+def ilexpowerset(N: int,
+                 empty: bool=True,
+                 full: bool=True,
+                 k: Optional[Union[tuple, list, int]]=None) -> Iterator[int]:
+    """subsets in lexicographic order"""
+    n = icard(N)
+    if k is None:
+        k = 0 if empty else 1, n if full else n-1
+    return ilexsubset(0, N, k=k)
+# end
+
+ipowerset_lex = ilexpowerset
+
+
+def ilexsubset(B: Optional[int]=None,
+               E: Optional[int]=None,
+               n: Optional[int]=None,
+               k: Optional[Union[tuple, list, int]]=None) -> Iterator[int]:
+    """
+    Subsets in the range [B,E] with cardinality in the range [kmin, kmax]
+    in lexicographic order
+    :param int B: begin set
+    :param int E: end set
+    :param int n: n of elements in the full set (N=[0,..n-1])
+    :param k: cardinality
+        None: (0, n)
+        int:  (k, k)
+        [int]:(0, k)
+        (kmin,kmax)
+    :return: iterator
+    """
+    from itertools import combinations
+
+    # assert E is not None or n is not None
+    if B is None and E is None and n is None:
+        raise ValueError("Missing B, E, n")
+    if B is None and E is None:
+        B, E = 0, (1 << n)-1
+    if E is None:
+        B, E = 0, B
+    if n is None:
+        n = icard(E)
+    b = icard(B)
+    kmin, kmax = parse_k(k, n, b)
+    D = idiff(E, B)
+    L = ilist(D)
+    for k in range(kmin-b, kmax-b+1):
+        for C in combinations(L, k):
+            S = _iset(C)
+            yield iunion(B, S)
+# end
+
+isubsets_lex = ilexsubset
+
+
+# ---------------------------------------------------------------------------
 # Integer sets
 # ---------------------------------------------------------------------------
 # Each set is defined by the bits in a integer
@@ -336,7 +399,7 @@ def ilist_list(S: int) -> List[int]:
 # ---------------------------------------------------------------------------
 
 def icard(S: int) -> int:
-    """Cardinality of the bitset"""
+    """Cardinality of the bitset: n of elements in the set"""
     c = 0
     while S != 0:
         c += _BIT_COUNTS[S & 0xFF]
@@ -543,54 +606,6 @@ def imembers(S: int, reverse: bool=False) -> Iterable[int]:
 # Subsets & powersets
 # ---------------------------------------------------------------------------
 
-def ipowerset_lex(N: int, empty: bool=True, full: bool=True, k: Optional[Union[tuple, list, int]]=None) -> Iterator[int]:
-    """subsets in lexicographic order"""
-    n = icard(N)
-    if k is None:
-        k = 0 if empty else 1, n if full else n-1
-    return isubsets_lex(0, N, k=k)
-# end
-
-
-def isubsets_lex(B: Optional[int]=None, 
-                 E: Optional[int]=None,
-                 n: Optional[int]=None, 
-                 k: Optional[Union[tuple, list, int]]=None)  -> Iterator[int]:
-    """
-    Subsets in the range [B,E] with cardinality in the range [kmin, kmax]
-    in lexicographic order
-    :param int B: begin set
-    :param int E: end set
-    :param int n: n of elements in the full set (N=[0,..n-1])
-    :param k: cardinality
-        None: (0, n)
-        int:  (k, k)
-        [int]:(0, k)
-        (kmin,kmax)
-    :return: iterator
-    """
-    from itertools import combinations
-
-    # assert E is not None or n is not None
-    if B is None and E is None and n is None:
-        raise ValueError("Missing B, E, n")
-    if B is None and E is None:
-        B, E = 0, (1 << n)-1
-    if E is None:
-        B, E = 0, B
-    if n is None:
-        n = icard(E)
-    b = icard(B)
-    kmin, kmax = parse_k(k, n, b)
-    D = idiff(E, B)
-    L = ilist(D)
-    for k in range(kmin-b, kmax-b+1):
-        for C in combinations(L, k):
-            S = _iset(C)
-            yield iunion(B, S)
-# end
-
-
 def ipowerset(N: int, empty: bool=True, full: bool=True) -> Iterator[int]:
     """all subsets of the fullset N (in binary order)"""
     s = 0 if empty else 1
@@ -774,10 +789,10 @@ def idisjointpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
     """
     n = icard(N)
     b = 0 if empty else 1
-    for S in isubsets_lex(N, k=[b,n//2]):
+    for S in ilexsubset(N, k=[b,n//2]):
         s = icard(S)
         D = idiff_gt(N, S)
-        for T in isubsets_lex(D, k=[s, n]):
+        for T in ilexsubset(D, k=[s, n]):
             yield S, T
 # end
 
@@ -802,7 +817,7 @@ def ipowersetpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
     #         yield SR, TR
     for S, T in idisjointpairs(N, empty=empty):
         D = idiffn(N, S, T)
-        for I in isubsets_lex(D):
+        for I in ilexsubset(D):
             yield iunion(S, I), iunion(T, I)
 # end
 
@@ -819,7 +834,7 @@ def isupersetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
         for T in isubsets(S, N, lower=same):
             yield S, T
     # n = icard(N)
-    # for S in isubsets_lex(N, k=[0 if empty else 1, n//2]):
+    # for S in ilexsubset(N, k=[0 if empty else 1, n//2]):
     #     for T in isubsets(S, N, lower=same):
     #         yield S, T
 # end
