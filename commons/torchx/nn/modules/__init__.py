@@ -11,6 +11,7 @@ from .rbf import RBFLayer
 from .norm import LayerNorm
 from .losstuple import MSELossTuple, L1LossTuple
 from .proj import Projection
+from .tlin import TimeLinear
 
 from .attn import Attention, DotProductAttention, ScaledDotProductAttention, GeneralDotProductAttention
 from .attn import AdditiveAttention, CosineAttention, create_attention

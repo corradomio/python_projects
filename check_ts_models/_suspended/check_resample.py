@@ -5,7 +5,7 @@ import pandasx as pdx
 
 
 def main():
-    data = pdx.read_data("../single_column_Cucumber.csv",
+    data = pdx.read_data("../_cucumber/single_column_Cucumber.csv",
                          datetime=('Date', '%m/%d/%Y', 'M'),
                          numeric='Production',
                          index='Date',

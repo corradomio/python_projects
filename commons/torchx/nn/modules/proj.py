@@ -1,12 +1,8 @@
-from typing import Union
-
-import torch
 import torch.nn as nn
 from torch import Tensor
-from stdlib import mul_
-from is_instance import is_instance
+
 from .lin import Linear
-from .xnn import TimeDistributed
+from ...utils import is_shape
 
 
 # ---------------------------------------------------------------------------
@@ -34,8 +30,8 @@ class Projection(nn.Module):
         self.output_shape = output_shape
         self.projection_type = projection_type
 
-        assert is_instance(input_shape, Union[tuple[int ,int], list[int ,int]])
-        assert is_instance(output_shape, Union[tuple[int ,int], list[int ,int]])
+        assert is_shape(input_shape), "input_shape"
+        assert is_shape(output_shape), "output_shape"
 
         if projection_type == 'linear':
             self.projection = Linear(in_features=input_shape, out_features=output_shape)

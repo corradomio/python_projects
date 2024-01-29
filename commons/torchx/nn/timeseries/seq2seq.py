@@ -7,7 +7,6 @@ from .ts import TimeSeriesModel
 from ... import nn as nnx
 from ...utils import time_repeat
 
-
 __all__ = [
     "TSSeq2SeqV1",
     "TSSeq2SeqV1",
@@ -25,68 +24,83 @@ class TSSeq2SeqV1(TimeSeriesModel):
     """
     Simple model:
         [X_train] -> encoder -> [hidden_state] -> decoder -> [y_predict]
+                             -> [zero]
+
+    The input of the decoder is the ZERO vector
     """
 
     def __init__(self, input_shape, output_shape,
+                 feature_size=None,
                  hidden_size=None,
                  flavour='lstm', **kwargs):
         super().__init__(input_shape, output_shape,
                          flavour=flavour,
+                         feature_size=feature_size,
                          hidden_size=hidden_size,
                          **kwargs)
 
+        input_seqlen, input_size = input_shape
+        ouput_seqlen, output_size = output_shape
+
+        if feature_size is None:
+            feature_size = input_size
+        if hidden_size is None:
+            hidden_size = feature_size
+
+        self.feature_size = feature_size
         self.hidden_size = hidden_size
 
-        if hidden_size is None:
-            hidden_size = output_shape[1]
-
-        output_size = output_shape[1]
-
         enc_params = {} | kwargs
-        enc_params['input_size'] = input_shape[1]
+        enc_params['input_size'] = feature_size
         enc_params['hidden_size'] = hidden_size
         enc_params['return_state'] = True
 
         dec_params = {} | kwargs
-        # dec_params['input_size'] = input_shape[1]
-        dec_params['input_size'] = 1
+        dec_params['input_size'] = hidden_size
         dec_params['hidden_size'] = hidden_size
 
         self.enc = nnx.create_rnn(flavour, **enc_params)
         self.dec = nnx.create_rnn(flavour, **dec_params)
+        self.input_adapter = None
+        self.output_adapter = None
+
+        if feature_size != input_size:
+            self.input_adapter = nnx.Linear(in_features=input_size, out_features=feature_size)
         if hidden_size != output_size:
-            adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
-            self.adapter = nnx.TimeDistributed(adapter)
-        else:
-            self.adapter = None
+            self.output_adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
 
         self._zero_cache: dict[int, torch.Tensor] = {}
 
     def forward(self, x):
-        t, h = self.enc(x)
+        t = self.input_adapter(x) if self.input_adapter is not None else x
 
-        z = self._zero(len(x), x)
+        t, h = self.enc(t)
+        z = self._zero(len(t), t)
         t = self.dec(z, h)
-        if self.adapter is not None:
-            t = self.adapter(t)
-        return t
+
+        y = self.output_adapter(t) if self.output_adapter is not None else t
+        return y
 
     def _zero(self, batch_size, t):
         # t: tensor used to retrieve dtype and device
         if batch_size not in self._zero_cache:
-            # input_size = self.input_shape[1]
-            input_size = 1
+            hidden_size = self.hidden_size
             output_seqlen = self.output_shape[0]
-            zero = torch.zeros((batch_size, output_seqlen, input_size), dtype=t.dtype, device=t.device, requires_grad=False)
+            zero = torch.zeros((batch_size, output_seqlen, hidden_size), dtype=t.dtype, device=t.device, requires_grad=False)
             self._zero_cache[batch_size] = zero
         return self._zero_cache[batch_size]
+    # end
 # end
 
 
 # ---------------------------------------------------------------------------
 # TSSeq2SeqV2
 # ---------------------------------------------------------------------------
-# fit(Xt, (yt, yp))
+# encoder output is used as input into decoder.
+# if the encoder's output is just the last value -> it is necessary to replicate
+#   it to adapt it to the decoder's input
+# if the encoder's output is the complete sequence -> it is necessary to use
+#   a linear layer to adapt it to the decoder's input
 #
 
 class TSSeq2SeqV2(TimeSeriesModel):
@@ -95,7 +109,7 @@ class TSSeq2SeqV2(TimeSeriesModel):
         [X_train] -> encoder -> [hidden_state] -> decoder -> [y_predict]
                              -> [y_encoder]
 
-    but the encoder output [y_encoder] is compared [y_train]
+    but the encoder output [y_encoder] is compared against [y_train]
     """
 
     _tags = {
@@ -104,6 +118,7 @@ class TSSeq2SeqV2(TimeSeriesModel):
     }
 
     def __init__(self, input_shape, output_shape,
+                 feature_size=None,
                  hidden_size=None,
                  flavour='lstm',
                  use_encoder_sequence=False,
@@ -112,66 +127,85 @@ class TSSeq2SeqV2(TimeSeriesModel):
 
         :param input_shape:
         :param output_shape:
+        :param feature_size:
         :param hidden_size:
         :param flavour:
-        :param use_sequence: if to use just the last value of the encoder
-            or the complete sequence
+        :param use_encoder_sequence: if to use just the last encoder's value (False)
+            or the complete sequence (True)
         :param kwargs:
         """
         super().__init__(input_shape, output_shape,
                          flavour=flavour,
+                         feature_size=feature_size,
                          hidden_size=hidden_size,
                          use_encoder_sequence=use_encoder_sequence,
                          **kwargs)
 
+        input_seqlen, input_size = input_shape
+        output_seqlen, output_size = output_shape
+
+        if feature_size is None:
+            feature_size = input_size
+        if hidden_size is None:
+            hidden_size = feature_size
+
+        self.feature_size = feature_size
         self.hidden_size = hidden_size
         self.use_encoder_sequence = use_encoder_sequence
 
-        if hidden_size is None:
-            hidden_size = output_shape[1]
-
-        input_seqlen = input_shape[0]
-        output_size = output_shape[1]
-
         enc_params = {} | kwargs
-        enc_params['input_size'] = input_shape[1]
+        enc_params['input_size'] = feature_size
         enc_params['hidden_size'] = hidden_size
         enc_params['return_state'] = True       # return the hidden state
-        enc_params['return_sequence'] = use_encoder_sequence in (True, "return")   # return just the last value
+        enc_params['return_sequence'] = use_encoder_sequence in (True, "return")
+            # False return just the last value
+            # True  return the encoder sequence
 
         dec_params = {} | kwargs
-        dec_params['input_size'] = hidden_size * (input_seqlen if use_encoder_sequence else 1)
+        dec_params['input_size'] = feature_size
         dec_params['hidden_size'] = hidden_size
         dec_params['return_state'] = False
 
         self.enc = nnx.create_rnn(flavour, **enc_params)
         self.dec = nnx.create_rnn(flavour, **dec_params)
-        if hidden_size != output_size:
-            adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
-            self.adapter = nnx.TimeDistributed(adapter)
+        self.enc_input_adapter = None
+        self.dec_input_adapter = None
+        self.output_adapter = None
+
+        if feature_size != input_size:
+            self.enc_input_adapter = nnx.Linear(in_features=input_size, out_features=feature_size)
+        if use_encoder_sequence:
+            self.dec_input_adapter = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=(output_seqlen, feature_size))
         else:
-            self.adapter = None
+            self.dec_input_adapter = nnx.TimeLinear(in_features=hidden_size, out_features=feature_size, replicate=output_seqlen)
+        if feature_size != output_size:
+            self.output_adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
     # end
 
     def forward(self, x):
-        batch_size = len(x)
-        output_seqlen = self.output_shape[0]
+        # apply the encoder input adapter
+        t = self.enc_input_adapter(x) if self.enc_input_adapter is not None else x
 
-        # e: encoder sequence
-        # t: decoder sequence
-        e, h = self.enc(x)
-        t = e.reshape(batch_size, -1)
+        # the encoder can return just the last value or the complete sequence!
+        # 'e': encoder output
+        # 'h': encoder state
+        e, h = self.enc(t)
 
-        z = time_repeat(t, output_seqlen)
-        t = self.dec(z, h)
+        # convert the encoder output into the decoder input
+        d = self.dec_input_adapter(e) if self.dec_input_adapter is not None else e
 
-        t = t if self.adapter is None else self.adapter(t)
+        # 4) call the decoder
+        t = self.dec(d, h)
 
+        # 5) apply the decoder output adapter
+        y = self.output_adapter(t) if self.output_adapter is not None else t
+
+        # 6) return (encoder_output, decoder_output) OR only decoder_output
         if self.use_encoder_sequence == 'return':
-            e = e if self.adapter is None else self.adapter(e)
-            return e, t
+            e = self.output_adapter(e) if self.output_adapter is not None else e
+            return e, y
         else:
-            return t
+            return y
 # end
 
 
@@ -242,7 +276,7 @@ class TSSeq2SeqV3(TimeSeriesModel):
 
         self.enc = nnx.create_rnn(flavour, **enc_params)
         self.dec = nnx.create_rnn(flavour, **dec_params)
-        self.adapte = None if hidden_size == output_size \
+        self.adapter = None if hidden_size == output_size \
             else nnx.Linear(in_features=hidden_size, out_features=output_size)
 
         # n of times 'forward' is called

@@ -1,0 +1,15 @@
+TSTransformerWithReplicate  untested
+TSNoufTransformer           as TSEncoderOnlyTransformer
+TiDE                        ok
+TSEncoderOnlyTransformer    ok
+TSPlainTransformer          ok
+
+TSLinear                    ok
+TSRNNLinear                 ok
+TSCNNLinear                 ok
+
+TSSeq2SeqV1                 disaster
+TSSeq2SeqV2                 disaster
+TSSeq2SeqV3                 disaster
+TSSeq2SeqAttnV1
+TSSeq2SeqAttnV3

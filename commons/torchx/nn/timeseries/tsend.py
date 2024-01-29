@@ -1,6 +1,6 @@
 from .tslin import TSLinear, TSRNNLinear, TSCNNLinear
 from .seq2seq import TSSeq2SeqV1, TSSeq2SeqV2, TSSeq2SeqV3
-from .seq2seqattn import TSSeq2SeqAttnV1, TSSeq2SeqAttnV3
+from .seq2seqattn import TSSeq2SeqAttnV1, TSSeq2SeqAttnV2
 from .tstran import TSPlainTransformer
 from .tseots import TSEncoderOnlyTransformer
 from .tsnouf import TSNoufTransformer
@@ -15,8 +15,6 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
 
     if name == 'linear':
         return TSLinear(input_shape, output_shape, **kwargs)
-    if name == 'lin':
-        return TSLinear(input_shape, output_shape, **kwargs)
     if name == 'rnnlin':
         return TSRNNLinear(input_shape, output_shape, **kwargs)
     if name == 'cnnlin':
@@ -30,7 +28,7 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
     if name == 'seq2seqattn1':
         return TSSeq2SeqAttnV1(input_shape, output_shape, **kwargs)
     if name == 'seq2seqattn3':
-        return TSSeq2SeqAttnV3(input_shape, output_shape, **kwargs)
+        return TSSeq2SeqAttnV2(input_shape, output_shape, **kwargs)
 
     # if name == 'attn1':
     #     return TSTransformerWithReplicate(input_shape, output_shape, **kwargs)
@@ -42,10 +40,6 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
         return TSNoufTransformer(input_shape, output_shape, **kwargs)
 
     if name == "tide":
-        return TiDE(input_shape, output_shape, **kwargs)
-    if name == "tide1":
-        return TiDE(input_shape, output_shape, **kwargs)
-    if name == "tide2":
         return TiDE(input_shape, output_shape, **kwargs)
 
     # unimplemented (for now)

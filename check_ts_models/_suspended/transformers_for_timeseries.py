@@ -25,7 +25,7 @@ def convert_col_into_float(df, list_cols):
 #
 # Read the data
 #
-df = pd.read_csv("../single_column_Cucumber.csv", index_col='Date', parse_dates=['Date'])
+df = pd.read_csv("../_cucumber/single_column_Cucumber.csv", index_col='Date', parse_dates=['Date'])
 print(df.head())
 list_cols = list(df.columns)
 print("dataset variables", list_cols)
@@ -154,7 +154,7 @@ class MultiHeadAttention(nn.Module):
 B, S, H, D = 9, 11, 5, 8
 mha = MultiHeadAttention(D, H)
 out, att = mha.forward(torch.zeros(B, S, D), mask=None)
-print(out.shape, att.shape)
+out.shape, att.shape
 
 # Positional encodings
 def get_angles(pos, i, D):
@@ -182,7 +182,7 @@ def create_look_ahead_mask(size, device=device):
     mask = torch.triu(mask, diagonal=1)
     return mask  # (size, size)
 
-print(create_look_ahead_mask(6))
+create_look_ahead_mask(6)
 
 class TransformerLayer(nn.Module):
     def __init__(self, D, H, hidden_mlp_dim, dropout_rate):
@@ -214,7 +214,7 @@ class TransformerLayer(nn.Module):
 
 dl = TransformerLayer(16, 3, 32, 0.1)
 out, attn = dl(x=torch.zeros(5, 7, 16), look_ahead_mask=None)
-print(out.shape, attn.shape)
+out.shape, attn.shape
 
 class Transformer(nn.Module):
     '''Transformer Decoder Implementating several Decoder Layers.
@@ -258,7 +258,7 @@ transformer.to(device)
 S = inputs.shape[1]
 mask = create_look_ahead_mask(S)
 out, attn = transformer(x=inputs, mask=mask)
-print(out.shape, attn["decoder_layer1"].shape)
+out.shape, attn["decoder_layer1"].shape
 
 """## Training the Transformer"""
 

@@ -230,8 +230,7 @@ def test_8t():
         flatten=False,
         concat=True,    # changed
         encoder=None,
-        decoder=-1,
-        recursive=False
+        decoder=-1
     )
 
     X_past_future, y_future = tt.fit_transform(y=yt, X=Xt)
@@ -258,8 +257,7 @@ def test_8p():
         flatten=False,
         concat=True,    # changed
         encoder=None,
-        decoder=-1,
-        recursive=False
+        decoder=-1
     )
 
     pt = tt.predict_transform()

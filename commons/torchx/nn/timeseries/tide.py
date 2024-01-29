@@ -12,13 +12,10 @@
 #       X_future: (X, len(tlags), nx)
 #
 
-from typing import Union
-
 import torch
 import torch.nn as nn
 from torch import Tensor
 
-from is_instance import is_instance
 from .ts import TimeSeriesModel
 from ... import nn as nnx
 
@@ -189,9 +186,9 @@ class TiDE(TimeSeriesModel):
 
     def forward(self, x):
         if self.use_future_features:
-            assert is_instance(x, Union[tuple[Tensor, Tensor], list[Tensor]])
+            assert isinstance(x, (list, tuple))
         else:
-            assert is_instance(x, Tensor)
+            assert isinstance(x, Tensor)
 
         # concatenate and flatten: return [Xy;Xf], Xf
         xc, yp, xf = self._concat_split_flatten(x)
@@ -356,7 +353,7 @@ class TiDE(TimeSeriesModel):
 #     # end
 #
 #     def forward(self, x):
-#         assert is_instance(x, Tensor)
+#         assert isinstance(x, Tensor)
 #
 #         # concatenate and flatten: return [Xy;Xf], Xf
 #         xc, yp = self._concat_split_flatten(x)

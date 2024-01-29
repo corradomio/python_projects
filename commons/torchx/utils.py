@@ -1,9 +1,8 @@
-from typing import Union, Any, Optional
+from typing import Union
 
 import numpy as np
 import torch
 from torch import Tensor
-from is_instance import is_instance
 
 
 # ---------------------------------------------------------------------------
@@ -20,8 +19,7 @@ def dim_of(dim: Union[int, list[int]]):
 
 def is_shape(s):
     """Check if s is a 2-elements tuple """
-    return isinstance(s, tuple) and (len(s) == 2)
-    # return is_instance(s, tuple[int, int])
+    return isinstance(s, (list, tuple)) and (len(s) == 2)
 
 
 def assert_is_tuple(v, name, len=None):
@@ -62,7 +60,7 @@ def time_repeat(x: Tensor, n: int) -> Union[Tensor, list[Tensor]]:
 
 
 def expand_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
-    if is_instance(dim, int):
+    if isinstance(dim, int):
         return torch.unsqueeze(t, dim)
     for d in dim:
         t = torch.unsqueeze(t, d)
@@ -70,7 +68,7 @@ def expand_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
 
 
 def remove_dims(t: Tensor, dim: Union[list[int], int]=-1) -> Tensor:
-    if is_instance(dim, int):
+    if isinstance(dim, int):
         return torch.squeeze(t, dim)
     for d in dim:
         t = torch.squeeze(t, d)
