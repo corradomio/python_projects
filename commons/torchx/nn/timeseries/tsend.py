@@ -1,6 +1,6 @@
 from .tslin import TSLinear, TSRNNLinear, TSCNNLinear
-from .seq2seq import TSSeq2SeqV1, TSSeq2SeqV2, TSSeq2SeqV3
-from .seq2seqattn import TSSeq2SeqAttnV1, TSSeq2SeqAttnV2
+from .seq2seq import TSSeq2Seq
+from .seq2seqattn import TSSeq2SeqAttn
 from .tstran import TSPlainTransformer
 from .tseots import TSEncoderOnlyTransformer
 from .tsnouf import TSNoufTransformer
@@ -19,16 +19,10 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
         return TSRNNLinear(input_shape, output_shape, **kwargs)
     if name == 'cnnlin':
         return TSCNNLinear(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq1':
-        return TSSeq2SeqV1(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq2':
-        return TSSeq2SeqV2(input_shape, output_shape, **kwargs)
-    if name == 'seq2seq3':
-        return TSSeq2SeqV3(input_shape, output_shape, **kwargs)
-    if name == 'seq2seqattn1':
-        return TSSeq2SeqAttnV1(input_shape, output_shape, **kwargs)
-    if name == 'seq2seqattn3':
-        return TSSeq2SeqAttnV2(input_shape, output_shape, **kwargs)
+    if name == 'seq2seq':
+        return TSSeq2Seq(input_shape, output_shape, **kwargs)
+    if name == 'seq2seqattn':
+        return TSSeq2SeqAttn(input_shape, output_shape, **kwargs)
 
     # if name == 'attn1':
     #     return TSTransformerWithReplicate(input_shape, output_shape, **kwargs)

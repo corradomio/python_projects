@@ -67,7 +67,154 @@ def save_plot(model, y_train, y_test, y_pred, periodic, noisy):
     plt.savefig(fname, dpi=300)
 
 
-def eval_seq2seqv1(periodic, noisy):
+# def eval_seq2seqv1(periodic, noisy):
+#     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+#
+#     # create Xt,yt, used with the NN model
+#     # past 12 timeslots
+#     # predict 6 timeslots, but using a prediction window of 12 timeslots
+#     # Note: if X is None, the value of xlags is ignored
+#     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+#     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+#
+#     #
+#     # create the Transformer model
+#     #
+#     tsmodel = nnx.TSSeq2SeqV1(
+#         input_shape=X_SHAPE, output_shape=Y_SHAPE,
+#         feature_size=32,
+#         hidden_size=32,
+#         flavour='lstm'
+#     )
+#
+#     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=50)
+#
+#     # create the skorch model
+#     model = skorchx.NeuralNetRegressor(
+#         module=tsmodel,
+#         # optimizer=torch.optim.Adam,
+#         # lr=0.0001,
+#         optimizer=torch.optim.RMSprop,
+#         lr=0.001,
+#         criterion=torch.nn.MSELoss,
+#         batch_size=32,
+#         max_epochs=1000,
+#         iterator_train__shuffle=True,
+#         callbacks=[early_stop],
+#         callbacks__print_log=PrintLog
+#     )
+#
+#     #
+#     # Training
+#     #
+#
+#     # fit the model
+#     model.fit(X_train_t, y_train_t)
+#
+#     #
+#     # Prediction
+#     #
+#
+#     # create the data transformer to use with predictions
+#     pt = tt.predict_transform()
+#
+#     # forecasting horizon
+#     fh = len(y_test)
+#     y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+#
+#     # generate the predictions
+#     i = 0
+#     while i < fh:
+#         # create X to pass to the model (a SINGLE step)
+#         X_pred_t = pt.step(i)
+#         # compute the predictions (1+ predictions in a single row)
+#         y_pred_t = model.predict(X_pred_t)
+#         # update 'y_pred' with the predictions AND return
+#         # the NEW update location
+#         i = pt.update(i, y_pred_t)
+#     # end
+#
+#     #
+#     # Done
+#     #
+#     save_plot("seq2seqv1", y_train, y_test, y_pred, periodic, noisy)
+
+
+# def eval_seq2seqv2(periodic, noisy, use_encoder_sequence):
+#     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+#
+#     # create Xt,yt, used with the NN model
+#     # past 12 timeslots
+#     # predict 6 timeslots, but using a prediction window of 12 timeslots
+#     # Note: if X is None, the value of xlags is ignored
+#     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+#     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+#
+#     #
+#     # create the Transformer model
+#     #
+#     tsmodel = nnx.TSSeq2SeqV2(
+#         input_shape=X_SHAPE, output_shape=Y_SHAPE,
+#         flavour='lstm',
+#         feature_size=32,
+#         hidden_size=32,
+#         use_encoder_sequence=use_encoder_sequence
+#     )
+#
+#     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
+#
+#     # create the skorch model
+#     model = skorchx.NeuralNetRegressor(
+#         module=tsmodel,
+#         # optimizer=torch.optim.Adam,
+#         # lr=0.0001,
+#         optimizer=torch.optim.RMSprop,
+#         lr=0.01,
+#         criterion=torch.nn.MSELoss,
+#         batch_size=32,
+#         max_epochs=1000,
+#         iterator_train__shuffle=True,
+#         callbacks=[early_stop],
+#         callbacks__print_log=PrintLog
+#     )
+#
+#     #
+#     # Training
+#     #
+#
+#     # fit the model
+#     model.fit(X_train_t, y_train_t)
+#
+#     #
+#     # Prediction
+#     #
+#
+#     # create the data transformer to use with predictions
+#     pt = tt.predict_transform()
+#
+#     # forecasting horizon
+#     fh = len(y_test)
+#     y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+#
+#     # generate the predictions
+#     i = 0
+#     while i < fh:
+#         # create X to pass to the model (a SINGLE step)
+#         X_pred_t = pt.step(i)
+#         # compute the predictions (1+ predictions in a single row)
+#         y_pred_t = model.predict(X_pred_t)
+#         # update 'y_pred' with the predictions AND return
+#         # the NEW update location
+#         i = pt.update(i, y_pred_t)
+#     # end
+#
+#     #
+#     # Done
+#     #
+#     model = 'seq2seqv2' if use_encoder_sequence in [None, False] else 'seq2seqv21'
+#     save_plot(model, y_train, y_test, y_pred, periodic, noisy)
+
+def eval_seq2seq(periodic, noisy, decoder_mode):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
     # create Xt,yt, used with the NN model
@@ -80,10 +227,11 @@ def eval_seq2seqv1(periodic, noisy):
     #
     # create the Transformer model
     #
-    tsmodel = nnx.TSSeq2SeqV1(
+    tsmodel = nnx.TSSeq2Seq(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
         feature_size=32,
         hidden_size=32,
+        decoder_mode=decoder_mode,
         flavour='lstm'
     )
 
@@ -140,81 +288,6 @@ def eval_seq2seqv1(periodic, noisy):
     save_plot("seq2seqv1", y_train, y_test, y_pred, periodic, noisy)
 
 
-def eval_seq2seqv2(periodic, noisy, use_encoder_sequence):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
-
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
-    # Note: if X is None, the value of xlags is ignored
-    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
-    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
-
-    #
-    # create the Transformer model
-    #
-    tsmodel = nnx.TSSeq2SeqV2(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE,
-        flavour='lstm',
-        feature_size=32,
-        hidden_size=32,
-        use_encoder_sequence=use_encoder_sequence
-    )
-
-    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
-
-    # create the skorch model
-    model = skorchx.NeuralNetRegressor(
-        module=tsmodel,
-        # optimizer=torch.optim.Adam,
-        # lr=0.0001,
-        optimizer=torch.optim.RMSprop,
-        lr=0.01,
-        criterion=torch.nn.MSELoss,
-        batch_size=32,
-        max_epochs=1000,
-        iterator_train__shuffle=True,
-        callbacks=[early_stop],
-        callbacks__print_log=PrintLog
-    )
-
-    #
-    # Training
-    #
-
-    # fit the model
-    model.fit(X_train_t, y_train_t)
-
-    #
-    # Prediction
-    #
-
-    # create the data transformer to use with predictions
-    pt = tt.predict_transform()
-
-    # forecasting horizon
-    fh = len(y_test)
-    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
-
-    # generate the predictions
-    i = 0
-    while i < fh:
-        # create X to pass to the model (a SINGLE step)
-        X_pred_t = pt.step(i)
-        # compute the predictions (1+ predictions in a single row)
-        y_pred_t = model.predict(X_pred_t)
-        # update 'y_pred' with the predictions AND return
-        # the NEW update location
-        i = pt.update(i, y_pred_t)
-    # end
-
-    #
-    # Done
-    #
-    model = 'seq2seqv2' if use_encoder_sequence in [None, False] else 'seq2seqv21'
-    save_plot(model, y_train, y_test, y_pred, periodic, noisy)
-
-
 def eval_seq2seqv3(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
@@ -230,6 +303,7 @@ def eval_seq2seqv3(periodic, noisy):
     #
     tsmodel = nnx.TSSeq2SeqV3(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        feature_size=32,
         flavour='lstm'
     )
 
@@ -439,10 +513,11 @@ def main():
 
     for periodic in PERIODICS:
         for noisy in NOISY:
+            eval_seq2seq(periodic, noisy, "zero")
             # eval_seq2seqv1(periodic, noisy)
             # eval_seq2seqv2(periodic, noisy, False)
             # eval_seq2seqv2(periodic, noisy, True)
-            eval_seq2seqv3(periodic, noisy)
+            # eval_seq2seqv3(periodic, noisy)
             # eval_seq2seqattnv1(periodic, noisy)
             # eval_seq2seqattnv2(periodic, noisy)
             pass

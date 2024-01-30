@@ -180,7 +180,7 @@ def infer_freq(index, steps=5, ntries=3) -> str:
 
 def periodic_encode(df: pd.DataFrame, periodic, datetime_name, datetime_freq):
     # (*periodic): remaining parameters: method, freq, year_scale, columns
-    if periodic in [False, None]:
+    if periodic in [False, None, 'none', '']:
         pass
     elif isinstance(periodic, dict):
         df = _periodic_encode(df, datetime_name, freq=datetime_freq, **periodic)

@@ -334,13 +334,14 @@ def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
     Create a new dictionary without keys having as prefix a string in 'exclude'
     :param kwargs: dictionary containing the parameters
-    :param keys: prefix(es) to exlude
+    :param keys: prefix(es) to exclude
     :return: a new dictionary without the excluded parameters
     """
     exclude = as_list(exclude, 'exclude')
 
     def has_prefix(k: str):
-        for p in exclude:
+        for prefix in exclude:
+            p = f"{prefix}__"
             if k.startswith(p):
                 return True
         return False
