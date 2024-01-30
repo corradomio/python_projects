@@ -20,14 +20,14 @@ FEATURE_SIZE = 8
 
 def load_data(periodic, noisy=False):
     # select the column to process
-    ignore = ['perfect', 'Date'] if noisy else ['noisy', 'Date']
+    ignore = ['clean', 'Date'] if noisy else ['noisy', 'Date']
 
     # load the dataset
-    df = pdx.read_data('perfect_noisy_ts.csv',
+    df = pdx.read_data('clean_noisy_ts.csv',
                        datetime=('Date', '%Y-%m-%d %H:%M:%S', 'M'),
                        index='Date',
                        ignore=ignore,
-                       rename={'noisy': 'Data', 'perfect': 'Data'},
+                       rename={'noisy': 'Data', 'clean': 'Data'},
                        periodic=periodic)
 
     # scaling not necessary: values already in range [0,1]

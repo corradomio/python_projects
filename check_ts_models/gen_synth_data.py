@@ -29,7 +29,7 @@ def plot_data(noise=False):
     plt.tight_layout()
     # plt.show()
 
-    fname = 'ts_noisy.jpg' if noise else 'ts_perfect.jpg'
+    fname = 'ts_noisy.jpg' if noise else 'ts_clean.jpg'
     plt.savefig(fname, dpi=300)
 
     return x, y
@@ -47,8 +47,8 @@ def main():
 
     data = np.concatenate([dt, y0, y1], axis=1)
 
-    df = pd.DataFrame(data=data, columns=['Date', 'perfect', 'noisy'])
-    pdx.write_data(df, 'perfect_noisy_ts.csv', )
+    df = pd.DataFrame(data=data, columns=['Date', 'clean', 'noisy'])
+    pdx.write_data(df, 'clean_noisy_ts.csv', )
     pass
 
 

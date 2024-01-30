@@ -1,12 +1,19 @@
-import matplotlib.pyplot as plt
-import skorch
-import torch
-import pandasx as pdx
-import sktimex as sktx
-import torchx.nn as nnx
-from sktimex.utils import plot_series, show
-from sktimex.transform.lags import LagsTrainTransform
+import os
 
+import matplotlib.pyplot as plt
+import torch
+
+import pandasx as pdx
+import skorchx
+import torchx.nn as nnx
+from sktimex.transform.lags import LagsTrainTransform
+from sktimex.utils import plot_series
+from skorchx.callbacks import PrintLog
+
+X_SEQ_LEN = 12
+Y_SEQ_LEN = 12
+T_SEQ_LEN = 6
+D_LEN = 1
 
 
 def load_data(periodic, noisy=False):
@@ -37,64 +44,65 @@ def load_data(periodic, noisy=False):
     #       Then, it is better to identify the CORRECT X/y shapes by hand!
     #
     if periodic in [None, False, '']:
-        X_SHAPE = (12, 1)
+        X_SHAPE = (X_SEQ_LEN, 1)
     elif periodic == 'sincos':
-        X_SHAPE = (12, 3)
+        X_SHAPE = (X_SEQ_LEN, 3)
     elif periodic == 'onehot':
-        X_SHAPE = (12, 13)
+        X_SHAPE = (X_SEQ_LEN, 13)
     else:
         raise ValueError(f"Periodic '{periodic}' not supported")
-    Y_SHAPE = (12, 1)
+    Y_SHAPE = (Y_SEQ_LEN, 1)
 
     return df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test
-# end
 
 
 def save_plot(model, y_train, y_test, y_pred, periodic, noisy):
-    periodic = 'none' if periodic in [None, ''] else periodic
-    with_noise = 'with_noise' if noisy else 'no_noise'
+    periodic = 'flat' if periodic in [None, ''] else periodic
+    with_noise = 'noisy' if noisy else 'clean'
 
     plot_series(y_train, y_test, y_pred, labels=['y_train', 'y_test', 'y_pred'],
                 title=f"{model} {periodic}/{with_noise}")
     # show()
     fname = f'plots/{model}-{periodic}-{with_noise}.png'
     plt.savefig(fname, dpi=300)
-# end
 
 
-def eval_encoderonly(periodic, noisy):
+def eval_seq2seq(periodic, noisy, decoder_mode):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
     # create Xt,yt, used with the NN model
     # past 12 timeslots
     # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
-    tt = LagsTrainTransform(xlags=12, ylags=12, tlags=range(-6, 6))
-    X_train_t, _,_, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
 
+    #
     # create the Transformer model
-    tsmodel = nnx.TSEncoderOnlyTransformer(
+    #
+    tsmodel = nnx.TSSeq2Seq(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
-        d_model=32, nhead=4,
-        num_encoder_layers=1,
-        dim_feedforward=32,
-        dropout=0.1,
-        positional_encode=False
+        feature_size=32,
+        hidden_size=32,
+        decoder_mode=decoder_mode,
+        flavour='lstm'
     )
 
+    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=50)
+
     # create the skorch model
-    model = skorch.NeuralNetRegressor(
+    model = skorchx.NeuralNetRegressor(
         module=tsmodel,
         # optimizer=torch.optim.Adam,
         # lr=0.0001,
         optimizer=torch.optim.RMSprop,
-        lr=0.00005,
+        lr=0.001,
         criterion=torch.nn.MSELoss,
         batch_size=32,
-        max_epochs=250,
+        max_epochs=1000,
         iterator_train__shuffle=True,
-        # callbacks=[early_stop],
-        # callbacks__print_log=PrintLog
+        callbacks=[early_stop],
+        callbacks__print_log=PrintLog
     )
 
     #
@@ -119,7 +127,7 @@ def eval_encoderonly(periodic, noisy):
     i = 0
     while i < fh:
         # create X to pass to the model (a SINGLE step)
-        X_pred_t, _, _ = pt.step(i)
+        X_pred_t = pt.step(i)
         # compute the predictions (1+ predictions in a single row)
         y_pred_t = model.predict(X_pred_t)
         # update 'y_pred' with the predictions AND return
@@ -130,16 +138,31 @@ def eval_encoderonly(periodic, noisy):
     #
     # Done
     #
-    save_plot("encoderonly", y_train, y_test, y_pred, periodic, noisy)
-# end
+    save_plot("seq2seqv1", y_train, y_test, y_pred, periodic, noisy)
 
 
 def main():
-    for periodic in ['', 'sincos', 'onehot']:
-        for noisy in [False, True]:
-            eval_encoderonly(periodic, noisy)
+    os.makedirs('../plots', exist_ok=True)
 
+    # PERIODICS = ['']
+    # PERIODICS = ['sincos']
+    PERIODICS = ['', 'sincos', 'onehot']
+    # NOISY = [False]
+    NOISY = [False, True]
+
+    for periodic in PERIODICS:
+        for noisy in NOISY:
+            eval_seq2seq(periodic, noisy, "zero")
+            # eval_seq2seqv1(periodic, noisy)
+            # eval_seq2seqv2(periodic, noisy, False)
+            # eval_seq2seqv2(periodic, noisy, True)
+            # eval_seq2seqv3(periodic, noisy)
+            # eval_seq2seqattnv1(periodic, noisy)
+            # eval_seq2seqattnv2(periodic, noisy)
+            pass
+        pass
     pass
+# end
 
 
 if __name__ == "__main__":
