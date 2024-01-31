@@ -9,30 +9,30 @@ Sia y un vettore di N interi in {0,1} (le due categorie)
 
 1) addestro GTC, il classificatore Ground Truth con (X, y)
 
-Ora, supponiamo di voler trovare K punti, diciamo K=10, da usare per addestrare
-un classificatore DC, dello stesso tipo di GTC. Gli "iperparametri" di DC sono
-questi K punti, ma poiche' ogni punto e' composto da M dimensioni, il numero
-totale di iperparametri di DC e' K*M. In questo caso 10*2=20.
 
-Quindi, posso considerare, come spazio degli iperparametri di DC lo spazio [0,1]^K*M
+Ora, supponiamo di voler trovare D punti, diciamo D=10, da usare per addestrare 
+un classificatore DC, dello stesso tipo di GTC. Gli "iperparametri" di DC sono
+questi D punti, ma poiche' ogni punto e' composto da M dimensioni, il numero
+totale di iperparametri di DC e' D*M. In questo caso 10*2=20. 
+
+Quindi, posso considerare, come spazio degli iperparametri di DC lo spazio [0,1]^D*M
 
 Il protocollo da seguire e' il seguente:
 
-1) genero un punto in [0,1]^KxM: 'Pd'
+1) genero un punto in [0,1]^DxM: 'Pd'
 
-2) converto 'Pd' in una matrice KxM, cioe' in K punti in [0,1]^M, che chiamo 'Xd'
+2) converto 'Pd' in una matrice DxM, cioe' in D punti in [0,1]^M, che chiamo 'Xd'
 
-3) uso GTC per assegnare le etichette a questi K punti: 'yd'
+3) uso GTC per assegnare le etichette a questi D punti: 'yd'
    A questo punto ho un "dataset distillato": (Xd, yd)
 
-4) creo un nuovo DC e lo addestro con il "dataset distillato" (Xd, yd)
+4) creo un nuovo DT e lo addestro con il "dataset distillato" (Xd, yd)
 
-5) applico DC a 'X' per ottenere 'yp', le predizioni sulle etichette fornite da DC
-   sul dataset originario 'X'
+5) applico DC a X per ottenere 'yp', le predizioni sulle ettichette fornite da DC 
+   sul dataset originario X
 
-6) calcolo l'accuracy: 'Ad=accuracy(y, yp)'.
+6) calcolo l'accuracy: Ad=accuracy(y, yp).
    A questo punto abbiamo il 'punto' da usare con l'ottimizzatore bayesiano: (Xd, Ad)
-   (piu' precisamente:  (Pd, Ad))
 
 7) aggiorno l'ottimizzatore con il nuovo punto (Xd, Ad)
 
