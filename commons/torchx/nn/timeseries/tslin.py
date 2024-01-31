@@ -22,6 +22,7 @@ class TSLinear(TimeSeriesModel):
     """
 
     def __init__(self, input_shape, output_shape,
+                 feature_size=None,
                  hidden_size=None,
                  activation='relu', **kwargs):
         """
@@ -34,29 +35,46 @@ class TSLinear(TimeSeriesModel):
         :param kwargs: parameters to use for the activation function.
                        They must be 'activation__<parameter_name>'
         """
-        super().__init__(input_shape, output_shape, hidden_size=hidden_size)
+        super().__init__(input_shape, output_shape,
+                         feature_size=feature_size,
+                         hidden_size=hidden_size)
+
+        input_seqlen, input_size = input_shape
+        output_seqlen, output_size = output_shape
+
+        if feature_size is None:
+            feature_size = input_size
+
+        self.feature_size = feature_size
         self.hidden_size = hidden_size
         self.activation = activation
         self.activation_params = kwparams(kwargs, 'activation')
 
-        if hidden_size is not None and hidden_size > 0:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=hidden_size)
+        self.input_adapter = None
+        if input_size != feature_size:
+            self.input_adapter = nnx.Linear(in_features=input_size, out_features=feature_size)
+
+        if hidden_size is not None:
+            self.encoder = nnx.Linear(in_features=(input_seqlen, feature_size), out_features=hidden_size)
             self.relu = activation_function(self.activation, self.activation_params)
-            self.decoder = nnx.Linear(in_features=hidden_size, out_features=output_shape)
+            self.decoder = nnx.Linear(in_features=hidden_size, out_features=(output_seqlen, output_size))
         else:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=output_shape)
-            self.decoder = None
+            self.encoder = nnx.Linear(in_features=(input_seqlen, feature_size), out_features=(output_seqlen, output_size))
             self.relu = None
+            self.decoder = None
         # end
 
     def forward(self, x):
+        t = apply_if(x, self.input_adapter)
+
         if self.hidden_size is None:
-            t = self.encoder(x)
+            y = self.encoder(t)
         else:
-            t = self.encoder(x)
+            t = self.encoder(t)
             t = self.relu(t)
-            t = self.decoder(t)
-        return t
+            y = self.decoder(t)
+
+        return y
 # end
 
 

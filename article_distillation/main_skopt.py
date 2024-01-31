@@ -1,67 +1,9 @@
-import matplotlib.pyplot as plt
-from sklearn.ensemble import RandomForestClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
-import numpy as np
-import pandas as pd
-import json
-from bayes_opt import BayesianOptimization
+from random import random
 
-
-def plot_bounds(bounds):
-    nx = len(bounds[0])
-    for i in range(1, nx-1):
-        bx = bounds[0][i]
-        plt.plot((bx, bx), (0, 1), c='gray')
-
-    ny = len(bounds[1])
-    for i in range(1, ny-1):
-        by = bounds[1][i]
-        plt.plot((0, 1), (by, by), c='gray')
-
-
-def plot_data(X, y, Xd, yd, bounds):
-    plt.clf()
-
-    X_blu = X[y == 0]
-    X_red = X[y == 1]
-
-    plt.scatter(X_blu[:, 0], X_blu[:, 1], c='blue', s=5)
-    plt.scatter(X_red[:, 0], X_red[:, 1], c='red', s=5)
-    plot_bounds(bounds)
-
-    plt.savefig("Data.png", dpi=300)
-    plt.clf()
-
-    Xd_blu = Xd[yd == 0]
-    Xd_red = Xd[yd == 1]
-
-    plt.scatter(Xd_blu[:, 0], Xd_blu[:, 1], c='blue', s=20)
-    plt.scatter(Xd_red[:, 0], Xd_red[:, 1], c='red', s=20)
-    plot_bounds(bounds)
-
-    plt.savefig("Distilled.png", dpi=300)
-
-
-class ArrayBayesianOptimization(BayesianOptimization):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    # def best_results(self) -> tuple[float, np.ndarray]:
-    #     best_results = super().max
-    #     return best_results['target'], array_of(best_results['params'])
-
-
-def load_data():
-    df = pd.read_csv("Xy.csv")
-    X = df[["x1", "x2"]].to_numpy(dtype=float)
-    y = df["y"].to_numpy(dtype=int)
-    return X, y
-
-
-def load_bounds():
-    with open("Xy_bounds.json") as fp:
-        return json.load(fp)
+from common import *
+from skopt import gp_minimize
 
 
 class TargetFunction:
@@ -73,7 +15,7 @@ class TargetFunction:
     values in [0,1]
     """
 
-    def __init__(self, X, y, D):
+    def __init__(self, X, y, D, maximize=True):
         self.X = X
         self.y = y
         self.D = D
@@ -84,6 +26,7 @@ class TargetFunction:
         self.best_score = 0
         self.best_model = None
         self.best_params = None
+        self.maximize = maximize
         pass
 
     def create_classifier(self, X, y):
@@ -100,15 +43,6 @@ class TargetFunction:
 
     def __call__(self, *args, **kwargs):
 
-        def array_of(kwargs):
-            # convert the list of parameters in a vector
-            # the parameter's name is an integer in string form
-            # used to specify the location in the array
-            a = np.zeros(len(kwargs), dtype=float)
-            for k in kwargs:
-                a[int(k)] = kwargs[k]
-            return a
-
         # just to avoid 'self.xxx'
         create_classifier = self.create_classifier
         X = self.X
@@ -118,7 +52,7 @@ class TargetFunction:
         GTC = self.GTC
 
         # convert the parameters in an array
-        x_ = array_of(kwargs)
+        x_ = np.array(args)
 
         # create Xd, the distilled dataset
         Xd = x_.reshape(D, M)
@@ -139,13 +73,15 @@ class TargetFunction:
             self.best_score = d_score
             self.best_model = DC
             self.best_params = Xd
-        return d_score
+        return d_score if self.maximize else -d_score
 
 
 def main():
     # load the data
     bounds = load_bounds()
     X, y = load_data()
+
+    plot_data("Data", X, y, bounds)
 
     # data dimensions
     N, M = X.shape
@@ -156,24 +92,28 @@ def main():
     # it is used a class because the function
     # requires extra information, not only the
     # position of the distilled data points
-    target_function = TargetFunction(X, y, D)
+    target_function = TargetFunction(X, y, D, maximize=False)
 
     # create the parameters for the BO
     # Note/1: the parameter's name can be not an integer, but it MUST be a string
     # Note/2: the parameter's name is an integer in string form. In this way it
     # is simple to convert the string into an integer and to use this value to
     # populate a numpy array
-    bo_params = {
-        f"{i:03}": (0., 1.)
+    gp_bounds = [
+        (0., 1.)
         for i in range(D * M)
-    }
-    # create the BayesOpt
-    # Note: used a custom class to add extra features to the
-    # original implementation
-    BO = ArrayBayesianOptimization(target_function, bo_params)
+    ]
+    gp_x0 = [random() for i in range(D * M)]
 
-    # maximize the target function
-    BO.maximize(init_points=2, n_iter=10, kappa=5)
+    # create the BayesOpt
+    res = gp_minimize(target_function, gp_bounds,
+                      x0=gp_x0,
+                      acq_func="LCB",
+                      n_calls=15,
+                      n_random_starts=3,
+                      n_points=1000,
+                      random_state=777,
+                      verbose=True)
 
     # retrieve the best results directly from TargetFunction
     accuracy = target_function.best_score
@@ -182,8 +122,21 @@ def main():
     yd = model.predict(Xd)
 
     # Some logs
-    print("best accuracy:", accuracy)
-    plot_data(X, y, Xd, yd, bounds)
+    print("distilled accuracy:", accuracy)
+    plot_data("Distilled", Xd, yd, bounds)
+
+    # create the coreset
+    Xcs, ycs = CoresetSelector(X, y).select(Xd)
+    # create the distilled classifier based on the core set
+    DC = target_function.create_classifier(Xcs, ycs)
+    # apply the classifier on the original dataset
+    yp = DC.predict(X)
+
+    # compute the accuracy
+    cs_accuracy = accuracy_score(y, yp)
+
+    print("coreset accuracy:", cs_accuracy)
+    plot_data("Coreset", Xcs, ycs, bounds)
     pass
 
 

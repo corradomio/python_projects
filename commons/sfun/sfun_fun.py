@@ -36,7 +36,7 @@
 # ω omega
 #
 
-from mathx import EPS, iseq, isz, isnz, zero, isle, isgt, isge
+from stdlib.mathx import EPS, iseq, isz, isnz, zero, isle, isgt, isge
 from tabulate import tabulate
 from .sfun_approx import *
 from .sfun_base import *

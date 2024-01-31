@@ -3,7 +3,7 @@
 #
 #   .
 from numpy import ndarray
-from mathx import INF
+from stdlib.mathx import INF
 from iset import *
 from .sfun_fun import SetFunction
 

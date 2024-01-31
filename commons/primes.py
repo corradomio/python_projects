@@ -1,4 +1,4 @@
-from imathx import isqrt, ipow
+from stdlib.imathx import isqrt, ipow
 
 
 PRIMES = [

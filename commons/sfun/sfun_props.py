@@ -5,7 +5,7 @@ from timing import tprint
 from numpy import ndarray
 from random import random
 from iset import *
-from mathx import EPS, iseq, isle, isge, isgt
+from stdlib.mathx import EPS, iseq, isle, isge, isgt
 from .sfun_fun import SFun, SetFunction
 
 

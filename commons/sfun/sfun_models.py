@@ -3,7 +3,7 @@
 #
 import random as rnd
 from stdlib import to_float
-from mathx import mean
+from stdlib.mathx import mean
 from .sfun_fun import *
 from .sfun_gen import *
 

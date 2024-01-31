@@ -16,14 +16,14 @@
 #
 #   SlopeTransform
 # .
-from typing import Optional, Union
+
+import logging
 
 import numpy as np
 import pandas as pd
-import logging
 import scipy.optimize as spo
 
-from mathx import isgt, islt, sq, sqrt
+from stdlib.mathx import isgt, islt, sq, sqrt
 from .base import GroupsEncoder
 
 ARRAY = np.ndarray[float]

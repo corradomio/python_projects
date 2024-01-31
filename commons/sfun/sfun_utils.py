@@ -24,7 +24,7 @@
 #                   xc[X] = xi[X] - xi[X-X] = xi[X].
 #
 from random import shuffle
-from imathx import ipow
+from stdlib.imathx import ipow
 from .sfun_fun import *
 
 

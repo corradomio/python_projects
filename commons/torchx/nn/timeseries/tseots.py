@@ -28,7 +28,7 @@ __all__ = [
 class TSEncoderOnlyTransformer(TimeSeriesModel):
 
     def __init__(self, input_shape, output_shape,
-                 d_model: int=64,
+                 d_model: int=64,   # alias for feature_size
                  nhead: int=1,
                  num_encoder_layers: int=1,
                  dim_feedforward=None,

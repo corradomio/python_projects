@@ -3,8 +3,8 @@
 #
 from numpy import ndarray, array, loadtxt, savetxt, zeros, ones
 from iset import *
-from mathx import sq, sqrt, pow, INF
-from imathx import qfact, comb, bernoulli, icomb, m1pow
+from stdlib.mathx import sq, sqrt, pow, INF
+from stdlib.imathx import qfact, comb, bernoulli, icomb, m1pow
 
 
 # ---------------------------------------------------------------------------

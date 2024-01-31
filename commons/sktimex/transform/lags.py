@@ -113,7 +113,7 @@ class LagsTrainTransform(ModelTrainTransform):
                  transpose=False, flatten=False, concat=True,
                  encoder=None, decoder=None):
         """
-Initialize the transformer
+        Initialize the transformer
         :param xlags: lags used for X data. It can be None, an int, the empty list or a list of integers
         :param ylags: lags used for y data. It must be specified
         :param tlags: last used for predicted data. It must be specified

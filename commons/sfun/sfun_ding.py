@@ -3,10 +3,10 @@
 # 2010 - Ding - Transforms of pseudo-Boolean random variables
 #
 from numpy import ndarray, zeros, ones, diag
-from numpy.linalg import solve, inv
+from numpy.linalg import solve
 from numpy.random import rand
 from iset import *
-from mathx import comb, iseq, sqrt
+from stdlib.mathx import comb, iseq, sqrt
 
 
 # ---------------------------------------------------------------------------

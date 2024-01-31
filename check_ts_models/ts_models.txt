@@ -1,15 +1,35 @@
-TSTransformerWithReplicate  untested
-TSNoufTransformer           as TSEncoderOnlyTransformer
-TiDE                        ok
-TSEncoderOnlyTransformer    ok
-TSPlainTransformer          ok
+Available models:
 
-TSLinear                    ok
-TSRNNLinear                 ok
-TSCNNLinear                 ok
+    TSLinear
+        very simple linear model. Two variants
+        - single layer
+        - two layers separated by a ReLU activation
 
-TSSeq2SeqV1                 disaster
-TSSeq2SeqV2                 disaster
-TSSeq2SeqV3                 disaster
-TSSeq2SeqAttnV1
-TSSeq2SeqAttnV3
+    TSRNNLinear
+        a RNN layer follower by a linear layer
+    TSCNNLinear
+        a CNN layer follower by a linear layer
+    TSSeq2Seq
+        A sequence to sequence model. Six variants:
+        - "zero":       the decoder receive 0 as input
+        - "last""       last encoder output value passed to the decoder input
+        - "sequence":   all encoder ouput values flattened and used as decoder input
+        - "recursive:   last encoder output value used in decoder as input in the firs iteration, 
+                        then the decore output is used as input in the next iteration
+                        
+        - "hs-recursive":   as 'recursive' but it is used also the encoder hidden state
+    TSSeq2SeqAttn
+        As TSSeq2Seq with attention. Four variants based on two parameters ('attn_input', 'att_output')
+        - attn_input:
+            False:   encoder's hidden state as attention's Key and Value
+            True:    encoder's hidden state as Key, encoder's output as Value
+        - attn_output:
+            False:  attention's output (a single value) concatenated to the decoder's input
+            True:   attention's output (a single value) used as hidden state for the decoder
+    
+    TSEncoderOnlyTransformer
+    TSPlainTransformer
+
+    TiDE
+        Long-term Forecasting with TiDE: Time-series Dense Encoder
+        https://arxiv.org/abs/2304.08424

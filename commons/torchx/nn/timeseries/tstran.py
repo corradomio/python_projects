@@ -3,172 +3,15 @@
 #
 
 import torch
-import torch.nn as nn
-from torch import Tensor
 
-from stdlib import kwval
 from .ts import TimeSeriesModel
 from .tspos import positional_encoding
+from .tsutils import apply_if
 from ... import nn as nnx
 
 __all__ = [
     "TSPlainTransformer",
 ]
-
-
-# ---------------------------------------------------------------------------
-# PositionalReplicate
-# ---------------------------------------------------------------------------
-
-class PositionalReplicate(nn.Module):
-    def __init__(self, n_repeat=1, input_size=0, ones=False):
-        """
-        Repeat 'r' times a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
-        with shape (batch, seq, r*input).
-
-        The tensor can be 'expanded' (along 'input' dimension) if 'input_size' is not zero and it is not equals
-        to the current input size. If 'input_size' is > 0, some zeroes are added in front, otherwise at the back
-
-
-        :param n_repeat: n of times the tensor is repeated along the 'input' dimension
-        :param input_size: if to add extra zeros in front (input_size > 0) or at back (input_size < 0)
-            of the tensor, to made it with exactly 'input_size' features
-        :param ones: if to use 1 or 0 during the expansion 'normalize' the vector.
-        """
-        super().__init__()
-        self.n_repeat = n_repeat
-        self.input_size = input_size
-        self.ones = ones
-        assert n_repeat > 0, "'n_repeat' needs to be an integer > 0"
-        assert isinstance(input_size, int), "'input_size' needs to be an integer"
-
-    def forward(self, x: Tensor) -> Tensor:
-        n_repeat = self.n_repeat
-        data_size = x.shape[-1]
-        input_size = self.input_size
-        const = torch.ones if self.ones else torch.zeros
-
-        if input_size != 0 and data_size != abs(input_size):
-            expand = input_size + data_size if input_size < 0 else input_size - data_size
-        else:
-            expand = 0
-
-        if expand > 0:
-            # expand adding 0/1 in front: [0..., x]
-            shape = list(x.shape)
-            shape[2] += expand
-            z = const(shape)
-            z[:, :, expand:] = x
-            x = z
-        elif expand < 0:
-            # expand adding 0/1 at back: [x, 0...]
-            shape = list(x.shape)
-            shape[2] -= expand
-            z = const(shape)
-            z[:, :, :expand] = x
-            x = z
-
-        if n_repeat > 1:
-            x = x.repeat(1, 1, n_repeat)
-
-        return x
-# end
-
-
-# ---------------------------------------------------------------------------
-# TSTransformerWithReplicate (ex TSTransformerV1)
-# ---------------------------------------------------------------------------
-# Input features extended & replicated
-#
-
-# class TSTransformerWithReplicate(TimeSeriesModel):
-#     def __init__(self, input_shape, output_shape,
-#                  nhead=1,
-#                  num_encoder_layers=1,
-#                  num_decoder_layers=1,
-#                  dim_feedforward=None,
-#                  dropout=0,
-#                  **kwargs):
-#         super().__init__(input_shape, output_shape,
-#                          nhead=nhead,
-#                          num_encoder_layers=num_encoder_layers,
-#                          num_decoder_layers=num_decoder_layers,
-#                          dim_feedforward=dim_feedforward,
-#                          dropout=dropout, **kwargs)
-#         input_length, input_size = input_shape
-#         output_length, output_size = output_shape
-#         d_model = nhead*input_size
-#
-#         if dim_feedforward in [0, None]:
-#             dim_feedforward = d_model
-#
-#         self.replicate = PositionalReplicate(
-#             nhead, input_size
-#         )
-#         self.decoder_output_adapter = nnx.TimeDistributed(
-#             nnx.Linear(d_model, output_size)
-#         )
-#
-#         self.transformer = nnx.Transformer(
-#             d_model=d_model, nhead=nhead,
-#             num_encoder_layers=num_encoder_layers,
-#             num_decoder_layers=num_decoder_layers,
-#             dim_feedforward=dim_feedforward,
-#             dropout=dropout,
-#             **kwargs
-#         )
-#
-#         max_len = max(input_shape[0], output_shape[0])
-#         self.positional_encoder = PositionalEncoder(d_model, max_len)
-#         pass
-#     # end
-#
-#     def forward(self, x):
-#         if isinstance(x, (list, tuple)):
-#             return self._train_forward(x)
-#         else:
-#             return self._predict_forward(x)
-#
-#     def _train_forward(self, x):
-#         x_enc, x_dec = x
-#
-#         x_enc = self.replicate(x_enc)
-#         x_dec = self.replicate(x_dec)
-#
-#         x_enc = self.positional_encoder(x_enc)
-#         x_dec = self.positional_encoder(x_dec)
-#
-#         y_tran = self.transformer(x_enc, x_dec)
-#
-#         yp = self.decoder_output_adapter(y_tran)
-#         return yp
-#     # end
-#
-#     def _predict_forward(self, x):
-#         output_seqlen, output_size = self.output_shape
-#
-#         x_enc = x                           # [N, Lin, Hin]
-#         x_dec = x[:, -1:, -output_size:]    # [N, 1,  Hout]
-#
-#         x_enc = self.replicate(x_enc)
-#         x_enc = self.positional_encoder(x_enc)
-#
-#         y_enc = self.transformer.encoder(x_enc)
-#
-#         ylist = []
-#         for i in range(output_seqlen):
-#             x_dec = self.replicate(x_dec)
-#             x_dec = self.positional_encoder(x_dec)
-#
-#             y_pred = self.transformer.decoder(x_dec, y_enc)
-#             y_pred = self.decoder_output_adapter(y_pred)
-#             ylist.append(y_pred)
-#
-#             x_dec = y_pred
-#         # end
-#         return torch.cat(ylist, dim=1)
-#     # end
-# # end
 
 
 # ---------------------------------------------------------------------------
@@ -182,15 +25,27 @@ class PositionalReplicate(nn.Module):
 #   3) output for the decoder   [y] forecasting window
 #
 
+# WARNING / Trick:
+#   it is necessary to understand IF the model is called during the
+#   train step OR the prediction step.
+#   The flag 'self.training' is not enough BECAUSE it can be False ALSO
+#   during the training.
+#   The problem is this: during the 'real prediction', the model must be
+#   used in 'recursive' way. It is necessary to pass ALSO the X_decoder
+#   data. BUT this data is not all available, then, for default, is filled
+#   with 0
+#
+
 class TSPlainTransformer(TimeSeriesModel):
     def __init__(self, input_shape, output_shape,
-                 d_model=64,
-                 nhead=1,
-                 num_encoder_layers=1,
-                 num_decoder_layers=1,
+                 d_model: int=64,   # alias for feature_size
+                 nhead: int=1,
+                 num_encoder_layers: int=1,
+                 num_decoder_layers: int=1,
                  layer_norm=True,
                  dim_feedforward=None,
-                 dropout=0,
+                 decoder_offset: int=-1,
+                 dropout: float=0.1,
                  positional_encode=True,
                  **kwargs):
         super().__init__(input_shape, output_shape,
@@ -199,17 +54,26 @@ class TSPlainTransformer(TimeSeriesModel):
                          num_decoder_layers=num_decoder_layers,
                          layer_norm=layer_norm,
                          dim_feedforward=dim_feedforward,
+                         decoder_offset=-1,
                          dropout=dropout,
                          positional_encode=positional_encode, **kwargs)
+        self.decoder_offset = decoder_offset
+
         input_length, input_size = input_shape
         output_length, output_size = output_shape
 
         if dim_feedforward in [0, None]:
             dim_feedforward = d_model
 
-        self.encoder_input_adapter = nnx.Linear(input_size, d_model)
+        self.encoder_input_adapter = None
         self.decoder_input_adapter = None
-        self.decoder_output_adapter = nnx.Linear(d_model, output_size)
+        self.decoder_output_adapter = None
+        self.pos_encoding = None
+
+        if input_size != d_model:
+            self.encoder_input_adapter = nnx.Linear(input_size, d_model)
+        if d_model != output_size:
+            self.decoder_output_adapter = nnx.Linear(d_model, output_size)
 
         self.tran = nnx.Transformer(
             d_model=d_model, nhead=nhead,
@@ -222,19 +86,46 @@ class TSPlainTransformer(TimeSeriesModel):
         )
 
         # in theory 'input_length > output_length' BUT to be safe, it is better to use 'max'
-        pos_length = max(input_length, output_length)
-        self.pos_encoding = positional_encoding(pos_length, d_model) if positional_encode else None
+        if positional_encode:
+            pos_length = max(input_length, output_length)
+            self.pos_encoding = positional_encoding(pos_length, d_model) if positional_encode else None
     # end
 
     def forward(self, x, **kwargs):
         self._check_decoder_input_adapter(x)
 
-        doffset = kwval(kwargs, ('decoder', 'doffset'), None)
-        if doffset in [None, "pass", 0]:
+        # doffset = kwval(kwargs, 'decoder_offset', None)
+        # if doffset in [None, "pass", 0]:
+        #     return self._train_forward(x)
+        # else:
+        #     return self._predict_forward(x, doffset)
+
+        # doffset = kwval(kwargs, 'decoder_offset', None)
+        # recursive = kwval(kwargs, 'recursive', False)
+        #
+        # if doffset is None and not recursive:
+        #     return self._train_forward(x)
+        # else:
+        #     return self._predict_forward(x, self.decoder_offset)
+
+        if not self._is_model_prediction(x):
             return self._train_forward(x)
         else:
-            return self._predict_forward(x, doffset)
+            return self._predict_forward(x, self.decoder_offset)
     # end
+
+    def _is_model_prediction(self, x):
+        assert isinstance(x, (list, tuple))
+        doffset = self.decoder_offset
+        output_size = self.output_shape[1]
+
+        x_dec = x[1]
+        dlen = x_dec.shape[1]
+        for i in range(-doffset, dlen):
+            for j in range(output_size):
+                if x_dec[0, i, j] != 0:
+                    return False
+        return True
 
     def _check_decoder_input_adapter(self, x):
         # IF the decoder's input has a size different than the encoder's input
@@ -252,15 +143,20 @@ class TSPlainTransformer(TimeSeriesModel):
 
     def _train_forward(self, x):
         x_enc, x_dec = x
-        x_enc_a = self.encoder_input_adapter(x_enc)
-        x_dec_a = self.decoder_input_adapter(x_dec)
+
+        # check validity
+        doffset = self.decoder_offset
+        assert x_enc[0, doffset, 0] == x_dec[0, 0, 0]
+
+        x_enc_a = apply_if(x_enc, self.encoder_input_adapter)
+        x_dec_a = apply_if(x_dec, self.decoder_input_adapter)
 
         if self.pos_encoding is not None:
             x_enc_a += self.pos_encoding[:x_enc_a.shape[1], :]
             x_dec_a += self.pos_encoding[:x_dec_a.shape[1], :]
 
         yp_a = self.tran(x_enc_a, x_dec_a)
-        yp = self.decoder_output_adapter(yp_a)
+        yp = apply_if(yp_a, self.decoder_output_adapter)
 
         return yp
     # end
@@ -275,7 +171,7 @@ class TSPlainTransformer(TimeSeriesModel):
         x_enc, x_dec_seq = x
         batch = len(x_enc)
 
-        # prepare 'y_pred'
+        # prepare the placeholder 'y_pred'
         y_pred_shape = (batch, ) + self.output_shape
         y_pred = torch.zeros(y_pred_shape, dtype=x_enc.dtype)
 
@@ -295,7 +191,7 @@ class TSPlainTransformer(TimeSeriesModel):
                 x_dec_a += self.pos_encoding[:dec_len, :]
 
             yp_a = self.tran(x_enc_a, x_dec_a)
-            yp = self.decoder_output_adapter(yp_a)
+            yp = apply_if(yp_a, self.decoder_output_adapter)
 
             # fill y_pred
             y_pred[:, i:iend, :] = yp

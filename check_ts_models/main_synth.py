@@ -1,4 +1,5 @@
 import os
+import logging.config
 
 import matplotlib.pyplot as plt
 import torch
@@ -13,8 +14,8 @@ from skorchx.callbacks import PrintLog
 X_SEQ_LEN = 12
 Y_SEQ_LEN = 12
 T_SEQ_LEN = 6
-D_LEN = 1
-FEATURE_SIZE = 8
+D_OFFSET = -1
+FEATURE_SIZE = 16
 
 
 def load_data(periodic, noisy=False):
@@ -58,7 +59,7 @@ def load_data(periodic, noisy=False):
 
 
 def save_plot(model, y_train, y_test, y_pred, periodic, noisy):
-    periodic = 'flat' if periodic in [None, ''] else periodic
+    periodic = 'yonly' if periodic in [None, ''] else periodic
     with_noise = 'noisy' if noisy else 'clean'
 
     plot_series(y_train, y_test, y_pred, labels=['y_train', 'y_test', 'y_pred'],
@@ -71,9 +72,6 @@ def save_plot(model, y_train, y_test, y_pred, periodic, noisy):
 def eval_encoderonly(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -86,7 +84,7 @@ def eval_encoderonly(periodic, noisy):
         d_model=32, nhead=4,
         num_encoder_layers=1,
         dim_feedforward=32,
-        dropout=0.1,
+        dropout=0.01,
         positional_encode=False
     )
 
@@ -144,11 +142,17 @@ def eval_encoderonly(periodic, noisy):
 def eval_transformer(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
+    # WARNING:
+    # using a past window of 12 elements to predict future 6 element works VERY BADLY
+    # using a past window of 6 elements to predict future 3 elements seems to work better
+
+    X_SEQ_LEN = 6
+    Y_SEQ_LEN = 3
+    X_SHAPE = (X_SEQ_LEN, ) + X_SHAPE[1:]
+    Y_SHAPE = (Y_SEQ_LEN, ) + Y_SHAPE[1:]
+
     # Note: if X is None, the value of xlags is ignored
-    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=range(-6, 6), decoder=-D_LEN)
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN, decoder=D_OFFSET)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
 
     tsmodel = nnx.TSPlainTransformer(
@@ -157,6 +161,7 @@ def eval_transformer(periodic, noisy):
         num_encoder_layers=1,
         num_decoder_layers=1,
         dim_feedforward=32,
+        decoder_offset=D_OFFSET,
         dropout=0.1,
         positional_encode=False
     )
@@ -169,10 +174,10 @@ def eval_transformer(periodic, noisy):
         # optimizer=torch.optim.Adam,
         # lr=0.0001,
         optimizer=torch.optim.RMSprop,
-        lr=0.00005,
+        lr=0.0001,
         criterion=torch.nn.MSELoss,
-        batch_size=32,
-        max_epochs=500,
+        batch_size=16,
+        max_epochs=1000,
         iterator_train__shuffle=True,
         callbacks=[early_stop],
         callbacks__print_log=PrintLog
@@ -181,6 +186,10 @@ def eval_transformer(periodic, noisy):
     #
     # Training
     #
+    # X_enc[-1] == X_dec[0]
+    # y_dec[0] == X_dec[1]
+    assert X_train_t[0][0,D_OFFSET,0] == X_train_t[1][0,0,0]
+    assert y_train_t[0,0,0] == X_train_t[1][0,1,0]
 
     # fit the model
     model.fit(X_train_t, y_train_t)
@@ -202,7 +211,8 @@ def eval_transformer(periodic, noisy):
         # create X to pass to the model (a SINGLE step)
         X_pred_t = pt.step(i)
         # compute the predictions (1+ predictions in a single row)
-        y_pred_t = model.predict(X_pred_t, doffset=-D_LEN)
+        # y_pred_t = model.predict(X_pred_t, decoder_offset=-D_LEN)
+        y_pred_t = model.predict(X_pred_t)
         # update 'y_pred' with the predictions AND return
         # the NEW update location
         i = pt.update(i, y_pred_t)
@@ -211,15 +221,12 @@ def eval_transformer(periodic, noisy):
     #
     # Done
     #
-    save_plot("encoderdecoder", y_train, y_test, y_pred, periodic, noisy)
+    save_plot("transformer", y_train, y_test, y_pred, periodic, noisy)
 
 
 def eval_tide(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -292,9 +299,6 @@ def eval_tide(periodic, noisy):
 def eval_tide_with_future(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN, decoder=(None if periodic == '' else 0))
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -367,9 +371,6 @@ def eval_tide_with_future(periodic, noisy):
 def eval_linear(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -378,7 +379,8 @@ def eval_linear(periodic, noisy):
     # create the Transformer model
     #
     tsmodel = nnx.TSLinear(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        feature_size=FEATURE_SIZE
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
@@ -437,9 +439,6 @@ def eval_linear(periodic, noisy):
 def eval_lin2layers(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -508,9 +507,6 @@ def eval_lin2layers(periodic, noisy):
 def eval_rnnlinear(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -519,7 +515,8 @@ def eval_rnnlinear(periodic, noisy):
     # create the Transformer model
     #
     tsmodel = nnx.TSRNNLinear(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        feature_size=FEATURE_SIZE
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
@@ -530,7 +527,7 @@ def eval_rnnlinear(periodic, noisy):
         # optimizer=torch.optim.Adam,
         # lr=0.0001,
         optimizer=torch.optim.RMSprop,
-        lr=0.0001,
+        lr=0.001,
         criterion=torch.nn.MSELoss,
         batch_size=32,
         max_epochs=1000,
@@ -578,9 +575,6 @@ def eval_rnnlinear(periodic, noisy):
 def eval_cnnlinear(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -589,7 +583,8 @@ def eval_cnnlinear(periodic, noisy):
     # create the Transformer model
     #
     tsmodel = nnx.TSCNNLinear(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        feature_size=FEATURE_SIZE
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
@@ -648,9 +643,8 @@ def eval_cnnlinear(periodic, noisy):
 def eval_seq2seq(periodic, noisy, decoder_mode):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
+    FEATURE_SIZE = 32
+
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -722,9 +716,6 @@ def eval_seq2seq(periodic, noisy, decoder_mode):
 def eval_seq2seqattn(periodic, noisy, attn_input, attn_output):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
-    # create Xt,yt, used with the NN model
-    # past 12 timeslots
-    # predict 6 timeslots, but using a prediction window of 12 timeslots
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
@@ -798,35 +789,39 @@ def eval_seq2seqattn(periodic, noisy, attn_input, attn_output):
 def main():
     os.makedirs('plots', exist_ok=True)
 
-    PERIODICS = ['']
+    # PERIODICS = ['']
     # PERIODICS = ['sincos']
+    PERIODICS = ['', 'sincos']
     # PERIODICS = ['', 'sincos', 'onehot']
-    NOISY = [False]
-    # NOISY = [False, True]
+    # NOISY = [False]
+    NOISY = [False, True]
 
     for periodic in PERIODICS:
         for noisy in NOISY:
-            eval_encoderonly(periodic, noisy)
-            eval_transformer(periodic, noisy)
-            eval_tide(periodic, noisy)
-            eval_tide_with_future(periodic, noisy)
-            eval_linear(periodic, noisy)
-            eval_lin2layers(periodic, noisy)
-            eval_rnnlinear(periodic, noisy)
-            eval_cnnlinear(periodic, noisy)
-            eval_seq2seq(periodic, noisy, 'zero')
-            eval_seq2seq(periodic, noisy, 'last')
+            # eval_encoderonly(periodic, noisy)
+            # eval_transformer(periodic, noisy)
+            # eval_tide(periodic, noisy)
+            # eval_tide_with_future(periodic, noisy)
+            # eval_linear(periodic, noisy)
+            # eval_lin2layers(periodic, noisy)
+            # eval_rnnlinear(periodic, noisy)
+            # eval_cnnlinear(periodic, noisy)
+            # eval_seq2seq(periodic, noisy, 'zero')
+            # eval_seq2seq(periodic, noisy, 'last')
             eval_seq2seq(periodic, noisy, 'sequence')
-            eval_seq2seq(periodic, noisy, 'adapt')
-            eval_seq2seq(periodic, noisy, 'recursive')
-            eval_seq2seqattn(periodic, noisy, False, False)
-            eval_seq2seqattn(periodic, noisy, False, True)
-            eval_seq2seqattn(periodic, noisy, True, False)
-            eval_seq2seqattn(periodic, noisy, True, True)
+            # eval_seq2seq(periodic, noisy, 'adapt')
+            # eval_seq2seq(periodic, noisy, 'recursive')
+            # eval_seq2seqattn(periodic, noisy, False, False)
+            # eval_seq2seqattn(periodic, noisy, False, True)
+            # eval_seq2seqattn(periodic, noisy, True, False)
+            # eval_seq2seqattn(periodic, noisy, True, True)
             pass
         pass
     pass
 
 
 if __name__ == "__main__":
+    logging.config.fileConfig('logging_config.ini')
+    log = logging.getLogger("root")
+    log.info("Logging system configured")
     main()

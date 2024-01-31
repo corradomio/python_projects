@@ -1,7 +1,7 @@
 from typing import Iterator
 from sys import maxsize
 from random import Random, random
-from imathx import comb, failing_fact
+from stdlib.imathx import comb, failing_fact
 
 MAXINT = maxsize
 

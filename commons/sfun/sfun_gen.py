@@ -7,7 +7,7 @@ from numpy import sort, flip, array, ndarray, zeros
 from numpy.random import rand
 
 from iset import *
-from mathx import comb, iseven
+from stdlib.mathx import comb, iseven
 from .sfun_base import fzeros
 from .sfun_base import inverse_mobius_transform, conjugate
 

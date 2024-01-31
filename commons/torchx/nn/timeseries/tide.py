@@ -64,6 +64,7 @@ class _ResidualBlock(nn.Module):
 class TiDE(TimeSeriesModel):
 
     def __init__(self, input_shape, output_shape,
+                 feature_size=None,
                  hidden_size=None,
                  decoder_output_size=None,
                  temporal_hidden_size=None,
@@ -86,6 +87,7 @@ class TiDE(TimeSeriesModel):
         :param use_future_features: if to use X_future (the future input features) in input
         """
         super().__init__(input_shape, output_shape,
+                         feature_size=feature_size,
                          hidden_dim=hidden_size,
                          decoder_output_size=decoder_output_size,
                          temporal_hidden_size=temporal_hidden_size,
@@ -97,7 +99,11 @@ class TiDE(TimeSeriesModel):
 
         input_len, input_size = input_shape
         output_len, target_size = output_shape
-        features_size = (input_size - target_size)
+
+        if feature_size is None:
+            feature_size = input_size
+
+        features_size = (feature_size - target_size)
 
         assert input_size == (target_size + features_size), "Invalid input_size: it must be |y|+|X|"
 
@@ -119,6 +125,7 @@ class TiDE(TimeSeriesModel):
         if temporal_hidden_size is None:
             temporal_hidden_size = decoder_output_size
 
+        self.feature_size = feature_size
         self.hidden_size = hidden_size
         self.decoder_output_size = decoder_output_size
         self.temporal_hidden_size = temporal_hidden_size
@@ -234,154 +241,6 @@ class TiDE(TimeSeriesModel):
             return xc, yp, None
     # end
 # end
-
-
-# ---------------------------------------------------------------------------
-# TiDE model (NO X_future)
-# ---------------------------------------------------------------------------
-# Model DOESN'T use X_future
-#
-
-# class TiDENoFuture(TimeSeriesModel):
-#
-#     def __init__(self, input_shape, output_shape,
-#                  hidden_size=None,
-#                  decoder_output_size=None,
-#                  temporal_hidden_size=None,
-#                  num_encoder_layers=1,
-#                  num_decoder_layers=1,
-#                  use_layer_norm=True,
-#                  dropout=0.1
-#                  ):
-#         """
-#
-#         :param input_shape: (past_len, |y| + |X|)
-#         :param output_shape: (future_len, |y|)
-#         :param hidden_size: size of the hidden data
-#         :param num_encoder_layers: n of encoder blocks
-#         :param num_decoder_layers: n of decoder blocks
-#         """
-#         super().__init__(input_shape, output_shape,
-#                          hidden_dim=hidden_size,
-#                          decoder_output_size=decoder_output_size,
-#                          temporal_hidden_size=temporal_hidden_size,
-#                          num_encoder_layers=num_encoder_layers,
-#                          num_decoder_layers=num_decoder_layers,
-#                          use_layer_norm=use_layer_norm,
-#                          dropout=dropout)
-#
-#         input_len, input_size = input_shape
-#         output_len, target_size = output_shape
-#         features_size = (input_size - target_size)
-#
-#         assert input_size == (target_size + features_size), "Invalid input_size: it must be |y|+|X|"
-#
-#         if decoder_output_size is None:
-#             decoder_output_size = (features_size + target_size)//2
-#
-#         encoder_input_size = input_len * features_size + input_len * target_size
-#         decoder_output_dim = (output_len, decoder_output_size)
-#
-#         if hidden_size is None:
-#             hidden_size = encoder_input_size//2
-#
-#         if temporal_hidden_size is None:
-#             temporal_hidden_size = decoder_output_size
-#
-#         self.hidden_size = hidden_size
-#         self.decoder_output_size = decoder_output_size
-#         self.temporal_hidden_size = temporal_hidden_size
-#         self.num_encoder_layers = num_encoder_layers
-#         self.num_decoder_layers = num_decoder_layers
-#
-#         # -------------------------------------------------------------------
-#         # model
-#
-#         self.encoders = nn.Sequential(
-#             _ResidualBlock(
-#                 input_dim=encoder_input_size,
-#                 hidden_size=hidden_size,
-#                 output_dim=hidden_size,
-#                 use_layer_norm=use_layer_norm,
-#                 dropout=dropout,
-#             ),
-#             *[
-#                 _ResidualBlock(
-#                     input_dim=hidden_size,
-#                     hidden_size=hidden_size,
-#                     output_dim=hidden_size,
-#                     use_layer_norm=use_layer_norm,
-#                     dropout=dropout,
-#                 )
-#                 for _ in range(num_encoder_layers - 1)
-#             ],
-#         )
-#
-#         self.decoders = nn.Sequential(
-#             *[
-#                 _ResidualBlock(
-#                     input_dim=hidden_size,
-#                     hidden_size=hidden_size,
-#                     output_dim=hidden_size,
-#                     use_layer_norm=use_layer_norm,
-#                     dropout=dropout,
-#                 )
-#                 for _ in range(num_decoder_layers - 1)
-#             ],
-#             # add decoder output layer
-#             _ResidualBlock(
-#                 input_dim=hidden_size,
-#                 hidden_size=hidden_size,
-#                 output_dim=decoder_output_dim,
-#                 use_layer_norm=use_layer_norm,
-#                 dropout=dropout,
-#             ),
-#         )
-#
-#         self.temporal_decoder = _ResidualBlock(
-#             input_dim=(output_len, decoder_output_size),
-#             hidden_size=temporal_hidden_size,
-#             output_dim=(output_len, target_size),
-#             use_layer_norm=use_layer_norm,
-#             dropout=dropout,
-#         )
-#
-#         self.lookback_skip = nnx.Linear(
-#             in_features=(input_len, target_size),
-#             out_features=(output_len, target_size)
-#         )
-#     # end
-#
-#     def forward(self, x):
-#         assert isinstance(x, Tensor)
-#
-#         # concatenate and flatten: return [Xy;Xf], Xf
-#         xc, yp = self._concat_split_flatten(x)
-#         # encode
-#         xe = self.encoders(xc)
-#         # decode:  (N, output_len, decoder_output_size)
-#         xg = self.decoders(xe)
-#
-#         # apply the temporal decoder
-#         yt = self.temporal_decoder(xg)
-#
-#         # apply the lookback skip
-#         yr = self.lookback_skip(yp)
-#
-#         # add the residual
-#         ypred = yt + yr
-#
-#         return ypred
-#     # end
-#
-#     def _concat_split_flatten(self, Xyp):
-#         target_size = self.output_shape[1]
-#         yp = Xyp[:, :, -target_size:]
-#
-#         xc = torch.flatten(Xyp, start_dim=1)
-#         return xc, yp
-#
-# # end
 
 # ---------------------------------------------------------------------------
 # End

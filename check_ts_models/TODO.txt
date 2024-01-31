@@ -1,5 +1,309 @@
 
 
+# ---------------------------------------------------------------------------
+# PositionalReplicate
+# ---------------------------------------------------------------------------
+
+# class PositionalReplicate(nn.Module):
+#     def __init__(self, n_repeat=1, input_size=0, ones=False):
+#         """
+#         Repeat 'r' times a 3D tensor (batch, seq, input) along 'input' dimension, generating a new 3D tensor
+#         with shape (batch, seq, r*input).
+#
+#         The tensor can be 'expanded' (along 'input' dimension) if 'input_size' is not zero and it is not equals
+#         to the current input size. If 'input_size' is > 0, some zeroes are added in front, otherwise at the back
+#
+#
+#         :param n_repeat: n of times the tensor is repeated along the 'input' dimension
+#         :param input_size: if to add extra zeros in front (input_size > 0) or at back (input_size < 0)
+#             of the tensor, to made it with exactly 'input_size' features
+#         :param ones: if to use 1 or 0 during the expansion 'normalize' the vector.
+#         """
+#         super().__init__()
+#         self.n_repeat = n_repeat
+#         self.input_size = input_size
+#         self.ones = ones
+#         assert n_repeat > 0, "'n_repeat' needs to be an integer > 0"
+#         assert isinstance(input_size, int), "'input_size' needs to be an integer"
+#
+#     def forward(self, x: Tensor) -> Tensor:
+#         n_repeat = self.n_repeat
+#         data_size = x.shape[-1]
+#         input_size = self.input_size
+#         const = torch.ones if self.ones else torch.zeros
+#
+#         if input_size != 0 and data_size != abs(input_size):
+#             expand = input_size + data_size if input_size < 0 else input_size - data_size
+#         else:
+#             expand = 0
+#
+#         if expand > 0:
+#             # expand adding 0/1 in front: [0..., x]
+#             shape = list(x.shape)
+#             shape[2] += expand
+#             z = const(shape)
+#             z[:, :, expand:] = x
+#             x = z
+#         elif expand < 0:
+#             # expand adding 0/1 at back: [x, 0...]
+#             shape = list(x.shape)
+#             shape[2] -= expand
+#             z = const(shape)
+#             z[:, :, :expand] = x
+#             x = z
+#
+#         if n_repeat > 1:
+#             x = x.repeat(1, 1, n_repeat)
+#
+#         return x
+# # end
+
+
+# ---------------------------------------------------------------------------
+# TSTransformerWithReplicate (ex TSTransformerV1)
+# ---------------------------------------------------------------------------
+# Input features extended & replicated
+#
+
+# class TSTransformerWithReplicate(TimeSeriesModel):
+#     def __init__(self, input_shape, output_shape,
+#                  nhead=1,
+#                  num_encoder_layers=1,
+#                  num_decoder_layers=1,
+#                  dim_feedforward=None,
+#                  dropout=0,
+#                  **kwargs):
+#         super().__init__(input_shape, output_shape,
+#                          nhead=nhead,
+#                          num_encoder_layers=num_encoder_layers,
+#                          num_decoder_layers=num_decoder_layers,
+#                          dim_feedforward=dim_feedforward,
+#                          dropout=dropout, **kwargs)
+#         input_length, input_size = input_shape
+#         output_length, output_size = output_shape
+#         d_model = nhead*input_size
+#
+#         if dim_feedforward in [0, None]:
+#             dim_feedforward = d_model
+#
+#         self.replicate = PositionalReplicate(
+#             nhead, input_size
+#         )
+#         self.decoder_output_adapter = nnx.TimeDistributed(
+#             nnx.Linear(d_model, output_size)
+#         )
+#
+#         self.transformer = nnx.Transformer(
+#             d_model=d_model, nhead=nhead,
+#             num_encoder_layers=num_encoder_layers,
+#             num_decoder_layers=num_decoder_layers,
+#             dim_feedforward=dim_feedforward,
+#             dropout=dropout,
+#             **kwargs
+#         )
+#
+#         max_len = max(input_shape[0], output_shape[0])
+#         self.positional_encoder = PositionalEncoder(d_model, max_len)
+#         pass
+#     # end
+#
+#     def forward(self, x):
+#         if isinstance(x, (list, tuple)):
+#             return self._train_forward(x)
+#         else:
+#             return self._predict_forward(x)
+#
+#     def _train_forward(self, x):
+#         x_enc, x_dec = x
+#
+#         x_enc = self.replicate(x_enc)
+#         x_dec = self.replicate(x_dec)
+#
+#         x_enc = self.positional_encoder(x_enc)
+#         x_dec = self.positional_encoder(x_dec)
+#
+#         y_tran = self.transformer(x_enc, x_dec)
+#
+#         yp = self.decoder_output_adapter(y_tran)
+#         return yp
+#     # end
+#
+#     def _predict_forward(self, x):
+#         output_seqlen, output_size = self.output_shape
+#
+#         x_enc = x                           # [N, Lin, Hin]
+#         x_dec = x[:, -1:, -output_size:]    # [N, 1,  Hout]
+#
+#         x_enc = self.replicate(x_enc)
+#         x_enc = self.positional_encoder(x_enc)
+#
+#         y_enc = self.transformer.encoder(x_enc)
+#
+#         ylist = []
+#         for i in range(output_seqlen):
+#             x_dec = self.replicate(x_dec)
+#             x_dec = self.positional_encoder(x_dec)
+#
+#             y_pred = self.transformer.decoder(x_dec, y_enc)
+#             y_pred = self.decoder_output_adapter(y_pred)
+#             ylist.append(y_pred)
+#
+#             x_dec = y_pred
+#         # end
+#         return torch.cat(ylist, dim=1)
+#     # end
+# # end
+
+
+
+# ---------------------------------------------------------------------------
+# TiDE model (NO X_future)
+# ---------------------------------------------------------------------------
+# Model DOESN'T use X_future
+#
+
+# class TiDENoFuture(TimeSeriesModel):
+#
+#     def __init__(self, input_shape, output_shape,
+#                  hidden_size=None,
+#                  decoder_output_size=None,
+#                  temporal_hidden_size=None,
+#                  num_encoder_layers=1,
+#                  num_decoder_layers=1,
+#                  use_layer_norm=True,
+#                  dropout=0.1
+#                  ):
+#         """
+#
+#         :param input_shape: (past_len, |y| + |X|)
+#         :param output_shape: (future_len, |y|)
+#         :param hidden_size: size of the hidden data
+#         :param num_encoder_layers: n of encoder blocks
+#         :param num_decoder_layers: n of decoder blocks
+#         """
+#         super().__init__(input_shape, output_shape,
+#                          hidden_dim=hidden_size,
+#                          decoder_output_size=decoder_output_size,
+#                          temporal_hidden_size=temporal_hidden_size,
+#                          num_encoder_layers=num_encoder_layers,
+#                          num_decoder_layers=num_decoder_layers,
+#                          use_layer_norm=use_layer_norm,
+#                          dropout=dropout)
+#
+#         input_len, input_size = input_shape
+#         output_len, target_size = output_shape
+#         features_size = (input_size - target_size)
+#
+#         assert input_size == (target_size + features_size), "Invalid input_size: it must be |y|+|X|"
+#
+#         if decoder_output_size is None:
+#             decoder_output_size = (features_size + target_size)//2
+#
+#         encoder_input_size = input_len * features_size + input_len * target_size
+#         decoder_output_dim = (output_len, decoder_output_size)
+#
+#         if hidden_size is None:
+#             hidden_size = encoder_input_size//2
+#
+#         if temporal_hidden_size is None:
+#             temporal_hidden_size = decoder_output_size
+#
+#         self.hidden_size = hidden_size
+#         self.decoder_output_size = decoder_output_size
+#         self.temporal_hidden_size = temporal_hidden_size
+#         self.num_encoder_layers = num_encoder_layers
+#         self.num_decoder_layers = num_decoder_layers
+#
+#         # -------------------------------------------------------------------
+#         # model
+#
+#         self.encoders = nn.Sequential(
+#             _ResidualBlock(
+#                 input_dim=encoder_input_size,
+#                 hidden_size=hidden_size,
+#                 output_dim=hidden_size,
+#                 use_layer_norm=use_layer_norm,
+#                 dropout=dropout,
+#             ),
+#             *[
+#                 _ResidualBlock(
+#                     input_dim=hidden_size,
+#                     hidden_size=hidden_size,
+#                     output_dim=hidden_size,
+#                     use_layer_norm=use_layer_norm,
+#                     dropout=dropout,
+#                 )
+#                 for _ in range(num_encoder_layers - 1)
+#             ],
+#         )
+#
+#         self.decoders = nn.Sequential(
+#             *[
+#                 _ResidualBlock(
+#                     input_dim=hidden_size,
+#                     hidden_size=hidden_size,
+#                     output_dim=hidden_size,
+#                     use_layer_norm=use_layer_norm,
+#                     dropout=dropout,
+#                 )
+#                 for _ in range(num_decoder_layers - 1)
+#             ],
+#             # add decoder output layer
+#             _ResidualBlock(
+#                 input_dim=hidden_size,
+#                 hidden_size=hidden_size,
+#                 output_dim=decoder_output_dim,
+#                 use_layer_norm=use_layer_norm,
+#                 dropout=dropout,
+#             ),
+#         )
+#
+#         self.temporal_decoder = _ResidualBlock(
+#             input_dim=(output_len, decoder_output_size),
+#             hidden_size=temporal_hidden_size,
+#             output_dim=(output_len, target_size),
+#             use_layer_norm=use_layer_norm,
+#             dropout=dropout,
+#         )
+#
+#         self.lookback_skip = nnx.Linear(
+#             in_features=(input_len, target_size),
+#             out_features=(output_len, target_size)
+#         )
+#     # end
+#
+#     def forward(self, x):
+#         assert isinstance(x, Tensor)
+#
+#         # concatenate and flatten: return [Xy;Xf], Xf
+#         xc, yp = self._concat_split_flatten(x)
+#         # encode
+#         xe = self.encoders(xc)
+#         # decode:  (N, output_len, decoder_output_size)
+#         xg = self.decoders(xe)
+#
+#         # apply the temporal decoder
+#         yt = self.temporal_decoder(xg)
+#
+#         # apply the lookback skip
+#         yr = self.lookback_skip(yp)
+#
+#         # add the residual
+#         ypred = yt + yr
+#
+#         return ypred
+#     # end
+#
+#     def _concat_split_flatten(self, Xyp):
+#         target_size = self.output_shape[1]
+#         yp = Xyp[:, :, -target_size:]
+#
+#         xc = torch.flatten(Xyp, start_dim=1)
+#         return xc, yp
+#
+# # end
+
+
 # def eval_seq2seqv1(periodic, noisy):
 #     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 #
