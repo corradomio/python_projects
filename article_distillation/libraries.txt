@@ -1,0 +1,43 @@
+Mango
+    https://towardsdatascience.com/mango-a-new-way-to-make-bayesian-optimisation-in-python-a1a09989c6d8
+
+Bayesian Optimization Libraries Python
+    https://www.reddit.com/r/datascience/comments/cpyer5/bayesian_optimization_libraries_python/
+
+    https://github.com/fmfn/BayesianOptimization
+    https://github.com/SheffieldML/GPyOpt
+    https://github.com/HIPS/Spearmint
+    https://github.com/GPflow/GPflowOpt
+    https://scikit-optimize.github.io
+    https://www.ax.dev/
+    https://botorch.org
+    https://github.com/Yelp/MOE
+
+Top 10 Tools For Hyperparameter Optimization In Python
+    https://www.activestate.com/blog/top-10-tools-for-hyperparameter-optimization-in-python/
+
+    Scikit-Optimize
+    GPyOpt
+    Hyperopt
+    SHERPA
+    Optuna
+    Ray Tune
+    MLMachine
+
+Hyperparameter Optimization: 10 Top Python Libraries
+    https://www.kdnuggets.com/2023/01/hyperparameter-optimization-10-top-python-libraries.html
+
+    Optuna
+    Hyperopt
+    Scikit-learn
+    Auto-Sklearn
+    Hyperactive
+    Optunity
+    HyperparameterHunter
+    MLJAR
+    KerasTuner
+    Talos
+
+
+
+https://medium.com/@okanyenigun/step-by-step-guide-to-bayesian-optimization-a-python-based-approach-3558985c6818
