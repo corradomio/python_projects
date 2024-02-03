@@ -22,26 +22,50 @@ def label_of(x, bounds) -> int:
     # end
 
 
-def gen_bounds(d) -> list:
+def gen_bounds(n, d, k) -> list:
     """
     :param d: data dimension
     :return:
     """
     bounds = []
-    for i in range(d):
-        nsegs = 0
-        while nsegs < 2:
-            nsegs = randint(1, MAX_SEGMENTS)
-        segs_bounds = [0.] + sorted(random() for s in range(nsegs-1)) + [1.]
-        bounds.append(segs_bounds)
+
+    if k is None:
+        # random suddivisions
+        for i in range(d):
+            nsegs = 0
+            while nsegs < 2:
+                nsegs = randint(1, MAX_SEGMENTS)
+            segs_bounds = [0.] + sorted(random() for s in range(nsegs-1)) + [1.]
+            bounds.append(segs_bounds)
+        # end
+    else:
+        for i in range(n):
+            ds = 1./k
+            bounds.append([i*ds for i in range(k+1)])
+        # end
     # end
 
+    if n < 1000:
+        sn = str(n)
+    elif n == 1000:
+        sn = "1k"
+    elif n < 1000000:
+        sn = f"{n // 1000}k"
+    else:
+        sn = f"{n// 1000000}m"
+
+    sd = f"x{d}"
+
+    if k is None:
+        sk = ""
+    else:
+        sk = f"x{k}"
+
     # save bounds:
-    with open("Xy_bounds.json", mode='w') as fp:
+    with open(f"Xy_bounds-{sn}{sd}.json", mode='w') as fp:
         json.dump(bounds, fp, indent="  ")
 
     return bounds
-# end
 
 
 def gen_data(n: int, d: int, bounds: list) -> tuple[np.ndarray, np.ndarray]:
@@ -53,13 +77,42 @@ def gen_data(n: int, d: int, bounds: list) -> tuple[np.ndarray, np.ndarray]:
     X = np.zeros((n, d), dtype=float)
     y = np.zeros(n, dtype=int)
 
-    for i in range(n):
-        X[i] = np.random.rand(d)
-        y[i] = label_of(X[i], bounds)
+    valid = False
+    while not valid:
+        for i in range(n):
+            X[i] = np.random.rand(d)
+            y[i] = label_of(X[i], bounds)
+
+        c1 = y.sum()
+        valid = min(c1, n-c1)/n > 0.40
+        if not valid:
+            print(f"Classes non balanced: c1={c1}. Retry")
+
+    data = {"y": y}
+    for i in range(d):
+        if d <= 10:
+            k = f"x{i}"
+        elif d <= 100:
+            k = f"x{i:02}"
+        else:
+            k = f"x{i:03}"
+
+        data[k] = X[:, i]
 
     # save data
-    df = pd.DataFrame(data={"x1": X[:, 0], "x2": X[:, 1], "y": y})
-    df.to_csv("Xy.csv", header=True, index=False)
+    # df = pd.DataFrame(data={"x0": X[:, 0], "x1": X[:, 1], "y": y})
+    df = pd.DataFrame(data=data)
+
+    if n < 1000:
+        nk = str(n)
+    elif n == 1000:
+        nk = "1k"
+    elif n < 1000000:
+        nk = f"{n // 1000}k"
+    else:
+        nk = f"{n// 1000000}m"
+
+    df.to_csv(f"Xy-{nk}x{d}.csv", header=True, index=False)
 
     return X, y
 
@@ -88,17 +141,34 @@ def plot_data(X, y, bounds):
     pass
 
 
-def main():
-    N = 1000
-    M = 2
-    bounds = gen_bounds(M)
+def gen_dataset(N, M, K=None):
+    print(f"Generate X[{N}x{M}]")
+    bounds = gen_bounds(N, M, K)
     X, y = gen_data(N, M, bounds)
-
-    plot_data(X, y, bounds)
-    plot_data(X[:100], y[:100], bounds)
-    plot_data(X[:10], y[:10], bounds)
-
     print(y.sum())
+
+
+def main():
+    # N = 1000
+    # M = 2
+    # bounds = gen_bounds(M)
+    # X, y = gen_data(N, M, bounds)
+
+    # plot_data(X, y, bounds)
+    # plot_data(X[:100], y[:100], bounds)
+    # plot_data(X[:10], y[:10], bounds)
+
+    k = 3
+    ns = [100, 1000, 10000]
+    ds = [2, 3, 4, 5, 10, 25, 50, 100]
+    # ns = [1000, 10000]
+    # ds = [3, 5]
+    # ns = [1000, 10000]
+    # ds = [4]
+    for n in ns:
+        for d in ds:
+            gen_dataset(n, d, k)
+
     pass
 
 

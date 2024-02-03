@@ -14,4 +14,4 @@ from .proj import Projection
 
 from .attn import Attention, DotProductAttention, ScaledDotProductAttention, GeneralDotProductAttention
 from .attn import AdditiveAttention, CosineAttention, create_attention
-from .transformer_ext import Transformer, EncoderOnlyTransformer
+from .transformer_ext import Transformer, EncoderOnlyTransformer, CNNEncoderTransformer

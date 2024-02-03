@@ -26,9 +26,14 @@ Available models:
         - attn_output:
             False:  attention's output (a single value) concatenated to the decoder's input
             True:   attention's output (a single value) used as hidden state for the decoder
-    
-    TSEncoderOnlyTransformer
+
     TSPlainTransformer
+        Model based on a full standard transformer
+    TSEncoderOnlyTransformer
+        Model based on standard transformer's encoder component only
+    TSCNNEncoderTransformer
+        Model based on transformer's encoder component only where the
+        linear layers are replaced by Conv1d layers
 
     TiDE
         Long-term Forecasting with TiDE: Time-series Dense Encoder

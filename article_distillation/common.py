@@ -44,15 +44,27 @@ def plot_data(name, X, y, bounds):
     # plt.savefig(fname, dpi=300)
 
 
-def load_data():
-    df = pd.read_csv("Xy.csv")
-    X = df[["x1", "x2"]].to_numpy(dtype=float)
+# SUFFIX = "-1kx2"
+# DATA = f"data/Xy{SUFFIX}.csv"
+# BOUNDS = f"data/Xy_bounds{SUFFIX}.json"
+
+DATA_DIR = "data_reg"
+
+
+def load_data(SUFFIX):
+    DATA = f"{DATA_DIR}/Xy{SUFFIX}.csv ..."
+    print(f"Loading data {DATA}")
+    df = pd.read_csv(DATA)
+    X = df[df.columns.difference(["y"])].to_numpy(dtype=float)
     y = df["y"].to_numpy(dtype=int)
+    print("... done")
     return X, y
 
 
-def load_bounds():
-    with open("Xy_bounds.json") as fp:
+def load_bounds(SUFFIX):
+    BOUNDS = f"{DATA_DIR}/Xy_bounds{SUFFIX}.json"
+    print(f"Loading bounds {BOUNDS}")
+    with open(BOUNDS) as fp:
         return json.load(fp)
 
 

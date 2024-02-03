@@ -73,20 +73,19 @@ class TargetFunction:
             self.best_score = d_score
             self.best_model = DC
             self.best_params = Xd
-        return d_score if self.maximize else -d_score
+        return d_score if self.maximize else (1-d_score)
 
 
-def main():
-    # load the data
-    bounds = load_bounds()
-    X, y = load_data()
+def process_data(SUFFIX):
+    bounds = load_bounds(SUFFIX)
+    X, y = load_data(SUFFIX)
 
     plot_data("Data", X, y, bounds)
 
     # data dimensions
     N, M = X.shape
     # number of distilled points
-    D = N//10
+    D = N // 10
 
     # create the target function
     # it is used a class because the function
@@ -137,6 +136,14 @@ def main():
 
     print("coreset accuracy:", cs_accuracy)
     plot_data("Coreset", Xcs, ycs, bounds)
+    return
+# end
+
+
+def main():
+    # load the data
+    SUFFIX = "-1kx100"
+    process_data(SUFFIX)
     pass
 
 

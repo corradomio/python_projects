@@ -1,0 +1,5 @@
+dict()
+# dict(None)
+dict({})
+dict(dict())
+dict(a=1)

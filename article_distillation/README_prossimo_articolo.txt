@@ -242,3 +242,51 @@ classificazione: 2 categorie
         metrica: accuracy
 
 
+------------------------------------------------
+aumento dimensione dataset e dimensioni
+    100_000/10_000/1000
+    100
+    ..
+
+dataset a dimensione piu' bassa rispetto
+
+-----------------------------------------------------------------------------
+- Whatsapp
+-----------------------------------------------------------------------------
+
+Una proiezione lineare da fare (da piccolo a grande) e' semplice: basta generare una matrice riempita dei numeri random.
+
+MA (domandona): esiste un modo SEMPLICE per fare qualche proiezione NON lineare (anche se la non linearita' e di tipo "semplice")?
+
+L'idea che mi era venuta e' quella di generare dei "segmenti di curva" (nello spazio grande), una per ogni asse dello spazio piccolo, e poi usare un po' di interpolazione per traformare le coordinate dei punti dallo spazio piccolo a quello grande.
+Ma mi pare arzigogolato.
+E poi SOLO se ne vale la pena.
+Penso che una trasformazione lineare, per iniziare, dovrebbe essere gia' abbastanza
+
+
+
+UNO
+Supponiamo di avere tre classi R,G e B, giusto per fare un po’ di colore.
+Le associo a tre segmenti che coprono l’intervallo [0,1] dell’asse t. Esiste una funzione semplice che mappa t in f(t) (la classe/colore). Adesso aggiungo una dimensione non informativa z, così che f(t,z)=f(t).
+
+Dal punto di vista di un algoritmo come Isomap, t-sne, UMAP, questa roba può essere riproiettata su dimensionalità 1D facilmente. [questo è il ritornello 1D]
+
+DUE
+Adesso riparto da zero e adotto una variante, con trasformazione di coordinate e produco uno swiss-roll. Parto da una funzione semplice che mappa t in f(t) (la classe/colore).
+Prendo la dimensione lineare t (su cui generare i punti), e passo a coordinate radiali con r=r(t) e theta=theta(t); esempio semplice r=t e theta=t, così da avere una curva parametrica nel piano descritta da (t cos t, t sin t). Poi aggiungo la dimensione non informativa z, così da avere (t cos t, t sin t, z) e infine, magari ruoto di due angoli a caso tutta la baracca.
+Le dimensioni dello spazio sono 3, quelle della varietà sono 2, ma quella informativa è una sola.
+[ritornello 1D]
+
+TRE
+Adesso prendo, scrivendo un po’ a caso, (t cos t, t sin t, t^2 cos 3t, t^3 sin 2t, z1, z2, z3), con z1, z2 e z3 non informative. E’ chiaro che la dimensione informativa è una sola. [Ritornello 1D]
+
+QUATTRO
+Aggiungo altri due parametri u e v che si combinano tra di loro e con t, in modo che esista f(t,u,v) con tutte e tre le dimensioni informative (esempio f(t,u,v)=parity(ceiling(10 t) ceiling(10 u) ceiling(10 v)))
+Adesso combino le cose un po’ a caso
+(v sin t cos u, t sin v sin u, v u cos 3 t, t^3 sin 2t, z1, z2, z3), con le z non informative
+E’ chiaro che le dimensioni effettive sono 3 [ritornello 3D]
+
+INSOMMA
+Basta decidere le dimensionalità k della manifold effettivamente informativa (poi decidere la f() di k variabili), combinare le k variabili con delle funzioni continue e finite ad esempio trigonometriche, e aggiungere delle dimensioni non informative. Poi se uno vuole può anche ruotare nello spazio alto dimensionale. Quel che salta fuori è una roba sufficientemente complessa. E può anche peggiorare facilmente complicando f().
+
+

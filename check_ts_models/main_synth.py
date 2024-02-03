@@ -139,6 +139,76 @@ def eval_encoderonly(periodic, noisy):
     save_plot("encoderonly", y_train, y_test, y_pred, periodic, noisy)
 
 
+def eval_cnnencoder(periodic, noisy):
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+
+    # Note: if X is None, the value of xlags is ignored
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+
+    #
+    # create the Transformer model
+    #
+    tsmodel = nnx.TSCNNEncoderTransformer(
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        d_model=32, nhead=4,
+        num_encoder_layers=1,
+        dim_feedforward=32,
+        dropout=0.01,
+        positional_encode=False
+    )
+
+    # create the skorch model
+    model = skorchx.NeuralNetRegressor(
+        module=tsmodel,
+        # optimizer=torch.optim.Adam,
+        # lr=0.0001,
+        optimizer=torch.optim.RMSprop,
+        lr=0.00005,
+        criterion=torch.nn.MSELoss,
+        batch_size=32,
+        max_epochs=250,
+        iterator_train__shuffle=True,
+        # callbacks=[early_stop],
+        callbacks__print_log=PrintLog
+    )
+
+    #
+    # Training
+    #
+
+    # fit the model
+    model.fit(X_train_t, y_train_t)
+
+    #
+    # Prediction
+    #
+
+    # create the data transformer to use with predictions
+    pt = tt.predict_transform()
+
+    # forecasting horizon
+    fh = len(y_test)
+    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+
+    # generate the predictions
+    i = 0
+    while i < fh:
+        # create X to pass to the model (a SINGLE step)
+        X_pred_t = pt.step(i)
+        # compute the predictions (1+ predictions in a single row)
+        y_pred_t = model.predict(X_pred_t)
+        # update 'y_pred' with the predictions AND return
+        # the NEW update location
+        i = pt.update(i, y_pred_t)
+    # end
+
+    #
+    # Done
+    #
+    save_plot("cnnencoder", y_train, y_test, y_pred, periodic, noisy)
+
+
 def eval_transformer(periodic, noisy):
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
 
@@ -798,7 +868,8 @@ def main():
 
     for periodic in PERIODICS:
         for noisy in NOISY:
-            # eval_encoderonly(periodic, noisy)
+            eval_cnnencoder(periodic, noisy)
+            eval_encoderonly(periodic, noisy)
             # eval_transformer(periodic, noisy)
             # eval_tide(periodic, noisy)
             # eval_tide_with_future(periodic, noisy)
@@ -808,7 +879,7 @@ def main():
             # eval_cnnlinear(periodic, noisy)
             # eval_seq2seq(periodic, noisy, 'zero')
             # eval_seq2seq(periodic, noisy, 'last')
-            eval_seq2seq(periodic, noisy, 'sequence')
+            # eval_seq2seq(periodic, noisy, 'sequence')
             # eval_seq2seq(periodic, noisy, 'adapt')
             # eval_seq2seq(periodic, noisy, 'recursive')
             # eval_seq2seqattn(periodic, noisy, False, False)
