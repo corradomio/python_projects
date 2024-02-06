@@ -47,6 +47,8 @@ def _comb(n: int, k: int) -> int:
     return c
 # end
 
+comb = _comb
+
 
 def _iset(l: Iterable[int]) -> int:
     """list -> iset"""

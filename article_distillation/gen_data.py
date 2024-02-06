@@ -27,9 +27,10 @@ def gen_bounds(n, d, k) -> list:
     :param d: data dimension
     :return:
     """
+    k = 0 if k is None else k
     bounds = []
 
-    if k is None:
+    if k == 0:
         # random suddivisions
         for i in range(d):
             nsegs = 0
@@ -54,26 +55,21 @@ def gen_bounds(n, d, k) -> list:
     else:
         sn = f"{n// 1000000}m"
 
-    sd = f"x{d}"
-
-    if k is None:
-        sk = ""
-    else:
-        sk = f"x{k}"
-
     # save bounds:
-    with open(f"Xy_bounds-{sn}{sd}.json", mode='w') as fp:
+    fname = f"Xy_bounds-{sn}x{d}x{k}.json"
+    with open(fname, mode='w') as fp:
         json.dump(bounds, fp, indent="  ")
 
     return bounds
 
 
-def gen_data(n: int, d: int, bounds: list) -> tuple[np.ndarray, np.ndarray]:
+def gen_data(n: int, d: int, k, bounds: list) -> tuple[np.ndarray, np.ndarray]:
     """
     :param n: of points
     :param d: data dimension
     :return: array of data
     """
+    k = 0 if k is None else k
     X = np.zeros((n, d), dtype=float)
     y = np.zeros(n, dtype=int)
 
@@ -91,13 +87,13 @@ def gen_data(n: int, d: int, bounds: list) -> tuple[np.ndarray, np.ndarray]:
     data = {"y": y}
     for i in range(d):
         if d <= 10:
-            k = f"x{i}"
+            kd = f"x{i}"
         elif d <= 100:
-            k = f"x{i:02}"
+            kd = f"x{i:02}"
         else:
-            k = f"x{i:03}"
+            kd = f"x{i:03}"
 
-        data[k] = X[:, i]
+        data[kd] = X[:, i]
 
     # save data
     # df = pd.DataFrame(data={"x0": X[:, 0], "x1": X[:, 1], "y": y})
@@ -112,7 +108,8 @@ def gen_data(n: int, d: int, bounds: list) -> tuple[np.ndarray, np.ndarray]:
     else:
         nk = f"{n// 1000000}m"
 
-    df.to_csv(f"Xy-{nk}x{d}.csv", header=True, index=False)
+    fname = f"Xy-{nk}x{d}x{k}.csv"
+    df.to_csv(fname, header=True, index=False)
 
     return X, y
 
@@ -141,10 +138,10 @@ def plot_data(X, y, bounds):
     pass
 
 
-def gen_dataset(N, M, K=None):
-    print(f"Generate X[{N}x{M}]")
+def gen_dataset(N, M, K):
+    print(f"Generate X[{N}x{M}x{K}]")
     bounds = gen_bounds(N, M, K)
-    X, y = gen_data(N, M, bounds)
+    X, y = gen_data(N, M, K, bounds)
     print(y.sum())
 
 

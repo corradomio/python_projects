@@ -1,15 +1,11 @@
-import os
-import logging.config
-
 import matplotlib.pyplot as plt
 import torch
 
-import pandasx as pdx
 import skorchx
 import torchx.nn as nnx
+from skorchx.callbacks import PrintLog
 from sktimex.transform.lags import LagsTrainTransform
 from sktimex.utils import plot_series
-from skorchx.callbacks import PrintLog
 
 X_SEQ_LEN = 12
 Y_SEQ_LEN = 12
@@ -18,59 +14,19 @@ D_OFFSET = -1
 FEATURE_SIZE = 16
 
 
-def load_data(periodic, noisy=False):
-    # select the column to process
-    ignore = ['clean', 'Date'] if noisy else ['noisy', 'Date']
-
-    # load the dataset
-    df = pdx.read_data('clean_noisy_ts.csv',
-                       datetime=('Date', '%Y-%m-%d %H:%M:%S', 'M'),
-                       index='Date',
-                       ignore=ignore,
-                       rename={'noisy': 'Data', 'clean': 'Data'},
-                       periodic=periodic)
-
-    # scaling not necessary: values already in range [0,1]
-    pass
-
-    # split [X, y]. Note: X can be None
-    X, y = pdx.xy_split(df, target='Data')
-
-    # split X,y into train/test. Note: if X is None, X_train, X_test will be None
-    X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=12)
-
-    # X contains [y] o [sin, cos, y]
-    # Note: in THEORY it is possible to retrieve X_SHAPE and Y_SHAPE from
-    #       X_train_t and X_train_t BUT, based on configuration, X_train_t and X_train_t
-    #       COULD BE tuples.
-    #       Then, it is better to identify the CORRECT X/y shapes by hand!
-    #
-    if periodic in [None, False, '']:
-        X_SHAPE = (X_SEQ_LEN, 1)
-    elif periodic == 'sincos':
-        X_SHAPE = (X_SEQ_LEN, 3)
-    elif periodic == 'onehot':
-        X_SHAPE = (X_SEQ_LEN, 13)
-    else:
-        raise ValueError(f"Periodic '{periodic}' not supported")
-    Y_SHAPE = (Y_SEQ_LEN, 1)
-
-    return df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test
-
-
-def save_plot(model, y_train, y_test, y_pred, periodic, noisy):
-    periodic = 'yonly' if periodic in [None, ''] else periodic
-    with_noise = 'noisy' if noisy else 'clean'
+def save_plot(model_name, y_train, y_test, y_pred):
 
     plot_series(y_train, y_test, y_pred, labels=['y_train', 'y_test', 'y_pred'],
-                title=f"{model} {periodic}/{with_noise}")
+                title=f"{model_name}")
     # show()
-    fname = f'plots/{model}-{periodic}-{with_noise}.png'
+    fname = f'plots/{model_name}.png'
     plt.savefig(fname, dpi=300)
 
 
-def eval_encoderonly(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+
+def eval_encoderonly(dname, data):
+    print("eval_encoderonly", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -88,8 +44,6 @@ def eval_encoderonly(periodic, noisy):
         positional_encode=False
     )
 
-    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
-
     # create the skorch model
     model = skorchx.NeuralNetRegressor(
         module=tsmodel,
@@ -99,79 +53,7 @@ def eval_encoderonly(periodic, noisy):
         lr=0.00005,
         criterion=torch.nn.MSELoss,
         batch_size=32,
-        max_epochs=1000,
-        iterator_train__shuffle=True,
-        callbacks=[early_stop],
-        callbacks__print_log=PrintLog
-    )
-
-    #
-    # Training
-    #
-
-    # fit the model
-    model.fit(X_train_t, y_train_t)
-
-    #
-    # Prediction
-    #
-
-    # create the data transformer to use with predictions
-    pt = tt.predict_transform()
-
-    # forecasting horizon
-    fh = len(y_test)
-    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
-
-    # generate the predictions
-    i = 0
-    while i < fh:
-        # create X to pass to the model (a SINGLE step)
-        X_pred_t = pt.step(i)
-        # compute the predictions (1+ predictions in a single row)
-        y_pred_t = model.predict(X_pred_t)
-        # update 'y_pred' with the predictions AND return
-        # the NEW update location
-        i = pt.update(i, y_pred_t)
-    # end
-
-    #
-    # Done
-    #
-    save_plot("encoderonly", y_train, y_test, y_pred, periodic, noisy)
-
-
-def eval_cnnencoder(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
-
-    # Note: if X is None, the value of xlags is ignored
-    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
-    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
-
-    #
-    # create the Transformer model
-    #
-    tsmodel = nnx.TSCNNEncoderTransformer(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE,
-        d_model=32, nhead=4,
-        num_encoder_layers=1,
-        dim_feedforward=32,
-        dropout=0.01,
-        positional_encode=False
-    )
-
-    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
-
-    # create the skorch model
-    model = skorchx.NeuralNetRegressor(
-        module=tsmodel,
-        # optimizer=torch.optim.Adam,
-        # lr=0.0001,
-        optimizer=torch.optim.RMSprop,
-        lr=0.00005,
-        criterion=torch.nn.MSELoss,
-        batch_size=32,
-        max_epochs=1000,
+        max_epochs=250,
         iterator_train__shuffle=True,
         # callbacks=[early_stop],
         callbacks__print_log=PrintLog
@@ -210,11 +92,87 @@ def eval_cnnencoder(periodic, noisy):
     #
     # Done
     #
-    save_plot("cnnencoder", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"encoderonly-{dname}", y_train, y_test, y_pred)
 
 
-def eval_transformer(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_cnnencoder(dname, data):
+    print("eval_cnnencoder", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
+
+    # Note: if X is None, the value of xlags is ignored
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+
+    #
+    # create the Transformer model
+    #
+    tsmodel = nnx.TSCNNEncoderTransformer(
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        d_model=32, nhead=4,
+        num_encoder_layers=1,
+        dim_feedforward=32,
+        dropout=0.01,
+        positional_encode=False
+    )
+
+    # create the skorch model
+    model = skorchx.NeuralNetRegressor(
+        module=tsmodel,
+        # optimizer=torch.optim.Adam,
+        # lr=0.0001,
+        optimizer=torch.optim.RMSprop,
+        lr=0.00005,
+        criterion=torch.nn.MSELoss,
+        batch_size=32,
+        max_epochs=250,
+        iterator_train__shuffle=True,
+        # callbacks=[early_stop],
+        callbacks__print_log=PrintLog
+    )
+
+    #
+    # Training
+    #
+
+    # fit the model
+    model.fit(X_train_t, y_train_t)
+
+    #
+    # Prediction
+    #
+
+    # create the data transformer to use with predictions
+    pt = tt.predict_transform()
+
+    # forecasting horizon
+    fh = len(y_test)
+    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+
+    # generate the predictions
+    i = 0
+    while i < fh:
+        # create X to pass to the model (a SINGLE step)
+        X_pred_t = pt.step(i)
+        # compute the predictions (1+ predictions in a single row)
+        y_pred_t = model.predict(X_pred_t)
+        # update 'y_pred' with the predictions AND return
+        # the NEW update location
+        i = pt.update(i, y_pred_t)
+    # end
+
+    #
+    # Done
+    #
+    save_plot(f"cnnencoder-{dname}", y_train, y_test, y_pred)
+
+
+def eval_transformer(dname, data, decoder_offset=-1):
+    # decoder_offset: how many timeslots predict in the recursive way. A NEGATIVE number
+    if decoder_offset is not None:
+        dname += str(decoder_offset)
+
+    print("eval_transformer", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # WARNING:
     # using a past window of 12 elements to predict future 6 element works VERY BADLY
@@ -226,7 +184,7 @@ def eval_transformer(periodic, noisy):
     Y_SHAPE = (Y_SEQ_LEN, ) + Y_SHAPE[1:]
 
     # Note: if X is None, the value of xlags is ignored
-    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN, decoder=D_OFFSET)
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN, decoder=decoder_offset)
     X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
 
     tsmodel = nnx.TSPlainTransformer(
@@ -235,7 +193,7 @@ def eval_transformer(periodic, noisy):
         num_encoder_layers=1,
         num_decoder_layers=1,
         dim_feedforward=32,
-        decoder_offset=D_OFFSET,
+        decoder_offset=decoder_offset,
         dropout=0.1,
         positional_encode=False
     )
@@ -250,7 +208,7 @@ def eval_transformer(periodic, noisy):
         optimizer=torch.optim.RMSprop,
         lr=0.0001,
         criterion=torch.nn.MSELoss,
-        batch_size=16,
+        batch_size=32,
         max_epochs=1000,
         iterator_train__shuffle=True,
         callbacks=[early_stop],
@@ -262,8 +220,9 @@ def eval_transformer(periodic, noisy):
     #
     # X_enc[-1] == X_dec[0]
     # y_dec[0] == X_dec[1]
-    assert X_train_t[0][0,D_OFFSET,0] == X_train_t[1][0,0,0]
-    assert y_train_t[0,0,0] == X_train_t[1][0,1,0]
+    if isinstance(X_train_t, tuple):
+        assert X_train_t[0][0, decoder_offset, 0] == X_train_t[1][0, 0, 0]
+        assert y_train_t[0, 0, 0] == X_train_t[1][0, -decoder_offset, 0]
 
     # fit the model
     model.fit(X_train_t, y_train_t)
@@ -295,11 +254,12 @@ def eval_transformer(periodic, noisy):
     #
     # Done
     #
-    save_plot("transformer", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"transformer-{dname}", y_train, y_test, y_pred)
 
 
-def eval_tide(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_tide(dname, data):
+    print("eval_tide", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -367,11 +327,13 @@ def eval_tide(periodic, noisy):
     #
     # Done
     #
-    save_plot("tide", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"tide-{dname}", y_train, y_test, y_pred)
 
 
-def eval_tide_with_future(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_tide_with_future(dname, data):
+    print("eval_tide_with_future", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
+    periodic = X_SHAPE[-1] > 1
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN, decoder=(None if periodic == '' else 0))
@@ -439,11 +401,12 @@ def eval_tide_with_future(periodic, noisy):
     #
     # Done
     #
-    save_plot("tidefuture", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"tidefuture-{dname}", y_train, y_test, y_pred)
 
 
-def eval_linear(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_linear(dname, data):
+    print("eval_linear", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -507,11 +470,12 @@ def eval_linear(periodic, noisy):
     #
     # Done
     #
-    save_plot("linear", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"linear-{dname}", y_train, y_test, y_pred)
 
 
-def eval_lin2layers(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_lin2layers(dname, data):
+    print("eval_lin2layers", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -575,11 +539,12 @@ def eval_lin2layers(periodic, noisy):
     #
     # Done
     #
-    save_plot("linear2layers", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"linear2layers-{dname}", y_train, y_test, y_pred)
 
 
-def eval_rnnlinear(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_rnnlinear(dname, data):
+    print("eval_rnnlinear", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -643,11 +608,12 @@ def eval_rnnlinear(periodic, noisy):
     #
     # Done
     #
-    save_plot("rnnlinear", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"rnnlinear-{dname}", y_train, y_test, y_pred)
 
 
-def eval_cnnlinear(periodic, noisy):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_cnnlinear(dname, data):
+    print("eval_cnnlinear", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -711,11 +677,12 @@ def eval_cnnlinear(periodic, noisy):
     #
     # Done
     #
-    save_plot("cnnlinear", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"cnnlinear-{dname}", y_train, y_test, y_pred)
 
 
-def eval_seq2seq(periodic, noisy, decoder_mode):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_seq2seq(dname, data, decoder_mode):
+    print(f"eval_seq2seq/{decoder_mode}", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     FEATURE_SIZE = 32
 
@@ -784,11 +751,12 @@ def eval_seq2seq(periodic, noisy, decoder_mode):
     #
     # Done
     #
-    save_plot(f"seq2seq-{decoder_mode}", y_train, y_test, y_pred, periodic, noisy)
+    save_plot(f"seq2seq-{decoder_mode}-{dname}", y_train, y_test, y_pred)
 
 
-def eval_seq2seqattn(periodic, noisy, attn_input, attn_output):
-    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = load_data(periodic, noisy)
+def eval_seq2seqattn(dname, data, attn_input, attn_output):
+    print(f"eval_seq2seqattn/{attn_input},{attn_output}", dname)
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
     tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
@@ -857,46 +825,4 @@ def eval_seq2seqattn(periodic, noisy, attn_input, attn_output):
     # Done
     #
     attn_mask = ("y" if attn_input else "n") + ("y" if attn_output else "n")
-    save_plot(f"seq2seqattn-{attn_mask}", y_train, y_test, y_pred, periodic, noisy)
-
-
-def main():
-    os.makedirs('plots', exist_ok=True)
-
-    # PERIODICS = ['']
-    PERIODICS = ['sincos']
-    # PERIODICS = ['', 'sincos']
-    # PERIODICS = ['', 'sincos', 'onehot']
-    # NOISY = [False]
-    NOISY = [False, True]
-
-    for periodic in PERIODICS:
-        for noisy in NOISY:
-            eval_cnnencoder(periodic, noisy)
-            eval_encoderonly(periodic, noisy)
-            # eval_transformer(periodic, noisy)
-            # eval_tide(periodic, noisy)
-            # eval_tide_with_future(periodic, noisy)
-            # eval_linear(periodic, noisy)
-            # eval_lin2layers(periodic, noisy)
-            # eval_rnnlinear(periodic, noisy)
-            # eval_cnnlinear(periodic, noisy)
-            # eval_seq2seq(periodic, noisy, 'zero')
-            # eval_seq2seq(periodic, noisy, 'last')
-            # eval_seq2seq(periodic, noisy, 'sequence')
-            # eval_seq2seq(periodic, noisy, 'adapt')
-            # eval_seq2seq(periodic, noisy, 'recursive')
-            # eval_seq2seqattn(periodic, noisy, False, False)
-            # eval_seq2seqattn(periodic, noisy, False, True)
-            # eval_seq2seqattn(periodic, noisy, True, False)
-            # eval_seq2seqattn(periodic, noisy, True, True)
-            pass
-        pass
-    pass
-
-
-if __name__ == "__main__":
-    logging.config.fileConfig('logging_config.ini')
-    log = logging.getLogger("root")
-    log.info("Logging system configured")
-    main()
+    save_plot(f"seq2seqattn-{attn_mask}-{dname}", y_train, y_test, y_pred)

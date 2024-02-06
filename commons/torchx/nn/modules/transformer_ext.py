@@ -1,9 +1,14 @@
 from typing import Union, Callable, Optional, Any
 
-import torch
+import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
-import torch.nn as nn
+# This import refers the 'original' pytorch transformer
+from torch.nn.modules import transformer as ttx
+
+# extended Conv1d layer
+from ..modules import cnn as cnnx
+
 
 #
 # Original 'pytorch transformer file' copied here as
@@ -11,12 +16,6 @@ import torch.nn as nn
 # See the documentation at the begin of the file
 #
 # from . import transformer_torch as ttx
-
-# This import refers the 'original' pytorch transformer
-from torch.nn.modules import transformer as ttx
-
-# extended Conv1d layer
-from ..modules import cnn as cnnx
 
 
 # ---------------------------------------------------------------------------

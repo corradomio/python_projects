@@ -57,6 +57,7 @@ class TSPlainTransformer(TimeSeriesModel):
                          decoder_offset=-1,
                          dropout=dropout,
                          positional_encode=positional_encode, **kwargs)
+        self.d_model = d_model
         self.decoder_offset = decoder_offset
 
         input_length, input_size = input_shape
@@ -94,25 +95,12 @@ class TSPlainTransformer(TimeSeriesModel):
     def forward(self, x, **kwargs):
         self._check_decoder_input_adapter(x)
 
-        # doffset = kwval(kwargs, 'decoder_offset', None)
-        # if doffset in [None, "pass", 0]:
-        #     return self._train_forward(x)
-        # else:
-        #     return self._predict_forward(x, doffset)
-
-        # doffset = kwval(kwargs, 'decoder_offset', None)
-        # recursive = kwval(kwargs, 'recursive', False)
-        #
-        # if doffset is None and not recursive:
-        #     return self._train_forward(x)
-        # else:
-        #     return self._predict_forward(x, self.decoder_offset)
-
-        if not self._is_model_prediction(x):
-            return self._train_forward(x)
+        if self.decoder_offset is None:
+            return self._train_single(x)
+        elif not self._is_model_prediction(x):
+            return self._train_tuple(x)
         else:
             return self._predict_forward(x, self.decoder_offset)
-    # end
 
     def _is_model_prediction(self, x):
         assert isinstance(x, (list, tuple))
@@ -134,14 +122,52 @@ class TSPlainTransformer(TimeSeriesModel):
         if not self.training or self.decoder_input_adapter is not None:
             return
 
-        x_enc, x_dec = x
-        if x_enc.shape[-1] == x_dec.shape[-1]:
-            self.decoder_input_adapter = self.encoder_input_adapter
+        if isinstance(x, (list, tuple)):
+            x_enc, x_dec = x
+            if x_enc.shape[-1] == x_dec.shape[-1]:
+                self.decoder_input_adapter = self.encoder_input_adapter
+            else:
+                self.decoder_input_adapter = nnx.Linear(x_dec.shape[-1], self.d_model)
         else:
-            self.decoder_input_adapter = nnx.Linear(x_dec.shape[-1], self.d_model)
+            output_size = self.output_shape[1]
+            self.decoder_input_adapter = nnx.Linear(output_size, self.d_model)
+
+    def _train_single(self, x):
+        # training using only the input for the encoder.
+        # the last entry in input in the encoder must be used as first input for the decoder
+        # the remaining prediction mus be done recursively
+        # ASSUMPTION: y is in FRONT of X
+        output_seqlen, output_size = self.output_shape
+
+        x_enc = x
+        x_dec = x[:, -1:, :output_size]
+
+        x_enc_a = apply_if(x_enc, self.encoder_input_adapter)
+        if self.pos_encoding is not None:
+            x_enc_a = x_enc_a + self.pos_encoding[:x_enc_a.shape[1], :]
+
+        y_pred = []
+        for i in range(output_seqlen):
+            x_dec_a = apply_if(x_dec, self.decoder_input_adapter)
+            if self.pos_encoding is not None:
+                x_dec_a = x_dec_a + self.pos_encoding[:x_dec_a.shape[1], :]
+
+            yp_a = self.tran(x_enc_a, x_dec_a)
+            yp = apply_if(yp_a, self.decoder_output_adapter)
+
+            y_pred.append(yp)
+            x_dec = yp
+
+            x_dec_a = apply_if(x_dec, self.decoder_input_adapter)
+            if self.pos_encoding is not None:
+                x_dec_a = x_dec_a + self.pos_encoding[:x_dec_a.shape[1], :]
+        # end
+
+        y_pred = torch.concatenate(y_pred, dim=1)
+        return y_pred
     # end
 
-    def _train_forward(self, x):
+    def _train_tuple(self, x):
         x_enc, x_dec = x
 
         # check validity
@@ -152,8 +178,8 @@ class TSPlainTransformer(TimeSeriesModel):
         x_dec_a = apply_if(x_dec, self.decoder_input_adapter)
 
         if self.pos_encoding is not None:
-            x_enc_a += self.pos_encoding[:x_enc_a.shape[1], :]
-            x_dec_a += self.pos_encoding[:x_dec_a.shape[1], :]
+            x_enc_a = x_enc_a + self.pos_encoding[:x_enc_a.shape[1], :]
+            x_dec_a = x_dec_a + self.pos_encoding[:x_dec_a.shape[1], :]
 
         yp_a = self.tran(x_enc_a, x_dec_a)
         yp = apply_if(yp_a, self.decoder_output_adapter)
@@ -162,52 +188,54 @@ class TSPlainTransformer(TimeSeriesModel):
     # end
 
     def _predict_forward(self, x, doffset):
-        # It predict |decoder_offset| targets at each interaction
         assert isinstance(doffset, int) and doffset < 0
+        input_seqlen, input_size = self.input_shape
         output_seqlen, output_size = self.output_shape
         dlen = -doffset
 
-        # extract X's components
         x_enc, x_dec_seq = x
-        batch = len(x_enc)
+        # the last element of x_enc must be equals to the first element of x_dec_seq
+        # assert x_enc[:, -1, :] == x_dec_seq[:, 0, :]
 
-        # prepare the placeholder 'y_pred'
-        y_pred_shape = (batch, ) + self.output_shape
-        y_pred = torch.zeros(y_pred_shape, dtype=x_enc.dtype)
+        y_pred = []
 
+        # transform x_enc and eventually add the positional encoding
         x_enc_a = self.encoder_input_adapter(x_enc)
         if self.pos_encoding is not None:
-            enc_len = x_enc_a.shape[1]
-            x_enc_a += self.pos_encoding[:enc_len, :]
+            x_enc_a = x_enc_a + self.pos_encoding[:input_seqlen, :]
 
         i = 0
         iend = min(i + dlen, output_seqlen)
+        yp = x_dec_seq[:, i:iend, :output_size]
         while i < output_seqlen:
-            x_dec = x_dec_seq[:, i:iend]
+            # compose x_dec one element at the time, extracting the element from
+            x_dec_only = x_dec_seq[:, i:iend, output_size:]
+
+            # concatenate [yp, x_dec_only] along the data dimension (dim=2)
+            x_dec = torch.concatenate([yp, x_dec_only], dim=2)
 
             x_dec_a = self.decoder_input_adapter(x_dec)
             if self.pos_encoding is not None:
                 dec_len = x_dec_a.shape[1]
-                x_dec_a += self.pos_encoding[:dec_len, :]
+                x_dec_a = x_dec_a + self.pos_encoding[:dec_len, :]
 
             yp_a = self.tran(x_enc_a, x_dec_a)
             yp = apply_if(yp_a, self.decoder_output_adapter)
 
             # fill y_pred
-            y_pred[:, i:iend, :] = yp
+            y_pred.append(yp)
 
-            # advance of dlen
-            # Note: advance `i` HERE because in this way, it is possible to save yp in the
-            #       NEXT position in 'x_dec_seq'
             i += dlen
             iend = min(i + dlen, output_seqlen)
 
-            # fill x_dec_temp BUT ONLY the necessary slots
-            if i < iend:
-                x_dec_seq[:, i:iend, :output_size] = yp
+            # at the next step it is possible that it is necessary to use LESS dlen entries.
+            # Obviously if dlen == 1, this problem doesn't exists
+            yseq = iend-i
+            yp = yp if yseq == dlen else yp[:, :yseq, :]
         # end
 
-        # done
+        # compose the y predicted
+        y_pred = torch.concatenate(y_pred, dim=1)
         return y_pred
     # end
 # end

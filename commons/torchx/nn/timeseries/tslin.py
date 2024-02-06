@@ -37,35 +37,24 @@ class TSLinear(TimeSeriesModel):
         super().__init__(input_shape, output_shape,
                          hidden_size=hidden_size)
 
-        input_seqlen, input_size = input_shape
-        output_seqlen, output_size = output_shape
-
         self.hidden_size = hidden_size
         self.activation = activation
         self.activation_params = kwparams(kwargs, 'activation')
 
-        self.input_adapter = None
-
         if hidden_size is not None:
-            self.encoder = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=hidden_size)
+            self.encoder = nnx.Linear(in_features=input_shape, out_features=hidden_size)
             self.relu = activation_function(self.activation, self.activation_params)
-            self.decoder = nnx.Linear(in_features=hidden_size, out_features=(output_seqlen, output_size))
+            self.decoder = nnx.Linear(in_features=hidden_size, out_features=output_shape)
         else:
-            self.encoder = nnx.Linear(in_features=(input_seqlen, input_size), out_features=(output_seqlen, output_size))
+            self.encoder = nnx.Linear(in_features=input_shape, out_features=output_shape)
             self.relu = None
             self.decoder = None
         # end
 
     def forward(self, x):
-        t = apply_if(x, self.input_adapter)
-
-        if self.hidden_size is None:
-            y = self.encoder(t)
-        else:
-            t = self.encoder(t)
-            t = self.relu(t)
-            y = self.decoder(t)
-
+        t = apply_if(x, self.encoder)
+        t = apply_if(t, self.relu)
+        y = apply_if(t, self.decoder)
         return y
 # end
 
