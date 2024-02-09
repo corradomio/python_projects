@@ -27,9 +27,12 @@ class TSSeq2Seq(TimeSeriesModel):
                  feature_size=None,
                  hidden_size=None,
                  decoder_mode=None,
-                 flavour='lstm', **kwargs):
+                 flavour='lstm',
+                 nonlinearity='tanh',
+                 **kwargs):
         super().__init__(input_shape, output_shape,
                          flavour=flavour,
+                         nonlinearity=nonlinearity,
                          feature_size=feature_size,
                          hidden_size=hidden_size,
                          **kwargs)
@@ -49,12 +52,14 @@ class TSSeq2Seq(TimeSeriesModel):
         enc_params = {} | kwargs
         enc_params['input_size'] = feature_size
         enc_params['hidden_size'] = hidden_size
+        enc_params['nonlinearity'] = nonlinearity
         enc_params['return_state'] = True
         enc_params['return_sequence'] = decoder_mode in ["sequence", "adapt"]
 
         dec_params = {} | kwargs
         dec_params['input_size'] = feature_size
         dec_params['hidden_size'] = hidden_size
+        enc_params['nonlinearity'] = nonlinearity
         dec_params['return_state'] = decoder_mode in ["recursive", "hs-recursive"]
 
         self.enc = nnx.create_rnn(flavour, **enc_params)
@@ -68,7 +73,7 @@ class TSSeq2Seq(TimeSeriesModel):
         if hidden_size != output_size:
             self.dec_output_adapter = nnx.Linear(in_features=hidden_size, out_features=output_size)
 
-        if decoder_mode in [None, "zero", ""]:
+        if decoder_mode in [None, "", "zero", "none"]:
             self.dec_input_adapter = ZeroCache((output_seqlen, feature_size))
         elif decoder_mode == "last":
             self.dec_input_adapter = TimeLinear(in_features=(1, hidden_size), out_features=(output_seqlen, feature_size))

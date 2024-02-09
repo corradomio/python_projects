@@ -1,3 +1,4 @@
+import torch.nn as nn
 from stdlib import kwparams, kwexclude
 from .ts import TimeSeriesModel
 from .tsutils import apply_if
@@ -25,11 +26,18 @@ class TSLinear(TimeSeriesModel):
                  hidden_size=None,
                  activation='relu', **kwargs):
         """
-        Time series Linear model.
+        Time series Linear model. It uses one or more linear layers separated by
+        the activation function, if specified
 
         :param input_shape: sequence_length x n_input_features
         :param output_shape: sequence_length x n_target_features
-        :param hidden_size: hidden size. Can be a shape (seq_len, data_size)
+        :param hidden_size: size of the hidden layers. It can be:
+                - None or the empty list: no extra layers
+                    (input_shape->output_shape)
+                - size: 2 layers
+                    (input_shape->size->output_shape)
+                - [size1, ...] multiple layers
+                    (input_shape->size1->...->output_shape)
         :param activation: activation function to use
         :param kwargs: parameters to use for the activation function.
                        They must be 'activation__<parameter_name>'
@@ -41,20 +49,28 @@ class TSLinear(TimeSeriesModel):
         self.activation = activation
         self.activation_params = kwparams(kwargs, 'activation')
 
-        if hidden_size is not None:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=hidden_size)
-            self.relu = activation_function(self.activation, self.activation_params)
-            self.decoder = nnx.Linear(in_features=hidden_size, out_features=output_shape)
+        if hidden_size is None:
+            hidden_size = []
+        elif isinstance(hidden_size, int):
+            hidden_size = [hidden_size]
+
+        nlayers = len(hidden_size)
+        if nlayers == 0:
+            self.model = nnx.Linear(in_features=input_shape, out_features=output_shape)
         else:
-            self.encoder = nnx.Linear(in_features=input_shape, out_features=output_shape)
-            self.relu = None
-            self.decoder = None
+            layers_size = [input_shape] + hidden_size + [output_shape]
+            layers = []
+            for i in range(nlayers):
+                layers.append(nnx.Linear(in_features=layers_size[i], out_features=layers_size[i+1]))
+                if self.activation is not None:
+                    layers.append(activation_function(self.activation, self.activation_params))
+            layers.append(nnx.Linear(in_features=layers_size[nlayers], out_features=output_shape))
+            self.model = nn.Sequential(*layers)
         # end
+    # end
 
     def forward(self, x):
-        t = apply_if(x, self.encoder)
-        t = apply_if(t, self.relu)
-        y = apply_if(t, self.decoder)
+        y = self.model(x)
         return y
 # end
 
@@ -70,12 +86,14 @@ class TSRNNLinear(TimeSeriesModel):
     def __init__(self, input_shape, output_shape,
                  feature_size=None,
                  hidden_size=None,
-                 flavour='lstm', activation='relu', **kwargs):
+                 flavour='lstm', nonlinearity='tanh',
+                 activation='relu', **kwargs):
         super().__init__(input_shape, output_shape,
                          flavour=flavour,
                          activation=activation,
                          feature_size=feature_size,
                          hidden_size=hidden_size,
+                         nonlinearity=nonlinearity,
                          **kwargs)
 
         input_seqlen, input_size = input_shape
@@ -95,6 +113,7 @@ class TSRNNLinear(TimeSeriesModel):
         rnn_params = kwexclude(kwargs, 'activation')
         rnn_params['input_size'] = feature_size
         rnn_params['hidden_size'] = hidden_size
+        rnn_params['nonlinearity'] = nonlinearity
 
         self.input_adapter = None
         self.output_adapter = None
@@ -112,8 +131,8 @@ class TSRNNLinear(TimeSeriesModel):
         t = apply_if(x, self.input_adapter)
         t = self.rnn(t)
         t = apply_if(t, self.relu)
-        t = apply_if(t, self.output_adapter)
-        return t
+        y = apply_if(t, self.output_adapter)
+        return y
 # end
 
 
@@ -177,8 +196,8 @@ class TSCNNLinear(TimeSeriesModel):
         t = apply_if(x, self.input_adapter)
         t = self.cnn(t)
         t = apply_if(t, self.relu)
-        t = apply_if(t, self.output_adapter)
-        return t
+        y = apply_if(t, self.output_adapter)
+        return y
 # end
 
 

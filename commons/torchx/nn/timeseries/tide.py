@@ -242,6 +242,36 @@ class TiDE(TimeSeriesModel):
     # end
 # end
 
+
+class TSTiDE(TiDE):
+    def __init__(self, input_shape, output_shape,
+                 feature_size=None,
+                 hidden_size=None,
+                 decoder_output_size=None,
+                 temporal_hidden_size=None,
+                 num_encoder_layers=1,
+                 num_decoder_layers=1,
+                 use_layer_norm=True,
+                 use_future_features=True,
+                 dropout=0.1
+                 ):
+        super().__init__(input_shape,
+                         output_shape,
+                         feature_size,
+                         hidden_size,
+                         decoder_output_size,
+                         temporal_hidden_size,
+                         num_encoder_layers,
+                         num_decoder_layers,
+                         use_layer_norm,
+                         use_future_features,
+                         dropout)
+
+    def forward(self, x:Tensor) -> Tensor:
+        return super().forward(x)
+
+# end
+
 # ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------

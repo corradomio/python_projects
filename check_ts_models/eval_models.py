@@ -26,6 +26,7 @@ def save_plot(model_name, y_train, y_test, y_pred):
 
 def eval_encoderonly(dname, data):
     print("eval_encoderonly", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -97,6 +98,7 @@ def eval_encoderonly(dname, data):
 
 def eval_cnnencoder(dname, data):
     print("eval_cnnencoder", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -167,11 +169,9 @@ def eval_cnnencoder(dname, data):
 
 
 def eval_transformer(dname, data, decoder_offset=-1):
-    # decoder_offset: how many timeslots predict in the recursive way. A NEGATIVE number
-    if decoder_offset is not None:
-        dname += str(decoder_offset)
-
+    dname = f"{dname}-{abs(decoder_offset) if decoder_offset is not None else 0}"
     print("eval_transformer", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # WARNING:
@@ -259,6 +259,7 @@ def eval_transformer(dname, data, decoder_offset=-1):
 
 def eval_tide(dname, data):
     print("eval_tide", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -268,7 +269,7 @@ def eval_tide(dname, data):
     #
     # create the Transformer model
     #
-    tsmodel = nnx.TiDE(
+    tsmodel = nnx.TSTiDE(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
         hidden_size=32, decoder_output_size=32,
         num_encoder_layers=1,
@@ -330,8 +331,79 @@ def eval_tide(dname, data):
     save_plot(f"tide-{dname}", y_train, y_test, y_pred)
 
 
+def eval_nbeats(dname, data):
+    print("eval_nbeats", dname)
+
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
+
+    # Note: if X is None, the value of xlags is ignored
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+
+    #
+    # create the Transformer model
+    #
+    tsmodel = nnx.TSNBeats(
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        hidden_size=32
+    )
+
+    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
+
+    # create the skorch model
+    model = skorchx.NeuralNetRegressor(
+        module=tsmodel,
+        # optimizer=torch.optim.Adam,
+        # lr=0.0001,
+        optimizer=torch.optim.RMSprop,
+        lr=0.0001,
+        criterion=torch.nn.MSELoss,
+        batch_size=32,
+        max_epochs=1000,
+        iterator_train__shuffle=True,
+        callbacks=[early_stop],
+        callbacks__print_log=PrintLog
+    )
+
+    #
+    # Training
+    #
+
+    # fit the model
+    model.fit(X_train_t, y_train_t)
+
+    #
+    # Prediction
+    #
+
+    # create the data transformer to use with predictions
+    pt = tt.predict_transform()
+
+    # forecasting horizon
+    fh = len(y_test)
+    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+
+    # generate the predictions
+    i = 0
+    while i < fh:
+        # create X to pass to the model (a SINGLE step)
+        X_pred_t = pt.step(i)
+        # compute the predictions (1+ predictions in a single row)
+        y_pred_t = model.predict(X_pred_t)
+        # update 'y_pred' with the predictions AND return
+        # the NEW update location
+        i = pt.update(i, y_pred_t)
+    # end
+
+    #
+    # Done
+    #
+    save_plot(f"nbeats-{dname}", y_train, y_test, y_pred)
+
+
 def eval_tide_with_future(dname, data):
     print("eval_tide_with_future", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
     periodic = X_SHAPE[-1] > 1
 
@@ -342,7 +414,7 @@ def eval_tide_with_future(dname, data):
     #
     # create the Transformer model
     #
-    tsmodel = nnx.TiDE(
+    tsmodel = nnx.TSTiDE(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
         hidden_size=32, decoder_output_size=32,
         num_encoder_layers=1,
@@ -404,8 +476,80 @@ def eval_tide_with_future(dname, data):
     save_plot(f"tidefuture-{dname}", y_train, y_test, y_pred)
 
 
+def eval_tcn(dname, data):
+    print("eval_tcn", dname)
+
+    df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
+
+    # Note: if X is None, the value of xlags is ignored
+    tt = LagsTrainTransform(xlags=X_SEQ_LEN, ylags=X_SEQ_LEN, tlags=Y_SEQ_LEN)
+    X_train_t, y_train_t = tt.fit_transform(y=y_train, X=X_train)
+
+    #
+    # create the Transformer model
+    #
+    tsmodel = nnx.TSTCN(
+        input_shape=X_SHAPE, output_shape=Y_SHAPE,
+        feature_size=16,
+        num_channels=[32],
+    )
+
+    early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
+
+    # create the skorch model
+    model = skorchx.NeuralNetRegressor(
+        module=tsmodel,
+        # optimizer=torch.optim.Adam,
+        # lr=0.0001,
+        optimizer=torch.optim.RMSprop,
+        lr=0.0001,
+        criterion=torch.nn.MSELoss,
+        batch_size=32,
+        max_epochs=1000,
+        iterator_train__shuffle=True,
+        callbacks=[early_stop],
+        callbacks__print_log=PrintLog
+    )
+
+    #
+    # Training
+    #
+
+    # fit the model
+    model.fit(X_train_t, y_train_t)
+
+    #
+    # Prediction
+    #
+
+    # create the data transformer to use with predictions
+    pt = tt.predict_transform()
+
+    # forecasting horizon
+    fh = len(y_test)
+    y_pred = pt.fit(y=y_train, X=X_train).transform(fh=fh, X=X_test)
+
+    # generate the predictions
+    i = 0
+    while i < fh:
+        # create X to pass to the model (a SINGLE step)
+        X_pred_t = pt.step(i)
+        # compute the predictions (1+ predictions in a single row)
+        y_pred_t = model.predict(X_pred_t)
+        # update 'y_pred' with the predictions AND return
+        # the NEW update location
+        i = pt.update(i, y_pred_t)
+    # end
+
+    #
+    # Done
+    #
+    save_plot(f"tcn-{dname}", y_train, y_test, y_pred)
+
+
 def eval_linear(dname, data):
     print("eval_linear", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -416,8 +560,7 @@ def eval_linear(dname, data):
     # create the Transformer model
     #
     tsmodel = nnx.TSLinear(
-        input_shape=X_SHAPE, output_shape=Y_SHAPE,
-        feature_size=FEATURE_SIZE
+        input_shape=X_SHAPE, output_shape=Y_SHAPE
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
@@ -475,6 +618,7 @@ def eval_linear(dname, data):
 
 def eval_lin2layers(dname, data):
     print("eval_lin2layers", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -542,8 +686,11 @@ def eval_lin2layers(dname, data):
     save_plot(f"linear2layers-{dname}", y_train, y_test, y_pred)
 
 
-def eval_rnnlinear(dname, data):
+def eval_rnnlinear(dname, data, flavour, use_relu=False):
+    nonlinearity = "relu" if use_relu else "tanh"
+    dname = f"{dname}-{flavour}-{nonlinearity}"
     print("eval_rnnlinear", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -555,7 +702,9 @@ def eval_rnnlinear(dname, data):
     #
     tsmodel = nnx.TSRNNLinear(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
-        feature_size=FEATURE_SIZE
+        feature_size=FEATURE_SIZE,
+        flavour=flavour,
+        nonlinearity=nonlinearity
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=30)
@@ -613,6 +762,7 @@ def eval_rnnlinear(dname, data):
 
 def eval_cnnlinear(dname, data):
     print("eval_cnnlinear", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored
@@ -680,8 +830,11 @@ def eval_cnnlinear(dname, data):
     save_plot(f"cnnlinear-{dname}", y_train, y_test, y_pred)
 
 
-def eval_seq2seq(dname, data, decoder_mode):
-    print(f"eval_seq2seq/{decoder_mode}", dname)
+def eval_seq2seq(dname, data, flavour, use_relu, mode):
+    nonlinearity = "relu" if use_relu else "tanh"
+    dname = f"{dname}-{flavour}-{nonlinearity}-{mode}"
+    print(f"eval_seq2seq", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     FEATURE_SIZE = 32
@@ -696,9 +849,10 @@ def eval_seq2seq(dname, data, decoder_mode):
     tsmodel = nnx.TSSeq2Seq(
         input_shape=X_SHAPE, output_shape=Y_SHAPE,
         feature_size=FEATURE_SIZE,
+        flavour=flavour,
+        nonlinearity=nonlinearity,
         # hidden_size=32,
-        decoder_mode=decoder_mode,
-        flavour='lstm'
+        decoder_mode=mode,
     )
 
     early_stop = skorchx.callbacks.EarlyStopping(warmup=20, patience=50)
@@ -751,11 +905,15 @@ def eval_seq2seq(dname, data, decoder_mode):
     #
     # Done
     #
-    save_plot(f"seq2seq-{decoder_mode}-{dname}", y_train, y_test, y_pred)
+    save_plot(f"seq2seq-{dname}", y_train, y_test, y_pred)
 
 
-def eval_seq2seqattn(dname, data, attn_input, attn_output):
-    print(f"eval_seq2seqattn/{attn_input},{attn_output}", dname)
+def eval_seq2seqattn(dname, data, attn_input: bool, attn_output: bool):
+    ai = "1" if attn_input else "0"
+    ao = "1" if attn_output else "0"
+    dname = f"{dname}-{ai}{ao}"
+    print(f"eval_seq2seqattn", dname)
+
     df, X_SHAPE, Y_SHAPE, X_train, X_test, y_train, y_test = data
 
     # Note: if X is None, the value of xlags is ignored

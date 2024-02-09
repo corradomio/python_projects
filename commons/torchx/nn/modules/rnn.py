@@ -2,7 +2,19 @@ from typing import Optional, Tuple, Union, Any
 
 import torch
 import torch.nn as nn
-from torch import Tensor
+from torch import Tensor, matmul, sigmoid, tanh, relu
+
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def identity(x): return x
+
+
+def swapaxes(x, batch_first):
+    return torch.swapaxes(x, 0, 1) if batch_first else x
+
 
 class RNNComposer:
 
@@ -48,7 +60,7 @@ class RNNComposer:
 
 class LSTM(nn.LSTM):
     """
-    Extends nn.LSTM to accept the parameters 'return_sequence' and 'return_state'.
+    Extends nn.LSTM to accept the parameters 'return_sequence', 'return_state', 'nonlinearity'.
     It changes 'batch_first' to ``True`` as default
 
     Args:
@@ -68,6 +80,7 @@ class LSTM(nn.LSTM):
         return_state: If ``False`` it doesn't return the state
                       if ``True`` returns the last state (1, B, Hout)
                       if ``all`` returns all states (1, B, N, Hout)
+        nonlinearity: supported 'tanh' (default), 'relu', None
     """
     # mode: str,
     # input_size: int,
@@ -91,6 +104,7 @@ class LSTM(nn.LSTM):
                  batch_first=True,
                  return_sequence=True,
                  return_state=False,
+                 nonlinearity="tanh",
                  **kwargs):
         super().__init__(
             input_size=input_size,
@@ -102,8 +116,19 @@ class LSTM(nn.LSTM):
             batch_first=batch_first,
             **kwargs
         )
+
+        if nonlinearity is None:
+            self.activation = None
+        elif nonlinearity == "tanh":
+            self.activation = tanh
+        elif nonlinearity == "relu":
+            self.activation = relu
+        else:
+            raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
+
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self.nonlinearity = nonlinearity
         self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
@@ -126,18 +151,8 @@ class LSTM(nn.LSTM):
         if self.return_state == 'all':
             seq, state = self._loop_forward(input, hx)
         else:
-            seq, state = super().forward(input, hx)
+            seq, state = self._forward(input, hx)
 
-        # if self.return_sequence is True and self.return_state:
-        #     return seq, state
-        # elif self.return_sequence is True and self.return_state is False:
-        #     return seq
-        # elif self.return_sequence is False and self.return_state:
-        #     return seq[:, -1], state
-        # elif self.return_sequence is None and self.return_state:
-        #     return state
-        # else:
-        #     return seq[:, -1]
         return self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
@@ -146,7 +161,7 @@ class LSTM(nn.LSTM):
         hs = []
         cs = []
         for i in range(n):
-            out, hx = super().forward(x[:, i:i+1], hx)
+            out, hx = self._forward(x[:, i:i+1], hx)
             outs.append(out)
             h0, c0 = hx
             h0 = h0.unsqueeze(2)
@@ -157,12 +172,128 @@ class LSTM(nn.LSTM):
         h0 = torch.cat(hs, dim=2)
         c0 = torch.cat(cs, dim=2)
         return out, (h0, c0)
+
+    def _forward(self, x, hx):
+        if self.nonlinearity == "tanh":
+            return super().forward(x, hx)
+        else:
+            return self._compute(x, hx)
+    # end
+
+    def _compute(self, x, hx):
+        B, S, D = x.shape
+
+        D0 = 0
+        D1 = D0 + D
+        D2 = D1 + D
+        D3 = D2 + D
+        D4 = D3 + D
+
+        tanh = self.activation
+
+        # 
+        # weight_ih_l[k] – the learnable input-hidden weights of the k^th layer (W_ii|W_if|W_ig|W_io), 
+        #   of shape (4*hidden_size, input_size) for k = 0. Otherwise, the shape is     
+        #   (4*hidden_size, num_directions * hidden_size). If proj_size > 0 was specified, the shape will be 
+        #   (4*hidden_size, num_directions * proj_size) for k > 0
+        # 
+        # weight_hh_l[k] – the learnable hidden-hidden weights of the k^th layer (W_hi|W_hf|W_hg|W_ho), 
+        #   of shape (4*hidden_size, hidden_size). If proj_size > 0 was specified, the shape will be 
+        #   (4*hidden_size, proj_size).
+        # 
+        # bias_ih_l[k] – the learnable input-hidden bias of the k^th layer (b_ii|b_if|b_ig|b_io), 
+        #   of shape (4*hidden_size)
+        # 
+        # bias_hh_l[k] – the learnable hidden-hidden bias of the k^th layer (b_hi|b_hf|b_hg|b_ho), 
+        #   of shape (4*hidden_size)
+        # 
+        # weight_hr_l[k] – the learnable projection weights of the k^th layer 
+        #   of shape (proj_size, hidden_size). Only present when proj_size > 0 was specified.
+        # 
+        # weight_ih_l[k]_reverse – Analogous to weight_ih_l[k] for the reverse direction. 
+        #   Only present when bidirectional=True.
+        # 
+        # weight_hh_l[k]_reverse – Analogous to weight_hh_l[k] for the reverse direction. 
+        #   Only present when bidirectional=True.
+        # 
+        # bias_ih_l[k]_reverse – Analogous to bias_ih_l[k] for the reverse direction. 
+        #   Only present when bidirectional=True.
+        # 
+        # bias_hh_l[k]_reverse – Analogous to bias_hh_l[k] for the reverse direction. 
+        #   Only present when bidirectional=True.
+        # 
+        # weight_hr_l[k]_reverse – Analogous to weight_hr_l[k] for the reverse direction. 
+        #   Only present when bidirectional=True and proj_size > 0 was specified.
+        #
+        if hx is None:
+            max_batch_size = B
+            num_directions = 2 if self.bidirectional else 1
+            hp = torch.zeros(max_batch_size,
+                             self.hidden_size,
+                             dtype=x.dtype, device=x.device)
+            cp = torch.zeros(max_batch_size,
+                             self.hidden_size,
+                             dtype=x.dtype, device=x.device)
+            hx = (hp, cp)
+
+        x = swapaxes(x, self.batch_first)
+        hp, cp = hx
+        y, hy, cy = [], [], []
+        for l in range(self.num_layers):
+            y = []
+            weight_ih = self.all_weights[l][0]  # W_ir|W_iz|W_in
+            weight_hh = self.all_weights[l][1]  # W_hr|W_hz|W_hn
+            bias_ih = self.all_weights[l][2]  # b_ir|b_iz|b_in
+            bias_hh = self.all_weights[l][3]  # b_hr|b_hz|b_hn
+
+            Wii = weight_ih[D0:D1]
+            Wif = weight_ih[D1:D2]
+            Wig = weight_ih[D2:D3]
+            Wio = weight_ih[D3:D4]
+
+            bii = bias_ih[D0:D1]
+            bif = bias_ih[D1:D2]
+            big = bias_ih[D2:D3]
+            bio = bias_ih[D3:D4]
+
+            Whi = weight_hh[D0:D1]
+            Whf = weight_hh[D1:D2]
+            Whg = weight_hh[D2:D3]
+            Who = weight_hh[D3:D4]
+
+            bhi = bias_hh[D0:D1]
+            bhf = bias_hh[D1:D2]
+            bhg = bias_hh[D2:D3]
+            bho = bias_hh[D3:D4]
+
+            for xt in x:
+                it = sigmoid(matmul(xt, Wii) + bii + matmul(hp, Whi) + bhi)
+                ft = sigmoid(matmul(xt, Wif) + bif + matmul(hp, Whf) + bhf)
+                gt = tanh(matmul(xt, Wig) + big + (matmul(hp, Whg) + bhg))
+                ot = sigmoid(matmul(xt, Wio) + bio + matmul(hp, Who) + bho)
+                ct = ft*cp + it*gt
+                ht = ot*tanh(ct)
+
+                yt = ot[None, ...]
+                y.append(yt)
+                hp = ht
+                cp = ct
+            # end
+            hy.append(hp[None, ...])
+            cy.append(cp[None, ...])
+        # end
+        y = torch.cat(y, dim=0)
+        y = swapaxes(y, self.batch_first)
+        hy = torch.cat(hy, dim=0)
+        cy = torch.cat(cy, dim=0)
+        return y, (hy, cy)
+    # end
 # end
 
 
 class GRU(nn.GRU):
     """
-    Extends nn.GRU to accept the parameters 'return_sequence' and 'return_state'.
+    Extends nn.GRU to accept the parameters 'return_sequence', 'return_state', 'nonlinearity'
     It changes 'batch_first' to ``True`` as default
 
     Args:
@@ -181,6 +312,7 @@ class GRU(nn.GRU):
         return_state: If ``False`` it doesn't return the state
                       if ``True`` returns the last state
                       if ``all`` returns all states
+        nonlinearity: supported 'tanh' (default), 'relu', None
     """
     def __init__(self,
                  input_size, hidden_size,
@@ -191,6 +323,7 @@ class GRU(nn.GRU):
                  batch_first=True,
                  return_sequence=True,
                  return_state=False,
+                 nonlinearity="tanh",
                  **kwargs):
         super().__init__(
             input_size=input_size,
@@ -200,10 +333,22 @@ class GRU(nn.GRU):
             dropout=dropout,
             bidirectional=bidirectional,
             batch_first=batch_first,
+            # nonlinearity=nonlinearity, NOT SUPPORTED
             **kwargs
         )
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self.nonlinearity = nonlinearity
+
+        if nonlinearity is None:
+            self.activation = None
+        elif nonlinearity == "tanh":
+            self.activation = tanh
+        elif nonlinearity == "relu":
+            self.activation = relu
+        else:
+            raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
+
         self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
@@ -226,18 +371,8 @@ class GRU(nn.GRU):
         if self.return_state == 'all':
             seq, state = self._loop_forward(input, hx)
         else:
-            seq, state = super().forward(input, hx)
+            seq, state = self._forward(input, hx)
 
-        # if self.return_sequence is True and self.return_state is True:
-        #     return seq, state
-        # elif self.return_sequence is True and self.return_state is False:
-        #     return seq
-        # elif self.return_sequence is False and self.return_state is True:
-        #     return seq[:, -1], state
-        # elif self.return_sequence is None and self.return_state is True:
-        #     return state
-        # else:
-        #     return seq[:, -1]
         return self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
@@ -245,26 +380,114 @@ class GRU(nn.GRU):
         outs = []
         hs = []
         for i in range(n):
-            out, hx = super().forward(x[:, i:i+1], hx)
+            out, hx = self._forward(x[:, i:i+1], hx)
             outs.append(out)
             h0 = hx.unsqueeze(2)
             hs.append(h0)
         out = torch.cat(outs, dim=1)
         h0 = torch.cat(hs, dim=2)
         return out, h0
+
+    def _forward(self, x, hx):
+        if self.nonlinearity == 'tanh':
+            return super().forward(x, hx)
+        else:
+            return self._compute(x, hx)
+    # end
+
+    def _compute(self, x, hx):
+        B, S, D = x.shape
+
+        D0 = 0
+        D1 = D0+D
+        D2 = D1+D
+        D3 = D2+D
+
+        tanh = self.activation
+
+        # weight_ih_l[k] – the learnable input-hidden weights of the k^th layer (W_ir|W_iz|W_in),
+        # of shape (3*hidden_size, input_size) for k = 0.
+        # Otherwise, the shape is (3*hidden_size, num_directions * hidden_size)
+        #
+        # weight_hh_l[k] – the learnable hidden-hidden weights of the k^th layer (W_hr|W_hz|W_hn),
+        # of shape (3*hidden_size, hidden_size)
+        #
+        # bias_ih_l[k] – the learnable input-hidden bias of the k^th layer (b_ir|b_iz|b_in),
+        # of shape (3*hidden_size)
+        #
+        # bias_hh_l[k] – the learnable hidden-hidden bias of the k^th layer (b_hr|b_hz|b_hn),
+        # of shape (3*hidden_size)
+        #
+        # num_layers == 1:
+        #   x   (32, 12, 16) -> 48 = 16*3
+        #   hx  None
+        #
+        #   weight_ih_l0, weight_hh_l0      (48, 16)
+        #   bias_ih_l0,   bias_hh_l0        (48)
+        #
+        #   all_weights: [weight_ih_l0, weight_hh_l0, bias_ih_l0, bias_hh_l0]
+        if hx is None:
+            max_batch_size = B
+            num_directions = 2 if self.bidirectional else 1
+            hx = torch.zeros(self.num_layers * num_directions,
+                             max_batch_size,
+                             self.hidden_size,
+                             dtype=x.dtype, device=x.device)
+
+        x = swapaxes(x, self.batch_first)
+        hp = hx
+        y, hy = [], []
+        for l in range(self.num_layers):
+            y = []
+            weight_ih = self.all_weights[l][0]   # W_ir|W_iz|W_in
+            weight_hh = self.all_weights[l][1]   # W_hr|W_hz|W_hn
+            bias_ih   = self.all_weights[l][2]   # b_ir|b_iz|b_in
+            bias_hh   = self.all_weights[l][3]   # b_hr|b_hz|b_hn
+
+            Wir = weight_ih[D0:D1]
+            Wiz = weight_ih[D1:D2]
+            Win = weight_ih[D2:D3]
+
+            bir = bias_ih[D0:D1]
+            biz = bias_ih[D1:D2]
+            bin = bias_ih[D2:D3]
+
+            Whr = weight_hh[D0:D1]
+            Whz = weight_hh[D1:D2]
+            Whn = weight_hh[D2:D3]
+
+            bhr = bias_hh[D0:D1]
+            bhz = bias_hh[D1:D2]
+            bhn = bias_hh[D2:D3]
+
+            for xt in x:
+                rt = sigmoid(matmul(xt, Wir) + bir + matmul(hp, Whr) + bhr)
+                zt = sigmoid(matmul(xt, Wiz) + biz + matmul(hp, Whz) + bhz)
+                nt = tanh(matmul(xt, Win) + bin + rt*(matmul(hp, Whn) + bhn))
+                ht = (1-zt)*nt + zt*hp
+
+                y.append(ht)
+                hp = ht
+            # end
+            hy.append(hp)
+        # end
+        y = torch.cat(y, dim=0)
+        y = swapaxes(y, self.batch_first)
+        hy = torch.cat(hy, dim=0)
+        return y, hy
+    # end
 # end
 
 
 class RNN(nn.RNN):
     """
-    Extends nn.RNN to accept the parameters 'return_sequence' and 'return_state'.
+    Extends nn.RNN to accept the parameters 'return_sequence', 'return_state', 'nonlinearity'
     It changes 'batch_first' to ``True`` as default
 
     Args:
         input_size
         hidden_size
         num_layers
-        nonlinearity
         bias
         batch_first
         dropout
@@ -277,6 +500,7 @@ class RNN(nn.RNN):
         return_state: If ``False`` it doesn't return the state
                       if ``True`` returns the last state
                       if ``all`` returns all states
+        nonlinearity: natively supported 'tanh' and 'relu'
     """
     def __init__(self,
                  input_size, hidden_size,
@@ -287,6 +511,7 @@ class RNN(nn.RNN):
                  batch_first=True,
                  return_sequence=True,
                  return_state=False,
+                 nonlinearity="tanh",
                  **kwargs):
         super().__init__(
             input_size=input_size,
@@ -296,6 +521,7 @@ class RNN(nn.RNN):
             dropout=dropout,
             bidirectional=bidirectional,
             batch_first=batch_first,
+            nonlinearity=nonlinearity,
             **kwargs
         )
         self.return_sequence = return_sequence
@@ -322,32 +548,26 @@ class RNN(nn.RNN):
         if self.return_state == 'all':
             seq, state = self._loop_forward(input, hx)
         else:
-            seq, state = super().forward(input, hx)
+            seq, state = self._forward(input, hx)
 
-        # if self.return_sequence is True and self.return_state is True:
-        #     return seq, state
-        # elif self.return_sequence is True and self.return_state is False:
-        #     return seq
-        # elif self.return_sequence is False and self.return_state is True:
-        #     return seq[:, -1], state
-        # elif self.return_sequence is None and self.return_state is True:
-        #     return state
-        # else:
-        #     return seq[:, -1]
-        self._composer.compose_result(seq, state)
+        return self._composer.compose_result(seq, state)
 
     def _loop_forward(self, x, hx):
         n = x.shape[1]
         outs = []
         hs = []
         for i in range(n):
-            out, hx = super().forward(x[:, i:i+1], hx)
+            out, hx = self._forward(x[:, i:i+1], hx)
             outs.append(out)
             h0 = hx.unsqueeze(2)
             hs.append(h0)
         out = torch.cat(outs, dim=1)
         h0 = torch.cat(hs, dim=2)
         return out, h0
+
+    def _forward(self, x, hx):
+        # torch RNN supports natively 'nonlinearity' parameter
+        return super().forward(x, hx)
 # end
 
 

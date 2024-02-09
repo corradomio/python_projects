@@ -37,10 +37,10 @@ class Linear(nn.Linear):
         self.input_shape = in_features
         self.output_shape = out_features
 
-        self.flatten = None if isinstance(in_features, int) \
-            else nn.Flatten()
-        self.unflatten = None if isinstance(out_features, int) \
-            else nn.Unflatten(1, unflattened_size=out_features)
+        # self.flatten = None if isinstance(in_features, int) \
+        #     else nn.Flatten()
+        # self.unflatten = None if isinstance(out_features, int) \
+        #     else nn.Unflatten(1, unflattened_size=out_features)
 
     def forward(self, input: Tensor) -> Tensor:
         t = input
@@ -51,8 +51,8 @@ class Linear(nn.Linear):
         t = super().forward(t)
 
         if not isinstance(self.output_shape, int):
-            n = len(t)
-            t = t.view((n,) + self.output_shape)
+            # t = t.view((-1,) + self.output_shape)
+            t = torch.reshape(t, (-1,) + self.output_shape)
 
         return t
 # end

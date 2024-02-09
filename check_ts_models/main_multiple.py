@@ -1,8 +1,6 @@
 import os
-import pandasx as pdx
-import numpy as np
-import pandas as pd
 
+import pandasx as pdx
 from eval_models import *
 
 
@@ -63,11 +61,9 @@ def main():
     os.makedirs('data_plots', exist_ok=True)
 
     # PERIODICS = ['none']
-    PERIODICS = ['sincos']
-    # PERIODICS = ['none', 'sincos']
-    # PERIODICS = ['', 'sincos', 'onehot']
-    # NOISY = [False]
-    # NOISY = [False, True]
+    # PERIODICS = ['sincos']
+    PERIODICS = ['none', 'sincos']
+    # PERIODICS = ['none', 'sincos', 'onehot']
 
     columns = ["y0c", "y0n", "y1c", "y1n", "y2c", "y2n", "y3n", "y3c"]
 
@@ -79,29 +75,35 @@ def main():
             data = load_data(col, periodic)
             dname = f"{col}-{periodic}"
 
+            # eval_linear(dname, data)
+            # eval_lin2layers(dname, data)
             # eval_cnnencoder(dname, data)
             # eval_encoderonly(dname, data)
-            # eval_lin2layers(dname, data)
 
-            # eval_transformer(dname, data, decoder_offset=None)
-            # eval_transformer(dname, data, decoder_offset=-1)
-            eval_transformer(dname, data, decoder_offset=-2)
+            # for decoder_offset in [0, -1, -2]:
+            #     eval_transformer(dname, data, decoder_offset=decoder_offset)
 
-            # eval_rnnlinear(dname, data)
-            # eval_cnnlinear(dname, data)
-            # eval_seq2seq(dname, data, 'zero')
-            # eval_seq2seq(dname, data, 'last')
-            # eval_seq2seq(dname, data, 'sequence')
-            # eval_seq2seq(dname, data, 'adapt')
-            # eval_seq2seq(dname, data, 'recursive')
-            # eval_seq2seqattn(dname, data, False, False)
-            # eval_seq2seqattn(dname, data, False, True)
-            # eval_seq2seqattn(dname, data, True, False)
-            # eval_seq2seqattn(dname, data, True, True)
+            # for flavour in ['rnn', 'gru', 'lstm']:
+            #     for use_relu in [False, True]:
+            #         eval_rnnlinear(dname, data, flavour, use_relu)
 
+            # FLAVOURS = ['rnn', 'gru', 'lstm']
+            # USE_RELU = [False, True]
+            # MODES = ['zero', 'last', 'sequence', 'adapt', 'recursive']
+            FLAVOURS = ['lstm']
+            USE_RELU = [True]
+            MODES = ['zero']
+            for flavour in FLAVOURS:
+                for use_relu in USE_RELU:
+                    for mode in MODES:
+                        eval_seq2seq(dname, data, flavour, use_relu, mode)
+
+            # eval_nbeats(dname, data)
             # eval_tide(dname, data)
             # eval_tide_with_future(dname, data)
-            # eval_linear(dname, data)
+
+            # TCN: bad implementation
+            # eval_tcn(dname, data)
             pass
         pass
     pass

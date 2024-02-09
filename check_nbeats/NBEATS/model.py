@@ -63,21 +63,20 @@ class NBeatsNet(nn.Module):
             return TrendBlock
         else:
             return GenericBlock
-    
 
     def forward(self, backcast):
         forecast = torch.zeros(size=(backcast.size()[0], self.forecast_length,))  # maybe batch size here.
         for stack_id in range(len(self.stacks)):
             for block_id in range(len(self.stacks[stack_id])):
                 b, f = self.stacks[stack_id][block_id](backcast)
-                if self.Architecture=='DRESS':
+                if self.Architecture == 'DRESS':
                     backcast = backcast.to(self.device) - b
                     forecast = forecast.to(self.device) + f
                 else:
                     backcast = backcast.to(self.device)
                     forecast = forecast.to(self.device) + f
-        return backcast, forecast     
-        
+        return backcast, forecast
+
 
 def seasonality_model(thetas, t, device):
     p = thetas.size()[-1]

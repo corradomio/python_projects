@@ -46,6 +46,20 @@ class ReshapeVector(nn.Module):
 # end
 
 
+class Reshape(nn.Module):
+
+    def __init__(self, shape):
+        super().__init__()
+        if isinstance(shape, int):
+            self.shape = (-1, shape)
+        else:
+            self.shape = (-1,) + tuple(shape)
+
+    def forward(self, x: Tensor) -> Tensor:
+        return torch.reshape(x, self.shape)
+# end
+
+
 # ---------------------------------------------------------------------------
 # RepeatVector
 # ---------------------------------------------------------------------------

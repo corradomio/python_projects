@@ -64,7 +64,7 @@ class LinearEncoderDecoder(nn.Module):
 #         bidirectional: If ``True``, becomes a bidirectional LSTM. Default: ``False``
 #         proj_size: If ``> 0``, will use LSTM with projections of corresponding size. Default: 0
 #
-class LSTMLinear(nn.LSTM):
+class LSTMLinear(nnx.LSTM):
 
     def __init__(self, *,
                  input_size,
@@ -121,7 +121,7 @@ class LSTMLinear(nn.LSTM):
 #             :attr:`dropout`. Default: 0
 #         bidirectional: If ``True``, becomes a bidirectional GRU. Default: ``False``
 #
-class GRULinear(nn.GRU):
+class GRULinear(nnx.GRU):
 
     def __init__(self, *,
                  input_size,
@@ -182,7 +182,7 @@ class GRULinear(nn.GRU):
 #             :attr:`dropout`. Default: 0
 #         bidirectional: If ``True``, becomes a bidirectional RNN. Default: ``False``
 #
-class RNNLinear(nn.RNN):
+class RNNLinear(nnx.RNN):
 
     def __init__(self, *,
                  input_size,

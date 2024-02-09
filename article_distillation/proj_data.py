@@ -2,7 +2,7 @@
 # Project low dimensional data into an high dimensional space
 #
 # Low dimensional data used: [2,3,4,5,10]
-# Projections into:          [25,50,100]
+# Projections into:          [3,10,25,50,100]  (when possible)
 #
 import numpy as np
 import pandas as pd
