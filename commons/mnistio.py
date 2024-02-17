@@ -41,7 +41,7 @@ from path import Path as path
 #
 # ---------------------------------------------------------------------------
 
-def load_images(images_file: str, count=0, asfloat=False, asvector=False, asrgb=False):
+def load_images(images_file: str, count=0, asfloat=False, asvector=False, asrgb=False) -> np.ndarray:
     """
     Load the images in a MNIST formatted file.
 
@@ -112,11 +112,13 @@ def load_images(images_file: str, count=0, asfloat=False, asvector=False, asrgb=
 # end
 
 
-def save_images(images_file: str, images: np.ndarray, asrgb=False):
+def save_images(images_file: str, images: np.ndarray, asrgb=False, clast=False):
     """
     Save the images in a file in MNIST format
 
     :param str mnist_file: file to save the images
+    :param bool asrgb: if to save the image as RGB
+    :param bool clast: if the channels are the last dimension
     :param np.ndarray images: images to save
     """
 
@@ -132,6 +134,9 @@ def save_images(images_file: str, images: np.ndarray, asrgb=False):
         images = (images.clip(0, 1) * 255).astype(np.uint8)
 
     if asrgb:
+        if clast:
+            images = images.transpose([0, 3, 1, 2])
+
         if len(images.shape) == 2:
             n, s = images.shape
             n *= 3

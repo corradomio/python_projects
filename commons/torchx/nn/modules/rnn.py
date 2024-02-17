@@ -9,13 +9,6 @@ from torch import Tensor, matmul, sigmoid, tanh, relu
 # Utilities
 # ---------------------------------------------------------------------------
 
-def identity(x): return x
-
-
-def swapaxes(x, batch_first):
-    return torch.swapaxes(x, 0, 1) if batch_first else x
-
-
 class RNNComposer:
 
     def __init__(self, return_sequence, return_state):
@@ -33,7 +26,10 @@ class RNNComposer:
             return state
         else:
             return seq[:, -1]
-# end
+
+
+def swapaxes(x, batch_first):
+    return torch.swapaxes(x, 0, 1) if batch_first else x
 
 
 # ---------------------------------------------------------------------------
@@ -54,8 +50,16 @@ class RNNComposer:
 #                           False: it is returned just the last sequence value
 #                           True:  it is returned all sequence values
 #                           None:  no sequence value is returned
+#       nonlinearity:       'tanh', 'relu' or None/'identity'
+#                           permit to decide the activation function used. For
+#                           default is 'tanh' but RNN supports also 'relu'
+#                           It is extended to all other RNN types (LSTM & GRU)
+#                           Note: it is implemented in python then it is slow!
 #
 # It is changed the default value for 'batch_first': now it is ``True``
+#
+# Note: it it is necessary to use 'relu' instead than to use 'GRU' o 'LSTM'
+#       it is enough to use 'RNN'
 #
 
 class LSTM(nn.LSTM):
@@ -117,9 +121,7 @@ class LSTM(nn.LSTM):
             **kwargs
         )
 
-        if nonlinearity is None:
-            self.activation = None
-        elif nonlinearity == "tanh":
+        if nonlinearity == "tanh":
             self.activation = tanh
         elif nonlinearity == "relu":
             self.activation = relu
@@ -129,6 +131,7 @@ class LSTM(nn.LSTM):
         self.return_sequence = return_sequence
         self.return_state = return_state
         self.nonlinearity = nonlinearity
+        self._use_tanh = (nonlinearity == "tanh")
         self._composer = RNNComposer(return_sequence, return_state)
 
     def forward(self,
@@ -174,11 +177,10 @@ class LSTM(nn.LSTM):
         return out, (h0, c0)
 
     def _forward(self, x, hx):
-        if self.nonlinearity == "tanh":
+        if self._use_tanh:
             return super().forward(x, hx)
         else:
             return self._compute(x, hx)
-    # end
 
     def _compute(self, x, hx):
         B, S, D = x.shape
@@ -339,10 +341,9 @@ class GRU(nn.GRU):
         self.return_sequence = return_sequence
         self.return_state = return_state
         self.nonlinearity = nonlinearity
+        self._use_tanh = (nonlinearity == "tanh")
 
-        if nonlinearity is None:
-            self.activation = None
-        elif nonlinearity == "tanh":
+        if nonlinearity == "tanh":
             self.activation = tanh
         elif nonlinearity == "relu":
             self.activation = relu
@@ -389,11 +390,10 @@ class GRU(nn.GRU):
         return out, h0
 
     def _forward(self, x, hx):
-        if self.nonlinearity == 'tanh':
+        if self._use_tanh:
             return super().forward(x, hx)
         else:
             return self._compute(x, hx)
-    # end
 
     def _compute(self, x, hx):
         B, S, D = x.shape

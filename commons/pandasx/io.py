@@ -400,7 +400,7 @@ def read_data(file: str,
     if reindex:
         df = datetime_reindex(df)
 
-    print(f"... done ({df.shape})")
+    print(f"... done {df.shape}")
     return df
 # end
 
