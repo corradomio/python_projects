@@ -1,19 +1,18 @@
-import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
-import mnistio as mio
-import imageio as iio
+import pandas as pd
 import skimage as skm
-from timing import tprint
-from skimage.color import rgb2gray
-from skimage.transform import rescale, resize, downscale_local_mean
-from path import Path as path
 from joblib import Parallel, delayed
+from path import Path as path
+from skimage.color import rgb2gray
+from skimage.transform import resize
 
+import mnistio as mio
+from timing import tprint
 
 DATA_DIR="E:\Datasets\CartoonSet\cartoonset100k"
 
-SIZE = 64
+SIZE = 32
 
 
 def load_image(f, count, asrgb=False):
@@ -26,7 +25,7 @@ def load_image(f, count, asrgb=False):
     else:
         img = rgb2gray(img[:, :, 0:3])
     img = resize(img, (SIZE, SIZE))
-    img = 1 - img
+    img = (img*255).astype(np.uint8)
 
     # plt.imshow(img, cmap="gray")
     # plt.show()

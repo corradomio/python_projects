@@ -161,8 +161,8 @@ def save_images(images_file: str, images: np.ndarray, asrgb=False, clast=False):
     with f:
         write32(f, 2051)    # magick
         write32(f, n)       # number of images
-        write32(f, w)       # width
-        write32(f, h)       # height
+        write32(f, h)       # number of rows (height)
+        write32(f, w)       # number of cols (width)
         data = images.tobytes()
         f.write(data)
 # end
