@@ -1,8 +1,8 @@
 from typing import List
 import pandas as pd
-from .base import datetime_encode, onehot_encode, binary_encode, \
+from .base import datetime_encode, onehot_encode, binhot_encode, \
     set_index, ignore_columns, datetime_reindex, as_list, \
-    find_unnamed_columns, find_binary, dataframe_sort, rename_columns, \
+    find_unnamed_columns, dataframe_sort, rename_columns, \
     NoneType
 from .time import periodic_encode, infer_freq
 from .io_arff import read_arff
@@ -163,11 +163,13 @@ def read_database(url: str, dtype, **kwargs):
 def read_data(file: str,
               *,
               dtype=None,       # list of columns types
-              categorical=None, # categorical columns
               boolean=None,     # boolean columns
+              integer=None,     # integer columns
               numeric=None,     # numerical/float columns
-              onehot=None,      # columns to convert using onehot encoding
-              binary=None,      # columns to convert using onehot encoding in a single column
+
+              categorical=None, # pandas categorical columns
+              onehot=None,      # categorical columns to convert using onehot encoding.
+              binhot=None,      # categorical columns to convert using binary hot encoding.
 
               index=None,       # columns to use as index
               ignore=None,      # columns to ignore
@@ -175,7 +177,7 @@ def read_data(file: str,
 
               datetime=None,    # datetime column to convert in a PeriodTime
 
-              periodic=None,    # [EXPERIMENTAL]
+              periodic=None,    # [EXPERIMENTAL] to add datetime periodic representation
               count=False,      # [EXPERIMENTAL] if to add the column 'count' with value 1
               reindex=False,    # [EXPERIMENTAL] if to reindex the dataset
               sort=False,       # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
@@ -221,7 +223,6 @@ def read_data(file: str,
 
     :param file: file to read
     :param dtype: list of column types. A column type can be:
-
                 - None: column skipped
                 - str: string
                 - int: integer
@@ -230,14 +231,14 @@ def read_data(file: str,
                     (case insensitive)
                 - enum: string used as enumeration
                 - ienum: integer value used as enumeration
-    :param categorical: column(s) to convert in 'pandas.categorical' value
     :param boolean: column(s) to convert in 'boolean' value (False, True)
             It support several 'boolean' values:
                 0/1, 'f'/'t', 'F'/'T', 'false'/'true', 'False'/'True', 'off'/'on', 'close'/'open'
-    :param onehot: column(s) to convert using onehot encoding
-    :param binary: column(s) to convert using onehot encoding in a single column.
-            If the column contains 3+ values, it is not converted
+    :param integer: column(s) to convert in 'int' type. To force int values on float columns
     :param numeric: column(s) to convert in 'float' type. To force float values on integer columns
+    :param categorical: column(s) to convert in 'pandas.categorical' value
+    :param onehot: column(s) to convert using onehot encoding
+    :param binhot: column(s) to convert using binary hot encoding
     :param datetime: column used as datetime. Supported formats:
                 - col: column already in datetime format
                 - (col, format): 'format' used to convert the string into pandas datetime
@@ -280,9 +281,11 @@ def read_data(file: str,
     # convert list parameters passed as single value in a singleton list
     categorical = as_list(categorical, 'categorical')
     boolean = as_list(boolean, 'boolean')
+    integer = as_list(integer, 'integer')
     numeric = as_list(numeric, 'numeric')
     onehot = as_list(onehot, 'onehot')
-    binary = as_list(binary, 'binary')
+    binhot = as_list(binhot, 'binhot')
+    # binary = as_list(binary, 'binary')
     ignore = as_list(ignore, 'ignore')
     index = as_list(index, 'index')
 
@@ -332,10 +335,6 @@ def read_data(file: str,
         ignore += ignore_
     # end
 
-    # if binary == ['auto']:
-    #     binary = find_binary(df, onehot)
-    #     onehot = set(onehot).difference(binary)
-
     # pandas categorical
     for col in categorical:
         df[col] = df[col].astype('category')
@@ -343,6 +342,10 @@ def read_data(file: str,
     # pandas boolean
     for col in boolean:
         df[col] = df[col].astype(bool)
+
+    # pandas integer
+    for col in integer:
+        df[col] = df[col].astype(int)
 
     # pandas float
     for col in numeric:
@@ -366,9 +369,13 @@ def read_data(file: str,
     if len(onehot) > 0:
         df = onehot_encode(df, onehot)
 
+    # binhot encoding
+    if len(binhot) > 0:
+        df = binhot_encode(df, binhot)
+
     # binary/{0,1} encoding
-    if len(binary) > 0:
-        df = binary_encode(df, binary)
+    # if len(binary) > 0:
+    #     df = binary_encode(df, binary)
 
     # compose the index
     if len(index) > 0:

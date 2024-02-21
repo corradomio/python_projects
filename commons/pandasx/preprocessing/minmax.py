@@ -644,7 +644,7 @@ class FunctionMinMax(MinMax):
 class MinMaxScaler(GroupsEncoder):
 
     def __init__(self, columns=None, feature_range=(0, 1), *,
-                 method='linear', sp=None, tau=None,
+                 method=None, sp=None, tau=None,
                  groups=None, copy=True, **kwargs):
         """
 
@@ -706,18 +706,17 @@ class MinMaxScaler(GroupsEncoder):
             sp = 12
 
         # no scaling
-        if method in [None, 'identity']:
+        if method in ['identity']:
             return IdentityMinMax()
+
+        # global minmax
+        elif method in [None, "global"]:
+            return RatioMinMax()
 
         # ratio based
         elif isinstance(method, (int, float, list, tuple)):
             ratio = method
             return RatioMinMax(ratio)
-        elif method in ["global"]:
-            return RatioMinMax()
-
-        # elif sp is None:
-        #     return RatioMinMax()
 
         # linear
         elif method == 'linear':

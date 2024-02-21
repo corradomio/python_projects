@@ -1,2 +1,2 @@
 from .scipyx import maximize
-from .scipyxio import loadmat_hdf
+from .io import loadmat_hdf

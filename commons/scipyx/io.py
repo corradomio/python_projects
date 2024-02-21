@@ -6,7 +6,8 @@ def loadmat_hdf(file_name, mdict=None, appendmat=True, **kwargs):
     d = dict()
     with h5py.File(file_name, 'r') as f:
         for k in f.keys():
-            data = f[k].value
+            data = f[k]
+            data = data[:]
             print(data.shape)
             data = np.swapaxes(data, 0, 1)
             print(data.shape)

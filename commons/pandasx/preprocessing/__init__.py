@@ -9,7 +9,7 @@ from .periodic import PERIODIC_ALL, \
     PERIODIC_DAY_OF_WEEK, PERIODIC_DMY
 from .pipeline import Pipeline
 from .detrend import DetrendTransformer
-from .scalers import StandardScaler
+from .scalers import StandardScaler, LinearMinMaxScaler
 from .minmax import MinMaxScaler
 from .resampler import Resampler
 # from .lagst import LagsTransformer

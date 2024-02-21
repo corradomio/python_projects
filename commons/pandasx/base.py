@@ -12,9 +12,10 @@ from numpy import issubdtype, integer
 
 
 __all__ = [
-    "find_binary",
-    "binary_encode",
+    # "find_binary",
+    # "binary_encode",
     "onehot_encode",
+    "binhot_encode",
 
     "datetime_encode",
     "datetime_reindex",
@@ -60,84 +61,206 @@ __all__ = [
 # ---------------------------------------------------------------------------
 # find_binary
 # onehot_encode
+# ---------------------------------------------------------------------------
+
+# def find_binary(df: pd.DataFrame, columns: Optional[list[str]] = None) -> list[str]:
+#     """
+#     Select the columns in 'columns' that can be considered 'binary'
+#
+#     :param df: dataframe
+#     :param columns: columns to analyze. If None, all columns
+#     :return: list of binary columns
+#     """
+#     if columns is None:
+#         columns = df.columns
+#
+#     binary_columns = []
+#     for col in columns:
+#         nuv = len(df[col].unique())
+#         if nuv <= 2:
+#             binary_columns.append(col)
+#     return binary_columns
+# # end
+
+
+# def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) -> pd.DataFrame:
+#     """
+#     Encode the columns values as {0,1}, if not already encoded.
+#     It is possible to encode only 1 or 2 distinct values.
+#     The values are ordered
+#
+#     :param df: dataframe
+#     :param columns: columns to convert
+#     :return: the dataframe with the encoded columns
+#     """
+#     assert isinstance(df, pd.DataFrame)
+#     columns = as_list(columns, 'columns')
+#
+#     for col in columns:
+#         s = df[col]
+#         if issubdtype(s.dtype.type, integer):
+#             continue
+#
+#         values = sorted(s.unique())
+#         assert len(values) <= 2
+#
+#         if len(values) == 1 and values[0] in [0, 1]:
+#             continue
+#         elif values[0] in [0, 1] and values[1] in [0, 1]:
+#             continue
+#         elif len(values) == 1:
+#             v = list(values)[0]
+#             map = {v: 0}
+#         else:
+#             map = {values[0]: 0, values[1]: 1}
+#
+#         s = s.replace({col: map})
+#         df[col] = s
+#     # end
+#     return df
+# # end
+
+
+# def onehot_encode_old(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFrame:
+#     """
+#     Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
+#
+#     :param pd.DataFrame df:
+#     :param list[str] columns: list of columns to convert using 'pd.get_dummies'
+#     :return pd.DataFrame: new dataframe
+#     """
+#     assert isinstance(df, pd.DataFrame)
+#     columns = as_list(columns, 'columns')
+#
+#     for col in columns:
+#         dummies = pd.get_dummies(df[col], prefix=col).astype(int)
+#         df = df.join(dummies)
+#     return df
+# # end
+
+
+def safe_sorted(values):
+    ivals = sorted([v for v in values if isinstance(v, int)])
+    svals = sorted([v for v in values if isinstance(v, str)])
+    uvals = list(set(values).difference(ivals + svals))
+    return ivals + svals + uvals
+
+
+def onehot_encode(df: pd, columns: Union[str, list[str]]) -> pd.DataFrame:
+    assert isinstance(df, pd.DataFrame)
+    columns = as_list(columns, 'columns')
+
+    for col in columns:
+        # check if the column contains ONLY 2 values
+        uv = safe_sorted(df[col].unique())
+        nv = len(uv)
+
+        if nv <= 2:
+            vmap = {uv[i]: i for i in range(nv)}
+            df[col] = df[col].replace(vmap)
+            continue
+
+        # generate the columns
+        for v in uv:
+            ohcol = f"{col}_{v}"
+            df[ohcol] = 0
+
+        for v in uv:
+            ohcol = f"{col}_{v}"
+            df.loc[df[col] == v, ohcol] = 1
+
+        # remove column & clone to reduce fragmentation
+        df = df[df.columns.difference([col])].copy()
+        pass
+    return df
+# end
+
+
+def binhot_encode(df: pd, columns: Union[str, list[str]]) -> pd.DataFrame:
+    def nbits(n):
+        b = 1
+        m = 2
+        while m < n:
+            b += 1
+            m += m
+        return b
+
+    def bits(k, n):
+        t = k
+        b = [0]*n
+        i = 0
+        while t > 0:
+            if t % 2 == 1:
+                b[i] = 1
+            t >>= 1
+            i += 1
+        return b
+
+    assert isinstance(df, pd.DataFrame)
+    columns = as_list(columns, 'columns')
+
+    for col in columns:
+        # check if the column contains ONLY 2 values
+        uv = safe_sorted(df[col].unique())
+        nv = len(uv)
+        if nv <= 2:
+            vmap = {uv[i]: i for i in range(nv)}
+            df[col] = df[col].replace(vmap)
+            continue
+
+        nb = nbits(nv)
+
+        # generate the columns
+        for b in range(nb):
+            bcol = f"{col}_{b}"
+            df[bcol] = 0
+
+        for i, v in enumerate(uv):
+            vbits = bits(i, nb)
+            for b in range(nb):
+                bcol = f"{col}_{b}"
+                if vbits[b] == 1:
+                    df.loc[df[col] == v, bcol] = 1
+
+        # remove column & clone to reduce fragmentation
+        df = df[df.columns.difference([col])].copy()
+        pass
+    return df
+# end
+
+
+# ---------------------------------------------------------------------------
 # datetime_encode
 # datetime_reindex
 # ---------------------------------------------------------------------------
 
-def find_binary(df: pd.DataFrame, columns: Optional[list[str]] = None) -> list[str]:
-    """
-    Select the columns in 'columns' that can be considered 'binary'
-
-    :param df: dataframe
-    :param columns: columns to analyze. If None, all columns
-    :return: list of binary columns
-    """
-    if columns is None:
-        columns = df.columns
-
-    binary_columns = []
-    for col in columns:
-        nuv = len(df[col].unique())
-        if nuv <= 2:
-            binary_columns.append(col)
-    return binary_columns
-# end
+FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
+              'Q', 'Q', 'QS', 'BQS',
+              'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
 
 
-def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) -> pd.DataFrame:
-    """
-    Encode the columns values as {0,1}, if not already encoded.
-    It is possible to encode only 1 or 2 distinct values.
-    The values are ordered
+def _to_datetime(df, datetime, format, freq):
+    dt_series = df[datetime]
 
-    :param df: dataframe
-    :param columns: columns to convert
-    :return: the dataframe with the encoded columns
-    """
-    assert isinstance(df, pd.DataFrame)
-    columns = as_list(columns, 'columns')
+    # Note: if 'format' contains the timezone, it is necessary to normalize
+    # the timestamp removing the timezone in a 'intelligent' way.
+    # The first  solution is to remove the timezone and stop
+    # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
+    # then to remove the ZT reference
 
-    for col in columns:
-        s = df[col]
-        if issubdtype(s.dtype.type, integer):
-            continue
+    if format is not None:
+        dt_series = pd.to_datetime(dt_series, format=format)
+        if '%z' in format or '%Z' in format:
+            # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
+            dt_series = dt_series.apply(lambda x: x.tz_localize(None))
+    # np.dtypes.DateTime64DType == "datetime64[ns]"
+    # np.dtypes.ObjectDType
+    if dt_series.dtype not in [np.dtypes.DateTime64DType]:
+        dt_series = dt_series.astype("datetime64[ns]")
 
-        values = sorted(s.unique())
-        assert len(values) <= 2
-
-        if len(values) == 1 and values[0] in [0, 1]:
-            continue
-        elif values[0] in [0, 1] and values[1] in [0, 1]:
-            continue
-        elif len(values) == 1:
-            v = list(values)[0]
-            map = {v: 0}
-        else:
-            map = {values[0]: 0, values[1]: 1}
-
-        s = s.replace({col: map})
-        df[col] = s
-    # end
-    return df
-# end
-
-
-def onehot_encode(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFrame:
-    """
-    Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
-
-    :param pd.DataFrame df:
-    :param list[str] columns: list of columns to convert using 'pd.get_dummies'
-    :return pd.DataFrame: new dataframe
-    """
-    assert isinstance(df, pd.DataFrame)
-    columns = as_list(columns, 'columns')
-
-    for col in columns:
-        dummies = pd.get_dummies(df[col], prefix=col).astype(int)
-        df = df.join(dummies)
-    return df
-# end
+    if freq is not None:
+        dt_series = dt_series.dt.to_period(freq)
+    return dt_series
 
 
 def datetime_encode(df: pd.DataFrame,
@@ -166,10 +289,18 @@ def datetime_encode(df: pd.DataFrame,
     else:
         datetime, format, freq = datetime
 
-    if format is not None:
-        df[datetime] = pd.to_datetime(df[datetime], format=format)
-    if freq is not None:
-        df[datetime] = df[datetime].dt.to_period(freq)
+    df[datetime] = _to_datetime(df, datetime, format, freq)
+
+    # if format is not None:
+    #     dt_series = pd.to_datetime(df[datetime], format=format)
+    #     dt_series = dt_series.apply(lambda x: x.date())
+    #     df[datetime] = dt_series
+    # if freq in FREQ_VALID and df[datetime].dtype in [pd.Timestamp]:
+    #     # df[datetime] = df[datetime].apply(lambda x: x.date())
+    #     df[datetime] = df[datetime].apply(lambda x: x.to_pydatetime())
+    #     # df[datetime] = df[datetime].dt.date
+    # if freq is not None:
+    #     df[datetime] = df[datetime].dt.to_period(freq)
     return df
 # end
 
