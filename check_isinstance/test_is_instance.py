@@ -1,7 +1,7 @@
 from typing import *
 from types import *
 from collections import *
-from is_instance import is_instance, All, Immutable, Const
+from stdlib.is_instance import is_instance, All, Immutable, Const, Literals
 
 
 class C:
@@ -43,6 +43,7 @@ def test_literal():
     assert (not is_instance(1, Literal[2]))
     assert (is_instance(1, Literal[1, 2]))
     assert (is_instance("on", Literal["on", "off"]))
+
 
 
 def test_immutable():
@@ -92,6 +93,23 @@ def test_tuple():
     assert(is_instance((1, 2, 3), Tuple[int]))
     assert(not is_instance((1, 2, 3), Tuple[int, int]))
     assert(is_instance((1, 2, 3), Tuple[int, int, int]))
+
+
+def test_collection():
+    assert(is_instance((1, 2, 3), Collection))
+    assert(is_instance([1, 2, 3], Collection))
+    assert(is_instance({1, 2, 3}, Collection))
+    assert(is_instance(frozenset({1, 2, 3}), Collection))
+    assert(is_instance(deque({1, 2, 3}), Collection))
+
+    assert(is_instance((1, 2, 3), Collection[int]))
+    assert(is_instance([1, 2, 3], Collection[int]))
+    assert(is_instance({1, 2, 3}, Collection[int]))
+    assert(is_instance(frozenset((1, 2, 3)), Collection[int]))
+    assert(is_instance(deque((1, 2, 3)), Collection[int]))
+
+    assert(not is_instance([1, 2, 3], Collection[int, int]))
+    assert(is_instance((1, 2, 3), Collection[int, int, int]))
 
 
 def test_deque():
@@ -184,6 +202,17 @@ def test_frozenset():
     assert(is_instance(frozenset([1, 2]), frozenset[int]))
 
 
+def test_literals():
+    VALUES = ['a', 'b', 'c']
+    assert (is_instance(1, Union[int, Literals[VALUES]]))
+    assert (is_instance('a', Union[int, Literals[VALUES]]))
+    assert (is_instance('a', VALUES))
+
+
 def test_literal_extended():
     assert is_instance("a", (0, "a"))
     assert is_instance(0, (0, "a"))
+    assert not is_instance(1, (0, "a"))
+    assert is_instance("a", [0, "a"])
+    assert is_instance(0, [0, "a"])
+    assert not is_instance(1, [0, "a"])

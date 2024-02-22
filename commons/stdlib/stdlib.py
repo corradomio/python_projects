@@ -95,6 +95,13 @@ def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
             list(l) if tl == tuple else l
 
 
+def as_tuple(l: Union[NoneType, Any, list, tuple], param=None):
+    tl = type(l)
+    return tuple() if l is None else \
+        l if tl == tuple else \
+        tuple(l) if tl == list else (l,)
+
+
 # ---------------------------------------------------------------------------
 # tobool
 # ---------------------------------------------------------------------------

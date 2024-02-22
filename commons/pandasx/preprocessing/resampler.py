@@ -1,7 +1,12 @@
-from .base import BaseEncoder, GroupsEncoder
 import numpy as np
 import pandas as pd
 
+from .base import GroupsEncoder
+
+
+# ---------------------------------------------------------------------------
+# Resampler
+# ---------------------------------------------------------------------------
 
 def _oversample2d(a: np.ndarray, nsamples=10) -> np.ndarray:
     """
@@ -93,5 +98,9 @@ class Resampler(GroupsEncoder):
 
         return pd.DataFrame(data=resampled, columns=X.columns, index=index)
         pass
-
 # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

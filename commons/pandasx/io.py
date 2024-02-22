@@ -1,10 +1,13 @@
 from typing import List
 import pandas as pd
-from .base import datetime_encode, onehot_encode, binhot_encode, \
-    set_index, ignore_columns, datetime_reindex, as_list, \
+from .base import set_index, ignore_columns, as_list, \
     find_unnamed_columns, dataframe_sort, rename_columns, \
     NoneType
-from .time import periodic_encode, infer_freq
+from .binhot import binhot_encode
+from .onehot import onehot_encode
+from .datetimes import datetime_encode, datetime_reindex
+from .periodicx import periodic_encode
+from .freq import infer_freq
 from .io_arff import read_arff
 
 

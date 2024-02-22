@@ -1,4 +1,4 @@
-from .lin import LinearForecaster
+from .linear import LinearForecaster
 from .scikit import ScikitForecaster
 
 try:
@@ -13,5 +13,5 @@ except:
 # Compatibility
 #
 from .nn import compute_input_output_shapes
-from .lin import LinearForecastRegressor
+from .linear import LinearForecastRegressor
 from .scikit import ScikitForecastRegressor

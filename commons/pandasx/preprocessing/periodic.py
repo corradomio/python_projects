@@ -4,8 +4,7 @@ import numpy as np
 import pandas as pd
 
 from .base import BaseEncoder, as_list
-from ..base import groups_split, groups_merge
-
+from .base import groups_split, groups_merge
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -150,7 +149,6 @@ NAME_DATETIME = "$DT"
 #   weekly_monthly  'day'_'week'_'month'
 #
 
-
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
@@ -264,7 +262,8 @@ class PeriodicEncoder(BaseEncoder):
         :param datetime str|(str, str): datetime column. If not specified, it is used the index
         :param freq: datetime frequency
         :param periodic: flags of periodics to use
-        :param groups str|list[str]: list of columns used to split the sub time series
+        :param groups: columns used to identify the TS in a multi-TS dataset
+                If None, it is used the MultiIndex
         :params means bool: if to add the means columns for each period
         :params method str: if to add the periods columns:
                 None: no period columns are added

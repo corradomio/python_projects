@@ -27,7 +27,7 @@ class BaseEncoder:
         else:
             return list(X.columns)
 
-    def _check_X(self, X):
+    def _check_X(self, X: DataFrame):
         assert isinstance(X, DataFrame)
         return X.copy() if self.copy else X
 # end
@@ -39,6 +39,8 @@ class GroupsEncoder(BaseEncoder):
         super().__init__(columns, copy)
         self.groups = as_list(groups)
 
+    # -----------------------------------------------------------------------
+    # Override
     # -----------------------------------------------------------------------
 
     def _get_params(self, g):
@@ -57,6 +59,8 @@ class GroupsEncoder(BaseEncoder):
         ...
 
     # -----------------------------------------------------------------------
+    # fit(X)
+    # -----------------------------------------------------------------------
 
     def fit(self, X):
         X = self._check_X(X)
@@ -68,6 +72,8 @@ class GroupsEncoder(BaseEncoder):
         else:
             self._fit_plain(X)
         return self
+
+    # -----------------------------------------------------------------------
 
     def _fit_plain(self, X):
         params = self._compute_params(X)
@@ -91,6 +97,8 @@ class GroupsEncoder(BaseEncoder):
         return self
 
     # -----------------------------------------------------------------------
+    # transform(X)
+    # -----------------------------------------------------------------------
 
     def transform(self, X):
         X = self._check_X(X)
@@ -102,6 +110,8 @@ class GroupsEncoder(BaseEncoder):
         else:
             Xt = self._transform_plain(X)
         return Xt
+
+    # -----------------------------------------------------------------------
 
     def _transform_plain(self, X):
         params = self._get_params(None)
@@ -134,6 +144,8 @@ class GroupsEncoder(BaseEncoder):
         return X
 
     # -----------------------------------------------------------------------
+    # inverse_transform(X)
+    # -----------------------------------------------------------------------
 
     def inverse_transform(self, X):
         X = self._check_X(X)
@@ -145,6 +157,8 @@ class GroupsEncoder(BaseEncoder):
         else:
             Xt = self._inverse_transform_plain(X)
         return Xt
+
+    # -----------------------------------------------------------------------
 
     def _inverse_transform_plain(self, X):
         params = self._get_params(None)

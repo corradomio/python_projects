@@ -26,8 +26,8 @@ import scipy.optimize as spo
 from stdlib.mathx import isgt, islt, sq, sqrt
 from .base import GroupsEncoder
 
-ARRAY = np.ndarray[float]
-INT_ARRAY = np.ndarray[int]
+ARRAY = np.ndarray
+INT_ARRAY = np.ndarray
 FUNCTION = type(lambda x: None)
 
 
@@ -308,7 +308,7 @@ def has_valid_pattern(y, tau) -> bool:
     y31 = y[:n3]
     y32 = y[n3:nm]
     y33 = y[nm:]
-    y31diff, y32diff, y33diff = list(sorted([y31.max() - y31.min(), y32.max() - y32.min(), y33.max() - y33.min()]))
+    y31diff, y32diff, y33diff = sorted([y31.max() - y31.min(), y32.max() - y32.min(), y33.max() - y33.min()])
     if tau*y31diff < y32diff or tau*y32diff < y33diff:
         return False
 
@@ -317,7 +317,7 @@ def has_valid_pattern(y, tau) -> bool:
     n2 = n//2
     y21 = y[:n2]
     y22 = y[n2:]
-    y21diff, y22diff = list(sorted([y21.max() - y21.min(),  y22.max() - y22.min()]))
+    y21diff, y22diff = sorted([y21.max() - y21.min(),  y22.max() - y22.min()])
     if tau*y21diff < y22diff:
         return False
 
@@ -654,7 +654,8 @@ class MinMaxScaler(GroupsEncoder):
         :param sp: seasonality period
         :param tau: if not None, the TS is validated. If the TS is not valid (has a wrong pattern) no
                 transformation is applied
-        :param groups: columns used to identify the TD ina multi-TS dataset
+        :param groups: columns used to identify the TS in a multi-TS dataset
+                If None, it is used the MultiIndex
         :param copy:
         :param kwargs:
         """

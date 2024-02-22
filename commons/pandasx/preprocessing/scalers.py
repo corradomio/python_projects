@@ -24,9 +24,10 @@ class StandardScaler(GroupsEncoder):
             'per-group' basis
 
         :param columns: column or columns where to apply the scaling.
-            If None, the scaling is applied to all columns
+                If None, the scaling is applied to all columns
         :param feature_range: tuple (mean, standard_deviation) values to use
-        :param groups: if the dataset contains groups, column(s) used to identify each group
+        :param groups: columns used to identify the TS in a multi-TS dataset
+                If None, it is used the MultiIndex
         """
         super().__init__(columns, groups, copy)
         self.feature_range = feature_range
@@ -163,7 +164,7 @@ StandardScalerEncoder = StandardScaler
 
 
 # ---------------------------------------------------------------------------
-# MinMaxScaler
+# LinearMinMaxScaler
 # ---------------------------------------------------------------------------
 
 class LinearMinMaxScaler(GroupsEncoder):
@@ -180,9 +181,10 @@ class LinearMinMaxScaler(GroupsEncoder):
             'per-group' basis
 
         :param columns: column or columns where to apply the scaling.
-            If None, the scaling is applied to all columns
+                If None, the scaling is applied to all columns
         :param feature_range: tuple (mean, standard_deviation) values to use
-        :param groups: if the dataset contains groups, column(s) used to identify each group
+        :param groups: columns used to identify the TS in a multi-TS dataset
+                If None, it is used the MultiIndex
         """
         super().__init__(columns, groups, copy)
         self.feature_range = feature_range

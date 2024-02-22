@@ -1,6 +1,7 @@
 import logging
 
 from torch import nn as nn
+from skorchx.callbacks import PrintLog
 
 from stdlib import mul_
 from .nn import *
@@ -12,8 +13,6 @@ __all__ = [
     "SimpleCNNForecaster",
     "MultiLagsCNNForecaster",
 ]
-
-from skorchx.callbacks import PrintLog
 
 
 # ---------------------------------------------------------------------------

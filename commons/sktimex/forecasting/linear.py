@@ -101,13 +101,26 @@ class LinearForecaster(ExtendedBaseForecaster):
                  tlags=(0,),
                  estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
                  flatten=False,
-                 current=None,  # DEPRECATED
                  **kwargs):
         """
+        Sktime compatible forecaster based on Scikit models.
+        It offers the same interface to other sktime forecasters, instead than to use
+        'make_reduction'.
+        It extends the flexibility of 'make_reduction' because it is possibile to
+        specify past & future lags not only as simple integers but using specific
+        list of integers to use as offset respect the timeslot to predict.
+
+        Note: there is AN INCOMPATIBILITY to resolve:
+
+            in sktime the FIRST timeslot to predict has t=1
+            here      the FIRST timeslot to predict has t=0
+
+            THIS MUST BE RESOLVED!
 
         :param lags:
-                int             same for input and target
-                (ilag, tlag)    input lag, target lag
+                int                 same for input and target
+                (ilag, tlag)        input lag, target lag
+                ([ilags], [tlags])  selected input/target lags
                 {
                     'period_type': <period_type>,
                     'input': {
@@ -124,17 +137,15 @@ class LinearForecaster(ExtendedBaseForecaster):
                 }
 
         :param estimator: estimator to use. It can be
-                - q fully qualified class name (str). The parameters to use must be passed with 'kwargs'
+                - a fully qualified class name (str). The parameters to use must be passed with 'kwargs'
                 - a Python class (type). The parameters to use must be passed with 'kwargs'
                 - a class instance. The parameters 'kwargs' are retrieved from the instance
-        :param kwargs: parameters to pass to the estimator constructor
+        :param kwargs: parameters to pass to the estimator constructor, if necessary, or retrieved from the
+                estimator instance
         :param flatten: if to use a single model to predict the forecast horizon or a model for each
                 timeslot
         """
         super().__init__()
-
-        if current is not None:
-            lags = make_lags(lags, current)
 
         # Unmodified parameters [readonly]
         self.lags = lags

@@ -1,5 +1,5 @@
 from typing import *
-from is_instance import Const
+from stdlib.is_instance import Const
 
 # This is a sample Python script.
 

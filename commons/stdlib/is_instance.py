@@ -32,6 +32,7 @@
 # .
 from typing import _type_check, _remove_dups_flatten
 from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
+from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
 
 __all__ = [
     'is_instance',
@@ -220,6 +221,19 @@ from collections import *
 # Special forms
 # ---------------------------------------------------------------------------
 
+@_LiteralSpecialForm
+@_tp_cache(typed=True)
+def Literals(self, *parameters):
+    parameters = _flatten_literal_params(parameters[0])
+
+    try:
+        parameters = tuple(p for p, _ in _deduplicate(list(_value_and_type_iter(parameters))))
+    except TypeError:  # unhashable parameters
+        pass
+
+    return _LiteralGenericAlias(self, parameters)
+
+
 @_SpecialForm
 def All(self, parameters):
     """Intersection type; All[X, Y] means X and Y.
@@ -326,6 +340,25 @@ class IsLiteral(IsInstance):
         return obj in self.values
 
 
+class IsLiterals(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.targs = [type(arg) for arg in self.args]
+        self.nargs = len(self.args)
+        self.values = tp.__args__
+
+    def is_instance(self, obj) -> bool:
+        # Problem:  1 == True and 0 == False
+        # BUT, for type consistency, this is not a good idea
+        # both values must have the same type
+        # tobj = type(obj)
+        # for i in range(self.nargs):
+        #     if obj == self.args[i] and tobj == self.targs[i]:
+        #         return True
+        # return False
+        return obj in self.values
+
+
 # ---------------------------------------------------------------------------
 
 def _len(obj):
@@ -337,8 +370,10 @@ def _len(obj):
 
 class IsCollection(IsInstance):
     # supported:  collection[T], collection[T1,T2,...]
-    def __init__(self, tp, collection_type=Union[Collection, namedtuple]):
+    def __init__(self, tp, collection_type=None):
         super().__init__(tp)
+        if collection_type is None:
+            collection_type = (list, tuple, namedtuple, set, frozenset, deque)
         self.collection_type = collection_type
 
     def is_instance(self, obj) -> bool:
@@ -655,7 +690,7 @@ def type_name(a_type: type) -> str:
 def is_instance(obj, a_type) -> bool:
     # if hasattr(a_type, '__supertype__'):
     #     return is_instance(obj, a_type.__supertype__)
-    if isinstance(a_type, tuple):
+    if isinstance(a_type, (tuple, list)):
         a_types: tuple[type] = a_type
         for a_type in a_types:
             if is_instance(obj, a_type):

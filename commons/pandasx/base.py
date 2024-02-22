@@ -3,22 +3,15 @@
 # Some simple data set loaders: from csv and .arff data files
 #
 import warnings
-from typing import List, Union, Optional
-from stdlib import NoneType, CollectionType, as_list
-
 import numpy as np
 import pandas as pd
-from numpy import issubdtype, integer
-
+from typing import Union, Optional, Collection
+from pandas import CategoricalDtype
+from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
 
 __all__ = [
     # "find_binary",
     # "binary_encode",
-    "onehot_encode",
-    "binhot_encode",
-
-    "datetime_encode",
-    "datetime_reindex",
 
     "dataframe_sort",
 
@@ -26,10 +19,14 @@ __all__ = [
     "groups_split",
     "groups_merge",
     "groups_select",
+    "groups_count",
 
-    "split_column",
+    "split_column",     # DEPERECATED
+    "merge_column",     # DEPRECATED
+
     "columns_split",
     "columns_merge",
+    "columns_range",
 
     "multiindex_get_level_values",
     "set_index",
@@ -59,85 +56,8 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# find_binary
-# onehot_encode
+# safe_sorted
 # ---------------------------------------------------------------------------
-
-# def find_binary(df: pd.DataFrame, columns: Optional[list[str]] = None) -> list[str]:
-#     """
-#     Select the columns in 'columns' that can be considered 'binary'
-#
-#     :param df: dataframe
-#     :param columns: columns to analyze. If None, all columns
-#     :return: list of binary columns
-#     """
-#     if columns is None:
-#         columns = df.columns
-#
-#     binary_columns = []
-#     for col in columns:
-#         nuv = len(df[col].unique())
-#         if nuv <= 2:
-#             binary_columns.append(col)
-#     return binary_columns
-# # end
-
-
-# def binary_encode(df: pd.DataFrame, columns: Union[str, list[str]] = None) -> pd.DataFrame:
-#     """
-#     Encode the columns values as {0,1}, if not already encoded.
-#     It is possible to encode only 1 or 2 distinct values.
-#     The values are ordered
-#
-#     :param df: dataframe
-#     :param columns: columns to convert
-#     :return: the dataframe with the encoded columns
-#     """
-#     assert isinstance(df, pd.DataFrame)
-#     columns = as_list(columns, 'columns')
-#
-#     for col in columns:
-#         s = df[col]
-#         if issubdtype(s.dtype.type, integer):
-#             continue
-#
-#         values = sorted(s.unique())
-#         assert len(values) <= 2
-#
-#         if len(values) == 1 and values[0] in [0, 1]:
-#             continue
-#         elif values[0] in [0, 1] and values[1] in [0, 1]:
-#             continue
-#         elif len(values) == 1:
-#             v = list(values)[0]
-#             map = {v: 0}
-#         else:
-#             map = {values[0]: 0, values[1]: 1}
-#
-#         s = s.replace({col: map})
-#         df[col] = s
-#     # end
-#     return df
-# # end
-
-
-# def onehot_encode_old(df: pd.DataFrame, columns: Union[str, list[str]]) -> pd.DataFrame:
-#     """
-#     Add some columns based on pandas' 'One-Hot encoding' (pd.get_dummies)
-#
-#     :param pd.DataFrame df:
-#     :param list[str] columns: list of columns to convert using 'pd.get_dummies'
-#     :return pd.DataFrame: new dataframe
-#     """
-#     assert isinstance(df, pd.DataFrame)
-#     columns = as_list(columns, 'columns')
-#
-#     for col in columns:
-#         dummies = pd.get_dummies(df[col], prefix=col).astype(int)
-#         df = df.join(dummies)
-#     return df
-# # end
-
 
 def safe_sorted(values):
     ivals = sorted([v for v in values if isinstance(v, int)])
@@ -146,192 +66,12 @@ def safe_sorted(values):
     return ivals + svals + uvals
 
 
-def onehot_encode(df: pd, columns: Union[str, list[str]]) -> pd.DataFrame:
-    assert isinstance(df, pd.DataFrame)
-    columns = as_list(columns, 'columns')
-
-    for col in columns:
-        # check if the column contains ONLY 2 values
-        uv = safe_sorted(df[col].unique())
-        nv = len(uv)
-
-        if nv <= 2:
-            vmap = {uv[i]: i for i in range(nv)}
-            df[col] = df[col].replace(vmap)
-            continue
-
-        # generate the columns
-        for v in uv:
-            ohcol = f"{col}_{v}"
-            df[ohcol] = 0
-
-        for v in uv:
-            ohcol = f"{col}_{v}"
-            df.loc[df[col] == v, ohcol] = 1
-
-        # remove column & clone to reduce fragmentation
-        df = df[df.columns.difference([col])].copy()
-        pass
-    return df
-# end
-
-
-def binhot_encode(df: pd, columns: Union[str, list[str]]) -> pd.DataFrame:
-    def nbits(n):
-        b = 1
-        m = 2
-        while m < n:
-            b += 1
-            m += m
-        return b
-
-    def bits(k, n):
-        t = k
-        b = [0]*n
-        i = 0
-        while t > 0:
-            if t % 2 == 1:
-                b[i] = 1
-            t >>= 1
-            i += 1
-        return b
-
-    assert isinstance(df, pd.DataFrame)
-    columns = as_list(columns, 'columns')
-
-    for col in columns:
-        # check if the column contains ONLY 2 values
-        uv = safe_sorted(df[col].unique())
-        nv = len(uv)
-        if nv <= 2:
-            vmap = {uv[i]: i for i in range(nv)}
-            df[col] = df[col].replace(vmap)
-            continue
-
-        nb = nbits(nv)
-
-        # generate the columns
-        for b in range(nb):
-            bcol = f"{col}_{b}"
-            df[bcol] = 0
-
-        for i, v in enumerate(uv):
-            vbits = bits(i, nb)
-            for b in range(nb):
-                bcol = f"{col}_{b}"
-                if vbits[b] == 1:
-                    df.loc[df[col] == v, bcol] = 1
-
-        # remove column & clone to reduce fragmentation
-        df = df[df.columns.difference([col])].copy()
-        pass
-    return df
-# end
-
-
-# ---------------------------------------------------------------------------
-# datetime_encode
-# datetime_reindex
-# ---------------------------------------------------------------------------
-
-FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
-              'Q', 'Q', 'QS', 'BQS',
-              'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
-
-
-def _to_datetime(df, datetime, format, freq):
-    dt_series = df[datetime]
-
-    # Note: if 'format' contains the timezone, it is necessary to normalize
-    # the timestamp removing the timezone in a 'intelligent' way.
-    # The first  solution is to remove the timezone and stop
-    # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
-    # then to remove the ZT reference
-
-    if format is not None:
-        dt_series = pd.to_datetime(dt_series, format=format)
-        if '%z' in format or '%Z' in format:
-            # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
-            dt_series = dt_series.apply(lambda x: x.tz_localize(None))
-    # np.dtypes.DateTime64DType == "datetime64[ns]"
-    # np.dtypes.ObjectDType
-    if dt_series.dtype not in [np.dtypes.DateTime64DType]:
-        dt_series = dt_series.astype("datetime64[ns]")
-
-    if freq is not None:
-        dt_series = dt_series.dt.to_period(freq)
-    return dt_series
-
-
-def datetime_encode(df: pd.DataFrame,
-                    datetime: Union[str, tuple[str]],
-                    format: Optional[str] = None,
-                    freq: Optional[str] = None) -> pd.DataFrame:
-    """
-    Convert a string column in datatime/period, based on pandas' 'to_datetime' (pd.to_datetime)
-
-    :param df: dataframe to process
-    :param datetime: col | (col, format) | (col, format, freq)
-    :param format: datetime format
-    :param freq: period frequency
-    :return: the df with the 'datetime' column converted
-    """
-    assert isinstance(datetime, (str, list, tuple))
-    assert isinstance(format, (NoneType, str))
-    assert isinstance(freq, (NoneType, str))
-    # assert 1 < len(datetime) < 4
-    if isinstance(datetime, str):
-        pass
-    elif len(datetime) == 1:
-        pass
-    elif len(datetime) == 2:
-        datetime, format = datetime
-    else:
-        datetime, format, freq = datetime
-
-    df[datetime] = _to_datetime(df, datetime, format, freq)
-
-    # if format is not None:
-    #     dt_series = pd.to_datetime(df[datetime], format=format)
-    #     dt_series = dt_series.apply(lambda x: x.date())
-    #     df[datetime] = dt_series
-    # if freq in FREQ_VALID and df[datetime].dtype in [pd.Timestamp]:
-    #     # df[datetime] = df[datetime].apply(lambda x: x.date())
-    #     df[datetime] = df[datetime].apply(lambda x: x.to_pydatetime())
-    #     # df[datetime] = df[datetime].dt.date
-    # if freq is not None:
-    #     df[datetime] = df[datetime].dt.to_period(freq)
-    return df
-# end
-
-
-def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFrame:
-    """
-    Make sure that the datetime index in dataframe is complete, based
-    on the index's 'frequency'
-    :param df: dataframe to process
-    :param keep: used in 'index.duplicated(leep=...)'
-    :param method: used in 'index.reindex(method=...)'
-    :return: reindexed dataframe
-    """
-    start = df.index[0]
-    dtend = df.index[-1]
-    freq = start.freq
-    dtrange = pd.period_range(start, dtend+1, freq=freq)
-    # remove duplicated index keys
-    df = df[~df.index.duplicated(keep=keep)]
-    # make sure that all timestamps are present
-    df = df.reindex(index=dtrange, method=mehod)
-    return df
-# end
-
-
 # ---------------------------------------------------------------------------
 # dataframe_sort
 # ---------------------------------------------------------------------------
 
 def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, ascending=True) \
-    -> pd.DataFrame:
+        -> pd.DataFrame:
     if sort in [None, False, [], ()]:
         return df
     if sort is True:
@@ -344,8 +84,7 @@ def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, a
 
 # ---------------------------------------------------------------------------
 # groups_list
-# groups_split
-# groups_merge
+# groups_count
 # ---------------------------------------------------------------------------
 
 DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
@@ -402,13 +141,21 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]] = None, so
     else:
         glist = _groups_list_by_index(df)
 
-    if sorted:
-        glist = list(sorted(glist))
+    if sort:
+        glist = sorted(glist)
 
     return glist
 # end
 
 
+def groups_count(df: pd.DataFrame, groups: Union[None, str, list[str]] = None) -> int:
+    glist = groups_list(df, groups=groups, sort=False)
+    return len(glist)
+# end
+
+
+# ---------------------------------------------------------------------------
+# groups_split
 # ---------------------------------------------------------------------------
 
 def _groups_split_on_columns(df, groups, drop, keep):
@@ -449,6 +196,7 @@ def _groups_split_on_index(df, drop, keep):
         pass
 
     return dfdict
+# end
 
 
 def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
@@ -464,7 +212,7 @@ def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None
 
     :param df: DataFrame to split
     :param groups: list of columns to use during the split. The columns must be categorical or string.
-        None if it is used the MultiIndex
+        If None, it is used the MultiIndex
     :param drop: if to remove the 'groups' columns or from the index
     :param keep:  [DEBUG] keep only the first 'keep' groups
 
@@ -485,6 +233,8 @@ def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None
 # end
 
 
+# ---------------------------------------------------------------------------
+# groups_merge
 # ---------------------------------------------------------------------------
 
 def _groups_merge_by_columns(dfdict, groups, sortby):
@@ -557,15 +307,8 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame], *,
 
 
 # ---------------------------------------------------------------------------
-
-def as_tuple(l):
-    t = type(l)
-    if t == tuple:
-        return l
-    if t == list:
-        return tuple(l)
-    else:
-        return (l,)
+# groups_select
+# ---------------------------------------------------------------------------
 
 
 def _group_select_by_columns(df, groups, values, drop):
@@ -586,6 +329,7 @@ def _group_select_by_columns(df, groups, values, drop):
     if drop:
         selected_df.drop(groups, inplace=True, axis=1)
     return selected_df
+# end
 
 
 def _groups_select_by_index(df, values, drop):
@@ -608,12 +352,13 @@ def _groups_select_by_index(df, values, drop):
             level += 1
     # end
     return selected
+# end
 
 
 def groups_select(df: pd.DataFrame,
                   values: Union[None, str, list[str], tuple[str]], *,
                   groups: Union[None, str, list[str], tuple[str]] = None,
-                  drop=True):
+                  drop=True) -> pd.DataFrame:
     """
     Select the sub-dataframe based on the list of columns & values.
     To use the dataframe index (a multiindex), 'groups' must be None.
@@ -635,14 +380,9 @@ def groups_select(df: pd.DataFrame,
 # end
 
 
-# dataframe_split_on_groups = groups_split
-# dataframe_merge_on_groups = groups_merge
-
-
 # ---------------------------------------------------------------------------
 # split_column
-# columns_split
-# columns_merge
+# merge_column
 # ---------------------------------------------------------------------------
 
 def split_column(df: pd.DataFrame,
@@ -704,29 +444,7 @@ def split_column(df: pd.DataFrame,
 # end
 
 
-def columns_split(df: pd.DataFrame,
-                  columns: Union[None, str, list[str]] = None,
-                  ignore: Union[None, str, list[str]] = None) \
-        -> list[pd.Series]:
-    """
-    Split the dataframe in a list of series based on the list of selected columns
-    """
-    assert isinstance(df, pd.DataFrame)
-    columns = as_list(columns, 'columns')
-    ignore = as_list(ignore, 'ignore')
-
-    if len(columns) == 0:
-        columns = list(df.columns.difference(ignore))
-
-    series = []
-    for col in columns:
-        series.append(df[col])
-
-    return series
-# end
-
-
-def columns_merge(df: pd.DataFrame,
+def merge_column(df: pd.DataFrame,
                   columns: list[str],
                   column: str,
                   sep: str = '~',
@@ -764,16 +482,102 @@ def columns_merge(df: pd.DataFrame,
 # end
 
 
-# dataframe_split_column = split_column
-# dataframe_split_on_columns = columns_split
-# dataframe_merge_columns = columns_merge
+# ---------------------------------------------------------------------------
+# columns_split
+# columns_merge
+# ---------------------------------------------------------------------------
+
+def columns_split(df: pd.DataFrame,
+                  columns: Union[None, str, list[str]] = None,
+                  ignore: Union[None, str, list[str]] = None,
+                  shared: Union[None, str, list[str]] = None) \
+        -> list[pd.DataFrame]:
+    """
+    Split the dataframe in a list of series based on the list of selected columns
+    """
+    assert isinstance(df, pd.DataFrame)
+    columns = as_list(columns, 'columns')
+    ignore = as_list(ignore, 'ignore')
+    shared = as_list(shared, 'shared')
+
+    if len(columns) == 0:
+        columns = list(df.columns.difference(ignore + shared))
+
+    parts = []
+    for col in columns:
+        parts.append(df[[col] + shared])
+
+    return parts
+# end
+
+
+def columns_merge(parts: list[pd.DataFrame], sort: Union[None, bool, list[str]] = None) -> pd.DataFrame:
+    assert is_instance(parts, Collection[pd.DataFrame]) and len(parts) > 0
+
+    dfm = parts[0].copy()
+    for df in parts:
+        acols = df.columns.difference(dfm.columns)
+        if len(acols) == 0:
+            continue
+        dfm = pd.concat([dfm, df[acols]], axis=1)
+
+    scols = []
+    if sort is True:
+        scols = sorted(dfm.columns)
+    elif is_instance(sort, Collection[str]):
+        scols = sort + list(dfm.columns.difference(sort))
+
+    if len(scols) > 0:
+        dfm = dfm[scols]
+    return dfm
+
+
+# ---------------------------------------------------------------------------
+# columns_range
+# ---------------------------------------------------------------------------
+
+class RangeValues:
+
+    def __init__(self, dtype, values):
+        self.dtype = dtype
+        self.values = values
+# end
+
+
+def columns_range(df: pd.DataFrame, min_values=128):
+    """
+    Retrieve the range values for all columns.
+    If a column is of integer type and there are less than 'min_values' distinct values,
+    it is considered a 'categorical column'
+
+    :param df: dataframe to analyze
+    :param min_values: min number of integer values to consider as categorical
+    :return: a dictionary with the range values ofr each column
+    """
+    ranges = {}
+    for col in df.columns:
+        values = df[col]
+        dtype = df[col].dtype
+        if dtype in [float, np.float16, np.float32, np.float64]:
+            ranges[col] = (values.min(), values.max())
+        elif isinstance(dtype, CategoricalDtype):
+            ranges[col] = list(values.unique())
+        elif dtype in [int, np.int8, np.int16, np.int32] and 0 < len(values.unique()) <= min_values:
+            ranges[col] = list(values.unique())
+        elif dtype in [int, np.int8, np.int16, np.int32]:
+            ranges[col] = (values.min(), values.max())
+        elif dtype in [str]:
+            ranges[col] = list(values.unique())
+        else:
+            raise ValueError(f"Unsupported dtype {dtype} of column {col}")
+    return ranges
 
 
 # ---------------------------------------------------------------------------
 # multiindex_get_level_values
-# dataframe_index
-# dataframe_split_on_index
-# dataframe_merge_on_index
+# set_index
+# index_split
+# index_merge
 # ---------------------------------------------------------------------------
 
 def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) \
@@ -824,9 +628,6 @@ def set_index(df: pd.DataFrame,
         df = df.set_index(index, inplace=inplace, drop=drop)
     return df
 # end
-
-
-# dataframe_index = set_index
 
 
 def index_split(df: pd.DataFrame, levels: int = -1, drop=True) -> dict[tuple, pd.DataFrame]:
@@ -885,10 +686,6 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
     df = pd.concat(dflist, axis=0)
     return df
 # end
-
-
-# dataframe_split_on_index = index_split
-# dataframe_merge_on_index = index_merge
 
 
 # ---------------------------------------------------------------------------
@@ -1243,7 +1040,8 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple
 
 # ---------------------------------------------------------------------------
 # dataframe_correlation
-# dataframe_clip_outliers
+# filter_outliers
+# clip_outliers
 # ---------------------------------------------------------------------------
 
 def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
@@ -1334,12 +1132,8 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
     return df
 
 
-# dataframe_clip_outliers = clip_outliers
-# dataframe_filter_outliers = filter_outliers
-
-
 # ---------------------------------------------------------------------------
-# Index labels
+# index_labels
 # ---------------------------------------------------------------------------
 
 def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> list[str]:
@@ -1360,7 +1154,8 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 
 
 # ---------------------------------------------------------------------------
-# dataframe_ignore
+# find_unnamed_columns
+# ignore_columns
 # ---------------------------------------------------------------------------
 
 def find_unnamed_columns(df: pd.DataFrame) -> list[str]:
@@ -1389,9 +1184,6 @@ def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFr
         df = df[df.columns.difference(ignore)]
     return df
 # end
-
-
-# dataframe_ignore = ignore_columns
 
 
 # ---------------------------------------------------------------------------
