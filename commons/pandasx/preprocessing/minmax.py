@@ -24,7 +24,7 @@ import pandas as pd
 import scipy.optimize as spo
 
 from stdlib.mathx import isgt, islt, sq, sqrt
-from .base import GroupsEncoder
+from .base import GroupsBaseEncoder
 
 ARRAY = np.ndarray
 INT_ARRAY = np.ndarray
@@ -641,7 +641,7 @@ class FunctionMinMax(MinMax):
 #   exp             exponential interpolation
 #
 
-class MinMaxScaler(GroupsEncoder):
+class MinMaxScaler(GroupsBaseEncoder):
 
     def __init__(self, columns=None, feature_range=(0, 1), *,
                  method=None, sp=None, tau=None,
@@ -676,7 +676,7 @@ class MinMaxScaler(GroupsEncoder):
         self._minmax[g] = mmi
         self._start[g] = start
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         n = len(X)
         minmax = {}
         start = X.index[0]

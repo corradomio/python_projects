@@ -1,5 +1,5 @@
 from typing import Union, Optional
-
+from datetime import datetime
 import numpy as np
 import pandas as pd
 
@@ -16,23 +16,32 @@ FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
               'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
 
 
-def _to_datetime(df, datetime, format, freq):
-    dt_series = df[datetime]
+def _to_datetime(df, dtname, format, freq):
+    dt_series = df[dtname]
 
-    # Note: if 'format' contains the timezone, it is necessary to normalize
-    # the timestamp removing the timezone in a 'intelligent' way.
-    # The first  solution is to remove the timezone and stop
+    def remove_tz(x):
+        if hasattr(x, 'tz_localize'):
+            return x.tz_localize(None)
+        elif isinstance(x, datetime):
+            return x.replace(tzinfo=None)
+        else:
+            return x
+
+    # Note: if 'format' contains the timezone (%z, %Z), it is necessary to normalize
+    # the datetime removing it in a 'intelligent' way.
+    # The first  solution is to remove the timezone and stop.
     # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
-    # then to remove the ZT reference
+    # then to remove the TZ reference.
+    # Implemented the first one
 
     if format is not None:
         dt_series = pd.to_datetime(dt_series, format=format)
         if '%z' in format or '%Z' in format:
             # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
-            dt_series = dt_series.apply(lambda x: x.tz_localize(None))
+            dt_series = dt_series.apply(remove_tz)
     # np.dtypes.DateTime64DType == "datetime64[ns]"
     # np.dtypes.ObjectDType
-    if dt_series.dtype not in [np.dtypes.DateTime64DType]:
+    if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
         dt_series = dt_series.astype("datetime64[ns]")
 
     if freq is not None:

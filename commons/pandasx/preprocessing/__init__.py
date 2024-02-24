@@ -1,10 +1,10 @@
+from .base import GroupsBaseEncoder, XyBaseEncoder, SequenceEncoder
 from .transformers import IgnoreTransformer
 from .outliers import OutlierTransformer, QuantileTransformer
 from .pipeline import Pipeline
 from .detrend import DetrendTransformer
 from .scalers import StandardScaler, LinearMinMaxScaler
 from .minmax import MinMaxScaler
-from .resampler import Resampler
 from .onehot import OneHotEncoder
 from .binhot import BinHotEncoder
 from .periodic import PeriodicEncoder
@@ -15,5 +15,6 @@ from .times import DatetimeEncoder
 from .encoderx import PandasCategoricalEncoder, OrderedLabelsEncoder, DTypeEncoder
 from .agg import AggregateTransformer
 
+# from .resampler import Resampler
 # from .lagst import LagsTransformer
 # from .arryt import LagsArrayTransformer, LagsArrayForecaster

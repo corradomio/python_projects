@@ -10,14 +10,14 @@ def main():
                         ignore=['area_id', 'skill_id', 'day']
                         )
 
-    df = dfg.loc[(1, 1)]
-    dfa = df.groupby([df.index.year, df.index.month, df.index.weekday]).sum()
-    dfa.index.names = ['year', 'month', 'weekday']
+    # df = dfg.loc[(1, 1)]
+    # dfa = df.groupby([df.index.year, df.index.month, df.index.weekday]).sum()
+    # dfa.index.names = ['year', 'month', 'weekday']
+    #
+    # dfa = df.groupby([df.index.year, df.index.month]).sum()
+    # dfa.index.names = ['year', 'month']
 
-    dfa = df.groupby([df.index.year, df.index.month]).sum()
-    dfa.index.names = ['year', 'month']
-
-    agg = pdx.AggregateTransformer(freq=5)
+    agg = pdx.AggregateTransformer(freq='WS')
 
     dfa = agg.fit_transform(dfg)
 

@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import random
 
 # ---------------------------------------------------------------------------
@@ -43,7 +44,7 @@ import random
 FREQUENCIES = {
     # second
     'S': 1,                     # one second
-    's': 1,  # one second
+    's': 1,                     # one second
 
     # minute
     'T': 60,
@@ -112,6 +113,10 @@ FREQUENCIES = {
     # 'L': 1, 'ms': 1,    # milliseconds
     # 'U': 1, 'us': 1,    # microseconds
     # 'N': 1              # nanoseconds
+
+    'WS': 60 * 60 * 24 * 7,  # one week, optionally anchored on a day of the week
+    'WE': 60 * 60 * 24 * 7,  # one week, optionally anchored on a day of the week
+
 }
 
 
@@ -188,35 +193,58 @@ NORMALIZED_FREQ = {
 
 
 def normalize_freq(freq):
-    return NORMALIZED_FREQ[freq] if isinstance(freq, str) else freq
+    # return NORMALIZED_FREQ[freq] if isinstance(freq, str) else freq
+    return freq
 
 
 # ---------------------------------------------------------------------------
-# Statistical infer_freq
+# infer_freq
 # ---------------------------------------------------------------------------
+# Pandas already offer a 'infer_freq' method
 
 def infer_freq(datetime, steps=5, ntries=3) -> str:
     """
     Infer 'freq' checking randomly different positions of the index
 
-    :param index: pandas' index to use
+    [2024/02/23] implementation simplified using the services offered
+                 by pandas.infer_freq
+                 It add some extra cases not supported by
+
+    :param datetime: pandas' index to use
     :param steps: number of success results
     :param ntries: maximum number of retries if some check fails
     :return: the inferred frequency
     """
-    freq = None
-    if isinstance(datetime, pd.Period):
-        freq = datetime.freqstr
+    if isinstance(datetime, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        return pd.infer_freq(datetime)
     elif isinstance(datetime, pd.PeriodIndex):
-        freq = datetime.iloc[0].freqstr
-    elif isinstance(datetime, pd.Series):
-        dt = datetime.iloc[0]
-        if hasattr(dt, 'freqstr'):
-            freq = dt.freqstr
-    if freq is None:
-        freq = _infer_freq(datetime, steps, ntries)
+        return datetime.iloc[0].freqstr
+    # other pandas index types
+    elif isinstance(datetime, pd.Index):
+        return None
+    elif isinstance(datetime, pd.Series) and datetime.dtype == pd.PeriodDtype:
+        return datetime.iloc[0].freqstr
+    elif isinstance(datetime, pd.Period):
+        return datetime.freqstr
+    else:
+        return pd.infer_freq(datetime)
 
-    return NORMALIZED_FREQ[freq]
+    # freq = None
+    # if isinstance(datetime, pd.Period):
+    #     freq = datetime.freqstr
+    # elif isinstance(datetime, pd.PeriodIndex):
+    #     freq = datetime.iloc[0].freqstr
+    # elif isinstance(datetime, pd.Series):
+    #     dt = datetime.iloc[0]
+    #     if hasattr(dt, 'freqstr'):
+    #         freq = dt.freqstr
+    # if freq is None:
+    #     freq = _infer_freq(datetime, steps, ntries)
+    #
+    # # support: DatetimeIndex | TimedeltaIndex | Series | DatetimeLikeArrayMixin,
+    # freq2 = pd.infer_freq(datetime)
+    #
+    # return NORMALIZED_FREQ[freq]
 # end
 
 

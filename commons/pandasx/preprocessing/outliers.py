@@ -1,7 +1,7 @@
 from typing import Union
 from pandas import Series, DataFrame
 
-from .base import GroupsEncoder
+from .base import GroupsBaseEncoder
 
 
 # ---------------------------------------------------------------------------
@@ -12,7 +12,7 @@ NO_SCALE_LIMIT = 10
 NO_SCALE_EPS = 0.0000001
 
 
-class OutlierTransformer(GroupsEncoder):
+class OutlierTransformer(GroupsBaseEncoder):
     """
     Compute mean and standard deviation, then replace the outliers based on some strategy.
     Supported strategies:
@@ -56,7 +56,7 @@ class OutlierTransformer(GroupsEncoder):
             self._medians[g] = medians
         pass
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         if self.sp is None:
             return self._compute_means_stds(X)
         else:
@@ -216,7 +216,7 @@ class OutlierTransformer(GroupsEncoder):
 # QuantileTransformer
 # ---------------------------------------------------------------------------
 
-class QuantileTransformer(GroupsEncoder):
+class QuantileTransformer(GroupsBaseEncoder):
 
     def __init__(self, columns: Union[None, str, list[str]] = None,
                  quantile=.05,
@@ -264,7 +264,7 @@ class QuantileTransformer(GroupsEncoder):
             self._maxs[g] = maxs
         pass
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         return self._compute_mins_maxs(X)
 
     def _apply_transform(self, X, params):

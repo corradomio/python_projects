@@ -687,7 +687,7 @@ def type_name(a_type: type) -> str:
     return t_name
 
 
-def is_instance(obj, a_type) -> bool:
+def is_instance(obj, a_type, msg=None) -> bool:
     # if hasattr(a_type, '__supertype__'):
     #     return is_instance(obj, a_type.__supertype__)
     if isinstance(a_type, (tuple, list)):
@@ -701,9 +701,14 @@ def is_instance(obj, a_type) -> bool:
     t_name = type_name(a_type)
 
     if t_name in IS_INSTANCE_OF:
-        return IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
+        valid = IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
     else:
-        return isinstance(obj, a_type)
+        valid = isinstance(obj, a_type)
+
+    if not valid and msg is not None:
+        raise AssertionError(msg)
+    return valid
+
 
 
 # ---------------------------------------------------------------------------

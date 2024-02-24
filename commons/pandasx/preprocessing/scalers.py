@@ -1,6 +1,6 @@
 import pandas as pd
 
-from .base import GroupsEncoder
+from .base import GroupsBaseEncoder
 
 # ---------------------------------------------------------------------------
 # StandardScaler
@@ -9,7 +9,7 @@ from .base import GroupsEncoder
 NO_SCALE_EPS = 1.e-6
 
 
-class StandardScaler(GroupsEncoder):
+class StandardScaler(GroupsBaseEncoder):
 
     def __init__(self, columns=None,
                  feature_range=(0, 1),
@@ -57,7 +57,7 @@ class StandardScaler(GroupsEncoder):
             self._sdevs[g] = sdevs
         pass
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         return self._compute_means_sdevs(X)
 
     def _apply_transform(self, X, params):
@@ -167,7 +167,7 @@ StandardScalerEncoder = StandardScaler
 # LinearMinMaxScaler
 # ---------------------------------------------------------------------------
 
-class LinearMinMaxScaler(GroupsEncoder):
+class LinearMinMaxScaler(GroupsBaseEncoder):
 
     def __init__(self, columns=None,
                  feature_range=(0, 1),
@@ -212,7 +212,7 @@ class LinearMinMaxScaler(GroupsEncoder):
             self._maxs[g] = maxs
         pass
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         return self._compute_mins_maxs(X)
 
     def _apply_transform(self, X, params):

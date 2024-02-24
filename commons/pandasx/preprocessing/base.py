@@ -1,11 +1,15 @@
+import pandas as pd
 from pandas import DataFrame, Series, MultiIndex
 
 from ..base import as_list, NoneType, groups_split, groups_merge
+from ..base import is_instance
 
 
 class BaseEncoder:
 
     def __init__(self, columns, copy):
+        assert is_instance(columns, (NoneType, str, list[str])), "Invalid 'columns' value type"
+        assert is_instance(copy, bool), "Invalid 'copy' value type"
         self.columns = as_list(columns, "columns")
         self.copy = copy
         self._col = self.columns[0] if len(self.columns) > 0 else None
@@ -23,6 +27,7 @@ class BaseEncoder:
 
     def _get_columns(self, X) -> list[str]:
         if len(self.columns) > 0:
+            # return list(X.columns.intersection(self.columns))
             return self.columns
         else:
             return list(X.columns)
@@ -33,23 +38,24 @@ class BaseEncoder:
 # end
 
 
-class GroupsEncoder(BaseEncoder):
+class GroupsBaseEncoder(BaseEncoder):
 
-    def __init__(self, columns, groups, copy):
+    def __init__(self, columns, groups, copy=True):
         super().__init__(columns, copy)
         self.groups = as_list(groups)
+        self._params = {}
 
     # -----------------------------------------------------------------------
     # Override
     # -----------------------------------------------------------------------
 
     def _get_params(self, g):
-        ...
+        return self._params[g]
 
     def _set_params(self, g, params):
-        ...
+        self._params[g] = params
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         ...
 
     def _apply_transform(self, X, params):
@@ -76,7 +82,7 @@ class GroupsEncoder(BaseEncoder):
     # -----------------------------------------------------------------------
 
     def _fit_plain(self, X):
-        params = self._compute_params(X)
+        params = self._compute_params(None, X)
         self._set_params(None, params)
         return self
 
@@ -84,7 +90,7 @@ class GroupsEncoder(BaseEncoder):
         groups = groups_split(X, groups=self.groups, drop=True)
         for g in groups:
             Xg = groups[g]
-            params = self._compute_params(Xg)
+            params = self._compute_params(g, Xg)
             self._set_params(g, params)
         return self
 
@@ -92,7 +98,7 @@ class GroupsEncoder(BaseEncoder):
         groups = groups_split(X, drop=True)
         for g in groups:
             Xg = groups[g]
-            params = self._compute_params(Xg)
+            params = self._compute_params(g, Xg)
             self._set_params(g, params)
         return self
 
@@ -215,3 +221,28 @@ class XyBaseEncoder(BaseEncoder):
         assert isinstance(y, (NoneType, DataFrame))
         return X.copy() if self.copy else X, y
 # end
+
+
+class SequenceEncoder(BaseEncoder):
+
+    def __init__(self, encoders):
+        super().__init__([], False)
+        self.encoders = encoders
+
+    def fit(self, X):
+        assert is_instance(X, pd.DataFrame)
+        for encoder in self.encoders:
+            encoder.fit(X)
+        return self
+
+    def transform(self, X):
+        assert is_instance(X, pd.DataFrame)
+        for encoder in self.encoders:
+            X = encoder.transform(X)
+        return X
+
+    def inverse_transform(self, X):
+        assert is_instance(X, pd.DataFrame)
+        for encoder in reversed(self.encoders):
+            X = encoder.transform(X)
+        return X

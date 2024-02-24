@@ -2,6 +2,7 @@
 # Pandas reader
 # Some simple data set loaders: from csv and .arff data files
 #
+import random
 import warnings
 import numpy as np
 import pandas as pd
@@ -29,7 +30,7 @@ __all__ = [
     "columns_range",
 
     "multiindex_get_level_values",
-    "set_index",
+    "set_index", "set_multiindex",
     "index_split",
     "index_merge",
 
@@ -537,11 +538,26 @@ def columns_merge(parts: list[pd.DataFrame], sort: Union[None, bool, list[str]] 
 # ---------------------------------------------------------------------------
 
 class RangeValues:
+    def __init__(self, minv, maxv):
+        self.minv = minv
+        self.maxv = maxv
 
-    def __init__(self, dtype, values):
-        self.dtype = dtype
-        self.values = values
-# end
+    def bound(self):
+        return (self.minv, self.maxv)
+
+    def random(self):
+        return random.uniform(self.minv, self.maxv)
+
+
+class ListValues:
+    def __init__(self, values):
+        self.values = list(values)
+
+    def bound(self):
+        return self.values
+
+    def random(self):
+        return random.choice(self.values)
 
 
 def columns_range(df: pd.DataFrame, min_values=128):
@@ -558,16 +574,17 @@ def columns_range(df: pd.DataFrame, min_values=128):
     for col in df.columns:
         values = df[col]
         dtype = df[col].dtype
+        vtype = type(values[0])
         if dtype in [float, np.float16, np.float32, np.float64]:
-            ranges[col] = (values.min(), values.max())
+            ranges[col] = RangeValues(values.min(), values.max())
         elif isinstance(dtype, CategoricalDtype):
-            ranges[col] = list(values.unique())
+            ranges[col] = ListValues(values.unique())
         elif dtype in [int, np.int8, np.int16, np.int32] and 0 < len(values.unique()) <= min_values:
-            ranges[col] = list(values.unique())
+            ranges[col] = ListValues(values.unique())
         elif dtype in [int, np.int8, np.int16, np.int32]:
-            ranges[col] = (values.min(), values.max())
-        elif dtype in [str]:
-            ranges[col] = list(values.unique())
+            ranges[col] = RangeValues(values.min(), values.max())
+        elif dtype in [str] or vtype in [str]:
+            ranges[col] = ListValues(values.unique())
         else:
             raise ValueError(f"Unsupported dtype {dtype} of column {col}")
     return ranges
@@ -610,24 +627,27 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
 
 
 def set_index(df: pd.DataFrame,
-              index: Union[None, str, list[str]],
+              columns: Union[None, str, list[str]],
               inplace=False,
               drop=False) -> pd.DataFrame:
     """
     Create a multiindex based on the columns list
 
     :param df: dataframe to process
-    :param index: column or list of columns to use in the index
+    :param columns: column or list of columns to use in the index
     :param inplace: if to apply the transformation inplace
     :param drop: if to drop the columns
     :return: the new dataframe
     """
     if inplace:
-        df.set_index(index, inplace=inplace, drop=drop)
+        df.set_index(columns, inplace=inplace, drop=drop)
     else:
-        df = df.set_index(index, inplace=inplace, drop=drop)
+        df = df.set_index(columns, inplace=inplace, drop=drop)
     return df
 # end
+
+
+set_multiindex = set_index
 
 
 def index_split(df: pd.DataFrame, levels: int = -1, drop=True) -> dict[tuple, pd.DataFrame]:
@@ -666,7 +686,7 @@ def index_split(df: pd.DataFrame, levels: int = -1, drop=True) -> dict[tuple, pd
 # end
 
 
-def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
+def index_merge(dfdict: dict[tuple, pd.DataFrame], names: Union[None, str, list[str]]=None) -> pd.DataFrame:
     """
     Recreate a dataframe using the keys in the dictionary as multiindex
 
@@ -679,7 +699,7 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame]) -> pd.DataFrame:
         tuples = []
         for idx in dflv.index:
             tuples.append(lv + (idx,))
-        mi = pd.MultiIndex.from_tuples(tuples)
+        mi = pd.MultiIndex.from_tuples(tuples, names=names)
         dflv.set_index(mi, inplace=True)
         dflist.append(dflv)
     # end

@@ -8,7 +8,7 @@
 import numpy as np
 
 from stdlib import kwparams
-from .base import GroupsEncoder
+from .base import GroupsBaseEncoder
 from .minmax import period_diff, interpolate_bounds, select_bounds, fit_function, select_seasonal_values
 from .minmax import poly1, poly3, power1
 
@@ -183,7 +183,7 @@ class ConstantTrend(Trend):
 #   power               global exponential trend
 #
 
-class DetrendTransformer(GroupsEncoder):
+class DetrendTransformer(GroupsBaseEncoder):
 
     def __init__(self, columns=None, *,
                  method='linear', sp=12,
@@ -203,7 +203,7 @@ class DetrendTransformer(GroupsEncoder):
         self._detrend[g] = detrend
         self._start[g] = start
 
-    def _compute_params(self, X):
+    def _compute_params(self, g, X):
         start = X.index[0]
         detrend = {}
 
