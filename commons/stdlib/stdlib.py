@@ -39,11 +39,13 @@ def module_path():
 # end
 
 
-def qualified_name(klass: Any):
+def qualified_name(klass: Any) -> str:
     """
     Fully qualified of the class.
     For builtin classes, only the name
     """
+    if isinstance(klass, str):
+        return klass
     module = klass.__module__
     if module == 'builtins':
         return klass.__qualname__   # avoid outputs like 'builtins.str'
@@ -101,6 +103,10 @@ def as_tuple(l: Union[NoneType, Any, list, tuple], param=None):
     return tuple() if l is None else \
         l if tl == tuple else \
         tuple(l) if tl == list else (l,)
+
+
+def as_dict(d: Union[NoneType, dict]) -> dict:
+    return dict() if d is None else d
 
 
 # ---------------------------------------------------------------------------
@@ -198,7 +204,7 @@ def argsort(values: Iterable, descending: bool = False) -> list[int]:
 # Numerical aggregation functions
 # ---------------------------------------------------------------------------
 # sum_  as Python 'sum([...])'
-# mul_  as Pythin 'sum([...]) but for multiplication
+# mul_  as Python 'sum([...]) but for multiplication
 #
 
 def sum_(x):
@@ -241,13 +247,6 @@ mul_ = prod_
 #     usato in skorch, ad esempio.
 #
 #
-
-# def as_kwargs(locals):
-#     kwargs = {} | locals
-#     for key in ['forecaster', 'window_length', 'reduction_strategy',
-#                 'self', '__class__']:
-#         del kwargs[key]
-#     return kwargs
 
 
 def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, list] = None, defval: Any = None, keys=None) -> Any:
@@ -333,8 +332,20 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
             params[n] = kwargs[kw]
     return params
 
-# alias
-kwselect = kwparams
+
+def kwselect(kwargs: dict, prefix: str) -> dict:
+    """
+    Select the parameters with the specified prefic
+
+    :param kwargs:
+    :param prefix:
+    :return:
+    """
+    selected = {}
+    for kw in kwargs:
+        if kw.startswith(prefix):
+            selected[kw] = kwargs[kw]
+    return selected
 
 
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
@@ -348,7 +359,8 @@ def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
 
     def has_prefix(k: str):
         for prefix in exclude:
-            p = f"{prefix}__"
+            # p = f"{prefix}__"
+            p = prefix
             if k.startswith(p):
                 return True
         return False

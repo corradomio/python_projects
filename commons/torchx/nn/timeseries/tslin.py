@@ -174,11 +174,14 @@ class TSCNNLinear(TimeSeriesModel):
 
         activation_params = kwparams(kwargs, 'activation')
 
-        cnn_params = kwexclude(kwargs, 'activation')
-        cnn_params['in_channels'] = feature_size
-        cnn_params['out_channels'] = hidden_size
+        cnn_params = kwexclude(kwargs, 'activation') | {
+            'in_channels': feature_size,
+            'out_channels': hidden_size
+        }
+        # cnn_params['in_channels'] = feature_size
+        # cnn_params['out_channels'] = hidden_size
         # Force the tensor layout equals to the RNN layers
-        cnn_params['channels_last'] = True
+        # cnn_params['channels_last'] = True
 
         self.input_adapter = None
         self.output_adapter = None

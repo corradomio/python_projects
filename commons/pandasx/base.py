@@ -21,6 +21,7 @@ __all__ = [
     "groups_merge",
     "groups_select",
     "groups_count",
+    "groups_apply",
 
     "split_column",     # DEPERECATED
     "merge_column",     # DEPRECATED
@@ -152,6 +153,33 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]] = None, so
 def groups_count(df: pd.DataFrame, groups: Union[None, str, list[str]] = None) -> int:
     glist = groups_list(df, groups=groups, sort=False)
     return len(glist)
+# end
+
+
+def groups_apply(df: pd.DataFrame, fun, *,
+                 groups: Union[None, str, list[str]] = None,
+                 sortby: Union[None, str, list[str]] = None) -> pd.DataFrame:
+    """
+    Apply fun to all groups in the dataframe
+
+    :param df: DataFrame to split
+    :param groups: list of columns to use during the split. The columns must be categorical or string
+    :param fun: function 'f(df: DataFrame, g: tuple) -> DataFrame' called
+    :return:
+    """
+
+    dfdict = groups_split(df, groups=groups)
+    dfres = {}
+    for g in dfdict:
+        dfg = dfdict[g]
+        res = fun(dfg, g)
+        # skip no results
+        if res is not None:
+            dfres[g] = res
+
+    # end
+    df = groups_merge(dfdict, groups=groups, sortby=sortby)
+    return df
 # end
 
 
@@ -542,7 +570,7 @@ class RangeValues:
         self.minv = minv
         self.maxv = maxv
 
-    def bound(self):
+    def bounds(self):
         return (self.minv, self.maxv)
 
     def random(self):
@@ -553,7 +581,7 @@ class ListValues:
     def __init__(self, values):
         self.values = list(values)
 
-    def bound(self):
+    def bounds(self):
         return self.values
 
     def random(self):

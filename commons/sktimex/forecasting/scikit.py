@@ -7,7 +7,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from .base import ExtendedBaseForecaster
 from ..forecasting.compose import make_reduction
 from ..lags import LagSlots, resolve_lags
-from ..utils import import_from, NoneType, kwval, dict_del, qualified_name
+from ..utils import import_from, NoneType, kwval, kwexclude, qualified_name
 from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
 
 __all__ = [
@@ -150,7 +150,7 @@ class ScikitForecaster(ExtendedBaseForecaster):
         if ns in SCIKIT_NAMESPACES:
             window_length = kwval(kwargs, "window_length", 5)
             strategy = kwval(kwargs, "strategy", "recursive")
-            kwargs = dict_del(kwargs, ["window_length", "strategy"])
+            kwargs = kwexclude(kwargs, ["window_length", "strategy"])
 
             # create the regressor
             regressor = estimator(**kwargs)

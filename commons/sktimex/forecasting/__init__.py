@@ -1,17 +1,12 @@
-from .linear import LinearForecaster
-from .scikit import ScikitForecaster
+from .linear import *
+from .scikit import *
 
 try:
     # available only if 'torch/skorch are available
-    from .cnn import SimpleCNNForecaster, MultiLagsCNNForecaster
-    from .rnn import SimpleRNNForecaster, MultiLagsRNNForecaster
+    from .nn import compute_input_output_shapes
+    from .cnn import CNNLinearForecaster
+    from .rnn import RNNLinearForecaster
     from .lnn import LinearNNForecaster
+    from .skorch import SkorchForecaster
 except:
     pass
-
-#
-# Compatibility
-#
-from .nn import compute_input_output_shapes
-from .linear import LinearForecastRegressor
-from .scikit import ScikitForecastRegressor

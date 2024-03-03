@@ -36,7 +36,7 @@ class Conv1d(nn.Conv1d):
                  padding_mode: str = 'zeros',  # TODO: refine this type
                  device=None,
                  dtype=None,
-                 channels_last=False):
+                 channels_last=True):
         super().__init__(
             in_channels=in_channels,
             out_channels=out_channels,

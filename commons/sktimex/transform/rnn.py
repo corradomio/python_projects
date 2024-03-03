@@ -18,7 +18,7 @@ from ..lags import lmax
 @deprecated(reason="You should use LagsTrainTransform")
 class RNNTrainTransform(ModelTrainTransform):
 
-    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,), yprev=False, ytrain=False):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,), yprev=False, ytrain=False, flatten=False):
         """
 
         :param slots:   combine xlags and ylags
@@ -34,7 +34,7 @@ class RNNTrainTransform(ModelTrainTransform):
 
         self.yprev = yprev
         self.ytrain = ytrain
-        # self.flatten = flatten
+        self.flatten = flatten
         xlags = self.xlags
         ylags = self.ylags
         assert len(xlags) == 0 or xlags == ylags, "Supported only [0, n], [n, n]"
@@ -127,13 +127,13 @@ class RNNTrainTransform(ModelTrainTransform):
         if self.ytrain:
             yx = Xt[:, :, :my]
 
-        # if self.flatten:
-        #     yt = yt.reshape((yt.shape[0], -1))
-        #     if self.ytrain:
-        #         yx = yx.reshape((yt.shape[0], -1))
-        #     if self.yprev:
-        #         yp = yp.reshape((yp.shape[0], -1))
-        # # end
+        if self.flatten:
+            yt = yt.reshape((yt.shape[0], -1))
+            if self.ytrain:
+                yx = yx.reshape((yt.shape[0], -1))
+            if self.yprev:
+                yp = yp.reshape((yp.shape[0], -1))
+        # end
 
         if self.yprev and self.ytrain:
             return (Xt, yx, yp), yt
@@ -150,10 +150,11 @@ class RNNTrainTransform(ModelTrainTransform):
 @deprecated(reason="You should use LagsPredictTransform")
 class RNNPredictTransform(ModelPredictTransform):
 
-    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
+    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,), flatten=False):
         if ylags is not None:
             slots = [xlags, ylags]
         super().__init__(slots=slots, tlags=tlags)
+        self.flatten = flatten
     # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None) -> np.ndarray:

@@ -6,7 +6,7 @@ from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
 from jsonx import *
-from sktimex import SimpleCNNForecaster
+from sktimex import CNNLinearForecaster
 
 
 def main():
@@ -44,7 +44,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleCNNForecaster(
+    forecaster = CNNLinearForecaster(
         # lags=[1, 1],
         # steps=12,
         lags=[12, 12],

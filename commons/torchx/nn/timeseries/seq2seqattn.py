@@ -3,7 +3,7 @@
 #
 import torch
 
-from stdlib import kwexclude, kwselect
+from stdlib import kwexclude, kwparams
 from .ts import TimeSeriesModel
 from .tsutils import apply_if
 from ... import nn as nnx
@@ -100,7 +100,7 @@ class TSSeq2SeqAttn(TimeSeriesModel):
         self.att_output = attn_output
 
         rnnargs = kwexclude(kwargs, 'attn')
-        attn_params = kwselect(kwargs, 'attn')
+        attn_params = kwparams(kwargs, 'attn')
 
         enc_params = {} | rnnargs
         enc_params['input_size'] = feature_size

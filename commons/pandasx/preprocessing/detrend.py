@@ -245,7 +245,7 @@ class DetrendTransformer(GroupsBaseEncoder):
         return X
 
     def create_trend(self):
-        params = kwparams(self.kwargs, 'method')
+        params = kwparams(self.kwargs, "method")
         if self.method in [None, 'identity']:
             return IndentityTrend()
         elif self.method == 'linear':

@@ -6,7 +6,7 @@ from sktime.transformations.series.detrend import Detrender
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from sktimex import SimpleCNNForecaster
+from sktimex import CNNLinearForecaster
 
 
 def main():
@@ -28,7 +28,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleCNNForecaster(
+    forecaster = CNNLinearForecaster(
         lags=[0, 12],
         flavour="cnn",
         scale=True,

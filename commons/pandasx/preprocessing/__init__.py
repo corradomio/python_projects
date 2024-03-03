@@ -14,7 +14,3 @@ from .periodic import PERIODIC_ALL, \
 from .times import DatetimeEncoder
 from .encoderx import PandasCategoricalEncoder, OrderedLabelsEncoder, DTypeEncoder
 from .agg import AggregateTransformer
-
-# from .resampler import Resampler
-# from .lagst import LagsTransformer
-# from .arryt import LagsArrayTransformer, LagsArrayForecaster

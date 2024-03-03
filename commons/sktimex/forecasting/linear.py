@@ -97,8 +97,8 @@ class LinearForecaster(ExtendedBaseForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self,
-                 lags: Union[int, list, tuple, dict] = (0, 1),
-                 tlags=(0,),
+                 lags: Union[int, list, tuple, dict],
+                 tlags: Union[int, list],
                  estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
                  flatten=False,
                  **kwargs):

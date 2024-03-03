@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from pandasx import MinMaxEncoder
-from sktimex import SimpleCNNForecaster
+from pandasx import MinMaxScaler
+from sktimex import CNNLinearForecaster
 
 
 def main():

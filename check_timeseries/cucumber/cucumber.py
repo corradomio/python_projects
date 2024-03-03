@@ -39,7 +39,7 @@ def main():
     #     batch_size=16,
     #     max_epochs=1000
     # )
-    model = sktimex.SimpleRNNForecaster(
+    model = sktimex.RNNLinearForecaster(
         lags=[12, 12],
         flavour='lstm',
         hidden_size=20,

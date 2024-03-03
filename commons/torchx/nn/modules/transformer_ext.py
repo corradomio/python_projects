@@ -217,11 +217,9 @@ class CNNEncoderLayer(ttx.TransformerEncoderLayer):
 
         # replace the linear layers with Conv1d layers
         self.linear1 = cnnx.Conv1d(in_channels=d_model, out_channels=d_model,
-                                   kernel_size=kernel_size, stride=stride, padding=padding,
-                                   channels_last=True)
+                                   kernel_size=kernel_size, stride=stride, padding=padding)
         self.linear2 = cnnx.Conv1d(in_channels=d_model, out_channels=d_model,
-                                   kernel_size=kernel_size, stride=stride, padding=padding,
-                                   channels_last=True)
+                                   kernel_size=kernel_size, stride=stride, padding=padding)
     # end
 
     # Used to rename 'mask' into 'src_mask'

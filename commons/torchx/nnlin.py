@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from stdlib import is_instance
 from . import nn as nnx
 
 from .activation import activation_function
@@ -12,22 +13,22 @@ from .activation import activation_function
 class LinearEncoderDecoder(nn.Module):
 
     def __init__(self, *,
-                 input_shape,
-                 output_shape,
+                 input_size,
+                 output_size,
                  hidden_size=None,
                  activation=None,
                  activation_params=None):
         super().__init__()
-        self.input_shape = input_shape
-        self.output_shape = output_shape
+        self.input_size = input_size
+        self.output_size = output_size
         self.hidden_size = hidden_size
 
         if hidden_size is None:
-            self.lin = nnx.Linear(in_features=input_shape, out_features=output_shape)
+            self.lin = nnx.Linear(in_features=input_size, out_features=output_size)
         else:
-            self.enc = nnx.Linear(in_features=input_shape, out_features=hidden_size)
+            self.enc = nnx.Linear(in_features=input_size, out_features=hidden_size)
             self.activation = activation_function(activation, activation_params)
-            self.dec = nnx.Linear(in_features=hidden_size, out_features=output_shape)
+            self.dec = nnx.Linear(in_features=hidden_size, out_features=output_size)
 
     def forward(self, x):
         if self.hidden_size is None:
@@ -68,36 +69,36 @@ class LSTMLinear(nnx.LSTM):
 
     def __init__(self, *,
                  input_size,
-                 hidden_size,
+                 output_size,
+                 hidden_size=1,
                  num_layers=1,
-                 output_size=1,
-                 steps=1,
                  activation=None,
                  activation_params=None,
                  batch_first=True,
                  **kwargs):
-        super().__init__(input_size=input_size,
+        assert is_instance(input_size, tuple[int, int])
+        assert is_instance(output_size, tuple[int, int])
+        assert is_instance(hidden_size, int)
+        super().__init__(input_size=input_size[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
-        self.steps = steps
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
+        steps = input_size[0]
+
         self.activation = activation_function(activation, activation_params)
-        if output_size > 0:
-            self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
-            self.output_size = output_size
-        else:
-            self.V = None
-            self.output_size = f * hidden_size * steps
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+        self.output_size = output_size
 
     def forward(self, input, hx=None):
-        t, h = super().forward(input, hx)
+        # t, h = super().forward(input, hx)
+        t = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
-        t = torch.reshape(t, (len(input), -1))
-        output = self.V(t) if self.V else t
+        # t = torch.reshape(t, (len(input), -1))
+        output = self.lin(t) if self.lin else t
         return output
 # end
 
@@ -125,39 +126,39 @@ class GRULinear(nnx.GRU):
 
     def __init__(self, *,
                  input_size,
-                 hidden_size,
+                 output_size,
+                 hidden_size=1,
                  num_layers=1,
-                 output_size=1,
-                 steps=1,
                  activation=None,
                  activation_params=None,
                  batch_first=True,
                  **kwargs):
+        assert is_instance(input_size, tuple[int, int])
+        assert is_instance(output_size, tuple[int, int])
+        assert is_instance(hidden_size, int)
         #
         # Note: if output_size is <=0, no nn.Linear is created
         #
-        super().__init__(input_size=input_size,
+        super().__init__(input_size=input_size[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
-        self.steps = steps
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
+        steps = input_size[0]
+
         self.activation = activation_function(activation, activation_params)
-        if output_size > 0:
-            self.V = nn.Linear(in_features=f * hidden_size * steps, out_features=output_size)
-            self.output_size = output_size
-        else:
-            self.V = None
-            self.output_size = f * hidden_size * steps
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+        self.output_size = output_size
 
     def forward(self, input, hx=None):
-        t, h = super().forward(input, hx)
+        # t, h = super().forward(input, hx)
+        t = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
-        t = torch.reshape(t, (len(input), -1))
-        output = self.V(t) if self.V else t
+        # t = torch.reshape(t, (len(input), -1))
+        output = self.lin(t) if self.lin else t
         return output
 # end
 
@@ -194,12 +195,16 @@ class RNNLinear(nnx.RNN):
                  activation_params=None,
                  batch_first=True,
                  **kwargs):
-        super().__init__(input_size=input_size,
+        assert is_instance(input_size, tuple[int, int])
+        assert is_instance(output_size, tuple[int, int])
+        assert is_instance(hidden_size, int)
+
+        super().__init__(input_size=input_size[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
-        self._steps = steps
+
         self.input_size = input_size
         self.hidden_size = hidden_size
         self.output_size = output_size
@@ -207,19 +212,16 @@ class RNNLinear(nnx.RNN):
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
+        steps = input_size[0]
         self.activation = activation_function(activation, activation_params)
-        if output_size > 0:
-            self.V = nn.Linear(in_features=f*hidden_size*steps, out_features=output_size)
-            self.output_size = output_size
-        else:
-            self.V = None
-            self.output_size = f*hidden_size*steps
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
+        self.output_size = output_size
 
     def forward(self, input, hx=None):
         t, h = super().forward(input, hx)
         t = self.activation(t) if self.activation else t
-        t = torch.reshape(t, (len(input), -1))
-        output = self.V(t) if self.V else t
+        # t = torch.reshape(t, (len(input), -1))
+        output = self.lin(t) if self.lin else t
         return output
 # end
 
@@ -239,40 +241,44 @@ class RNNLinear(nnx.RNN):
 #         device=None,
 #         dtype=None
 #
-class Conv1dLinear(nn.Conv1d):
+class Conv1dLinear(nnx.Conv1d):
     def __init__(self, *,
                  input_size,
                  output_size,
                  hidden_size=1,
-                 steps=1,
+                 # steps=1,
                  activation=None,
                  activation_params=None,
                  kernel_size=1,
                  stride=1,
                  padding=0,
                  dilation=1,
-                 groups=1):
-        super().__init__(in_channels=input_size,
+                 groups=1,
+                 **kwargs):
+        assert is_instance(input_size, tuple[int, int])
+        assert is_instance(output_size, tuple[int, int])
+        assert is_instance(hidden_size, int)
+
+        super().__init__(in_channels=input_size[1],
                          out_channels=hidden_size,
                          kernel_size=kernel_size,
                          stride=stride,
                          padding=padding,
                          dilation=dilation,
-                         groups=groups)
+                         groups=groups,
+                         **kwargs)
 
+        steps = input_size[0]
         self.activation = activation_function(activation, activation_params)
-        if output_size > 0:
-            self.lin = nn.Linear(in_features=hidden_size * steps, out_features=output_size)
-            self.output_size = output_size
-        else:
-            self.lin = None
-            self.output_size = hidden_size * steps
+
+        self.lin = nnx.Linear(in_features=steps * hidden_size, out_features=output_size)
+        self.output_size = output_size
     # end
 
     def forward(self, input):
         t = super().forward(input)
         t = self.activation(t) if self.activation else t
-        t = torch.reshape(t, (len(input), -1))
+        # t = torch.reshape(t, (len(input), -1))
         t = self.lin(t) if self.lin else t
         return t
     # end
@@ -311,6 +317,7 @@ class MultiInputs(nn.Module):
         result = self.output_model(inner)
         return result
     # end
+# end
 
 
 # ---------------------------------------------------------------------------

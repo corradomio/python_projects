@@ -1,7 +1,10 @@
 import math
-from typing import Optional, Union
+from typing import Optional, Union, Collection
 
 import pandas as pd
+
+
+NAME_DATETIME = "$DT"
 
 
 # ---------------------------------------------------------------------------
@@ -43,17 +46,79 @@ def set_datetime_index(df: pd.DataFrame, datetime: Union[str, list[str]]) -> pd.
 # ---------------------------------------------------------------------------
 
 def periodic_encode(df: pd.DataFrame, periodic, datetime_name, datetime_freq):
-    # (*periodic): remaining parameters: method, freq, year_scale, columns
-    if periodic in [False, None, 'none', '']:
-        pass
-    elif isinstance(periodic, dict):
-        df = _periodic_encode(df, datetime_name, freq=datetime_freq, **periodic)
-    elif isinstance(periodic, (list, tuple)):
-        df = _periodic_encode(df, datetime_name, *periodic, freq=datetime_freq)
-    else:
-        df = _periodic_encode(df, datetime_name, periodic, freq=datetime_freq)
+    if not isinstance(periodic, Collection):
+        periodic = [periodic]
+
+    for p in periodic:
+        if p in [False, None, 'none', '']:
+            pass
+        elif p == 'last_week_in_month':
+            df = _last_week_in_month(df, datetime_name)
+        elif isinstance(p, dict):
+            df = _periodic_encode(df, datetime_name, freq=datetime_freq, **p)
+        elif isinstance(p, str):
+            df = _periodic_encode(df, datetime_name, p, freq=datetime_freq)
+        elif isinstance(p, (list, tuple)):
+            df = _periodic_encode(df, datetime_name, *p, freq=datetime_freq)
+        else:
+            df = _periodic_encode(df, datetime_name, p, freq=datetime_freq)
+
     return df
 # end
+
+
+def _last_week_in_month(df: pd.DataFrame, datetime: Optional[str] = None):
+    """
+    Add the column '<datetime>_lweek' containing the value 0,1 if the day
+    is located in the last week of the month
+
+    :param df: dataframe to process
+    :param datetime: if to use a datetime column. If None, it is used the index
+    :return:
+    """
+    def lweek(t) -> int:
+        if isinstance(t, pd.Period):
+            # Period is composed by 2 timestamps:
+            #
+            #   start_time
+            #   end_time
+            #
+            # The properties (day, day_of_week, ...) are refereed to 'end_time'
+            #
+
+            # check if t.day is in the last week of the month
+            # if t.day//7 < 4, it is NOT the last week of the month
+            if t.day//7 < 4:
+                return int(False)
+
+            # Problem: it is necessary to understand which is the 'periodicity':
+            # - daily
+            # - weekly
+            if isinstance(t.freq, pd.tseries.offsets.Week):
+                return int(t.month != (t+1).month)
+            elif isinstance(t.freq, pd.tseries.offsets.Day):
+                return int(t.month != (t+7).month)
+            else:
+                raise ValueError(f"Unsupported frequency '{t.freqstr}'")
+        elif isinstance(t, pd.DatetimeTZDtype):
+            raise ValueError(f"Unsupported datetime of type '{t.__class__.__name__}'")
+        else:
+            raise ValueError(f"Unsupported datetime of type '{t.__class__.__name__}'")
+        pass
+
+    if datetime is None:
+        dt = df.index.to_series()
+        if dt.name is None:
+            lweek_name = f"{NAME_DATETIME}_lweek"
+        else:
+            lweek_name = f"{dt.name}_lweek"
+    else:
+        lweek_name = f"{datetime}_lweek"
+        dt = df[datetime]
+
+    dt = dt.apply(lweek)
+    df[lweek_name] = dt
+    return df
 
 
 def _periodic_encode(df: pd.DataFrame,
@@ -67,12 +132,12 @@ def _periodic_encode(df: pd.DataFrame,
 
     Supported methods:
 
-        onehot:     year/month      -> year, month (onehot encoded)
-        order:      year/month      -> year, month (index, 0-based)
-                    year/month/day  -> year, month (index, 0-based), day (0-based)
-        circle      year/month/day/h    year, month, day, cos(h/24), sin(h/24)
-                    year/month/day      year, month, cos(day/30), sin(day/30)
-                    year/month          year, cos(month/12), sin(month/12)
+        onehot:     year/month          -> year, month (onehot encoded)
+        order:      year/month          -> year, month (index, 0-based)
+                    year/month/day      -> year, month (index, 0-based), day (0-based)
+        circle      year/month/day/h    -> year, month, day, cos(h/24), sin(h/24)
+                    year/month/day      -> year, month, cos(day/30), sin(day/30)
+                    year/month          -> year, cos(month/12), sin(month/12)
         sincos|cossin: as circle
 
     :param df: dataframe to process
@@ -308,6 +373,8 @@ def _sincos_encoder(df, datetime, columns, year_scale, freq):
 
     return df
 
+
+last_week_in_month = _last_week_in_month
 
 # ---------------------------------------------------------------------------
 # End

@@ -1,7 +1,7 @@
 from sktime.forecasting.base import BaseForecaster
 from .utils import method_of, clear_yX
 from .transform import *
-from .forecasting import *
+# from .forecasting import *
 from .lags import resolve_lags, resolve_tlags, LagSlots
 
 

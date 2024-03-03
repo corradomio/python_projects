@@ -6,7 +6,7 @@ from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
 from jsonx import *
-from sktimex import SimpleRNNForecaster, SlotsRNNForecaster
+from sktimex import RNNLinearForecaster, SlotsRNNForecaster
 
 
 def main():
@@ -72,7 +72,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleRNNForecaster(
+    forecaster = RNNLinearForecaster(
         # lags=[1, 1],
         # steps=12,
         lags=[12, 12],

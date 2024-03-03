@@ -45,7 +45,9 @@ class Linear(nn.Linear):
     def forward(self, input: Tensor) -> Tensor:
         t = input
 
-        if not isinstance(self.input_shape, int):
+        # if not isinstance(self.input_shape, int):
+        #     t = torch.flatten(t, start_dim=1)
+        if len(input.shape) > 2:
             t = torch.flatten(t, start_dim=1)
 
         t = super().forward(t)

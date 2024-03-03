@@ -9,7 +9,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from torchx import nnlin as nnx
 from .base import TransformForecaster
 from ..lags import resolve_lags, resolve_tlags, LagSlots
-from ..utils import import_from, to_matrix, kwexclude
+from ..utils import import_from, qualified_name, to_matrix, kwexclude
 
 # ---------------------------------------------------------------------------
 # Optimizers
@@ -68,6 +68,7 @@ NNX_RNN_FLAVOURS = {
     'gru': nnx.GRULinear,
     'rnn': nnx.RNNLinear,
 }
+
 
 NNX_CNN_FLAVOURS = {
     'cnn': nnx.Conv1dLinear
@@ -170,15 +171,15 @@ class BaseNNForecaster(TransformForecaster):
     }
 
     def __init__(self, *,
-                 lags: Union[int, list, tuple, dict] = (0, 1),
-                 tlags: Union[int, list, tuple] = (0,),
-                 scale=False,
+                 lags: Union[int, list, tuple, dict],
+                 tlags: Union[int, list],
 
                  # --
 
+                 scale=False,
                  flavour=None,
-                 activation=None,
-                 activation_params=None,
+                 # activation=None,
+                 # activation_params=None,
 
                  # --
 
@@ -189,24 +190,28 @@ class BaseNNForecaster(TransformForecaster):
                  batch_size=16,
                  max_epochs=300,
                  callbacks=None,
+
+                 # --
+
                  patience=0,
                  **kwargs):
 
         super().__init__()
 
-        self._flavour = flavour.lower() if isinstance(flavour, str) else flavour
+        #
         self._lags = lags
         self._slots: LagSlots = resolve_lags(lags)
         self._tlags = resolve_tlags(tlags)
         self._scale = scale
+        self._flavour = flavour.lower() if isinstance(flavour, str) else flavour
 
-        optimizer = parse_class(optimizer, torch.optim.Adam)
-        criterion = parse_class(criterion, torch.nn.MSELoss)
+        # optimizer = parse_class(optimizer, torch.optim.Adam)
+        # criterion = parse_class(criterion, torch.nn.MSELoss)
         if patience > 0:
             callbacks = [EarlyStopping(patience=patience)]
 
-        self._optimizer = optimizer
-        self._criterion = criterion
+        self._optimizer = parse_class(optimizer, torch.optim.Adam)
+        self._criterion = parse_class(criterion, torch.nn.MSELoss)
         self._callbacks = callbacks
 
         #
@@ -217,19 +222,20 @@ class BaseNNForecaster(TransformForecaster):
             tlags=tlags,
             flavour=flavour,
             scale=scale,
-
-            activation=activation,
-            activation_params=activation_params,
+            # activation=activation,
+            # activation_params=activation_params,
             patience=patience
         )
 
-        self._skt_args = kwexclude(kwargs, 'method')
-        self._skt_args["criterion"] = criterion
-        self._skt_args["optimizer"] = optimizer
+        self._skt_args = kwexclude(kwargs, "method")
+        self._skt_args["criterion"] = qualified_name(criterion)
+        self._skt_args["optimizer"] = qualified_name(optimizer)
         self._skt_args["lr"] = lr
         self._skt_args["batch_size"] = batch_size
         self._skt_args["max_epochs"] = max_epochs
         self._skt_args["callbacks"] = callbacks
+
+        self._kwargs = kwargs
 
         #
         #
@@ -239,16 +245,63 @@ class BaseNNForecaster(TransformForecaster):
         # index
         self._X = None
         self._y = None
-
     # end
 
     def get_params(self, deep=True):
-        params = {} | super().get_params(deep=deep) | self._skt_args | self._nn_args
+        params = {} | self._skt_args | self._nn_args
         return params
     # end
 
+    # -----------------------------------------------------------------------
+    # update
+    # -----------------------------------------------------------------------
+
+    def _update(self, y, X=None, update_params=True):
+        return super()._update(y=y, X=X, update_params=False)
+
     # def update(self, y, X=None, update_params=True):
     #     self._save_history(X, y)
+
+    # -----------------------------------------------------------------------
+    #
+    # -----------------------------------------------------------------------
+
+    # def _update_fit(self, y, X):
+    #     ...
+
+    # def fit_predict(self, y, X=None, fh=None):
+    #     ...
+
+    # def score(self, y, X=None, fh=None):
+    #     ...
+
+    # -----------------------------------------------------------------------
+
+    # def predict_quantiles(self, fh=None, X=None, alpha=None):
+    #     ...
+
+    # def predict_interval(self, fh=None, X=None, coverage=0.90):
+    #     ...
+
+    # def predict_var(self, fh=None, X=None, cov=False):
+    #     ...
+
+    # def predict_proba(self, fh=None, X=None, marginal=True):
+    #     ...
+
+    # def predict_residuals(self, y=None, X=None):
+    #     ...
+
+    # -----------------------------------------------------------------------
+
+    # def update(self, y, X=None, update_params=True):
+    #     ...
+
+    # def update_predict(self, y, cv=None, X=None, update_params=True, reset_forecaster=True):
+    #     ...
+
+    # def update_predict_single(self, y=None, fh=None, X=None, update_params=True):
+    #     ...
 
     # -----------------------------------------------------------------------
     # Support

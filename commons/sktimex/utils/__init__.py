@@ -12,10 +12,10 @@ from .plotting import plot_series, show
 # ---------------------------------------------------------------------------
 # DON'T REMOVE!!!!
 # They are used in other modules to avoid the direct dependency with 'stdlib'
-# from stdlib import NoneType, RangeType
-# from stdlib import lrange, import_from, qualified_name, kwval, kwexclude, dict_del
 from stdlib import NoneType, RangeType
-from stdlib import lrange, import_from, qualified_name, kwval, kwexclude, dict_del
+from stdlib import kwselect, kwparams, kwexclude, kwval
+from stdlib import lrange, import_from, qualified_name, as_dict, as_list
+from stdlib import mul_, is_instance
 # DON'T REMOVE!!!!
 # ---------------------------------------------------------------------------
 # Constants

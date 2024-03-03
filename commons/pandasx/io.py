@@ -6,7 +6,7 @@ from .base import set_index, ignore_columns, as_list, \
 from .binhot import binhot_encode
 from .onehot import onehot_encode
 from .datetimes import datetime_encode, datetime_reindex
-from .periodicx import periodic_encode
+from .periodic import periodic_encode
 from .freq import infer_freq
 from .io_arff import read_arff
 
@@ -31,19 +31,17 @@ def _select_typed_columns(columns, dtype):
             ignore.append(columns[i])
     # end
     return categorical, boolean, ignore
-# end
 
 
 def _read_header(file: str, comment="#", sep=",") -> List[str]:
     def trim(s: str) -> str:
         return s.strip(" '\"")
+
     with open(file) as fin:
         line = comment
         while line.startswith(comment):
             line = next(fin)
         return list(map(trim, line.split(sep)))
-    # end
-# end
 
 
 def _pandas_dtype(columns, dtype) -> dict:
@@ -56,7 +54,6 @@ def _pandas_dtype(columns, dtype) -> dict:
         else:
             dt[columns[i]] = ct
     return dt
-# end
 
 
 def _parse_datetime(datetime) -> tuple:
@@ -73,7 +70,6 @@ def _parse_datetime(datetime) -> tuple:
     else:
         raise ValueError("Invalid 'datetime' parameter format")
     return datetime_name, datetime_format, datetime_freq
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -109,7 +105,6 @@ def _to_url_select(url: str):
         return url, f'select * from {what}'
     else:
         return url, what
-# end
 
 
 def read_database(url: str, dtype, **kwargs):
@@ -119,7 +114,6 @@ def read_database(url: str, dtype, **kwargs):
     with engine.connect() as con:
         df = pd.read_sql(sql=sql, con=con, params=kwargs)
     return df
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -165,31 +159,31 @@ def read_database(url: str, dtype, **kwargs):
 
 def read_data(file: str,
               *,
-              dtype=None,       # list of columns types
-              boolean=None,     # boolean columns
-              integer=None,     # integer columns
-              numeric=None,     # numerical/float columns
+              dtype=None,  # list of columns types
+              boolean=None,  # boolean columns
+              integer=None,  # integer columns
+              numeric=None,  # numerical/float columns
 
-              categorical=None, # pandas categorical columns
-              onehot=None,      # categorical columns to convert using onehot encoding.
-              binhot=None,      # categorical columns to convert using binary hot encoding.
+              categorical=None,  # pandas categorical columns
+              onehot=None,  # categorical columns to convert using onehot encoding.
+              binhot=None,  # categorical columns to convert using binary hot encoding.
 
-              index=None,       # columns to use as index
-              ignore=None,      # columns to ignore
-              ignore_unnamed=False,     # if to ignore 'Unnamed *' columns
+              index=None,  # columns to use as index
+              ignore=None,  # columns to ignore
+              ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
 
-              datetime=None,    # datetime column to convert in a PeriodTime
+              datetime=None,  # datetime column to convert in a PeriodTime
 
-              periodic=None,    # [EXPERIMENTAL] to add datetime periodic representation
-              count=False,      # [EXPERIMENTAL] if to add the column 'count' with value 1
-              reindex=False,    # [EXPERIMENTAL] if to reindex the dataset
-              sort=False,       # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+              periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
+              count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
+              reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
+              sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
 
-              rename=None,      # [EXPERIMENTAL] rename some columns
+              rename=None,  # [EXPERIMENTAL] rename some columns
 
-              dropna=False,     # if to drop the rows containing NaN values
-              na_values=None,   # strings to consider NaN values
-              **kwargs          # parameters to pass to 'pandas.read_*(...)' routine
+              dropna=False,  # if to drop the rows containing NaN values
+              na_values=None,  # strings to consider NaN values
+              **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
               ) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -253,7 +247,8 @@ def read_data(file: str,
             The columns are not automatically ignored
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
-    :param periodic: if to add 'periodic' information (EXPERIMENTAL)
+    :param periodic: if to add  one or multiple 'periodic' information (EXPERIMENTAL)
+
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
     :param sort: resort the dataframe based on index or column(s) (EXPERIMENTAL)
     :param rename: rename some columns. The columns can be specified by position (starting from 0)
@@ -412,7 +407,6 @@ def read_data(file: str,
 
     print(f"... done {df.shape}")
     return df
-# end
 
 
 def write_data(df: pd.DataFrame, file: str, **kwargs):
@@ -426,4 +420,59 @@ def write_data(df: pd.DataFrame, file: str, **kwargs):
         df.to_xml(file, **kwargs)
     else:
         raise ValueError(f"Unsupported file format {file}")
-# end
+
+
+def load(file: str,
+         *,
+         dtype=None,  # list of columns types
+         boolean=None,  # boolean columns
+         integer=None,  # integer columns
+         numeric=None,  # numerical/float columns
+
+         categorical=None,  # pandas categorical columns
+         onehot=None,  # categorical columns to convert using onehot encoding.
+         binhot=None,  # categorical columns to convert using binary hot encoding.
+
+         index=None,  # columns to use as index
+         ignore=None,  # columns to ignore
+         ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
+
+         datetime=None,  # datetime column to convert in a PeriodTime
+
+         periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
+         count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
+         reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
+         sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+
+         rename=None,  # [EXPERIMENTAL] rename some columns
+
+         dropna=False,  # if to drop the rows containing NaN values
+         na_values=None,  # strings to consider NaN values
+         **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
+         ):
+    return read_data(
+        file,
+        dtype=dtype,
+        boolean=boolean,
+        integer=integer,
+        numeric=numeric,
+        categorical=categorical,
+        onehot=onehot,
+        binhot=binhot,
+        index=index,
+        ignore=ignore,
+        ignore_unnamed=ignore_unnamed,
+        datetime=datetime,
+        periodic=periodic,
+        count=count,
+        reindex=reindex,
+        sort=sort,
+        rename=rename,
+        dropna=dropna,
+        na_values=na_values,
+        **kwargs
+    )
+
+
+def save(df: pd.DataFrame, file: str, **kwargs):
+    write_data(df, file, **kwargs)

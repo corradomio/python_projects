@@ -16,8 +16,8 @@ __all__ = [
 class LinearNNForecaster(BaseNNForecaster):
 
     def __init__(self, *,
-                 lags: Union[int, list, tuple, dict] = (0, 1),
-                 tlags: Union[int, list, tuple] = (0,),
+                 lags: Union[int, list, tuple, dict],
+                 tlags: Union[int, list, tuple],
                  scale=False,
 
                  flavour='lin',
@@ -25,7 +25,13 @@ class LinearNNForecaster(BaseNNForecaster):
                  activation_params=None,
 
                  # -- linear
-
+                 # This is the GLOBAL size of the hidden layer
+                 # For example:
+                 #      - input: (30,1)     30 days, 1 feature
+                 #      - output: (7,2)     7 days, 2 targets
+                 #
+                 # the hidden size can be NOT 8, BUT it is necessary to specify
+                 # also the sequence length
                  hidden_size=None,
 
                  # -- opt/loss
@@ -52,19 +58,33 @@ class LinearNNForecaster(BaseNNForecaster):
             max_epochs=max_epochs,
             callbacks=callbacks,
 
-            activation=activation,
-            activation_params=activation_params,
+            # activation=activation,
+            # activation_params=activation_params,
 
             patience=patience,
             **kwargs
         )
+
         self._lnn_args = {
             'hidden_size': hidden_size,
             'activation': activation,
             'activation_params': activation_params
         }
 
+        # self.activation = activation
+        # self.activation_params = activation_params
         self.hidden_size = hidden_size
+
+        self._log = logging.getLogger(f"LinearNNForecaster.{flavour}")
+    # end
+
+    # -----------------------------------------------------------------------
+    # get_params()
+    # -----------------------------------------------------------------------
+
+    def get_params(self, deep=True):
+        params = super().get_params(deep=deep) | self._lnn_args
+        return params
 
     # -----------------------------------------------------------------------
     # Operations
@@ -83,6 +103,38 @@ class LinearNNForecaster(BaseNNForecaster):
 
         self._model.fit(y=yt, X=Xt)
         return self
+    # end
+
+    def _create_skorch_model(self, input_shape, output_shape):
+        lin_constructor = NNX_LIN_FLAVOURS[self._flavour]
+
+        #
+        # create the linear model
+        #
+        lin = lin_constructor(
+            input_shape=input_shape,
+            output_shape=output_shape,
+            **self._lnn_args
+        )
+
+        # create the skorch model
+        #   module: torch module
+        #   criterion:  loss function
+        #   optimizer: optimizer
+        #   lr
+        #
+        model = skorch.NeuralNetRegressor(
+            module=lin,
+            callbacks__print_log=PrintLog(
+                sink=logging.getLogger(str(self)).info,
+                delay=3),
+            **self._skt_args
+        )
+        # model.set_params(callbacks__print_log=PrintLog(
+        #     sink=logging.getLogger(str(self)).info,
+        #     delay=3))
+
+        return model
     # end
 
     # -----------------------------------------------------------------------
@@ -118,37 +170,6 @@ class LinearNNForecaster(BaseNNForecaster):
     # -----------------------------------------------------------------------
     # Support
     # -----------------------------------------------------------------------
-
-    def get_params(self, deep=True):
-        params = super().get_params(deep=deep)
-        params = params | self._lnn_args
-        return params
-    # end
-
-    def _create_skorch_model(self, input_shape, output_shape):
-        lin_constructor = NNX_LIN_FLAVOURS[self._flavour]
-
-        lin = lin_constructor(
-            input_shape=input_shape,
-            output_shape=output_shape,
-            **self._lnn_args
-        )
-
-        # create the skorch model
-        #   module: torch module
-        #   criterion:  loss function
-        #   optimizer: optimizer
-        #   lr
-        #
-        model = skorch.NeuralNetRegressor(
-            module=lin,
-            **self._skt_args
-        )
-        model.set_params(callbacks__print_log=PrintLog(
-            sink=logging.getLogger(str(self)).info,
-            delay=3))
-
-        return model
 
     def __repr__(self):
         return f"LinearNNForecaster[{self._flavour}]"

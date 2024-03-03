@@ -12,8 +12,8 @@ class ExtendedBaseForecaster(BaseForecaster):
     def __init__(self):
         super().__init__()
 
-    def get_params(self, deep=True):
-        return {} | super().get_params(deep=deep)
+    # def get_params(self, deep=True):
+    #     return {} | super().get_params(deep=deep)
 
     def _fit(self, y, X, fh):
         ...
@@ -44,7 +44,7 @@ class TransformForecaster(ExtendedBaseForecaster):
 
     def get_params(self, deep=True):
         params = super().get_params(deep=deep) | {
-            'method': self.method
+            "method": self.method
         }
         return params
 

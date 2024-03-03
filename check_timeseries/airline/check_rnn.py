@@ -8,7 +8,7 @@ from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
 from pandasx.preprocessing import MinMaxNormalizer
-from sktimex import SimpleRNNForecaster
+from sktimex import RNNLinearForecaster
 
 
 def main():
@@ -41,7 +41,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleRNNForecaster(
+    forecaster = RNNLinearForecaster(
         lags=[0, 12],
         flavour="lstm",
         scale=True,

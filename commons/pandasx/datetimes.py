@@ -5,6 +5,19 @@ import pandas as pd
 
 from stdlib import NoneType
 
+# ---------------------------------------------------------------------------
+# Datetime encoding:
+#   There are several services to support
+#
+#   1) string:  datetime object DatetimeIndex
+#               period object   PeriodIndex
+#   2) add periodicity
+#       hourly  (0-23)      onehot, sincos
+#       weekly  (0-6)       onehot, sincos
+#       monthly (0-11)      onehot, sincos
+#       last_week_in_month  [0,1]
+#
+
 
 # ---------------------------------------------------------------------------
 # datetime_encode

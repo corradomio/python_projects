@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from sktimex.old.nn_model import SimpleRNNForecaster, SimpleCNNForecaster
+from sktimex.forecasting import RNNLinearForecaster, CNNLinearForecaster
 from jsonx import *
 
 
@@ -44,7 +44,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleRNNForecaster(
+    forecaster = RNNLinearForecaster(
         # lags=[1, 1],
         # steps=12,
         lags=[12, 12],
@@ -76,7 +76,7 @@ def main():
 
     # -----------------------------------------------------------------------
 
-    forecaster = SimpleCNNForecaster(
+    forecaster = CNNLinearForecaster(
         # lags=[1, 1],
         # steps=12,
         lags=[12, 12],
