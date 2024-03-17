@@ -1,7 +1,7 @@
 #
 # Set function properties
 #
-from timing import tprint
+from stdlib.tprint import tprint
 from numpy import ndarray
 from random import random
 from iset import *

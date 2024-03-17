@@ -1,6 +1,10 @@
 #
 # Some Python language extensions
 #
+true = True
+false = False
+null = None
+
 
 def method_of(Class):
     """Register functions as methods in created class.

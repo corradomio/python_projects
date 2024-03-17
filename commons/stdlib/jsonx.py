@@ -1,21 +1,42 @@
+#
+# Extensions to 'json' standard package to use 'load' and 'dump' directly
+# with a file path
+#
 import json
 
+OPEN_ARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
+
+#
+# compatibility constants to permit a 'perfect' correspondence between JSON syntax and
+# Python syntax
+#
 true = True
 false = False
 null = None
 
 
-def load(file: str) -> dict:
-    with open(file, mode="r") as fp:
+def _open_dump_args(kwargs):
+    oargs = {}
+    dargs = {}
+    for arg in kwargs:
+        if arg in OPEN_ARGS:
+            oargs[arg] = kwargs[arg]
+        else:
+            dargs[arg] = kwargs[arg]
+    return oargs, dargs
+
+
+def load(file: str, **kwargs) -> dict:
+    with open(file, mode="r", **kwargs) as fp:
         return json.load(fp)
 
 
-def save(obj, file: str, **kwargs):
+def dump(obj, file: str, **kwargs):
     if 'indent' not in kwargs:
         kwargs['indent'] = 4
-    with open(file, mode="w") as fp:
-        return json.dump(obj, fp, **kwargs)
+    oargs, dargs = _open_dump_args(kwargs)
+    with open(file, mode="w", **oargs) as fp:
+        return json.dump(obj, fp, **dargs)
 
 
-json_load = load
-json_save = save
+save = dump

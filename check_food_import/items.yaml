@@ -1,0 +1,57 @@
+Food:
+    Beef:
+        - BEEF - FRESH
+        - BEEF - FROZEN
+        - CHICKEN MEAT - FRESH
+        - CHICKEN MEAT - FROZEN
+        - GOAT AND LAMB / LAMB - FRESH
+        - GOAT AND SHEEP/LAMB - FROZEN
+    Fish:
+        - DRIED SALTED FISH
+        - FISH - FRESH
+        - FISH - FROZEN
+        - MOLLUSCS
+    Other:
+        - CHILLI
+        - EGGS
+        - PREPARED EGGS
+        - HERBS - PARSLEY AND CORIANDER
+        - CORN
+        - LEGUMES
+        - RICE
+        - SUGAR
+        - WHEAT FLOUR
+    Vegetable:
+        - BEANS
+        - BEETROOT
+        - BROCCOLI AND CAULIFLOWER
+        - CARROTS
+        - CABBAGE
+        - CUCUMBER
+        - EGGPLANT
+        - LETTUCE
+        - OKRA
+        - ONIONS
+        - POTATOS
+        - SWEET POTATO
+        - TOMATOES
+    Fruit:
+        - APPLE
+        - BANANA
+        - CRANBERRY
+        - DATES
+        - GRAPEFRUIT
+        - GUAVA
+        - LEMON
+        - MANGO
+        - ORANGE
+        - PAPAYA
+        - POMEGRANATE
+        - PUMPKIN
+        - STRAWBERRIES
+        - WATERMELONS
+    Liquid:
+        - MILK
+        - OILS
+        - HONEY
+        - WATER

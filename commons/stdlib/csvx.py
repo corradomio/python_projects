@@ -2,6 +2,8 @@ import csv
 import io
 import zipfile
 import gzip
+from typing import Optional
+
 from path import Path
 from datetime import datetime, time
 from stdlib.bag import bag
@@ -596,6 +598,12 @@ def guess_csv_column_types(fname,
     :param nrows: n of rows to analyze. With 0, all rows will be analyzed
     :param kwargs: parameters passsed to 'csv.reader()'
     """
+    def to_enum(s: set) -> str:
+        return f"enum[{','.join(sorted(s))}]"
+
+    def to_union(d: dict) -> str:
+        return f"Union[{','.join(sorted(d.keys()))}]"
+
     header = None
     n = 0
     iline = 0
@@ -656,4 +664,16 @@ def guess_csv_column_types(fname,
     return col_types
 # end
 
+
+# Compatibility with 'json'
+
+def load(fname: str, **kwargs):
+    if fname.endswith('.arff'):
+        return load_arff(fname, **kwargs)
+    else:
+        return load_csv(fname, **kwargs)
+
+
+def dump(obj, fname: str, header: list[str], fmt: Optional[str] = None):
+    save_csv(fname, data=obj, header=header, fmt=fmt)
 

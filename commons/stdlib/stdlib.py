@@ -1,3 +1,4 @@
+from deprecated import deprecated
 from typing import Any, Union, Optional, Iterable
 from path import Path as path
 
@@ -254,7 +255,7 @@ def kwval(kwargs: dict[Union[str, tuple], Any], key: Union[None, str, tuple, lis
     Return the value in the dictionary with key 'name' or the default value
 
     :param kwargs: dictionary containing pairs (key, value)
-    :param key: key (or alternate names) to read
+    :param key: key (or alternative names) to read
     :param keys: list of keys used to navigate the dictionary
     :param defval: value to return is the key is not in the dictionary
     :return: the value in the dictionary or the default value
@@ -335,10 +336,11 @@ def kwparams(kwargs: dict, prefix: str) -> dict:
 
 def kwselect(kwargs: dict, prefix: str) -> dict:
     """
-    Select the parameters with the specified prefic
+    Select the parameters with the specified prefix.
+    The keys are no changed as in 'kwparams()'
 
-    :param kwargs:
-    :param prefix:
+    :param kwargs: keyword parameters
+    :param prefix: prefix to use
     :return:
     """
     selected = {}
@@ -351,7 +353,8 @@ def kwselect(kwargs: dict, prefix: str) -> dict:
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
     Create a new dictionary without keys having as prefix a string in 'exclude'
-    :param kwargs: dictionary containing the parameters
+
+    :param kwargs: keyword parameters
     :param keys: prefix(es) to exclude
     :return: a new dictionary without the excluded parameters
     """
@@ -377,21 +380,29 @@ def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
 # is_filesystem
 # ---------------------------------------------------------------------------
 
-def is_filesystem(datasource: str) -> bool:
+def is_filesystem(url: str) -> bool:
+    """
+    Check if the url is a filesystem, sthat is, starting with 'file://' or '<disk>:'.
+    It must have the form '<protocol>://<rest>' or '<disk>:<rest>'
+
+    :param url: url to analyze
+    :return: true if it is a filesystem url
+    """
     # file://....
     # <disk>:....
-    if datasource.startswith("file://") or len(datasource) > 2 and datasource[1] == ':':
+    if url.startswith("file://") or len(url) > 2 and url[1] == ':':
         return True
-    elif "://" in datasource:
+    elif "://" in url:
         return False
     else:
-        raise ValueError(f"Unsupported datasource '{datasource}'")
+        raise ValueError(f"Unsupported datasource '{url}'")
 
 
 # ---------------------------------------------------------------------------
 # dict utilities
 # ---------------------------------------------------------------------------
 
+@deprecated(reason='Supported by stdlib.dict.contains_keys()')
 def dict_contains_some(d: dict, keys: Union[str, list[str]]):
     """
     Check if the dictionary contains some key in the list
@@ -406,6 +417,7 @@ def dict_contains_some(d: dict, keys: Union[str, list[str]]):
     return False
 
 
+@deprecated(reason="Supported by builtin.dict '|' operator:  d1|d2")
 def dict_union(d1: dict, d2: dict, inplace=False) -> dict:
     """
     Union of 2 dictionaries. The second dictionary will override the
@@ -423,6 +435,7 @@ def dict_union(d1: dict, d2: dict, inplace=False) -> dict:
         return {} | d1 | d2
 
 
+@deprecated(reason="Supported by stdlib.dict.select(mode='select')")
 def dict_select(d: dict, keys: list[str]) -> dict:
     s = {}
     for k in keys:
@@ -431,6 +444,7 @@ def dict_select(d: dict, keys: list[str]) -> dict:
     return s
 
 
+@deprecated(reason="Supported by stdlib.dict.select(mode='exclude')")
 def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     """
     Remove from the dictionary some keys (and values
@@ -487,6 +501,7 @@ def dict_rename(d: dict, k1: Union[str, list[str], dict[str, str]], k2: Optional
     return d
 
 
+@deprecated(reason='Supported by stdlib.dict.delete_keys()')
 def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
     """
     Remove the list of keys from the dictionary
@@ -502,6 +517,7 @@ def dict_del(d: dict, keys: Union[str, list[str]]) -> dict:
     return d
 
 
+@deprecated(reason='Supported by stdlib.dict.to_list()')
 def dict_to_list(d: Union[dict, list, tuple]) -> list:
     """
     Convert a dictionary in a list of tuples

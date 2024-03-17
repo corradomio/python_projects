@@ -1,5 +1,7 @@
 from typing import Union
 from pandas import DataFrame
+from pandas.errors import PerformanceWarning
+import warnings
 
 from .base import as_list, safe_sorted
 
@@ -11,6 +13,8 @@ from .base import as_list, safe_sorted
 def onehot_encode(df: DataFrame, columns: Union[str, list[str]]) -> DataFrame:
     assert isinstance(df, DataFrame)
     columns = as_list(columns, 'columns')
+
+    warnings.simplefilter(action='ignore', category=PerformanceWarning)
 
     for col in columns:
         # check if the column contains ONLY 2 values

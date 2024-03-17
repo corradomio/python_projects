@@ -1,0 +1,230 @@
+World:
+    Africa:
+        - Algeria
+        - Angola
+        - Benin
+        - Botswana
+        - Burkina Faso
+        - Burundi
+        - Camerun
+        - Capo Verde
+        - Repubblica Centrafricana
+        - Ciad
+        - Comore
+        - Repubblica del Congo
+        - Repubblica Democratica del Congo
+        - Costa d'Avorio
+        - Egitto
+        - Eritrea
+        - ESwatini
+        - Etiopia
+        - Gabon
+        - Gambia
+        - Ghana
+        - Gibuti
+        - Guinea
+        - Guinea Equatoriale
+        - Guinea-Bissau
+        - Kenya
+        - Lesotho
+        - Liberia
+        - Libia
+        - Madagascar
+        - Malawi
+        - Mali
+        - Marocco
+        - Mauritania
+        - Mauritius
+        - Mozambico
+        - Namibia
+        - Niger
+        - Nigeria
+        - Ruanda
+        - Sahara Occidentale
+        - São Tomé e Príncipe
+        - Senegal
+        - Seychelles
+        - Sierra Leone
+        - Somalia
+        - Sudafrica
+        - Sudan
+        - Sudan del Sud
+        - Tanzania
+        - Togo
+        - Tunisia
+        - Uganda
+        - Zambia
+        - Zimbabwe
+    America Centrale:
+        - Belize
+        - Costa Rica
+        - El Salvador
+        - Guatemala
+        - Honduras
+        - Nicaragua
+        - Panama
+    America Meridionale:
+        - Argentina
+        - Bolivia
+        - Brasile
+        - Cile
+        - Colombia
+        - Ecuador
+        - Guyana
+        - Paraguay
+        - Perù
+        - Suriname
+        - Uruguay
+        - Venezuela
+    America Settentrionale:
+        - Antigua e Barbuda
+        - Bahamas
+        - Barbados
+        - Bermuda
+        - Canada
+        - Cuba
+        - Dominica
+        - Giamaica
+        - Grenada
+        - Haiti
+        - Messico
+        - Repubblica Dominicana
+        - Saint Kitts e Nevis
+        - Saint Lucia
+        - Saint Vincent e Grenadine
+        - Stati Uniti d'America
+        - Trinidad e Tobago
+    Asia:
+        - Abcasia
+        - Afghanistan
+        - Arabia Saudita
+        - Armenia
+        - Azerbaigian
+        - Bahrein
+        - Bangladesh
+        - Bhutan
+        - Birmania
+        - Brunei
+        - Cambogia
+        - Cina
+        - Cipro
+        - Cipro del Nord
+        - Corea del Nord
+        - Corea del Sud
+        - Egitto
+        - Emirati Arabi Uniti
+        - Filippine
+        - Georgia
+        - Giappone
+        - Giordania
+        - India
+        - Indonesia
+        - Iran
+        - Iraq
+        - Israele
+        - Kazakistan
+        - Kirghizistan
+        - Kuwait
+        - Laos
+        - Libano
+        - Malaysia
+        - Maldive
+        - Mongolia
+        - Nepal
+        - Oman
+        - Ossezia del Sud
+        - Pakistan
+        - Stato di Palestina
+        - Qatar
+        - Russia
+        - Singapore
+        - Siria
+        - Sri Lanka
+        - Tagikistan
+        - Taiwan
+        - Thailandia
+        - Timor Est
+        - Turchia
+        - Turkmenistan
+        - Uzbekistan
+        - Vietnam
+        - Yemen
+    Europa:
+        - Abcasia
+        - Albania
+        - Andorra
+        - Armenia
+        - Austria
+        - Azerbaigian
+        - Belgio
+        - Bielorussia
+        - Bosnia ed Erzegovina
+        - Bosnia
+        - Erzegovina
+        - Bulgaria
+        - Repubblica Ceca
+        - Cecoslovacchia
+        - Cipro
+        - Città del Vaticano
+        - Vaticano
+        - Croazia
+        - Danimarca
+        - Estonia
+        - Finlandia
+        - Francia
+        - Georgia
+        - Germania
+        - Grecia
+        - Irlanda
+        - Islanda
+        - Italia
+        - Kazakistan
+        - Kosovo
+        - Lettonia
+        - Liechtenstein
+        - Lituania
+        - Lussemburgo
+        - Macedonia del Nord
+        - Macedonia
+        - Malta
+        - Moldavia
+        - Principato di Monaco
+        - Monaco
+        - Montenegro
+        - Norvegia
+        - Ossezia del Sud
+        - Polonia
+        - Portogallo
+        - Regno dei Paesi Bassi
+        - Olanda
+        - Paesi Bassi
+        - Regno Unito
+        - Inghilterra
+        - Romania
+        - Russia
+        - San Marino
+        - Serbia
+        - Slovacchia
+        - Slovenia
+        - Spagna
+        - Svezia
+        - Svizzera
+        - Transnistria
+        - Turchia
+        - Ucraina
+        - Ungheria
+    Oceania:
+        - Australia
+        - Figi
+        - Isole Marshall
+        - Isole Salomone
+        - Kiribati
+        - Nauru
+        - Nuova Zelanda
+        - Palau
+        - Papua Nuova Guinea
+        - Samoa
+        - Stati Federati di Micronesia
+        - Tonga
+        - Tuvalu
+        - Vanuatu

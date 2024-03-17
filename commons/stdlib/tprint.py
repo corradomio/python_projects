@@ -1,8 +1,9 @@
 import time
+from datetime import datetime
 
 
-_TIMEDELAY = 3  # seconds
-_TIMESTAMP = 0  # last timestamp
+TIMEDELAY = 3  # seconds
+TIMESTAMP = 0  # last timestamp
 
 
 def tprint(*args, force=True, **nargs):
@@ -14,11 +15,11 @@ def tprint(*args, force=True, **nargs):
     :param nargs: named arguments passed to 'print'
     :return:
     """
-    global _TIMESTAMP
+    global TIMESTAMP
 
     now = time.time()
-    if (now - _TIMESTAMP) > _TIMEDELAY or force:
-        _TIMESTAMP = now
+    if (now - TIMESTAMP) > TIMEDELAY or force:
+        TIMESTAMP = now
         print(time.strftime("[%H:%M:%S] "), end="")
         print(*args, **nargs)
 # end
@@ -96,3 +97,23 @@ class Timing:
             return "not stopped"
     # end
 # end
+
+
+def delta_time(start: datetime, done: datetime):
+    assert start <= done, "Start time must be before done time"
+    seconds = int((done - start).total_seconds())
+    if seconds < 60:
+        return f"{seconds} s"
+    elif seconds < 3600:
+        s = seconds % 60
+        m = seconds // 60
+        return f"{m:02}:{s:02} s"
+    else:
+        s = seconds % 60
+        seconds = seconds // 60
+        m = seconds % 60
+        h = seconds // 60
+        return f"{h:02}:{m:02}:{s:02} s"
+# end
+
+

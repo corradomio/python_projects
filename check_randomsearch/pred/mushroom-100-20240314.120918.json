@@ -1,0 +1,29 @@
+{
+    "start_time": "2024-03-14 12:09:18",
+    "done_time": "2024-03-14 12:09:39",
+    "execution_time": "21 s",
+    "synthetic_points": true,
+    "n_iter": 2,
+    "n_distilled_points": 100,
+    "n_features": 22,
+    "n_targets": 1,
+    "classifier": "DecisionTreeClassifier",
+    "best_score": {
+        "iter": 1,
+        "score": 0.9320531757754801
+    },
+    "score_history": [
+        0.8249630723781388,
+        0.9320531757754801
+    ],
+    "best_score_history": [
+        {
+            "iter": 0,
+            "score": 0.8249630723781388
+        },
+        {
+            "iter": 1,
+            "score": 0.9320531757754801
+        }
+    ]
+}

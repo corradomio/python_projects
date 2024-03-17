@@ -5,23 +5,37 @@ import functools
 import inspect
 import itertools
 import types
-from typing import Any, Callable, Dict, Iterable, Iterator, Literal, Mapping, Optional, Tuple
-from typing import TypeVar, Union, get_type_hints, no_type_check, overload as tp_overload
+import typing
+import warnings
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from typing import Any, Literal, Optional, TypeVar, Union, get_type_hints, overload as tp_overload
 
-__version__ = '1.10'
-Empty = types.new_class('*')
+__version__ = '1.11.2'
 
 
 class DispatchError(TypeError):
     pass
 
 
+def get_origin(tp):
+    return tp.__origin__ if isinstance(tp, subtype) else typing.get_origin(tp)
+
+
+def get_args(tp) -> tuple:
+    if isinstance(tp, subtype) or typing.get_origin(tp) is Callable:
+        return getattr(tp, '__args__', ())
+    return typing.get_args(tp)
+
+
+def get_mro(cls) -> tuple:  # `inspect.getmro` doesn't handle all cases
+    return type.mro(cls) if isinstance(cls, type) else cls.mro()
+
+
 class subtype(abc.ABCMeta):
     """A normalized generic type which checks subscripts.
 
-    Transforms a generic alias into a concrete type which supports `issubclass`.
+    Transforms a generic alias into a concrete type which supports `issubclass` and `isinstance`.
     If the type ends up being equivalent to a builtin, the builtin is returned.
-    Includes an adaptive replacement for `type` which will iterate args as needed for subscripts.
     """
 
     __origin__: type
@@ -36,22 +50,26 @@ class subtype(abc.ABCMeta):
             if not tp.__constraints__:
                 return object
             tp = Union[tp.__constraints__]
-        origin = getattr(tp, '__origin__', tp)
+        origin = get_origin(tp) or tp
         if hasattr(types, 'UnionType') and isinstance(tp, types.UnionType):
             origin = Union  # `|` syntax added in 3.10
-        args = tuple(map(cls, getattr(tp, '__args__', args)))
+        args = tuple(map(cls, get_args(tp) or args))
         if set(args) <= {object} and not (origin is tuple and args):
             return origin
         bases = (origin,) if type(origin) in (type, abc.ABCMeta) else ()
         if origin is Literal:
             bases = (subtype(Union[tuple(map(type, args))]),)
-        if origin is Callable.__origin__ and args[:1] == (...,):
+        if origin is Union:
+            counts = collections.Counter()
+            for arg in args:
+                counts.update(cls for cls in get_mro(arg) if issubclass(abc.ABCMeta, type(cls)))
+            bases = tuple(cls for cls in counts if counts[cls] == len(args))[:1]
+        if origin is Callable and args[:1] == (...,):
             args = args[1:]
         namespace = {'__origin__': origin, '__args__': args}
         return type.__new__(cls, str(tp), bases, namespace)
 
-    def __init__(self, tp, *args):
-        ...
+    def __init__(self, tp, *args): ...
 
     def key(self) -> tuple:
         return self.__origin__, *self.__args__
@@ -62,98 +80,111 @@ class subtype(abc.ABCMeta):
     def __hash__(self) -> int:
         return hash(self.key())
 
-    @no_type_check
-    def __subclasscheck__(self, subclass: type) -> bool:
-        origin = getattr(subclass, '__origin__', subclass)
-        args = getattr(subclass, '__args__', ())
-        if origin is Union:
-            return all(issubclass(cls, self) for cls in args)
-        if self.__origin__ in (Union, type):
-            return inspect.isclass(subclass) and issubclass(subclass, self.__args__)
-        if self.__origin__ is Literal:
-            return (origin is Literal) and set(subclass.__args__) <= set(self.__args__)
+    def __subclasscheck__(self, subclass):
+        origin = get_origin(subclass) or subclass
+        args = get_args(subclass)
         if origin is Literal:
             return all(isinstance(arg, self) for arg in args)
-        if self.__origin__ is Callable.__origin__:
+        if origin is Union:
+            return all(issubclass(cls, self) for cls in args)
+        if self.__origin__ is Literal:
+            return False
+        if self.__origin__ is Union:
+            return issubclass(subclass, self.__args__)
+        if self.__origin__ is Callable:
             return (
-                origin is Callable.__origin__
+                origin is Callable
                 and signature(self.__args__[-1:]) <= signature(args[-1:])  # covariant return
                 and signature(args[:-1]) <= signature(self.__args__[:-1])  # contravariant args
             )
-        if args == (Empty,):
-            return issubclass(origin, self.__origin__)
-        params = self.__args__[: -1 if self.__args__[-1:] == (...,) else None]
-        return (  # check args first to avoid a recursion error in ABCMeta
-            len(args) >= len(params)
+        return (  # check args first to avoid recursion error: python/cpython#73407
+            len(args) == len(self.__args__)
             and issubclass(origin, self.__origin__)
-            and all(map(issubclass, args, params))
+            and all(pair[0] is pair[1] or issubclass(*pair) for pair in zip(args, self.__args__))
         )
 
     def __instancecheck__(self, instance):
-        return issubclass(self.get_type(instance), self)
+        if self.__origin__ is Literal:
+            return any(type(arg) == type(instance) and arg == instance for arg in self.__args__)
+        if self.__origin__ is Union:
+            return isinstance(instance, self.__args__)
+        if hasattr(instance, '__orig_class__'):  # user-defined generic type
+            return issubclass(instance.__orig_class__, self)
+        if self.__origin__ is type:  # a class argument is expected
+            return inspect.isclass(instance) and issubclass(instance, self.__args__)
+        if not isinstance(instance, self.__origin__) or isinstance(instance, Iterator):
+            return False
+        if self.__origin__ is Callable:
+            return issubclass(subtype(Callable, *get_type_hints(instance).values()), self)
+        if self.__origin__ is tuple and self.__args__[-1:] != (...,):
+            if len(instance) != len(self.__args__):
+                return False
+        elif issubclass(self, Mapping):
+            instance = next(iter(instance.items()), ())
+        else:
+            instance = itertools.islice(instance, 1)
+        return all(map(isinstance, instance, self.__args__))
 
-    @classmethod
-    def subcheck(cls, tp: type) -> bool:
-        """Return whether type requires checking subscripts using `get_type`."""
-        return isinstance(tp, cls) and (
-            tp.__origin__ is not Union or any(map(cls.subcheck, tp.__args__))
+    @functools.singledispatch
+    def origins(self) -> Iterable[type]:
+        """Return origin types which would require instance checks.
+
+        Provisional custom usage: `subtype.origins.register(<metaclass>, lambda cls: ...)
+        """
+        origin = get_origin(self)
+        if origin is Literal:
+            yield from set(map(type, self.__args__))
+        elif origin is Union:
+            for arg in self.__args__:
+                yield from subtype.origins(arg)
+        elif origin is not None:
+            yield origin
+
+
+class parametric(abc.ABCMeta):
+    """A type which further customizes `issubclass` and `isinstance` beyond the base type.
+
+    Args:
+        base: base type
+        funcs: all predicate functions are checked against the instance
+        attrs: all attributes are checked for equality
+    """
+
+    def __new__(cls, base: type, *funcs: Callable, **attrs):
+        return super().__new__(cls, base.__name__, (base,), {'funcs': funcs, 'attrs': attrs})
+
+    def __init__(self, *_, **__): ...
+
+    def __subclasscheck__(self, subclass):
+        missing = object()
+        attrs = getattr(subclass, 'attrs', {})
+        return (
+            set(subclass.__bases__).issuperset(self.__bases__)  # python/cpython#73407
+            and set(getattr(subclass, 'funcs', ())).issuperset(self.funcs)
+            and all(attrs.get(name, missing) == self.attrs[name] for name in self.attrs)
         )
 
-    @no_type_check
-    def get_type(self, arg) -> type:
-        """An adaptive version of `type`, which checks subscripts as needed.
+    def __instancecheck__(self, instance):
+        missing = object()
+        return (
+            isinstance(instance, self.__bases__)
+            and all(func(instance) for func in self.funcs)
+            and all(getattr(instance, name, missing) == self.attrs[name] for name in self.attrs)
+        )
 
-        This is complicated by needing to potentially iterate an argument, but only if required
-        because the origin type matches and has subscripts. The challenge is making the type
-        checker as specific as needed, but with as minimal introspection as possible, and yet still
-        performant. The strategy is to end the recursive checking at the first failure, and only
-        check subsequent types which themselves are subclasses. This way `get_type` is only called
-        repeatedly if it may increase the type specificity.
-        """
-        if not isinstance(self, subtype):  # also called as a staticmethod
-            return type(arg)
-        if hasattr(arg, '__orig_class__'):  # user-defined generic type
-            return subtype(arg.__orig_class__)
-        if self.__origin__ is type:  # a class argument is expected
-            return arg
-        if self.__origin__ is Literal:
-            if any(arg == param and type(arg) is type(param) for param in self.__args__):
-                return subtype(Literal, arg)
-            return type(arg)
-        if self.__origin__ is Union:  # find the most specific match
-            tps = (subtype.get_type(tp_arg, arg) for tp_arg in self.__args__)
-            tps = {tp for tp, tp_arg in zip(tps, self.__args__) if issubclass(tp, tp_arg)}
-            if not tps:
-                return type(arg)
-            return functools.reduce(lambda x, y: x if issubclass(x, y) else y, tps)
-        if self.__origin__ is Callable.__origin__ and isinstance(arg, Callable):
-            return subtype(Callable.__origin__, *get_type_hints(arg).values())
-        if not isinstance(arg, self.__origin__):  # no need to check subscripts
-            return type(arg)
-        if isinstance(arg, Iterator) or not isinstance(arg, Iterable):
-            return type(arg)
-        if issubclass(self, tuple) and self.__args__[-1:] != (...,):  # check all values
-            if len(arg) != len(self.__args__):
-                return type(arg)
-            args = arg
-        elif issubclass(self, Mapping):  # check first item
-            args = next(iter(arg.items()), ())
-        else:  # check first value
-            args = itertools.islice(arg, 1)
-        subscripts = list(map(subtype.get_type, self.__args__, args)) or [Empty]
-        try:
-            return subtype(type(arg), *subscripts)
-        except TypeError:  # not an acceptable base type
-            return subtype(self.__origin__, *subscripts)
+    def __and__(self, other):
+        (base,) = set(self.__bases__ + other.__bases__)
+        return type(self)(base, *set(self.funcs + other.funcs), **(self.attrs | other.attrs))
 
-    __call__ = get_type
+
+subtype.origins.register(parametric, lambda cls: cls.__bases__)
 
 
 def distance(cls, subclass: type) -> int:
     """Return estimated distance between classes for tie-breaking."""
-    if getattr(cls, '__origin__', None) is Union:
+    if get_origin(cls) is Union:
         return min(distance(arg, subclass) for arg in cls.__args__)
-    mro = type.mro(subclass)
+    mro = get_mro(subclass)
     return mro.index(cls if cls in mro else object)
 
 
@@ -207,6 +238,10 @@ class signature(tuple):
         except TypeError:
             return False
 
+    def instances(self, *args) -> bool:
+        """Return whether all arguments are instances."""
+        return self.required <= len(args) and all(map(isinstance, args, self))
+
 
 REGISTERED = TypeVar("REGISTERED", bound=Callable[..., Any])
 
@@ -214,8 +249,9 @@ REGISTERED = TypeVar("REGISTERED", bound=Callable[..., Any])
 class multimethod(dict):
     """A callable directed acyclic graph of methods."""
 
+    __name__: str
     pending: set
-    type_checkers: list
+    generics: list[tuple]  # positional bases which require instance checks
 
     def __new__(cls, func):
         homonym = inspect.currentframe().f_back.f_locals.get(func.__name__)
@@ -224,7 +260,7 @@ class multimethod(dict):
 
         self = functools.update_wrapper(dict.__new__(cls), func)
         self.pending = set()
-        self.type_checkers = []  # defaults to builtin `type`
+        self.generics = []
         return self
 
     def __init__(self, func: Callable):
@@ -234,12 +270,10 @@ class multimethod(dict):
             self.pending.add(func)
 
     @tp_overload
-    def register(self, __func: REGISTERED) -> REGISTERED:
-        ...  # pragma: no cover
+    def register(self, __func: REGISTERED) -> REGISTERED: ...  # pragma: no cover
 
     @tp_overload
-    def register(self, *args: type) -> Callable[[REGISTERED], REGISTERED]:
-        ...  # pragma: no cover
+    def register(self, *args: type) -> Callable[[REGISTERED], REGISTERED]: ...  # pragma: no cover
 
     def register(self, *args) -> Callable:
         """Decorator for registering a function.
@@ -248,7 +282,7 @@ class multimethod(dict):
         """
         if len(args) == 1 and hasattr(args[0], '__annotations__'):
             multimethod.__init__(self, *args)
-            return self if self.__name__ == args[0].__name__ else args[0]  # type: ignore
+            return self if self.__name__ == args[0].__name__ else args[0]
         return lambda func: self.__setitem__(args, func) or func
 
     def __get__(self, instance, owner):
@@ -267,9 +301,7 @@ class multimethod(dict):
 
     def copy(self):
         """Return a new multimethod with the same methods."""
-        other = dict.__new__(type(self))
-        other.update(self)
-        return other
+        return dict.__new__(type(self)).__ior__(self)
 
     def __setitem__(self, types: tuple, func: Callable):
         self.clean()
@@ -283,15 +315,10 @@ class multimethod(dict):
             if types < key and (not parents or parents & key.parents):
                 key.parents -= parents
                 key.parents.add(types)
-        self.type_checkers += [type] * (len(types) - len(self.type_checkers))
-        for index, (cls, type_checker) in enumerate(zip(types, self.type_checkers)):
-            if subtype.subcheck(cls):  # switch to slower generic type checker
-                if type_checker is not type:
-                    if issubclass(type_checker, cls):
-                        cls = type_checker
-                    else:
-                        cls = subtype(Union[type_checker, cls])
-                self.type_checkers[index] = cls
+        for index, cls in enumerate(types):
+            if origins := set(subtype.origins(cls)):
+                self.generics += [()] * (index + 1 - len(self.generics))
+                self.generics[index] = tuple(origins.union(self.generics[index]))
         super().__setitem__(types, func)
         self.__doc__ = self.docstring
 
@@ -303,27 +330,41 @@ class multimethod(dict):
                 key.parents = self.parents(key)
         self.__doc__ = self.docstring
 
+    def select(self, types: tuple, keys: set[signature]) -> Callable:
+        keys = {key for key in keys if key.callable(*types)}
+        funcs = {self[key] for key in keys}
+        if len(funcs) > 1:
+            groups = collections.defaultdict(set)
+            for key in keys:
+                groups[types - key].add(key)
+            keys = groups[min(groups)]
+            funcs = {self[key] for key in keys}
+            if len(funcs) == 1:
+                warnings.warn("positional distance tie-breaking is deprecated", DeprecationWarning)
+        if len(funcs) == 1:
+            return funcs.pop()
+        raise DispatchError(f"{self.__name__}: {len(keys)} methods found", types, keys)
+
     def __missing__(self, types: tuple) -> Callable:
         """Find and cache the next applicable method of given types."""
         self.evaluate()
+        types = tuple(map(subtype, types))
         if types in self:
             return self[types]
-        groups = collections.defaultdict(list)
-        for key in self.parents(types):
-            if key.callable(*types):
-                groups[types - key].append(key)
-        keys = groups[min(groups)] if groups else []
-        funcs = {self[key] for key in keys}
-        if len(funcs) == 1:
-            return self.setdefault(types, *funcs)  # type: ignore
-        msg = f"{self.__name__}: {len(keys)} methods found"  # type: ignore
-        raise DispatchError(msg, types, keys)
+        return self.setdefault(types, self.select(types, self.parents(types)))
+
+    def dispatch(self, *args) -> Callable:
+        types = tuple(map(type, args))
+        if not any(map(issubclass, types, self.generics)):
+            return self[types]
+        matches = {key for key in list(self) if isinstance(key, signature) and key.instances(*args)}
+        matches -= {ancestor for match in matches for ancestor in match.parents}
+        return self.select(types, matches)
 
     def __call__(self, *args, **kwargs):
         """Resolve and dispatch to best method."""
-        if self.pending:  # check first to avoid function call
-            self.evaluate()
-        func = self[tuple(func(arg) for func, arg in zip(self.type_checkers, args))]
+        self.evaluate()
+        func = self.dispatch(*args)
         try:
             return func(*args, **kwargs)
         except TypeError as ex:
@@ -349,7 +390,7 @@ class multimethod(dict):
 RETURN = TypeVar("RETURN")
 
 
-class multidispatch(multimethod, Dict[Tuple[type, ...], Callable[..., RETURN]]):
+class multidispatch(multimethod, dict[tuple[type, ...], Callable[..., RETURN]]):
     """Wrapper for compatibility with `functools.singledispatch`.
 
     Only uses the [register][multimethod.multimethod.register] method instead of namespace lookup.
@@ -363,11 +404,16 @@ class multidispatch(multimethod, Dict[Tuple[type, ...], Callable[..., RETURN]]):
 
     def __init__(self, func: Callable[..., RETURN]) -> None:
         self.pending = set()
-        self.type_checkers = []
+        self.generics = []
         try:
             self.signature = inspect.signature(func)
         except ValueError:
             self.signature = None
+        msg = "base implementation will eventually ignore annotations as `singledispatch does`"
+        with contextlib.suppress(NameError, AttributeError, TypeError):
+            hints = signature.from_hints(func)
+            if hints and all(map(issubclass, hints, hints)):
+                warnings.warn(msg, DeprecationWarning)
         super().__init__(func)
 
     def __get__(self, instance, owner) -> Callable[..., RETURN]:
@@ -376,7 +422,7 @@ class multidispatch(multimethod, Dict[Tuple[type, ...], Callable[..., RETURN]]):
     def __call__(self, *args: Any, **kwargs: Any) -> RETURN:
         """Resolve and dispatch to best method."""
         params = self.signature.bind(*args, **kwargs).args if (kwargs and self.signature) else args
-        func = self[tuple(func(arg) for func, arg in zip(self.type_checkers, params))]
+        func = self.dispatch(*params)
         return func(*args, **kwargs)
 
 
@@ -394,6 +440,8 @@ class overload(dict):
 
     def __new__(cls, func):
         namespace = inspect.currentframe().f_back.f_locals
+        if func.__name__ not in namespace:
+            warnings.warn("use `parametric(<base>, <func>)` as a type instead", DeprecationWarning)
         self = functools.update_wrapper(super().__new__(cls), func)
         self.pending = set()
         return namespace.get(func.__name__, self)

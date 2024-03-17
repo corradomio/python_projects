@@ -1,7 +1,7 @@
 from typing import *
 from types import *
 from collections import *
-from stdlib.is_instance import is_instance, All, Immutable, Const, Literals
+from stdlib.is_instance import is_instance, All, Immutable, Const, Literals, has_methods
 
 
 class C:
@@ -185,7 +185,6 @@ def test_union():
 def test_class():
     c = C()
     d = D()
-
     assert(is_instance(c, Container))
     assert(is_instance(c, Iterable))
     assert(is_instance(c, Hashable))
@@ -216,3 +215,16 @@ def test_literal_extended():
     assert is_instance("a", [0, "a"])
     assert is_instance(0, [0, "a"])
     assert not is_instance(1, [0, "a"])
+
+
+def test_has_methods():
+    class C:
+        def fit(self,X, y):
+            pass
+        def predict(self, X):
+            pass
+        def score(self, X,y):
+            pass
+
+    assert has_methods(C, ['fit', 'predict', 'score'])
+    assert is_instance(C, has_methods(['fit', 'predict', 'score']))

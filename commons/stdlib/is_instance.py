@@ -595,6 +595,19 @@ class HasAttribute(IsInstance):
         return True
 
 
+class HasMethods(IsInstance):
+
+    def __init__(self, methods):
+        super().__init__(type(None))
+        self.methods = methods
+
+    def is_instance(self, obj) -> bool:
+        for method in self.methods:
+            if not hasattr(obj, method):
+                return False
+        return True
+
+
 # ---------------------------------------------------------------------------
 
 class IsLiteralExtend(IsInstance):
@@ -702,6 +715,8 @@ def is_instance(obj, a_type, msg=None) -> bool:
 
     if t_name in IS_INSTANCE_OF:
         valid = IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
+    elif isinstance(a_type, IsInstance):
+        valid = a_type.is_instance(obj)
     else:
         valid = isinstance(obj, a_type)
 
@@ -710,6 +725,19 @@ def is_instance(obj, a_type, msg=None) -> bool:
     return valid
 
 
+def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str]=None, msg=None) -> bool:
+    if isinstance(obj_or_methods, (list, tuple)):
+        methods: list[str] = list(obj_or_methods)
+        return HasMethods(methods)
+    missing = []
+    obj = obj_or_methods
+    for m in methods:
+        if not hasattr(obj, m):
+            missing.append(m)
+    valid = len(missing) == 0
+    if not valid and msg is not None:
+        raise AssertionError(msg + " " + missing)
+    return valid
 
 # ---------------------------------------------------------------------------
 # End

@@ -5,7 +5,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.plotting import plot_series
-from sktimex import SimpleRNNForecaster, LinearForecastRegressor, SimpleCNNForecaster, ScikitForecastRegressor
+from sktimex.forecasting import CNNLinearForecaster, RNNLinearForecaster, LinearForecaster
 
 TARGET = 'import_kg'  # target column
 GROUP = 'item_country'  # time series
@@ -89,7 +89,7 @@ def main():
         # model = LinearForecastRegressor(lag=(0, 12))
         # model = LinearForecastRegressor(lag=(12, 12))
         # model = LinearForecastRegressor(lag=(0, 12), current=True)
-        model = SimpleCNNForecaster(hidden_size=12, scale=True)
+        model = CNNLinearForecaster(hidden_size=12, scale=True)
 
         model.fit(X=X_train, y=y_train)
         y_pred = model.predict(fh=fh, X=X_test)

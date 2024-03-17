@@ -1,5 +1,6 @@
 import numpy as np
-from stdlib.dictx import dict
+from stdlib.dict import dict
+
 
 def main():
 
@@ -42,6 +43,8 @@ def main():
     print(configuration.get('model.dropout'))
     print(configuration.get('model.dropoutx'))
 
+    print(configuration.select(['data_props.historical_categorical_cardinalities',
+                                'data_props.future_categorical_cardinalities']))
     pass
 
 

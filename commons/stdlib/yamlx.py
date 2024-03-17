@@ -55,3 +55,11 @@ class YamlConfig(Navigate):
             data = yaml.load(f, Loader=yaml.FullLoader)
         super().__init__(data)
 # end
+
+
+# compatibility with 'json'
+
+def load(fname: str, **kwargs):
+    with open(fname, mode="r") as fp:
+        return yaml.load(fp, yaml.Loader)
+

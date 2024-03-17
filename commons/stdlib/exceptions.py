@@ -52,7 +52,17 @@
 # .
 
 # ---------------------------------------------------------------------------
-# IPredict Exceptions
+# Parameters Exceptions
+# ---------------------------------------------------------------------------
+
+class UnsupportedTypeError(Exception):
+    def __init__(self, dtype, msg=None):
+        if msg is None: msg = ''
+        super().__init__(f'{msg}{dtype}')
+
+
+# ---------------------------------------------------------------------------
+# Machine Learning Exceptions
 # ---------------------------------------------------------------------------
 
 class NoModelsException(Exception):

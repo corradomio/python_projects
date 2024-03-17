@@ -569,35 +569,55 @@ class RangeValues:
     def __init__(self, minv, maxv):
         self.minv = minv
         self.maxv = maxv
+        self.values = None
 
-    def bounds(self):
-        return (self.minv, self.maxv)
+    def bounds(self, n=None):
+        if n in [None, 0]:
+            return self.minv, self.maxv
+        else:
+            dv = (self.maxv - self.minv) / (n-1)
+            self.values = [self.minv + i*dv for i in range(n)]
+            return self.values
 
     def random(self):
-        return random.uniform(self.minv, self.maxv)
+        return random.uniform(self.minv, self.maxv) \
+            if self.values is None else random.choice(self.values)
 
 
 class ListValues:
     def __init__(self, values):
         self.values = list(values)
 
-    def bounds(self):
+    def bounds(self, n=None):
         return self.values
 
     def random(self):
         return random.choice(self.values)
 
 
-def columns_range(df: pd.DataFrame, min_values=128):
-    """
-    Retrieve the range values for all columns.
-    If a column is of integer type and there are less than 'min_values' distinct values,
-    it is considered a 'categorical column'
+def _ndarray_ranges(df: np.ndarray):
+    ranges = {}
+    dtype = df.dtype
+    if len(df.shape) == 1:
+        df = df.reshape((-1, 1))
+    if dtype in [float, np.float16, np.float32, np.float64]:
+        for col in range(df.shape[1]):
+            values = df[:, col]
+            ranges[col] = RangeValues(values.min(), values.max())
+    elif dtype in [int, np.int8, np.int16, np.int32]:
+        for col in range(df.shape[1]):
+            values = df[:, col]
+            ranges[col] = RangeValues(values.min(), values.max())
+    elif dtype in [str]:
+        for col in range(df.shape[1]):
+            values = df[:, col]
+            ranges[col] = ListValues(values.unique())
+    else:
+        raise ValueError(f"Unsupported dtype {dtype}")
+    return ranges
 
-    :param df: dataframe to analyze
-    :param min_values: min number of integer values to consider as categorical
-    :return: a dictionary with the range values ofr each column
-    """
+
+def _dataframe_ranges(df: pd.DataFrame, min_counts):
     ranges = {}
     for col in df.columns:
         values = df[col]
@@ -607,7 +627,7 @@ def columns_range(df: pd.DataFrame, min_values=128):
             ranges[col] = RangeValues(values.min(), values.max())
         elif isinstance(dtype, CategoricalDtype):
             ranges[col] = ListValues(values.unique())
-        elif dtype in [int, np.int8, np.int16, np.int32] and 0 < len(values.unique()) <= min_values:
+        elif dtype in [int, np.int8, np.int16, np.int32] and 0 < len(values.unique()) <= min_counts:
             ranges[col] = ListValues(values.unique())
         elif dtype in [int, np.int8, np.int16, np.int32]:
             ranges[col] = RangeValues(values.min(), values.max())
@@ -616,6 +636,24 @@ def columns_range(df: pd.DataFrame, min_values=128):
         else:
             raise ValueError(f"Unsupported dtype {dtype} of column {col}")
     return ranges
+
+
+def columns_range(df: Union[pd.DataFrame, np.ndarray], min_counts=128):
+    """
+    Retrieve the range values for all columns.
+    If a column is of integer type and there are less than 'min_values' distinct values,
+    it is considered a 'categorical column'
+
+    :param df: dataframe to analyze
+    :param min_values: min number of integer values to consider as categorical
+    :return: a dictionary with the range values ofr each column
+    """
+    if isinstance(df, np.ndarray):
+        return _ndarray_ranges(df)
+    elif isinstance(df, pd.DataFrame):
+        return _dataframe_ranges(df, min_counts)
+    else:
+        raise ValueError(f"Unsupported df type {type(df)}")
 
 
 # ---------------------------------------------------------------------------
