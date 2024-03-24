@@ -1,17 +1,17 @@
 Food:
-    Beef:
+    Beef:   1250
         - BEEF - FRESH
         - BEEF - FROZEN
         - CHICKEN MEAT - FRESH
         - CHICKEN MEAT - FROZEN
         - GOAT AND LAMB / LAMB - FRESH
         - GOAT AND SHEEP/LAMB - FROZEN
-    Fish:
+    Fish:   1251
         - DRIED SALTED FISH
         - FISH - FRESH
         - FISH - FROZEN
         - MOLLUSCS
-    Other:
+    Other:  1252
         - CHILLI
         - EGGS
         - PREPARED EGGS
@@ -21,7 +21,7 @@ Food:
         - RICE
         - SUGAR
         - WHEAT FLOUR
-    Vegetable:
+    Vegetable:  1253
         - BEANS
         - BEETROOT
         - BROCCOLI AND CAULIFLOWER
@@ -35,7 +35,7 @@ Food:
         - POTATOS
         - SWEET POTATO
         - TOMATOES
-    Fruit:
+    Fruit:  1254
         - APPLE
         - BANANA
         - CRANBERRY
@@ -50,7 +50,7 @@ Food:
         - PUMPKIN
         - STRAWBERRIES
         - WATERMELONS
-    Liquid:
+    Liquid: 1255
         - MILK
         - OILS
         - HONEY

@@ -191,7 +191,7 @@ class DistilledModel:
         Xe = self.GT.xenc.transform(X)
         ye = self.DC.predict(Xe)
         ye = DataFrame(data=ye, columns=self.GT.y.columns, index=X.index)
-        ypred = self.GT.yenc.inverse_transform(ye)
+        ypred = self.GT.yenc.find_nearest(ye)
         return ypred
 
     def score(self, X, y_true):

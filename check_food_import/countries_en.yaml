@@ -1,5 +1,5 @@
 World:
-    Africa:
+    Africa:             998
         - Algeria
         - Ambazonia
         - Angola
@@ -64,7 +64,7 @@ World:
         - Sahara
         - Zambia
         - Zimbabwe
-    Center America:
+    Center America:     999
         - Belize
         - Costa Rica
         - El Salvador
@@ -72,7 +72,7 @@ World:
         - Honduras
         - Nicaragua
         - Panama
-    North America:
+    North America:      1000
         - Antigua and Barbuda
         - Antigua
         - Barbuda
@@ -98,7 +98,7 @@ World:
         - Trinidad
         - Tobago
         - United States
-    South America:
+    South America:      1001
         - Argentina
         - Bolivia
         - Brazil
@@ -111,7 +111,7 @@ World:
         - Suriname
         - Uruguay
         - Venezuela
-    Asia:
+    Asia:               1002
         - Afghanistan
         - Armenia
         - Azerbaijan
@@ -145,7 +145,6 @@ World:
         - Nepal
         - North Korea
         - Northern Cyprus
-        - Cyprus
         - Oman
         - Pakistan
         - Philippines
@@ -165,10 +164,9 @@ World:
         - Uzbekistan
         - Vietnam
         - Yemen
-    Europe:
+    Europe:             1003
         - Albania
         - Andorra
-        - Armenia
         - Austria
         - Azerbaijan
         - Belarus
@@ -178,7 +176,6 @@ World:
         - Herzegovina
         - Bulgaria
         - Croatia
-        - Cyprus
         - Czech Republic
         - Czech
         - Denmark
@@ -224,7 +221,7 @@ World:
         - Ukraine
         - United Kingdom
         - Vatican City
-    Oceania:
+    Oceania:            1004
         - Australia
         - Cook Islands
         - Fiji

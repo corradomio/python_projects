@@ -4,7 +4,7 @@ from random import shuffle
 import numpy as np
 import pandas as pd
 from numpy import ndarray
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 from sklearn.tree import DecisionTreeClassifier
 from umap import UMAP
 
@@ -112,7 +112,7 @@ class BestScores:
             tprint(f"   {self.iter}: {score:.3}")
         self.iter += 1
 
-    def save(self, fname, Xy=None, method='generic'):
+    def save(self, fname, Xy=None, method='generic', coreset_score=0.):
         self.done_time = datetime.now()
 
         D = self.D
@@ -139,7 +139,8 @@ class BestScores:
 
             "best_score": {"iter": self.best_iter, "score": self.best_score},
             "score_history": self.score_history,
-            "best_score_history": self.best_score_history
+            "best_score_history": self.best_score_history,
+            "coreset_score": coreset_score
         }, jname)
         pass
 
@@ -180,6 +181,7 @@ class DistilledModel:
     def score(self, X, y_true):
         y_pred = self.predict(X)
         score = accuracy_score(y_true, y_pred)
+        # score = mean_squared_error(y_true, y_pred)
 
         global BEST_SCORES
         BEST_SCORES.update(score, (self.Xd, self.yd), self.DC)
@@ -265,7 +267,18 @@ class LoadData:
         print("done")
         return Xr, yr
 
-    def inverse_transform(self, Xy):
+    def original_data(self):
+        return self.Xr, self.yr
+
+    def transform(self, X, y):
+        Xt = self.xenc.transform(X)
+        yt = self.yenc.transform(y)
+
+        Xr = self.dr.transform(Xt)
+        yr = yt.to_numpy()
+        return Xr, yr
+
+    def find_nearest(self, Xy):
         Xr, yr = Xy
 
         # too slow
@@ -299,7 +312,6 @@ class LoadData:
                 min_dist = dist
                 selected = i
         return selected
-
 # end
 
 
@@ -320,57 +332,69 @@ def main():
     # -----
 
     method = 'RandomizedSearchCV'
-    # kwparams = parameters.named_values(Xy=True)
-    # kwbounds = parameters.named_bounds(Xy=True, n=10)
-    #
-    # estimator = DistilledModel(**kwparams)
-    #
-    # opt = RandomizedSearchCV(
-    #     estimator=estimator,
-    #     param_distributions=kwbounds,
-    #     scoring=lambda estimator, X, y: estimator.score(X, y),
-    #     n_iter=10,
-    #     n_jobs=1,
-    #     cv=5
-    # )
-
-    # -----
-
-    method = 'BayesSearchCV'
     kwparams = parameters.named_values(Xy=True)
-    kwbounds = parameters.named_bounds(Xy=True)
+    kwbounds = parameters.named_bounds(Xy=True, n=10)
 
     estimator = DistilledModel(**kwparams)
 
-    opt = BayesSearchCV(
+    opt = RandomizedSearchCV(
         estimator=estimator,
         param_distributions=kwbounds,
         scoring=lambda estimator, X, y: estimator.score(X, y),
-        n_points=1,
-        n_iter=30,
+        n_iter=10,
         n_jobs=1,
-        verbose=1,
-        cv=5,
-        # pre_dispatch=1
-        optimizer_kwargs=dict(
-            acq_optimizer_kwargs=dict(
-                n_points=10,
-                n_restarts_optimizer=5,
-                n_jobs=1
-            ),
-            acq_func_kwargs=dict(
-
-            )
-        )
+        cv=5
     )
+
+    # -----
+
+    # method = 'BayesSearchCV'
+    # kwparams = parameters.named_values(Xy=True)
+    # kwbounds = parameters.named_bounds(Xy=True)
+    #
+    # estimator = DistilledModel(**kwparams)
+    #
+    # opt = BayesSearchCV(
+    #     estimator=estimator,
+    #     param_distributions=kwbounds,
+    #     scoring=lambda estimator, X, y: estimator.score(X, y),
+    #     n_points=1,
+    #     n_iter=30,
+    #     n_jobs=1,
+    #     verbose=1,
+    #     cv=5,
+    #     # pre_dispatch=1
+    #     optimizer_kwargs=dict(
+    #         acq_optimizer_kwargs=dict(
+    #             n_points=10,
+    #             n_restarts_optimizer=5,
+    #             n_jobs=1
+    #         ),
+    #         acq_func_kwargs=dict(
+    #
+    #         )
+    #     )
+    # )
 
     # -----
 
     opt.fit(X, y)
 
-    X, y = ld.inverse_transform(BEST_SCORES.best_params)
+    # X,y distilled
+    Xd, yd = ld.find_nearest(BEST_SCORES.best_params)
+    # X,y distilled in the small dimension
+    Xdr, ydr = ld.transform(Xd, yd)
 
-    BEST_SCORES.save('pred3/mushroom', (X, y), method)
+    # create the distilled classifier
+    DC = GT.create_classifier(Xdr, ydr)
+
+    # original dataset in the small dimension
+    Xr, yr = ld.original_data()
+
+    yp = DC.predict(Xr)
+    coreset_score = accuracy_score(yr, yp)
+
+    BEST_SCORES.save('pred3/mushroom', (Xd, yd), method, coreset_score)
     pass
 
 
