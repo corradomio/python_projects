@@ -1,25 +1,18 @@
 import logging as log
+from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL, getLogger
 import time
+
 
 # ---------------------------------------------------------------------------
 # Logger
 # ---------------------------------------------------------------------------
 
-DEBUG = log.DEBUG
-INFO = log.INFO
-WARN = log.WARN
-WARNING = log.WARNING
-ERROR = log.ERROR
-CRITICAL = log.CRITICAL
-FATAL = log.FATAL
-
-
 def get_logger(name):
     return Logger.get_logger(name)
 
 
-def getLogger(name):
-    return log.getLogger(name)
+# def getLogger(name):
+#     return log.getLogger(name)
 
 
 def basic_config(**kwargs):
@@ -27,13 +20,13 @@ def basic_config(**kwargs):
 
 
 class Logger:
-    DEBUG = log.DEBUG
-    INFO = log.INFO
-    WARN = log.WARN
-    WARNING = log.WARNING
-    ERROR = log.ERROR
-    CRITICAL = log.CRITICAL
-    FATAL = log.FATAL
+    # DEBUG = log.DEBUG
+    # INFO = log.INFO
+    # WARN = log.WARN
+    # WARNING = log.WARNING
+    # ERROR = log.ERROR
+    # CRITICAL = log.CRITICAL
+    # FATAL = log.FATAL
     TIMEDELAY = 3
 
     # -----------------------------------------------------------------------
