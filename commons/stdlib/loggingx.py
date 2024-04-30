@@ -1,32 +1,34 @@
 import logging as log
-from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL, getLogger
+from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL
+from logging import config
 import time
 
 
 # ---------------------------------------------------------------------------
-# Logger
+# Utilities
 # ---------------------------------------------------------------------------
 
 def get_logger(name):
     return Logger.get_logger(name)
 
 
-# def getLogger(name):
-#     return log.getLogger(name)
+def getLogger(name):
+    return Logger.get_logger(name)
 
 
 def basic_config(**kwargs):
     return Logger.configure(**kwargs)
 
 
+# def getLogger(name):
+#     return log.getLogger(name)
+
+
+# ---------------------------------------------------------------------------
+# Logger
+# ---------------------------------------------------------------------------
+
 class Logger:
-    # DEBUG = log.DEBUG
-    # INFO = log.INFO
-    # WARN = log.WARN
-    # WARNING = log.WARNING
-    # ERROR = log.ERROR
-    # CRITICAL = log.CRITICAL
-    # FATAL = log.FATAL
     TIMEDELAY = 3
 
     # -----------------------------------------------------------------------
@@ -65,6 +67,21 @@ class Logger:
     def is_info_enabled(self):
         return self.logger.isEnabledFor(INFO)
 
+    def is_warning_enabled(self):
+        return self.logger.isEnabledFor(WARNING)
+
+    def is_warn_enabled(self):
+        return self.logger.isEnabledFor(WARN)
+
+    def is_error_enabled(self):
+        return self.logger.isEnabledFor(ERROR)
+
+    def is_critical_enabled(self):
+        return self.logger.isEnabledFor(CRITICAL)
+
+    def is_fatal_enabled(self):
+        return self.logger.isEnabledFor(FATAL)
+
     # -----------------------------------------------------------------------
 
     def debug(self, msg, *args, **kwargs):
@@ -76,8 +93,14 @@ class Logger:
     def warn(self, msg, *args, **kwargs):
         self.logger.warning(msg, *args, **kwargs)
 
+    def warning(self, msg, *args, **kwargs):
+        self.logger.warning(msg, *args, **kwargs)
+
     def error(self, msg, *args, **kwargs):
         self.logger.error(msg, *args, **kwargs)
+
+    def fatal(self, msg, *args, **kwargs):
+        self.logger.fatal(msg, *args, **kwargs)
 
     # -----------------------------------------------------------------------
 
@@ -116,4 +139,37 @@ class Logger:
             print(time.strftime("[%H:%M:%S] "), end="")
             print(fmt.format(*args), **kwargs)
 # end
+
+
+# ---------------------------------------------------------------------------
+# loggers
+# ---------------------------------------------------------------------------
+
+def debug(msg, *args, **kwargs):
+    Logger.get_logger("main").debug(msg, *args, **kwargs)
+
+
+def info(msg, *args, **kwargs):
+    Logger.get_logger("main").info(msg, *args, **kwargs)
+
+
+def warn(msg, *args, **kwargs):
+    Logger.get_logger("main").warn(msg, *args, **kwargs)
+
+
+def warning(msg, *args, **kwargs):
+    Logger.get_logger("main").warning(msg, *args, **kwargs)
+
+
+def error(msg, *args, **kwargs):
+    Logger.get_logger("main").error(msg, *args, **kwargs)
+
+
+def fatal(msg, *args, **kwargs):
+    Logger.get_logger("main").fatal(msg, *args, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
 

@@ -1,17 +1,26 @@
-import multimethod
-
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+from multimethod import multimethod, overload
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+@multimethod
+def say(what: int):
+    print("int:", what)
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+
+@multimethod
+def say(what: float):
+    print("flt:", what)
+
+
+@multimethod
+def say(what: str):
+    print("str:", what)
+
+
+def main():
+    say(1)
+    say(2.)
+    say("3")
+
+
+if __name__ == "__main__":
+    main()

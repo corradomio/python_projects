@@ -1,29 +1,47 @@
 # This is a sample Python script.
-import logging as log
-import logging.config
 
-# logging.basicConfig(level=logging.DEBUG,
-#                     filename='myfirstlog.log',
-#                     format='%(asctime)s | %(name)s | %(levelname)s | %(message)s')
-
-logging.config.fileConfig('logging_config.ini')
-
-import matplotlib.pyplot as plt
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import stdlib.loggingx as logging
 
 
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+def main():
+    logging.config.fileConfig('logging_config.ini')
 
+    # logging.info("I'm an informational message.")
+    # logging.debug("I'm a message for debugging purposes.")
+    # logging.warning("I'm a warning. Beware!")
+    # logging.error("I'm an error. Houch!")
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+    print("--base--", flush=True)
+    log = logging.getLogger("base")
     log.info("I'm an informational message.")
     log.debug("I'm a message for debugging purposes.")
     log.warning("I'm a warning. Beware!")
+    log.error("I'm an error. Houch!")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    print("--base.child--", flush=True)
+    log = logging.getLogger("base.child")
+    log.info("I'm an informational message.")
+    log.debug("I'm a message for debugging purposes.")
+    log.warning("I'm a warning. Beware!")
+    log.error("I'm an error. Houch!")
+
+    print("--base.child.leaf--", flush=True)
+    log = logging.getLogger("base.child.leaf")
+    log.info("I'm an informational message.")
+    log.debug("I'm a message for debugging purposes.")
+    log.warning("I'm a warning. Beware!")
+    log.error("I'm an error. Houch!")
+
+    print("--base.other.leaf--", flush=True)
+    log = logging.getLogger("base.other.leaf")
+    log.info("I'm an informational message.")
+    log.debug("I'm a message for debugging purposes.")
+    log.warning("I'm a warning. Beware!")
+    log.error("I'm an error. Houch!")
+
+    print("--done--", flush=True)
+# end
+
+
+if __name__ == '__main__':
+    main()

@@ -38,7 +38,7 @@ def create_scores_table(table_name, engine):
 
     for col in schema.__table__.columns:
         print(col)
-        table.append_column(Column(col.name, col.type, nullable=col.nullable))
+        table.append_column(Column(col.name, col.type, nullable=col.nullable, primary_key=col.primary_key, autoincrement=col.autoincrement))
 
     table.create(bind=engine)
     pass
@@ -66,7 +66,6 @@ def main():
         create_scores_table('algo_scores_1', engine)
 
     t = get_table('algo_scores_1', engine)
-    print(insert(t))
 
     with engine.connect() as c:
         stmt = insert(t).values(
@@ -88,6 +87,7 @@ def main():
                 # r2=33,
                 # area="cicciopasticcio"
         )
+        c.commit()
     pass
     pass
 

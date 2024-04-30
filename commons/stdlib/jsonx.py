@@ -3,6 +3,7 @@
 # with a file path
 #
 import json
+from json import dumps, loads
 
 OPEN_ARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
 
