@@ -83,27 +83,44 @@ def list_map(f, l):
     return list(map(f, l))
 
 
-def as_list(l: Union[NoneType, str, list[str], tuple[str]], param=None):
+def as_list(obj: Union[NoneType, str, list, tuple], param=None):
     """
-    Convert parameter 'l' in a list.
-    If 'l' is None, the empty list, if a string, in a singleton list
+    Convert parameter 'obj' in a list.
+    If 'obj' is None, the empty list, if a string|int|..., in a singleton list
 
-    :param l: value to convert
+    :param obj: value to convert
     :param param: parameter's name, used in the error message
     :return: a list
     """
-    tl = type(l)
-    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, list[str]"
-    return [] if l is None else \
-            [l] if tl == str else \
-            list(l) if tl == tuple else l
+    tl = type(obj)
+    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, int, list, tuple"
+    if tl is NoneType:
+        return []
+    elif tl == list:
+        return obj
+    elif tl == tuple:
+        return list(obj)
+    else:
+        return [obj]
+    # return [] if l is None else \
+    #         [l] if tl == str else \
+    #         list(l) if tl == tuple else l
 
 
-def as_tuple(l: Union[NoneType, Any, list, tuple], param=None):
-    tl = type(l)
-    return tuple() if l is None else \
-        l if tl == tuple else \
-        tuple(l) if tl == list else (l,)
+def as_tuple(obj: Union[NoneType, Any, list, tuple], param=None):
+    tl = type(obj)
+    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, int, list, tuple"
+    if tl is NoneType:
+        return ()
+    elif tl == tuple:
+        return obj
+    elif tl == list:
+        return tuple(obj)
+    else:
+        return [obj]
+    # return tuple() if l is None else \
+    #     l if tl == tuple else \
+    #     tuple(l) if tl == list else (l,)
 
 
 def as_dict(d: Union[NoneType, dict]) -> dict:

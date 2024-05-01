@@ -198,7 +198,8 @@ from typing import *
 #     'runtime_checkable',
 #     'Text',
 #     'TYPE_CHECKING',
-# .
+# ---------------------------------------------------------------------------
+
 
 # ---------------------------------------------------------------------------
 # from 'collections'
@@ -213,7 +214,6 @@ from collections import *
 #     'defaultdict',
 #     'deque',
 #     'namedtuple',
-#  .
 # ---------------------------------------------------------------------------
 
 
@@ -653,10 +653,13 @@ IS_INSTANCE_OF = {
     'typing.DefaultDict': IsDefaultDict,
     'typing.NewType': IsNewType,
     'typing.Collection': IsCollection,
+    'typing.Mapping': IsMapping,
 
     'typing.All': IsAll,
     'typing.Immutable': IsImmutable,
     'typing.Const': IsConst,
+
+    'types.UnionType': IsUnion,
 
     'typing.Container': HasAttribute('__contains__'),
     'typing.Iterable': HasAttribute('__iter__'),
@@ -689,6 +692,9 @@ def type_name(a_type: type) -> str:
         name = a_type._name
     elif hasattr(a_type, '__name__'):
         name = a_type.__name__
+    elif hasattr(a_type, '__class__'):
+        # name = f"{a_type.__class__.__module__}.{a_type.__class__.__name__}"
+        name = a_type.__class__.__name__
     else:
         name = str(a_type)
 
@@ -701,15 +707,16 @@ def type_name(a_type: type) -> str:
 
 
 def is_instance(obj, a_type, msg=None) -> bool:
+
     # if hasattr(a_type, '__supertype__'):
     #     return is_instance(obj, a_type.__supertype__)
+
     if isinstance(a_type, (tuple, list)):
         a_types: tuple[type] = a_type
         for a_type in a_types:
             if is_instance(obj, a_type):
                 return True
         return False
-    # end
 
     t_name = type_name(a_type)
 
@@ -717,6 +724,8 @@ def is_instance(obj, a_type, msg=None) -> bool:
         valid = IS_INSTANCE_OF[t_name](a_type).is_instance(obj)
     elif isinstance(a_type, IsInstance):
         valid = a_type.is_instance(obj)
+    elif not isinstance(a_type, type) and callable(a_type):
+        return a_type(obj)
     else:
         valid = isinstance(obj, a_type)
 
@@ -725,7 +734,8 @@ def is_instance(obj, a_type, msg=None) -> bool:
     return valid
 
 
-def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str]=None, msg=None) -> bool:
+def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str] = None, msg=None) \
+        -> Union[bool, HasMethods]:
     if isinstance(obj_or_methods, (list, tuple)):
         methods: list[str] = list(obj_or_methods)
         return HasMethods(methods)

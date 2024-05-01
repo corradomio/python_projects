@@ -1,36 +1,64 @@
 import logging.config
 from iplan.om import IPlanObjectModel, IPredictMasterFocussed, IPredictDetailFocussed, IDataValuesMaster
 from sqlalchemy import URL
+from stdlib import lrange
 from stdlib.jsonx import load
-
-
-# def main():
-#     datasource_dict = load('datasource.json')
-#     url = URL.create(**datasource_dict)
-#
-#     ipom = IPlanObjectModel(url)
-#
-#     with ipom.connect() as conn:
-#
-#         dvm: IDataValuesMaster = ipom.data_values_master("13355950")
-#         start_date = dvm.start_date
-#         end_date = dvm.end_date
-#         area_feature = dvm.area_feature
-#
-#         prdct_data = dvm.select_prediction_data(new_format=True)
-#         pass
+from datetime import datetime
 
 
 def main():
     datasource_dict = load('datasource.json')
-    url = URL.create(**datasource_dict)
+    ipom = IPlanObjectModel(datasource_dict)
 
-    ipom = IPlanObjectModel(url)
+    with ipom.connect():
+        pp = ipom.prediction_plans()
 
-    with ipom.connect() as conn:
+        # print(pp.delete_plan('Check_My_Plan'))
+        # pp.create_plan('Check_My_Plan', data_master=48, start_date=datetime(2024, 4, 1))
+
         pf = ipom.predict_focussed(68)
-        pf.select_prediction_data(new_format=False)
-        prdct_data = pf.select_prediction_data(plan_id=13355950, new_format=True)
+        print("data_master_id", pf.data_master.id)
+        print("data_model_id", pf.data_model.id)
+        print("area_feature_ids", pf.area_hierarchy.feature_ids())
+        print(pf.select_data_master_ids())
+        print(pf._select_data_values_master_ids())
+
+        train_data = pf.select_train_data(new_format=True)
+        prediction_data = pf.select_prediction_data(new_format=True)
+    pass
+# end
+
+
+def main5():
+    datasource_dict = load('datasource.json')
+    ipom = IPlanObjectModel(datasource_dict)
+
+    with ipom.connect():
+
+        pp = ipom.prediction_plans()
+
+        print(pp.exists_plan('Check_My_Plan', 7))
+        print(pp.exists_plan(datetime(2024, 5, 1, 0, 0, 0), 7))
+
+        # pp.delete_plan("Check_My_Plan")
+
+        pp.create_plan(name='Check_My_Plan',
+                       start_date=datetime(2024, 5, 1, 0, 0, 0),
+                       # end_date=datetime(224, 5, 31, 23,59,59),
+                       data_master=7,
+                       force=False)
+
+        # date_interval = pp.select_date_interval("13339197")
+        # date_interval = pp.select_date_interval("Autoupdate_Plan_sikhar_2023-02-26 0:00:00")
+        date_interval = pp.select_date_interval('Check_My_Plan', data_master_id=7)
+
+        date_interval = pp.select_date_interval(13356946, data_master_id=7)
+        date_interval = pp.select_date_interval(None, data_master_id=7, area_feature_ids=lrange(203, 255))
+
+        pf = ipom.predict_focussed(68)
+        pf.select_prediction_data(date_interval, new_format=False)
+
+        prdct_data = pf.select_prediction_data(plan_id='Check_My_Plan', new_format=True)
 
         pass
     # end
@@ -39,9 +67,7 @@ def main():
 
 def main4():
     datasource_dict = load('datasource.json')
-    url = URL.create(**datasource_dict)
-
-    ipom = IPlanObjectModel(url)
+    ipom = IPlanObjectModel(datasource_dict)
 
     with ipom.connect() as conn:
         dvm = ipom.data_values_master(13355950)
@@ -55,14 +81,12 @@ def main4():
 
 def main3():
     datasource_dict = load('datasource.json')
-    url = URL.create(**datasource_dict)
-
-    ipom = IPlanObjectModel(url)
+    ipom = IPlanObjectModel(datasource_dict)
 
     with ipom.connect() as conn:
         pf = ipom.predict_focussed(68)
-        train_data = pf.select_training_data(new_format=True)
-        prdct_data = pf.select_prediction_data(new_format=True)
+        train_data = pf.select_train_data(new_format=True)
+        prdct_data = pf.select_prediction_data(None, new_format=True)
 
         pass
     # end
@@ -71,17 +95,14 @@ def main3():
 
 def main2():
     datasource_dict = load('datasource.json')
-    url = URL.create(**datasource_dict)
+    ipom = IPlanObjectModel(datasource_dict)
 
-    ipom = IPlanObjectModel(url)
     try:
         ipom.connect()
 
         pf = ipom.predict_focussed('IXD_NEW_IPREDICT')
 
-
-
-        train_data = pf.select_training_data(new_format=True)
+        train_data = pf.select_train_data(new_format=True)
 
         print(train_data)
         pass
@@ -91,10 +112,8 @@ def main2():
 
 def main1():
     datasource_dict = load('datasource.json')
-    url = URL.create(**datasource_dict)
-    # url = "postgresql://postgres:p0stgres@10.193.20.15:5432/btdigital_ipredict_development"
+    ipom = IPlanObjectModel(datasource_dict)
 
-    ipom = IPlanObjectModel(url)
     try:
         ipom.connect()
 
@@ -110,7 +129,7 @@ def main1():
         # print(pf.data_master.data_model)
         # print(*pf.input_target_measure_ids)
 
-        print(pf.select_training_data())
+        print(pf.select_train_data())
 
         # data_model = ipom.data_model('IXD Model Master')
         # measures = data_model.details()
