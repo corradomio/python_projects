@@ -1,14 +1,17 @@
-from typing import List
+import logging
 import pandas as pd
-from .base import set_index, ignore_columns, as_list, \
-    find_unnamed_columns, dataframe_sort, rename_columns, \
+from typing import Union
+
+from .base import set_index, nan_drop, as_list, \
+    find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore, \
+    type_encode, count_encode, \
     NoneType
 from .binhot import binhot_encode
-from .onehot import onehot_encode
 from .datetimes import datetime_encode, datetime_reindex
-from .periodic import periodic_encode
 from .freq import infer_freq
 from .io_arff import read_arff
+from .onehot import onehot_encode
+from .periodic import periodic_encode
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +36,7 @@ def _select_typed_columns(columns, dtype):
     return categorical, boolean, ignore
 
 
-def _read_header(file: str, comment="#", sep=",") -> List[str]:
+def _read_header(file: str, comment="#", sep=",") -> list[str]:
     def trim(s: str) -> str:
         return s.strip(" '\"")
 
@@ -107,7 +110,7 @@ def _to_url_select(url: str):
         return url, what
 
 
-def read_database(url: str, dtype, **kwargs):
+def _read_database(url: str, dtype, **kwargs):
     url, sql = _to_url_select(url)
     from sqlalchemy import create_engine
     engine = create_engine(url)
@@ -159,32 +162,32 @@ def read_database(url: str, dtype, **kwargs):
 
 def read_data(file: str,
               *,
-              dtype=None,  # list of columns types
-              boolean=None,  # boolean columns
-              integer=None,  # integer columns
-              numeric=None,  # numerical/float columns
+              dtype=None,           # list of columns types
+              boolean=None,         # boolean columns
+              integer=None,         # integer columns
+              numeric=None,         # numerical/float columns
 
-              categorical=None,  # pandas categorical columns
-              onehot=None,  # categorical columns to convert using onehot encoding.
-              binhot=None,  # categorical columns to convert using binary hot encoding.
+              categorical=None,     # pandas categorical columns
+              onehot=None,          # categorical columns to convert using onehot encoding.
+              binhot=None,          # categorical columns to convert using binary hot encoding.
 
-              index=None,  # columns to use as index
-              ignore=None,  # columns to ignore
-              ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
+              index=None,           # columns to use as index
+              ignore=None,          # columns to ignore
+              ignore_unnamed=False, # if to ignore 'Unnamed *' columns
 
-              datetime=None,  # datetime column to convert in a PeriodTime
+              datetime=None,        # datetime column to convert in a PeriodTime
 
-              periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
-              count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
-              reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
-              sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+              periodic=None,        # [EXPERIMENTAL] to add datetime periodic representation
+              count=False,          # [EXPERIMENTAL] if to add the column 'count' with value 1
+              reindex=False,        # [EXPERIMENTAL] if to reindex the dataset
+              sort=False,           # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
 
-              rename=None,  # [EXPERIMENTAL] rename some columns
+              rename=None,          # [EXPERIMENTAL] rename some columns
 
-              dropna=False,  # if to drop the rows containing NaN values
-              na_values=None,  # strings to consider NaN values
-              **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
-              ) -> pd.DataFrame:
+              dropna=False,         # if to drop the rows containing NaN values
+              na_values=None,       # strings to consider NaN values
+              **kwargs              # parameters to pass to 'pandas.read_*(...)' routine
+              ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -247,6 +250,13 @@ def read_data(file: str,
             The columns are not automatically ignored
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
+            None/False:
+                no row is removed
+            True:
+                rows containing NA values are removed
+            ['col1', '...]:
+                remove rows containing NA in the selected columns
+
     :param periodic: if to add  one or multiple 'periodic' information (EXPERIMENTAL)
 
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
@@ -264,6 +274,7 @@ def read_data(file: str,
     :param dict kwargs: extra parameters passed to pd.read_*()
     :return pd.DataFrame: a Pandas DataFrame
     """
+    log = logging.getLogger("pandasx")
 
     # check parameter types
     assert isinstance(file, str), "'file' must be a str"
@@ -271,8 +282,8 @@ def read_data(file: str,
         "'datetime' must be (None, str, (str, str), (str, str, str))"
     assert isinstance(periodic, (NoneType, bool, str, list, tuple)), \
         "'periodic' must be (None, str, (str, str), (str, dict))"
-    assert isinstance(count, bool), "'count' bool"
-
+    assert isinstance(count, bool), \
+        "'count' must be bool"
     assert isinstance(rename, (NoneType, list, tuple, dict)), \
         "'rename' must be (None, [str,...], {str:str...}"
 
@@ -283,7 +294,6 @@ def read_data(file: str,
     numeric = as_list(numeric, 'numeric')
     onehot = as_list(onehot, 'onehot')
     binhot = as_list(binhot, 'binhot')
-    # binary = as_list(binary, 'binary')
     ignore = as_list(ignore, 'ignore')
     index = as_list(index, 'index')
 
@@ -302,7 +312,8 @@ def read_data(file: str,
         dt = None
 
     # load the file based on extension
-    print(f"Loading {file} ...")
+    # print(f"Loading {file} ...")
+    log.info(f"Loading {file} ...")
 
     if file.endswith(".csv"):
         df = pd.read_csv(file, dtype=dt, **kwargs)
@@ -316,12 +327,10 @@ def read_data(file: str,
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
         df = pd.read_hdf(file, dtype=dt, **kwargs)
-    elif file.endswith(".arff"):
-        # extension
+    elif file.endswith(".arff"):    # extension
         df = read_arff(file, dtype=dt, **kwargs)
-    elif "://" in file:
-        # extension
-        df = read_database(file, dtype=dt, **kwargs)
+    elif "://" in file:             # extension
+        df = _read_database(file, dtype=dt, **kwargs)
     else:
         raise ValueError(f"Unsupported file format: {file}")
 
@@ -334,24 +343,34 @@ def read_data(file: str,
     # end
 
     # pandas categorical
-    for col in categorical:
-        df[col] = df[col].astype('category')
+    # for col in categorical:
+    #     df[col] = df[col].astype('category')
+    if categorical:
+        df = type_encode(df, 'category', categorical)
 
     # pandas boolean
-    for col in boolean:
-        df[col] = df[col].astype(bool)
+    # for col in boolean:
+    #     df[col] = df[col].astype(bool)
+    if boolean:
+        df = type_encode(df, bool, boolean)
 
     # pandas integer
-    for col in integer:
-        df[col] = df[col].astype(int)
+    # for col in integer:
+    #     df[col] = df[col].astype(int)
+    if integer:
+        df = type_encode(df, int, integer)
 
     # pandas float
-    for col in numeric:
-        df[col] = df[col].astype(float)
+    # for col in numeric:
+    #     df[col] = df[col].astype(float)
+    if numeric:
+        df = type_encode(df, float, numeric)
 
     # add the 'count' column
-    if count and 'count' not in df.columns:
-        df['count'] = 1.
+    # if count and 'count' not in df.columns:
+    #     df['count'] = 1.
+    if count:
+        df = count_encode(df, count)
 
     # convert the datetime column
     if datetime is not None:
@@ -371,18 +390,23 @@ def read_data(file: str,
     if len(binhot) > 0:
         df = binhot_encode(df, binhot)
 
-    # binary/{0,1} encoding
-    # if len(binary) > 0:
-    #     df = binary_encode(df, binary)
-
-    # compose the index
-    if len(index) > 0:
-        df = set_index(df, index)
+    # remove the rows containing NaN
+    # [extension] if dropna is 'list[str]'
+    # note: it is better to check for NaN
+    #       BEFORE ignored columns
+    #       BEFORE to move the columns as index
+    #       BEFORE to rename columns
+    if dropna:
+        df = nan_drop(df, dropna)
 
     # force a sort
     # Note: here it is possible to use columns not yet removed
     if sort is not False:
         df = dataframe_sort(df, sort)
+
+    # compose the index
+    if len(index) > 0:
+        df = set_index(df, index)
 
     # add 'Unnamed: ...' columns to the list of columns to remove
     if ignore_unnamed:
@@ -390,23 +414,20 @@ def read_data(file: str,
 
     # remove the 'ignore' columns
     if len(ignore) > 0:
-        df = ignore_columns(df, ignore)
+        df = columns_ignore(df, ignore)
 
     # rename the columns
     if rename is not None:
-        df = rename_columns(df, rename)
-
-    # remove the rows containing NaN
-    # note: it is better to check for NaN ONLY AFTER ignored columns
-    if dropna:
-        df = df.dropna(how='any', axis=0)
+        df = columns_rename(df, rename)
 
     # force the reindex
     if reindex:
         df = datetime_reindex(df)
 
-    print(f"... done {df.shape}")
+    # print(f"... done {df.shape}")
+    log.info(f"... done {df.shape}")
     return df
+# end
 
 
 def write_data(df: pd.DataFrame, file: str, **kwargs):

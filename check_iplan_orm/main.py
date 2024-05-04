@@ -7,7 +7,7 @@ from datetime import datetime
 
 
 def main():
-    datasource_dict = load('datasource.json')
+    datasource_dict = load('datasource_localhost.json')
     ipom = IPlanObjectModel(datasource_dict)
 
     with ipom.connect():

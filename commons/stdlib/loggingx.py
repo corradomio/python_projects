@@ -1,6 +1,9 @@
+# DON'T remove
+from logging import config
+from logging import disable, shutdown, captureWarnings
+from logging import getLevelNamesMapping, getLevelName, addLevelName
 import logging as log
 from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL
-from logging import config
 import time
 
 
@@ -8,20 +11,12 @@ import time
 # Utilities
 # ---------------------------------------------------------------------------
 
-def get_logger(name):
-    return Logger.get_logger(name)
-
-
 def getLogger(name):
-    return Logger.get_logger(name)
+    return get_logger(name)
 
 
-def basic_config(**kwargs):
-    return Logger.configure(**kwargs)
-
-
-# def getLogger(name):
-#     return log.getLogger(name)
+def get_logger(name):
+    return Logger.getLogger(name)
 
 
 # ---------------------------------------------------------------------------
@@ -33,54 +28,80 @@ class Logger:
 
     # -----------------------------------------------------------------------
 
-    @staticmethod
-    def configure(**kwargs):
-        log.basicConfig(**kwargs)
+    # @staticmethod
+    # def configure(**kwargs):
+    #     log.basicConfig(**kwargs)
+
+    # @staticmethod
+    # def configure_using(fname: str, **kwargs):
+    #     # log.basicConfig(filename=fname)
+    #     log.config.fileConfig(fname, **kwargs)
+
+    # @staticmethod
+    # def configure_level(level=INFO):
+    #     log.basicConfig(level=level)
 
     @staticmethod
-    def configure_using(fname):
-        log.basicConfig(filename=fname)
-
-    @staticmethod
-    def configure_level(level=INFO):
-        log.basicConfig(level=level)
-
-    @staticmethod
-    def get_logger(name):
+    def getLogger(name):
         if not isinstance(name, str):
             name = type(name).__name__
-        logger = log.getLogger(name)
-        return Logger(logger)
+        # logger = log.getLogger(name)
+        # return Logger(logger)
+        return Logger(name)
 
     # -----------------------------------------------------------------------
 
-    def __init__(self, logger):
+    # def __init__(self, logger):
+    #     """
+    #     :param log.Logger logger:
+    #     """
+    #     self._logger = logger
+    #     self.timestamp = time.time()
+
+    def __init__(self, name):
         """
         :param log.Logger logger:
         """
-        self.logger = logger
+        self._name = name
+        self._logger = None
         self.timestamp = time.time()
 
-    def is_debug_enabled(self):
-        return self.logger.isEnabledFor(DEBUG)
+    @property
+    def logger(self):
+        if self._logger is None:
+            self._logger = log.getLogger(self._name)
+        return self._logger
 
-    def is_info_enabled(self):
-        return self.logger.isEnabledFor(INFO)
+    # -----------------------------------------------------------------------
 
-    def is_warning_enabled(self):
-        return self.logger.isEnabledFor(WARNING)
+    def setLevel(self, level):
+        self.logger.setLevel(level)
 
-    def is_warn_enabled(self):
-        return self.logger.isEnabledFor(WARN)
+    def isEnabledFor(self, level):
+        return self.logger.isEnabledFor(level)
 
-    def is_error_enabled(self):
-        return self.logger.isEnabledFor(ERROR)
+    # -----------------------------------------------------------------------
 
-    def is_critical_enabled(self):
-        return self.logger.isEnabledFor(CRITICAL)
-
-    def is_fatal_enabled(self):
-        return self.logger.isEnabledFor(FATAL)
+    # def is_debug_enabled(self):
+    #     return self.isEnabledFor(DEBUG)
+    #
+    # def is_info_enabled(self):
+    #     return self.isEnabledFor(INFO)
+    #
+    # def is_warning_enabled(self):
+    #     return self.isEnabledFor(WARNING)
+    #
+    # def is_warn_enabled(self):
+    #     return self.isEnabledFor(WARN)
+    #
+    # def is_error_enabled(self):
+    #     return self.isEnabledFor(ERROR)
+    #
+    # def is_critical_enabled(self):
+    #     return self.isEnabledFor(CRITICAL)
+    #
+    # def is_fatal_enabled(self):
+    #     return self.isEnabledFor(FATAL)
 
     # -----------------------------------------------------------------------
 
@@ -105,21 +126,24 @@ class Logger:
     # -----------------------------------------------------------------------
 
     def debugf(self, fmt, *args, **kwargs):
-        if self.is_debug_enabled():
+        if self.isEnabledFor(DEBUG):
             self.debug(fmt.format(*args), **kwargs)
 
     def infof(self, fmt, *args, **kwargs):
-        if self.is_info_enabled():
+        if self.isEnabledFor(INFO):
             self.info(fmt.format(*args), **kwargs)
 
     def warnf(self, fmt, *args, **kwargs):
         self.warn(fmt.format(*args), **kwargs)
 
+    def warningf(self, fmt, *args, **kwargs):
+        self.warning(fmt.format(*args), **kwargs)
+
     def errorf(self, fmt, *args, **kwargs):
         self.error(fmt.format(*args), **kwargs)
 
     def debugt(self, msg, *args, **kwargs):
-        if not self.is_debug_enabled():
+        if not self.isEnabledFor(DEBUG):
             return
 
         now = time.time()
@@ -144,29 +168,42 @@ class Logger:
 # ---------------------------------------------------------------------------
 # loggers
 # ---------------------------------------------------------------------------
+# critical
+# fatal
+# error
+# exception
+# warning
+# warn
+# info
+# debug
+# log
+# .
+
+ROOT = "root"
+
 
 def debug(msg, *args, **kwargs):
-    Logger.get_logger("main").debug(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).debug(msg, *args, **kwargs)
 
 
 def info(msg, *args, **kwargs):
-    Logger.get_logger("main").info(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).info(msg, *args, **kwargs)
 
 
 def warn(msg, *args, **kwargs):
-    Logger.get_logger("main").warn(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).warn(msg, *args, **kwargs)
 
 
 def warning(msg, *args, **kwargs):
-    Logger.get_logger("main").warning(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).warning(msg, *args, **kwargs)
 
 
 def error(msg, *args, **kwargs):
-    Logger.get_logger("main").error(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).error(msg, *args, **kwargs)
 
 
 def fatal(msg, *args, **kwargs):
-    Logger.get_logger("main").fatal(msg, *args, **kwargs)
+    Logger.getLogger(ROOT).fatal(msg, *args, **kwargs)
 
 
 # ---------------------------------------------------------------------------

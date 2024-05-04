@@ -648,9 +648,23 @@ class MinMaxScaler(GroupsBaseEncoder):
                  groups=None, copy=True, **kwargs):
         """
 
-        :param columns: columns where to apply the minimum maximum scaling
-        :param feature_range: mapped values range
+        :param columns: columns where to apply the minimum maximum scaling.
+                If None, it is applied to all columns
+        :param feature_range: in format '(min_val, max_val)', mapped values range
         :param method: method to use to compute the bounds
+                Available methods:
+                    None              identity
+                    'identity'        identity
+                    'global'          single min/max values (global)
+                    float             ratio  (global)
+                    (float, float)    ratio  (global)
+                    'linear'          linear (global)
+                    'piecewise'       linear   (by seasonality)
+                    'stepwise'        constant (by seasonality)
+                    'poly1'           polynomial  interpolation       a0 + a1 x
+                    'poly3'           polynomial  interpolation       a0 + a1 x + a2 x^2 + a3 x^3
+                    'power'           exponential interpolation       a0 + a1 x^a2
+                    'exp'             exponential interpolation
         :param sp: seasonality period
         :param tau: if not None, the TS is validated. If the TS is not valid (has a wrong pattern) no
                 transformation is applied

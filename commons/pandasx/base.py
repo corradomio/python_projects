@@ -37,8 +37,12 @@ __all__ = [
 
     "xy_split",
     "nan_split",
+    "nan_drop",
     "train_test_split",
     "cutoff_split",
+
+    "type_encode",
+    "count_encode",
 
     "series_argmax",
     "series_argmin",
@@ -52,13 +56,23 @@ __all__ = [
     "index_labels",
     "find_unnamed_columns",
 
-    "ignore_columns",
-    "rename_columns"
+    "columns_ignore", "columns_drop",
+    "columns_rename"
 ]
 
 
 # ---------------------------------------------------------------------------
+# Data types
+# ---------------------------------------------------------------------------
+
+DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
+TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[NoneType, DATAFRAME_OR_DICT]]
+PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series, NoneType]
+
+
+# ---------------------------------------------------------------------------
 # safe_sorted
+# check_columns
 # ---------------------------------------------------------------------------
 
 def safe_sorted(values):
@@ -66,6 +80,17 @@ def safe_sorted(values):
     svals = sorted([v for v in values if isinstance(v, str)])
     uvals = list(set(values).difference(ivals + svals))
     return ivals + svals + uvals
+
+
+def validate_columns(df: pd.DataFrame, columns: Union[None, str, list[str]]):
+    dfcols = df.columns
+    columns = as_list(columns)
+    invalid = []
+    for col in columns:
+        if col not in dfcols:
+            invalid.append(col)
+    if len(invalid) > 0:
+        raise ValueError(f"Columns {invalid} not present in DataFrame")
 
 
 # ---------------------------------------------------------------------------
@@ -88,11 +113,6 @@ def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, a
 # groups_list
 # groups_count
 # ---------------------------------------------------------------------------
-
-DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
-TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[NoneType, DATAFRAME_OR_DICT]]
-PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series, NoneType]
-
 
 def _groups_list_by_columns(df, groups):
     tlist = [tuple()]
@@ -429,6 +449,7 @@ def split_column(df: pd.DataFrame,
     :param col: column to analyze
     :param columns: columns to generate
     :param sep: separator to use
+    :param inplace: if to transform the dataframe inplace
     :return: the updated dataframe
     """
     assert isinstance(df, pd.DataFrame)
@@ -486,6 +507,7 @@ def merge_column(df: pd.DataFrame,
     :param column: name of the new column
     :param sep: separator used to concatenate the strings
     :param drop: if to remove the merged columns
+    :param inplace: if to transform the dataframe inplace
     :return: new dataframe
     """
     assert isinstance(df, pd.DataFrame)
@@ -815,7 +837,7 @@ def nan_split(*data_list,
     """
     Remove the columns of the dataframe containing nans
 
-    :param data_list: list of dataframe to analyze
+    :param data_list: list of dataframes to analyze
     :param ignore: list of columns to ignore from the analysis (alternative to 'columns')
     :param columns: list of columns to analyze (alternative to 'ignore')
     :param empty: return an empty dataset (True) or None
@@ -844,6 +866,58 @@ def nan_split(*data_list,
     # end
     return vi_list
 # end
+
+
+def nan_drop(df: PANDAS_TYPE, columns: Union[None, bool, str, list[str]] = None, inplace=False) -> PANDAS_TYPE:
+    """
+    Drop the rows having NA in the specifided list of columns
+    :param df: dataframe to analyze
+    :param columns: columns to consider. Possible values
+            - None, False: no column is considered
+            - True: all columns are considered
+            - str: colum's name
+            - list[str]: list of columns
+    :param inplace:
+    :return: the dataframe without the removed rows
+    """
+    if isinstance(columns, str):
+        columns = [columns]
+
+    if df is None:
+        pass
+    elif columns in [None, False]:
+        pass
+    elif columns is True:
+        if inplace:
+            df.dropna(how='any', axis=0, inplace=True)
+        else:
+            df.dropna(how='any', axis=0, inplace=False)
+    else:
+        if inplace:
+            nan_rows = df[columns].isna().any(axis=1)
+            df.drop(nan_rows, axis=0, inplace=True)
+        else:
+            valid_rows = df[columns].notna().all(axis=1)
+            df = df[valid_rows]
+    return df
+# end
+
+
+# ---------------------------------------------------------------------------
+# cutoff_split
+# ---------------------------------------------------------------------------
+
+def type_encode(df: pd.DataFrame, type: Union[str, type], columns: Union[None, str, list[str]]) -> pd.DataFrame:
+    columns = as_list(columns, 'columns')
+    for col in columns:
+        df[col] = df[col].astype(type)
+    return df
+
+
+def count_encode(df: pd.DataFrame, count: bool) -> pd.DataFrame:
+    if count and 'count' not in df.columns:
+        df['count'] = 1.
+    return df
 
 
 # ---------------------------------------------------------------------------
@@ -1241,7 +1315,7 @@ def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> li
 
 # ---------------------------------------------------------------------------
 # find_unnamed_columns
-# ignore_columns
+# columns_ignore
 # ---------------------------------------------------------------------------
 
 def find_unnamed_columns(df: pd.DataFrame) -> list[str]:
@@ -1258,7 +1332,7 @@ def find_unnamed_columns(df: pd.DataFrame) -> list[str]:
 # end
 
 
-def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
+def columns_ignore(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFrame:
     """
     Remove a column or list of columns
     :param df: dataframe to analyze
@@ -1272,8 +1346,12 @@ def ignore_columns(df: pd.DataFrame, ignore: Union[str, list[str]]) -> pd.DataFr
 # end
 
 
+# Alias
+columns_drop = columns_ignore
+
+
 # ---------------------------------------------------------------------------
-# rename_columns
+# columns_rename
 # ---------------------------------------------------------------------------
 
 def _normalize_rename(columns, rename):
@@ -1313,7 +1391,7 @@ def _normalize_rename(columns, rename):
 # end
 
 
-def rename_columns(df: pd.DataFrame, rename: Union[NoneType, list, dict], ignore_invalid=True) -> pd.DataFrame:
+def columns_rename(df: pd.DataFrame, rename: Union[NoneType, list, dict], ignore_invalid=True) -> pd.DataFrame:
     if rename is None or len(rename) == 0:
         return df
 

@@ -148,6 +148,7 @@ def _aggregate_on(series: Series, offset, freq, agg_index) -> Series:
     agg_values = Series(data=agg_values.values, index=agg_index.values)
     return agg_values
 
+
 # ---------------------------------------------------------------------------
 # AggregateTransformer
 # ---------------------------------------------------------------------------
