@@ -34,6 +34,8 @@ from typing import _type_check, _remove_dups_flatten
 from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
 from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
 
+__version__ = '1.0.1'
+
 __all__ = [
     'is_instance',
     'All',
@@ -522,8 +524,10 @@ class IsOptional(IsInstance):
     def is_instance(self, obj) -> bool:
         if obj is None:
             return True
-        else:
-            return is_instance(obj, self.args[0])
+        for a_type in self.args:
+            if is_instance(obj, a_type):
+                return True
+        return False
 
 
 class IsNewType(IsInstance):

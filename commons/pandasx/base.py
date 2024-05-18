@@ -9,10 +9,12 @@ import pandas as pd
 from typing import Union, Optional, Collection
 from pandas import CategoricalDtype
 from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
+from datetime import datetime
 
 __all__ = [
     # "find_binary",
     # "binary_encode",
+    "to_datetime",
 
     "dataframe_sort",
 
@@ -91,6 +93,17 @@ def validate_columns(df: pd.DataFrame, columns: Union[None, str, list[str]]):
             invalid.append(col)
     if len(invalid) > 0:
         raise ValueError(f"Columns {invalid} not present in DataFrame")
+
+
+def to_datetime(dt) -> datetime:
+    if isinstance(dt, datetime):
+        return dt
+    elif isinstance(dt, pd.Period):
+        return dt.to_timestamp().to_pydatetime()
+    elif isinstance(dt, pd.Timestamp):
+        return dt.to_pydatetime()
+    else:
+        raise ValueError(f"Unsupported datetime {dt}")
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +262,7 @@ def _groups_split_on_index(df, drop, keep):
 
 
 def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
-        -> dict[tuple[str], pd.DataFrame]:
+        -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list or the MultiIndex.
 

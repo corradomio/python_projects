@@ -1,12 +1,29 @@
 import logging.config
-from iplan.om import IPlanObjectModel, IPredictMasterFocussed, IPredictDetailFocussed, IDataValuesMaster
-from sqlalchemy import URL
-from stdlib import lrange
+from typing import Union
+from iplan.om import IPlanObjectModel, IPredictTimeSeries
+from stdlib import lrange, is_instance
 from stdlib.jsonx import load
 from datetime import datetime
 
 
 def main():
+    datasource_dict = load('datasource.json')
+    # datasource_dict = load('datasource_localhost.json')
+    ipom = IPlanObjectModel(datasource_dict)
+
+    with ipom.connect():
+        # ts: IPredictTimeSeries = ipom.time_series_focussed("68", data_master="48")
+        ts: IPredictTimeSeries = ipom.time_series_focussed("68", plan="13356658")
+
+        # df = ts.select_train_data(new_format=True)
+        df = ts.select_predict_data(start_date=datetime.now(), new_format=True)
+        print(df.shape)
+
+    print("done")
+# end
+
+
+def main6():
     datasource_dict = load('datasource_localhost.json')
     ipom = IPlanObjectModel(datasource_dict)
 
@@ -16,15 +33,9 @@ def main():
         # print(pp.delete_plan('Check_My_Plan'))
         # pp.create_plan('Check_My_Plan', data_master=48, start_date=datetime(2024, 4, 1))
 
-        pf = ipom.predict_focussed(68)
-        print("data_master_id", pf.data_master.id)
+        pf = ipom.predict_master_focussed(68)
         print("data_model_id", pf.data_model.id)
         print("area_feature_ids", pf.area_hierarchy.feature_ids())
-        print(pf.select_data_master_ids())
-        print(pf._select_data_values_master_ids())
-
-        train_data = pf.select_train_data(new_format=True)
-        prediction_data = pf.select_prediction_data(new_format=True)
     pass
 # end
 
@@ -55,7 +66,7 @@ def main5():
         date_interval = pp.select_date_interval(13356946, data_master_id=7)
         date_interval = pp.select_date_interval(None, data_master_id=7, area_feature_ids=lrange(203, 255))
 
-        pf = ipom.predict_focussed(68)
+        pf = ipom.predict_master_focussed(68)
         pf.select_prediction_data(date_interval, new_format=False)
 
         prdct_data = pf.select_prediction_data(plan_id='Check_My_Plan', new_format=True)
@@ -63,6 +74,7 @@ def main5():
         pass
     # end
     print("done")
+# end
 
 
 def main4():
@@ -77,6 +89,7 @@ def main4():
         pass
     # end
     print("done")
+# end
 
 
 def main3():
@@ -84,13 +97,14 @@ def main3():
     ipom = IPlanObjectModel(datasource_dict)
 
     with ipom.connect() as conn:
-        pf = ipom.predict_focussed(68)
+        pf = ipom.predict_master_focussed(68)
         train_data = pf.select_train_data(new_format=True)
         prdct_data = pf.select_prediction_data(None, new_format=True)
 
         pass
     # end
     print("done")
+# end
 
 
 def main2():
@@ -100,7 +114,7 @@ def main2():
     try:
         ipom.connect()
 
-        pf = ipom.predict_focussed('IXD_NEW_IPREDICT')
+        pf = ipom.predict_master_focussed('IXD_NEW_IPREDICT')
 
         train_data = pf.select_train_data(new_format=True)
 
@@ -108,6 +122,7 @@ def main2():
         pass
     finally:
         ipom.disconnect()
+# end
 
 
 def main1():
@@ -117,7 +132,7 @@ def main1():
     try:
         ipom.connect()
 
-        pf = ipom.predict_focussed('CM iPredict Master v2')
+        pf = ipom.predict_master_focussed('CM iPredict Master v2')
         # print(pf.parameters)
         # print(pf.input_target_parameters)
         # print(pf.measures)
@@ -169,6 +184,7 @@ def main1():
         ipom.disconnect()
 
     pass
+# end
 
 
 if __name__ == "__main__":

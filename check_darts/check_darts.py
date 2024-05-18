@@ -7,6 +7,7 @@ from darts.datasets import AirPassengersDataset
 
 series = AirPassengersDataset().load()
 series_df = series.pd_dataframe()
+train, val = series.split_before(pd.Timestamp("19580101"))
 pass
 # series.plot()
 # plt.show()
@@ -23,7 +24,6 @@ pass
 # (series / 2 + 20 * series_noise - 10).plot()
 # plt.show()
 
-train, val = series.split_before(pd.Timestamp("19580101"))
 train.plot(label="training")
 val.plot(label="validation")
 plt.show()
@@ -32,8 +32,9 @@ plt.show()
 # ---------------------------------------------------------------------------
 
 from darts.models import NaiveSeasonal
+from darts.models.forecasting.arima import ARIMA
 
-seasonal_model = NaiveSeasonal(K=12)
+seasonal_model = ARIMA()
 seasonal_model.fit(train)
 seasonal_forecast = seasonal_model.predict(36)
 

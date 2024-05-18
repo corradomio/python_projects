@@ -47,6 +47,7 @@
 #     def __setitem__(self, *args, **kwargs)
 #     def __sizeof__(self)
 #     __hash__ = None
+from typing import Union
 
 BuiltinDict = dict
 
@@ -215,3 +216,12 @@ class dict(BuiltinDict):
         """
         return [(key, self.__getitem__(key)) for key in self.keys()]
 # end
+
+
+def reverse(d: Union[BuiltinDict, dict]) -> dict:
+    """
+    Reverse the dictionary
+    :param d: dictionary
+    :return: the reversed dictionary
+    """
+    return {d[k]: k for k in d}

@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Any
 
 __all__ = [
     'LagSlots',
@@ -260,7 +260,7 @@ class LagsResolver:
             }
 
         # create a copy because 'lags' is modified'
-        self._lags = {} | lags
+        self._lags: dict[str, Any] = {} | lags
         self._period_type = None
 
         self._normalize()

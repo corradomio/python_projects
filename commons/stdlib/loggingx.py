@@ -1,7 +1,6 @@
 # DON'T remove
-from logging import config
-from logging import disable, shutdown, captureWarnings
-from logging import getLevelNamesMapping, getLevelName, addLevelName
+import traceback
+from logging import config, disable, shutdown, captureWarnings, getLevelName
 import logging as log
 from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL
 import time
@@ -162,6 +161,12 @@ class Logger:
             self.timestamp = now
             print(time.strftime("[%H:%M:%S] "), end="")
             print(fmt.format(*args), **kwargs)
+
+    def full_error(self, e, fmt, *args, **kwargs):
+        exc = traceback.format_exc()
+        self.error(fmt.format(*args), **kwargs)
+        self.error(f"... error type: {type(e)}\n{exc}")
+
 # end
 
 

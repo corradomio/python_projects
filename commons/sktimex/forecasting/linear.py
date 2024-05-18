@@ -8,7 +8,8 @@ from sktime.forecasting.base import ForecastingHorizon
 from .base import ExtendedBaseForecaster
 from ..lags import resolve_lags, resolve_tlags
 from ..transform.lin import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, import_from, qualified_name, make_lags
+from ..utils import PD_TYPES, import_from, qualified_name
+from ..utils import to_matrix
 
 __all__ = [
     "LinearForecaster",
@@ -187,6 +188,11 @@ class LinearForecaster(ExtendedBaseForecaster):
             for t in self._tlags:
                 self._estimators[t] = estimator(**self._kwargs)
     # end
+
+    def transform(self, y, X):
+        X = to_matrix(X)
+        y = to_matrix(y)
+        return y, X
 
     # -----------------------------------------------------------------------
     # Properties

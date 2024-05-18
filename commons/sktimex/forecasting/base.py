@@ -15,16 +15,11 @@ class ExtendedBaseForecaster(BaseForecaster):
     # def get_params(self, deep=True):
     #     return {} | super().get_params(deep=deep)
 
-    def _fit(self, y, X, fh):
+    def _fit(self, y, X=None, fh=None):
         ...
 
-    def _predict(self, fh, X):
+    def _predict(self, fh, X=None):
         ...
-
-    def transform(self, y, X):
-        X = to_matrix(X)
-        y = to_matrix(y)
-        return y, X
 
     def inverse_transform(self, y):
         return y
