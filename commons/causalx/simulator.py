@@ -1,12 +1,31 @@
+# ---------------------------------------------------------------------------
+# Corrado Mio, v1.0, 
+#
+# 2024/05/28
+# This file is a copy&paste of 'castle/datasets/simulator.py'
+# with the following changes:
+#
+#   1) the original implementation uses   'nx.from_numpy_matrix'
+#      BUT this function is replaced with 'nx.from_numpy_array' 
+#      in the latest library 'NetworkX'
+#
+#   2) commented the line
+#
+#       logging.info('Finished synthetic dataset')
+#
+#      because not in the correct namespace and useless
+#
+# ---------------------------------------------------------------------------
+
 # coding=utf-8
 # 2020.12 added (1) low rank DAG generations;
 #               (2) quad functons for causal functions;
 #               (3) event-type data
 # 2021.08 deleted (1) condition: sem_type == 'poisson'
-# Huawei Technologies Co., Ltd.
-#
+# Huawei Technologies Co., Ltd. 
+# 
 # Copyright (C) 2021. Huawei Technologies Co., Ltd. All rights reserved.
-#
+# 
 # Copyright (c) Xun Zheng (https://github.com/xunzheng/notears)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -190,14 +209,14 @@ class DAG(object):
         return W
 
     @staticmethod
-    def bipartite(n_nodes, n_edges, split_ratio=0.2, weight_range=None, seed=None):
+    def bipartite(n_nodes, n_edges, split_ratio = 0.2, weight_range=None, seed=None):
 
         assert n_nodes > 0
         set_random_seed(seed)
         # Bipartite, Sec 4.1 of (Gu, Fu, Zhou, 2018)
         n_top = int(split_ratio * n_nodes)
-        n_bottom = n_nodes - n_top
-        creation_prob = n_edges / (n_top * n_bottom)
+        n_bottom = n_nodes -  n_top
+        creation_prob = n_edges/(n_top*n_bottom)
         G_und = bipartite.random_graph(n_top, n_bottom, p=creation_prob, directed=True)
         B_und = DAG._graph_to_adjmat(G_und)
         B = DAG._random_acyclic_orientation(B_und)
@@ -251,23 +270,23 @@ class IIDSimulation(object):
     method: str, (linear or nonlinear), default='linear'
         Distribution for standard trainning dataset.
     sem_type: str
-        gauss, exp, gumbel, uniform, logistic (linear);
+        gauss, exp, gumbel, uniform, logistic (linear); 
         mlp, mim, gp, gp-add, quadratic (nonlinear).
     noise_scale: float
         Scale parameter of noise distribution in linear SEM.
     '''
 
-    def __init__(self, W, n=1000, method='linear',
+    def __init__(self, W, n=1000, method='linear', 
                  sem_type='gauss', noise_scale=1.0):
 
         self.B = (W != 0).astype(int)
         if method == 'linear':
             self.X = IIDSimulation._simulate_linear_sem(
-                W, n, sem_type, noise_scale)
+                    W, n, sem_type, noise_scale)
         elif method == 'nonlinear':
             self.X = IIDSimulation._simulate_nonlinear_sem(
-                W, n, sem_type, noise_scale)
-        logging.info('Finished synthetic dataset')
+                    W, n, sem_type, noise_scale)
+        # logging.info('Finished synthetic dataset')
 
     @staticmethod
     def _simulate_linear_sem(W, n, sem_type, noise_scale):
@@ -281,17 +300,16 @@ class IIDSimulation(object):
             [d, d] weighted adj matrix of DAG.
         n: int
             Number of samples, n=inf mimics population risk.
-        sem_type: str
+        sem_type: str 
             gauss, exp, gumbel, uniform, logistic.
-        noise_scale: float
+        noise_scale: float 
             Scale parameter of noise distribution in linear SEM.
-
+        
         Return
         ------
         X: np.ndarray
             [n, d] sample matrix, [d, d] if n=inf
         """
-
         def _simulate_single_equation(X, w, scale):
             """X: [n, num of parents], w: [num of parents], x: [n]"""
             if sem_type == 'gauss':
@@ -395,7 +413,7 @@ class IIDSimulation(object):
                 from sklearn.gaussian_process import GaussianProcessRegressor
                 gp = GaussianProcessRegressor()
                 x = sum([gp.sample_y(X[:, i, None], random_state=None).flatten()
-                         for i in range(X.shape[1])]) + z
+                        for i in range(X.shape[1])]) + z
             else:
                 raise ValueError('Unknown sem type. In a nonlinear model, \
                                  the options are as follows: mlp, mim, \
@@ -426,7 +444,7 @@ class IIDSimulation(object):
     def _simulate_quad_sem(W, n, noise_scale):
         """
         Simulate samples from SEM with specified type of noise.
-        Coefficient is randomly drawn but specifically designed
+        Coefficient is randomly drawn but specifically designed 
         to avoid overflow issues.
 
         Parameters
@@ -443,7 +461,6 @@ class IIDSimulation(object):
         X: np.ndarray
             [n,d] sample matrix
         """
-
         def generate_quadratic_coef(random_zero=True):
             if random_zero and np.random.randint(low=0, high=2):
                 return 0
@@ -483,14 +500,14 @@ class IIDSimulation(object):
                     eta += coef * np.square(X[:, p])
                     used_parents.add(p)
                     num_terms += 1
-
+                    
                 if num_terms > 0:
-                    eta /= num_terms  # Compute average
+                    eta /= num_terms    # Compute average
 
                 # Remove parent if both coef is zero
                 if p not in used_parents:
                     W[p, j] = 0
-            else:  # More than 1 parent
+            else:    # More than 1 parent
                 eta = np.zeros([n])
                 used_parents = set()
                 num_terms = 0
@@ -520,7 +537,7 @@ class IIDSimulation(object):
                         num_terms += 1
 
                 if num_terms > 0:
-                    eta /= num_terms  # Compute average
+                    eta /= num_terms    # Compute average
 
                 # Remove parent if both coef is zero
                 unused_parents = set(parents) - used_parents
@@ -560,7 +577,7 @@ class Topology(object):
         B: np.matrix
         """
         assert n_nodes > 0, 'The number of nodes must be greater than 0.'
-        creation_prob = (2 * n_edges) / (n_nodes ** 2)
+        creation_prob = (2*n_edges)/(n_nodes**2)
         G = nx.erdos_renyi_graph(n=n_nodes, p=creation_prob, seed=seed)
         B = nx.to_numpy_array(G)
         return B
@@ -587,11 +604,11 @@ class THPSimulation(object):
 
         assert (isinstance(causal_matrix, np.ndarray) and
                 causal_matrix.ndim == 2 and
-                causal_matrix.shape[0] == causal_matrix.shape[1]), \
+                causal_matrix.shape[0] == causal_matrix.shape[1]),\
             'casual_matrix should be np.matrix object, two dimension, square.'
         assert (isinstance(topology_matrix, np.ndarray) and
                 topology_matrix.ndim == 2 and
-                topology_matrix.shape[0] == topology_matrix.shape[1]), \
+                topology_matrix.shape[0] == topology_matrix.shape[1]),\
             'topology_matrix should be np.matrix object, two dimension, square.'
 
         self._causal_matrix = (causal_matrix != 0).astype(int)
@@ -612,7 +629,7 @@ class THPSimulation(object):
 
         alpha = np.random.uniform(*self._alpha_range, [N, N])
         alpha = alpha * self._causal_matrix
-        alpha = np.ones([max_hop + 1, N, N]) * alpha
+        alpha = np.ones([max_hop+1, N, N]) * alpha
 
         immigrant_events = dict()
         for node in self._topo.nodes:
@@ -624,10 +641,10 @@ class THPSimulation(object):
             offspring_events = dict()
             for node in tqdm(self._topo.nodes):
                 offspring_events[node] = []
-                for k in range(max_hop + 1):
+                for k in range(max_hop+1):
                     k_base_events = []
                     for neighbor in self._get_k_hop_neighbors(
-                        self._topo, node, k):
+                            self._topo, node, k):
                         k_base_events += base_events[neighbor]
                     k_new_events = [self._trigger_events(
                         alpha[k, i], start_time, duration, beta)
@@ -669,4 +686,4 @@ class THPSimulation(object):
         else:
             return (set(nx.single_source_dijkstra_path_length(G, node, k).keys())
                     - set(nx.single_source_dijkstra_path_length(
-                    G, node, k - 1).keys()))
+                        G, node, k - 1).keys()))

@@ -40,6 +40,13 @@ def module_path():
 # end
 
 
+def qualified_type(value: Any) -> str:
+    """
+    Fully qualified type of the specified value.
+    """
+    return qualified_name(type(value))
+
+
 def qualified_name(klass: Any) -> str:
     """
     Fully qualified of the class.

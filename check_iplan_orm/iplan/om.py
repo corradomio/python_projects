@@ -8,12 +8,14 @@ from stdlib.dict import reverse
 import pandas as pd
 import pandasx as pdx
 from pandas import DataFrame
-from typing import Optional, Union, Any, Literal
+from typing import Optional, Union, Any, Literal, Self
 from datetime import datetime, timedelta
 
-from sqlalchemy import MetaData, Engine, Table, Row, create_engine, URL, bindparam
-from sqlalchemy import select, delete, insert, text, func
+from sqlalchemy import MetaData, Engine, Table, Row, create_engine, URL
+from sqlalchemy import select, delete, insert, update, text, func
 
+
+CREATED_BY = "Python IPlanObjectModel"
 
 # ---------------------------------------------------------------------------
 # to_data
@@ -512,10 +514,27 @@ class AttributeHierarchy(IPlanData):
     def features(self) -> list[AttributeDetail]:
         return self.details()
 
-    def feature_ids(self, with_name=False) -> Union[list[int], dict[int, str]]:
+    def feature_ids(self, leaf_only=False, with_name=False) -> Union[list[int], dict[int, str]]:
+        """
+        Return the id's list of all hierarchy's nodes
+        If it is specified 'with_name=True', it is returned the dictionary {id: name}
+
+        :param leaf_only: if True, only the leaf nodes are returned
+        :param with_name: if to return the dictionary {id: name}
+        :return:
+        """
         with self.engine.connect() as conn:
-            tdetail = self.ipom.AttributeDetail
-            query = select(tdetail.c['id', 'attribute']).where(tdetail.c['attribute_master_id'] == self.id)
+            table = self.ipom.AttributeDetail
+            if leaf_only:
+                query = select(table.c['id', 'attribute']).where(
+                    (table.c['attribute_master_id'] == self.id) &
+                    (table.c['is_leafattribute'] == True)
+                )
+            else:
+                query = select(table.c['id', 'attribute']).where(
+                    (table.c['attribute_master_id'] == self.id)
+                )
+
             self.log.debug(f"{query}")
             rlist = conn.execute(query).fetchall()
             # rlist: [(id, name), ...]
@@ -541,16 +560,22 @@ class AttributeHierarchy(IPlanData):
             parent.children.append(node)
         return root
 
-    def to_ids(self, attr: Union[None, int, list[int], str, list[str]]):
+    def to_ids(self, attr: Union[None, int, list[int], str, list[str]], leaf_only=False) -> list[int]:
         """
         Convert the attribute(s) in a list of attribute ids.
         The attribute can be specified as id (an integer) or name (a string)
+        If attr is None, all leaf attributes are returned
+
         :param attr: attribute(s) to convert
+        :param leaf_only: if to select the leaf attributes
         :return: list of attribute ids
         """
         feature_dict = self.feature_ids(with_name=True)
         feature_drev = reverse(feature_dict)
         aids = []
+
+        if attr is None:
+            return self.feature_ids(leaf_only=leaf_only)
 
         if isinstance(attr, int | str):
             attr = [attr]
@@ -676,15 +701,34 @@ class IDataModel(IPlanData):
 
     def details(self) -> list[Measure]:
         with self.engine.connect() as conn:
-            tmeasure = self.ipom.iDataModelDetail
-            query = select(tmeasure).where(tmeasure.c['data_model_id_fk'] == self.id)
+            table = self.ipom.iDataModelDetail
+            query = select(table).where(table.c['data_model_id_fk'] == self.id)
             self.log.debug(f"{query}")
             rlist = conn.execute(query).fetchall()
             # idlist: [(id,), ...]
-        return [Measure(self.ipom, to_data(result), tmeasure) for result in rlist]
+        return [Measure(self.ipom, to_data(result), table) for result in rlist]
 
     def measures(self) -> list[Measure]:
         return self.details()
+
+    def measure(self, id: Union[int, str]):
+        with self.engine.connect() as conn:
+            table = self.ipom.iDataModelDetail
+            if isinstance(id, str):
+                query = select(table).where(
+                    (table.c['measure_id'] == id) &
+                    (table.c['data_model_id_fk'] == self.id)
+                )
+                self.log.debug(query)
+                ret = conn.execute(query).fetchone()
+            else:
+                query = select(table).where(
+                    (table.c.id == id) &
+                    (table.c['data_model_id_fk'] == self.id)
+                )
+                self.log.debug(query)
+                ret = conn.execute(query).fetchone()
+            return Measure(self.ipom, to_data(ret), table)
 
 
 class IDataMaster(IPlanData):
@@ -754,7 +798,7 @@ class IPredictionPlans(IPlanObject):
 
     # -----------------------------------------------------------------------
 
-    def exists_plan(self, name_or_date: Union[str, datetime], data_master_id: int):
+    def exists_plan(self, name_or_date: Union[str, datetime], data_master_id: int) -> bool:
         assert is_instance(name_or_date, Union[str, datetime])
 
         if isinstance(name_or_date, str):
@@ -803,8 +847,7 @@ class IPredictionPlans(IPlanObject):
                     start_date: Union[None, datetime, tuple[datetime, datetime]],
                     end_date: Optional[datetime] = None,
                     area_feature_ids: Union[None, int, list[int]] = None,
-                    force=False
-                    ):
+                    force=False):
         assert is_instance(name, Optional[str])
         assert is_instance(data_master, Union[int, str, IDataMaster])
         assert is_instance(start_date, Union[datetime, tuple[datetime, datetime]])
@@ -828,9 +871,10 @@ class IPredictionPlans(IPlanObject):
 
         already_exists = self.exists_plan(name, data_master_id)
         if already_exists and not force:
-            return
-
+            self.log.warning(f"Plan {name} already existent")
+            return self
         if already_exists:
+            self.log.warning(f"Delete plan {name}")
             self.delete_plan(name)
 
         af_ids: list[int] = data_master.area_hierarchy.feature_ids()
@@ -897,15 +941,13 @@ class IPredictionPlans(IPlanObject):
                     area_id=area_feature_id,
                     last_updated_date=None,
                     published_id=None,
-                    note="created by Python IPlanObjectModel"
-                )
+                    note="created by " + CREATED_BY
+                ).returning(table.c.id)
                 if count == 0: self.log.debug(stmt)
-                conn.execute(stmt)
+                rec_id = conn.execute(stmt).scalar()
                 count += 1
             conn.commit()
-        # end
         return
-
     # end
 
     # -----------------------------------------------------------------------
@@ -1050,6 +1092,14 @@ class IPredictionPlan(IPlanObject):
     def data_master(self) -> IDataMaster:
         return self._data_master
 
+    @property
+    def plan_ids(self) -> list[int]:
+        return self.ipom.select_data_values_master_ids(
+            self.name,
+            [self.data_master.id],
+            self.data_master.area_hierarchy.feature_ids(leaf_only=True)
+        )
+
     def area_plan_map(self) -> dict[int, int]:
         """
         Map area_feature_id -> plan_id
@@ -1076,7 +1126,7 @@ class IPredictionPlan(IPlanObject):
     def area_hierarchy(self) -> AttributeHierarchy:
         return self.data_master.area_hierarchy
 
-    def exists(self):
+    def exists(self) -> bool:
         name = self._name
         data_master_id = self._data_master.id
 
@@ -1104,8 +1154,9 @@ class IPredictionPlan(IPlanObject):
             conn.execute(query)
             conn.commit()
 
-    def create(self, start_date: datetime, end_date: Optional[datetime] = None, periods: Optional[int] = None,
-               force=False, note=None):
+    def create(self, start_date: datetime, end_date: Optional[datetime] = None,
+               periods: Optional[int] = None, note: Optional[str] = None,
+               update: Optional[bool] = None) -> Self:
         """
         Create a plan with the specified name for all areas in the area hierarchy
         If end_date or periods are not specified, it is used the PeriodHierarchy of the DataMaster
@@ -1113,7 +1164,13 @@ class IPredictionPlan(IPlanObject):
         :param start_date: start date
         :param end_date: end date
         :param periods: n of periods
-        :param force: if to recreate
+        :param update: how to update the data already present in the database
+                - None: all data is deleted and replaced
+                        (delete and insert)
+                - True: the data in the dataset replaces the same data in the database
+                        (update or insert)
+                - False:  all data in the database is not deleted or updated
+                        (insert only)
         :return:
         """
 
@@ -1127,9 +1184,9 @@ class IPredictionPlan(IPlanObject):
         # delete the plan if 'force == True'
         #
         already_exists = self.exists()
-        if already_exists and not force:
+        if already_exists and not update:
             self.log.warning(f"Plan {name} already existent")
-            return
+            return self
 
         if already_exists:
             self.log.warning(f"Delete plan {name}")
@@ -1168,7 +1225,7 @@ class IPredictionPlan(IPlanObject):
         data_master_id = self.data_master.id
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         now: datetime = datetime.now()
-        note = "created by Python IPlanObjectModel" if note is None else note
+        note = "created by " + CREATED_BY if note is None else note
         count = 0
         with (self.engine.connect() as conn):
             table = self.ipom.iDataValuesMaster
@@ -1190,15 +1247,18 @@ class IPredictionPlan(IPlanObject):
                     last_updated_date=None,
                     published_id=None,
                     note=note
-                )
+                ).returning(table.c.id)
                 if count == 0: self.log.debug(stmt)
-                conn.execute(stmt)
+                rec_id = conn.execute(stmt).scalar()
                 count += 1
             conn.commit()
         # end
         self.log.info(f"Done")
-        return
+        return self
     # end
+
+    def __repr__(self):
+        return f"{self.name}[{self._data_master.name}]"
 # end
 
 
@@ -1457,22 +1517,14 @@ class IDataValue(IPlanData):
 
 class IPredictTimeSeries(IPlanObject):
 
-    def __init__(self, ipom,
-                 id: int,
-                 data_master_id: int,
-                 data_values_master_ids: list[int]):
+    def __init__(self, ipom, id: int, data_master_id: int):
         super().__init__(ipom)
 
         assert is_instance(id, int)
         assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
 
-        self._id = id
-        self._data_master_id = data_master_id
-
-        # data_values_master_ids are compatible with 'Data Master' and 'Area Feature' ids
-        # FOR CONSTRUCTION
-        self._data_values_master_ids = data_values_master_ids
+        self._id: int = id
+        self._plan: Optional[str] = None
 
         self._data_master: IDataMaster = self.ipom.data_master(data_master_id)
         self._pf: IPredictMasterFocussed = self.ipom.predict_master_focussed(id)
@@ -1520,29 +1572,44 @@ class IPredictTimeSeries(IPlanObject):
         return self._pf.measures_ids(with_name=with_name)
 
     # -----------------------------------------------------------------------
+    # Prediction plan
+    # -----------------------------------------------------------------------
+
+    @property
+    def plan(self) -> Optional[IPredictionPlan]:
+        return self._plan
+
+    def set_plan(self, plan: str):
+        assert is_instance(plan, str)
+        self._plan = plan
+        return self
+
+    # -----------------------------------------------------------------------
     # Train/predict data
     # -----------------------------------------------------------------------
 
     def select_train_data(self,
+                          plan: Optional[str] = None,
                           area: Union[None, int, list[int]] = None,
                           skill: Union[None, int, list[int]] = None,
                           new_format=False) \
             -> DataFrame:
 
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
-
-        area_ids: list[int] = self.area_hierarchy.to_ids(area)
-        skill_ids: list[int] = self.skill_hierarchy.to_ids(skill)
-        # Note: 'data_values_master_ids' automatically specify 'data_master_id'
 
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
+
+        plan_ids = self.ipom.prediction_plan(plan, data_master_id).plan_ids
 
         df: DataFrame = self.ipom.select_train_data(
-            self._data_master_id,
-            self._data_values_master_ids,
+            data_master_id,
+            plan_ids,
             area_feature_dict,
             skill_feature_dict,
             measure_dict,
@@ -1551,6 +1618,7 @@ class IPredictTimeSeries(IPlanObject):
         return df
 
     def select_predict_data(self,
+                            plan: Optional[str] = None,
                             start_date: Optional[datetime] = None,
                             periods: Optional[int] = None,
                             area: Union[None, int, list[int], str, list[str]] = None,
@@ -1573,14 +1641,13 @@ class IPredictTimeSeries(IPlanObject):
         assert is_instance(skill, Union[None, int, list[int]])
 
         end_date = None
-        area_ids: list[int] = self.area_hierarchy.to_ids(area)
-        skill_ids: list[int] = self.skill_hierarchy.to_ids(skill)
-        # Note: 'data_values_master_ids' automatically specify 'data_master_id'
 
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
         input_feature_ids, _ = self.input_target_measure_ids
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
 
         freq = self.period_hierarchy.freq
         if periods is None:
@@ -1588,9 +1655,11 @@ class IPredictTimeSeries(IPlanObject):
         if start_date is not None:
             end_date = start_date + relativeperiods(periods=periods, freq=freq)
 
+        plan_ids = self.ipom.prediction_plan(plan, data_master_id).plan_ids
+
         df: DataFrame = self.ipom.select_predict_data(
-            self._data_master_id,
-            self._data_values_master_ids,
+            data_master_id,
+            plan_ids,
             area_feature_dict, skill_feature_dict,
             input_feature_ids, measure_dict,
             start_date, end_date, freq,
@@ -1629,9 +1698,9 @@ class IPredictTimeSeries(IPlanObject):
         :param update: how to update the data already present in the database
                 - None: all data is deleted and replaced
                         (delete and insert)
-                - False: the data in the dataset replaces the same data in the database
+                - True: the data in the dataset replaces the same data in the database
                         (update or insert)
-                - True:  all data in the database is not deleted or updated
+                - False:  all data in the database is not deleted or updated
                         (insert only)
         """
         assert is_instance(df, DataFrame)
@@ -1642,9 +1711,11 @@ class IPredictTimeSeries(IPlanObject):
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
 
         if plan is not None:
-            pplan = self.ipom.prediction_plan(plan, self.data_master.id)
+            pplan = self.ipom.prediction_plan(plan, data_master_id)
             area_plan_map = pplan.area_plan_map()
         else:
             area_plan_map = None
@@ -1680,37 +1751,99 @@ class IPredictTimeSeries(IPlanObject):
         return
 
     def delete_train_data(self,
-                          plan: str,
-                          start_date: Optional[datetime] = None,
-                          periods: Optional[int] = None,
+                          plan: Optional[str] = None,
                           area: Union[None, int, list[int], str, list[str]] = None,
                           skill: Union[None, int, list[int], str, list[str]] = None,):
+        """
+
+        :param plan:
+        :param start_date:
+        :param periods:
+        :param area:
+        :param skill:
+        :return:
+        """
 
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
 
-        area_ids: list[int] = self.area_hierarchy.to_ids(area)
-        skill_ids: list[int] = self.skill_hierarchy.to_ids(skill)
-        # Note: 'data_values_master_ids' automatically specify 'data_master_id'
+        self.log.info("Deleting train data ...")
 
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
+
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
+        if not pplan.exists():
+            raise ValueError(f"Plan {plan} not existent")
+
+        plan_ids = pplan.plan_ids
+
+        self.ipom.delete_train_data(
+            data_master_id,
+            plan_ids,
+            area_feature_dict,
+            skill_feature_dict,
+            measure_dict,
+        )
+        self.log.info("Done")
+        return
+    # end
+
+    def delete_predict_data(self,
+                            plan: Optional[str] = None,
+                            area: Union[None, int, list[int]] = None,
+                            skill: Union[None, int, list[int]] = None,):
+        """
+
+        :param plan:
+        :param area:
+        :param skill:
+        :return:
+        """
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+
+        self.log.info("Deleting predict data ...")
+
+        area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
+        skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
+        measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
 
         pplan = self.ipom.prediction_plan(plan, self.data_master.id)
         if not pplan.exists():
             raise ValueError(f"Plan {plan} not existent")
 
-        self.ipom.delete_train_data(
-            plan,
-            self._data_master_id,
-            self._data_values_master_ids,
+        plan_ids = pplan.plan_ids
+
+        # data_master_id: int,
+        # data_values_master_ids: list[int],
+        # area_feature_dict: dict[int, str],
+        # skill_feature_dict: dict[int, str],
+        # measure_dict: dict[int, str],
+        # start_date: Optional[datetime] = None,
+        # end_date: Optional[datetime] = None,
+        # freq: Literal['D', 'W', 'M'] = 'D',
+        # new_format=False):
+
+        self.ipom.delete_predict_data(
+            data_master_id,
+            plan_ids,
             area_feature_dict,
             skill_feature_dict,
             measure_dict,
         )
+        self.log.info("Done")
+        return
+    # end
 
-    def save_predict_data(self, df: DataFrame, plan: str, update: Optional[bool] = None):
+    def save_predict_data(self, df: DataFrame,
+                          plan: Optional[str] = None,
+                          update: Optional[bool] = None):
         """
         Save the data for the prediction (table: 'tb_idata_values_detail').
         The dataframe can be passed in the following formats:
@@ -1750,10 +1883,12 @@ class IPredictTimeSeries(IPlanObject):
         :param df: dataframe to insert into database
         :param plan: name of the plan used for reference
         :param update: how to update the data already present in the database
-                - None:  all data is deleted and replaced
-                - False: the data in the dataset replaces the same data in the database
-                         (or it is inserted)
-                - True:  all data in the database is not deleted or updated
+                - None: all data is deleted and replaced
+                        (delete and insert)
+                - True: the data in the dataset replaces the same data in the database
+                        (update or insert)
+                - False:  all data in the database is not deleted or updated
+                        (insert only)
         """
         assert is_instance(df, DataFrame)
         assert is_instance(plan, str)
@@ -1763,10 +1898,12 @@ class IPredictTimeSeries(IPlanObject):
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
 
         # 0) retrieve the Plan map
         #
-        pplan = self.ipom.prediction_plan(plan, self.data_master.id)
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
         if not pplan.exists():
             raise ValueError(f"Plan {plan} not existent")
 
@@ -1800,11 +1937,6 @@ class IPredictTimeSeries(IPlanObject):
         # end
         self.log.info("Done")
         return
-
-    def delete_predict_data(self,
-                            area: Union[None, int, list[int]] = None,
-                            skill: Union[None, int, list[int]] = None,):
-        pass
 # end
 
 
@@ -1853,6 +1985,7 @@ class IPlanObjectModel(IPlanObject):
         self.engine.dispose(True)
         self.engine = None
         self.metadata = None
+    # end
 
     # -----------------------------------------------------------------------
     # Support for
@@ -1869,64 +2002,335 @@ class IPlanObjectModel(IPlanObject):
     # -----------------------------------------------------------------------
     # Area/Skill hierarchy
 
+    def delete_area_hierarchy(self, id: Union[int, str]):
+        self._delete_attribute_hierarchy(id, 'area')
+
+    def delete_skill_hierarchy(self, id: Union[int, str]):
+        self._delete_attribute_hierarchy(id, 'skill')
+
+    def _delete_attribute_hierarchy(self, id: Union[int, str], attribute_type: Literal['area', 'skill']):
+        assert is_instance(attribute_type, Literal['area', 'skill'])
+        area_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'],
+                                             nullable=True)
+        if area_hierarchy_id is None:
+            return
+
+        assert self.hierarchy_type(area_hierarchy_id) == attribute_type
+
+        with self.engine.connect() as conn:
+            # 1) delete tb_attribute_details
+            table = self.AttributeDetail
+            query = delete(table).where(table.c['attribute_master_id'] == area_hierarchy_id)
+            self.log.debug(query)
+            conn.execute(query)
+            # 2) delete tb_attribute_master
+            table = self.AttributeMaster
+            query = delete(table).where(table.c.id == area_hierarchy_id)
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+    # end
+
+    # --
+
+    def create_area_hierarchy(self, name: str, hierarchy_tree):
+        return self._create_attribute_hierarchy(name, hierarchy_tree, 'area')
+
+    def create_skill_hierarchy(self, name: str, hierarchy_tree):
+        return self._create_attribute_hierarchy(name, hierarchy_tree, 'skill')
+
+    def _create_attribute_hierarchy(self, name: str, hierarchy_tree, hierarchy_type: Literal['area', 'skill']):
+        assert is_instance(name, str)
+        assert is_instance(hierarchy_type, Literal['area', 'skill'])
+
+        if len(hierarchy_tree) == 1 and is_instance(hierarchy_tree, dict[str, list[str]]):
+            return self._create_simple_hierarchy(name, hierarchy_tree, hierarchy_type)
+        else:
+            raise ValueError(f"Unsupported hierarchy tree format: {hierarchy_tree}")
+
+    def _create_simple_hierarchy(self, name: str, hierarchy_tree: dict[str, list[str]], hierarchy_type: Literal['area', 'skill']):
+        now = datetime.now()
+        root_name = list(hierarchy_tree.keys())[0]
+        leaf_names = hierarchy_tree[root_name]
+        description = name
+
+        # hierarchy_tree:
+        #   {parent: list[Union[str, dict[str, list]]}
+        #   {child: parent}
+
+        with self.engine.connect() as conn:
+            # 1) create tb_attribute_master
+            table = self.AttributeMaster
+            query = insert(table).values(
+                attribute_master_name=name,
+                attribute_desc=description,
+                createdby=CREATED_BY,
+                createddate=now,
+                hierarchy_type=1 if hierarchy_type == 'area' else 2
+            ).returning(table.c.id)
+            self.log.debug(query)
+            hierarchy_id = conn.execute(query).scalar()
+            # 2) create tb_attribute_detail
+            #    simple format: {root: list[leaf]}
+            table = self.AttributeDetail
+            # 2.1) create the root
+            query = insert(table).values(
+                attribute_master_id=hierarchy_id,
+                attribute=root_name,
+                description=root_name,
+                attribute_level=1,
+                parent_id=None,
+                createdby=CREATED_BY,
+                createddate=now,
+                is_leafattribute=False
+            ).returning(table.c.id)
+            self.log.debug(query)
+            parent_id = conn.execute(query).scalar()
+            # 2.2) create the leaves
+            for leaf in leaf_names:
+                query = insert(table).values(
+                    attribute_master_id=hierarchy_id,
+                    attribute=leaf,
+                    description=leaf,
+                    attribute_level=2,
+                    parent_id=parent_id,
+                    createdby=CREATED_BY,
+                    createddate=now,
+                    is_leafattribute=True
+                ).returning(table.c.id)
+                leaf_id = conn.execute(query).scalar()
+            # end
+            conn.commit()
+        return AttributeHierarchy(self, hierarchy_id, self.AttributeMaster)
+    # end
+
+    # -----------------------------------------------------------------------
+
     def hierarchy_type(self, id: Union[int, str]) -> Literal["area", "skill"]:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
 
         with self.engine.connect() as conn:
             table = self.AttributeMaster
-            query = select(table.c['hierarchy_type']).where(table.c['id'] == id)
+            query = select(table.c['hierarchy_type']).where(table.c['id'] == hierarchy_id)
             self.log.debug(f"{query}")
             hierarchy_type = conn.execute(query).fetchone()[0]
         return "area" if hierarchy_type == 1 else "skill"
 
     def area_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
-        ah = AttributeHierarchy(self.ipom, id, self.AttributeMaster)
+        area_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        ah = AttributeHierarchy(self.ipom, area_hierarchy_id, self.AttributeMaster)
         assert ah.type == "area"
         return ah
 
     def area_feature(self, id: Union[int, str]) -> AttributeDetail:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
-        af = AttributeDetail(self.ipom, id, self.AttributeDetail)
+        area_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
+        af = AttributeDetail(self.ipom, area_feature_id, self.AttributeDetail)
         assert self.hierarchy_type(af.hierarchy_id) == "area"
         return af
 
     def skill_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
-        sk = AttributeHierarchy(self.ipom, id, self.AttributeMaster)
-        assert sk.type == "skill"
-        return sk
+        skill_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        sh = AttributeHierarchy(self.ipom, skill_hierarchy_id, self.AttributeMaster)
+        assert sh.type == "skill"
+        return sh
 
     def skill_feature(self, id: Union[int, str]) -> AttributeDetail:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
-        sf = AttributeDetail(self.ipom, id, self.AttributeDetail)
+        skill_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
+        sf = AttributeDetail(self.ipom, skill_feature_id, self.AttributeDetail)
         assert self.hierarchy_type(sf.hierarchy_id) == "skill"
         return sf
 
     # -----------------------------------------------------------------------
     # Data Model
-    # Data Master
 
     def data_model(self, id: Union[int, str]) -> IDataModel:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.iDataModelMaster, ['description'])
-        return IDataModel(self, id, self.iDataModelMaster)
+        data_model_id = self._convert_id(id, self.iDataModelMaster, ['description'])
+        return IDataModel(self, data_model_id, self.iDataModelMaster)
 
-    def data_master(self, id: Union[int, str]) -> IDataMaster:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.iDataMaster, ['description'])
-        return IDataMaster(self, id, self.iDataMaster)
-
-    def find_data_master(self, data_model_id: int, area_hierarchy_id: int, skill_hierarchy_id: int) \
-            -> Optional[IDataMaster]:
+    def delete_data_model(self, id: Union[int, str]):
+        data_model_id = self._convert_id(id, self.iDataModelMaster, ['description'], nullable=True)
+        if data_model_id is None:
+            return
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataMaster
+            # 0) delete dependencies
+            query = text("""
+            DELETE FROM tb_ipr_conf_detail_focussed AS ticdf
+            WHERE ticdf.parameter_id IN (
+                SELECT timd.id FROM tb_idata_model_detail AS timd 
+                WHERE timd.data_model_id_fk = :data_model_id
+            )
+            """)
+            self.log.debug(query)
+            conn.execute(query, parameters=dict(
+                data_model_id=data_model_id
+            ))
+
+            query = text("""
+            DELETE FROM tb_ipr_conf_master_focussed AS ticmf
+            WHERE ticmf.idata_model_details_id_fk = :data_model_id
+            """)
+            table = self.iPredictMasterFocussed
+            query = delete(table).where(
+                table.c['idata_model_details_id_fk'] == data_model_id
+            )
+            self.log.debug(query)
+            conn.execute(query, parameters=dict(
+                data_model_id=data_model_id
+            ))
+
+            query = text("""
+            DELETE FROM tb_idata_values_master AS tivm
+            WHERE tivm.idata_master_fk IN (
+                SELECT tim.id FROM tb_idata_master AS tim
+                WHERE tim.idatamodel_id_fk = :data_model_id
+            )
+            """)
+            self.log.debug(query)
+            conn.execute(query, parameters=dict(
+                data_model_id=data_model_id
+            ))
+
+            query = text("""
+            DELETE FROM tb_idata_master AS tim
+            WHERE tim.idatamodel_id_fk = :data_model_id
+            """)
+            self.log.debug(query)
+            conn.execute(query, parameters=dict(
+                data_model_id=data_model_id
+            ))
+
+            # 1) delete tb_data_model_detail
+            table = self.iDataModelDetail
+            query = delete(table).where(
+                table.c['data_model_id_fk'] == data_model_id
+            )
+            self.log.debug(query)
+            conn.execute(query)
+
+            # 1) delete tb_data_model_master
+            table = self.iDataModelMaster
+            query = delete(table).where(
+                table.c.id == data_model_id
+            )
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+        return
+    # end
+
+    def create_data_model(self, name: str, *,
+                          targets: Union[str, list[str]],
+                          inputs: Union[None, str, list[str]],
+                          update: Optional[bool] = None) -> IDataModel:
+        """
+
+        :param name: Data Model name
+        :param targets: measures used as FEED
+        :param inputs: measures used as INPUT
+        :param area_hierarchy: Area Hierarchy to use
+        :param skill_hierarchy: Skill Hierarchy to use
+        :param update: how to update the data already present in the database
+                - None: all data is deleted and replaced
+                        (delete and insert)
+                - True: the data in the dataset replaces the same data in the database
+                        (update or insert)
+                - False:  all data in the database is not deleted or updated
+                        (insert only)
+        :return:
+        """
+        assert is_instance(name, str)
+        assert is_instance(targets, Union[str, list[str]])
+        assert is_instance(inputs, Union[None, str, list[str]])
+        assert is_instance(update, Optional[bool])
+
+        targets = as_list(targets, 'targets')
+        inputs = as_list(inputs, 'inputs')
+
+        # ensure that inputs DOESN'T contain targets
+        common = set(inputs).intersection(targets)
+        if len(common) > 0:
+            self.log.warning(f"'inputs' columns contain some 'target' columns: {common}.Removed from 'inputs'")
+            inputs = list(set(inputs).difference(targets))
+
+        now = datetime.now()
+        ntargets = len(targets)
+
+        data_model_id = self._convert_id(name, self.iDataModelMaster, ['description'], nullable=True)
+        already_exists = data_model_id is not None
+        if already_exists and not update:
+            self.log.warning(f"Data Model {name} already existent")
+            return IDataModel(self, data_model_id, self.iDataModelMaster)
+
+        if already_exists:
+            self.log.warning(f"Delete Data Model {name}")
+            self.delete_data_model(name)
+
+        with self.engine.connect() as conn:
+            # 1) create data model master
+            table = self.iDataModelMaster
+            query = insert(table).values(
+                description=name,
+            ).returning(table.c.id)
+            self.log.debug(query)
+            data_model_id: int = conn.execute(query).scalar()
+
+            # 2) create data model detail
+            table = self.iDataModelDetail
+            count = 0
+            for measure in targets + inputs:
+                query = insert(table).values(
+                    measure_id=measure,
+                    leaf_formula=None,
+                    non_leaf_formula=None,
+                    type='FEED' if count < ntargets else 'INPUT',
+                    non_leaf_type='AGGREGATION',
+                    created_date=now,
+                    roll='N',
+                    data_model_id_fk=data_model_id,
+                    description=measure,
+                    skills=None,
+                    skill_enabled='Y',
+                    popup_id=None,
+                    default_value=0,
+                    positive_only='N',
+                    model_percision=None,   # wrong 'model_precision'
+                    measure_mode='PLAN',
+                    linked_measure=None,
+                    period_agg_type=None
+                ).returning(table.c.id)
+                if count == 0: self.log.debug(query)
+                measure_id: int = conn.execute(query).scalar()
+                count += 1
+            conn.commit()
+        return IDataModel(self, data_model_id, self.iDataModelMaster)
+    # end
+
+    # -----------------------------------------------------------------------
+    # Data Master
+
+    def data_master(self, id: Union[int, str]) -> IDataMaster:
+        data_master_id = self._convert_id(id, self.iDataMaster, ['description'])
+        return IDataMaster(self, data_master_id, self.iDataMaster)
+
+    def find_data_master(self, data_model: Union[int, str],
+                         area_hierarchy: Union[int, str], skill_hierarchy: Union[int, str]) -> Optional[IDataMaster]:
+        """
+        Find a Data Master having the selected Data Model, Area Hierarchy, Skill Hierarchy (and Period Hierarchy)
+        Note: if there are multiple Data Masters, it is selected the first one.
+
+        :param data_model: Data Model
+        :param area_hierarchy: Area Hierarchy
+        :param skill_hierarchy: Skill Hierarchy
+        :return: Data Model or None
+        """
+
+        data_model_id = self._convert_id(data_model, self.iDataModelMaster, ['description'])
+        area_hierarchy_id = self._convert_id(area_hierarchy, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        skill_hierarchy_id = self._convert_id(skill_hierarchy, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+
+        with self.engine.connect() as conn:
+            table = self.iDataMaster
             query = select(table.c.id).distinct().where((table.c['area_id_fk'] == area_hierarchy_id) &
                                                         (table.c['skill_id_fk'] == skill_hierarchy_id) &
                                                         (table.c['idatamodel_id_fk'] == data_model_id))
@@ -1941,6 +2345,111 @@ class IPlanObjectModel(IPlanObject):
                 self.log.error(
                     f"Multiple Data Masters with found with (dara_model:{data_model_id},area_hierarchy:{area_hierarchy_id},skill_hierarchy:{skill_hierarchy_id})")
                 return IDataMaster(self.ipom, to_data(rlist[-1]), table)
+
+    def create_data_master(self, name: str, *,
+                           data_model: Union[int, str],
+                           area_hierarchy: Union[int, str],
+                           skill_hierarchy: Union[int, str],
+                           period_hierarchy: Literal['day', 'week', 'month'] = 'day',
+                           periods: int = 90,
+                           update: Optional[bool] = None) -> IDataMaster:
+        """
+        Create a Data Master
+
+        :param name: name of the Data Master
+        :param data_model: Data Model to use
+        :param area_hierarchy: Area Hierarchy to use
+        :param skill_hierarchy: Skill Hirerachy to use
+        :param period_hierarchy: Period Hierarchy to use
+        :param periods: period length to use
+        :param update: how to update the data already present in the database
+                - None: all data is deleted and replaced
+                        (delete and insert)
+                - True: the data in the dataset replaces the same data in the database
+                        (update or insert)
+                - False:  all data in the database is not deleted or updated
+                        (insert only)
+        :return:
+        """
+        assert is_instance(period_hierarchy, Literal['day', 'week', 'month'])
+        assert is_instance(periods, int) and periods > 0
+
+        # data_model_id = self._convert_id(data_model, self.iDataModelMaster, ['description'])
+        # area_hierarchy_id = self._convert_id(area_hierarchy, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        # skill_hierarchy_id = self._convert_id(skill_hierarchy, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        # assert self.hierarchy_type(area_hierarchy_id) == 'area'
+        # assert self.hierarchy_type(skill_hierarchy_id) == 'skill'
+
+        data_model_id = self.data_model(data_model).id
+        area_hierarchy_id = self.area_hierarchy(area_hierarchy).id
+        skill_hierarchy_id = self.skill_hierarchy(skill_hierarchy).id
+
+        table = self.iDataMaster
+        data_master_id = self._convert_id(name, table, ['description'], nullable=True)
+        already_exists = data_master_id is not None
+        if already_exists and not update:
+            self.log.warning(f"Data Master {name} already existent")
+            return IDataMaster(self, data_master_id, table)
+
+        if already_exists:
+            self.log.warning(f"Delete Data Master {name}")
+            self.delete_data_master(data_master_id)
+
+        with self.engine.connect() as conn:
+            if already_exists:
+                from sqlalchemy import update
+                query = update(table) \
+                    .where(table.c['description'] == name) \
+                    .values(
+                        description=name,
+                        area_id_fk=area_hierarchy_id,
+                        skill_id_fk=skill_hierarchy_id,
+                        idatamodel_id_fk=data_model_id,
+                        period_hierarchy=period_hierarchy,
+                        period=periods,
+                        rule_enabled=True,
+                        baseline_enabled=False,
+                        opti_enabled=False
+                    ) \
+                    .returning(table.c.id)
+            else:
+                query = insert(table) \
+                    .values(
+                        description=name,
+                        area_id_fk=area_hierarchy_id,
+                        skill_id_fk=skill_hierarchy_id,
+                        idatamodel_id_fk=data_model_id,
+                        period_hierarchy=period_hierarchy,
+                        period=periods,
+                        rule_enabled='Y',
+                        baseline_enabled='N',
+                        opti_enabled='N') \
+                    .returning(table.c.id)
+            self.log.debug(query)
+            data_master_id = conn.execute(query).scalar()
+            conn.commit()
+        return IDataMaster(self, data_master_id, table)
+    # end
+
+    def delete_data_master(self, id: Union[int, str]):
+        data_master_id = self._convert_id(id, self.iDataMaster, ['description'], nullable=True)
+        if data_master_id is None:
+            return
+
+        with self.engine.connect() as conn:
+            # 1) delete dependencies
+            table = self.iDataValuesMaster
+            query = delete(table).where(table.c['idata_master_fk'] == data_master_id)
+            self.log.debug(query)
+            conn.execute(query)
+
+            # 2) delete data master
+            table = self.iDataMaster
+            query = delete(table).where(table.c.id == data_master_id)
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+    # end
 
     # def select_data_master_ids(self, data_model_id: int, area_hierarchy_id: int, skill_hierarchy_id: int) \
     #         -> list[int]:
@@ -1963,9 +2472,32 @@ class IPlanObjectModel(IPlanObject):
     def prediction_plan(self, name: str, data_master: Union[int, str]) -> IPredictionPlan:
         return IPredictionPlan(self, name, data_master)
 
+    def delete_prediction_plan(self, id: Union[int, str], data_master: Union[int, str]):
+        self.prediction_plan(id, data_master).delete()
+
+    def create_prediction_plan(
+            self, name: str, data_master: Union[int, str], *,
+            start_date: datetime, end_date: Optional[datetime] = None,
+            periods: Optional[int] = None, note: Optional[str]=None,
+            update: Optional[bool] = None) -> IPredictionPlan:
+
+        assert is_instance(name, str)
+        assert is_instance(data_master, Union[int, str])
+        assert is_instance(start_date, datetime)
+        assert is_instance(end_date, Optional[datetime])
+        assert is_instance(periods, Optional[int])
+        assert is_instance(note, Optional[str])
+
+        pplan = self.prediction_plan(name, data_master)
+        return pplan.create(
+            start_date, end_date, periods, note, update
+        )
+    # end
+
+    # -----------------------------------------------------------------------
+
     def data_values_master(self, id: Union[int, str]) -> IDataValuesMaster:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.iDataValuesMaster, ['name'])
+        id = self._convert_id(id, self.iDataValuesMaster, ['name'])
         return IDataValuesMaster(self, id, self.iDataValuesMaster)
 
     def select_data_values(self, data_values_master_id) -> DataFrame:
@@ -2001,7 +2533,8 @@ class IPlanObjectModel(IPlanObject):
             rlist = conn.execute(query)
             return [result[0] for result in rlist]
 
-    def select_data_values_master_date_interval(self, data_values_master_ids: list[int]) -> tuple[datetime, datetime]:
+    def select_data_values_master_date_interval(self, data_values_master_ids: list[int]) \
+            -> Optional[tuple[datetime, datetime]]:
         with self.engine.connect() as conn:
             table = self.iDataValuesMaster
             query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
@@ -2027,6 +2560,147 @@ class IPlanObjectModel(IPlanObject):
 
     # -----------------------------------------------------------------------
     # Time Series Focussed
+
+    def delete_time_series_focussed(self, id: Union[int, str]):
+        tsf_id = self._convert_id(id, self.iPredictMasterFocussed, ['ipr_conf_master_name', 'ipr_conf_master_desc'],
+                                  nullable=True)
+        if tsf_id is None:
+            return
+
+        with self.engine.connect() as conn:
+            # 1) delete tb_ipr_conf_detail_focussed
+            table = self.iPredictDetailFocussed
+            query = delete(table).where(table.c['ipr_conf_master_id'] == tsf_id)
+            self.log.debug(query)
+            conn.execute(query)
+
+            # 2) delete tb_ipr_conf_master_focussed
+            table = self.iPredictMasterFocussed
+            query = delete(table).where(table.c['id'] == tsf_id)
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+        return
+    # end
+
+    def create_time_series_focussed(self, name: str, *,
+                                    targets: Union[str, list[str]],
+                                    inputs: Union[None, str, list[str]] = None,
+                                    data_master: Union[None, int, str] = None,
+                                    # data_model: Union[None, int, str] = None,
+                                    # area_hierarchy: Union[None, int, str] = None,
+                                    # skill_hierarchy: Union[None, int, str] = None,
+                                    description: Optional[str] = None,
+                                    update: Optional[bool] = None) -> IPredictTimeSeries:
+        """
+        Create a time series
+
+        :param name: Time Series name
+        :param targets: list of target measures
+        :param inputs: list of input measures
+        :param data_master: Data Master, alternative to (data_model, area_hierarchy, skill_hierarchy)
+        :param description:  Time Series description
+        :param update:
+                - None: all data is deleted and replaced
+                        (delete and insert)
+                - True: the data in the dataset replaces the same data in the database
+                        (update or insert)
+                - False:  all data in the database is not deleted or updated
+                        (insert only)
+        """
+        # :param data_model: Data Model (alternative to data_master)
+        # :param area_hierarchy: Area Hierarchy (alternative to data_master)
+        # :param skill_hierarchy: Skill Hierarchy (alternative to data_master)
+
+        assert is_instance(name, str)
+        assert is_instance(targets, Union[str, list[str]])
+        assert is_instance(inputs, Union[None, str, list[str]])
+        assert is_instance(data_master, Union[None, int, str])
+        assert is_instance(description, Optional[str])
+        assert is_instance(update, Optional[bool])
+        # assert is_instance(data_model, Union[None, int, str])
+        # assert is_instance(area_hierarchy, Union[None, int, str])
+        # assert is_instance(skill_hierarchy, Union[None, int, str])
+
+        data_master_id = data_master
+        data_master = self.data_master(data_master_id)
+        data_master_id = data_master.id
+        data_model: IDataModel = data_master.data_model
+        data_model_id = data_model.id
+        area_hierarchy_id = data_master.area_hierarchy.id
+        skill_hierarchy_id = data_master.skill_hierarchy.id
+
+        targets = as_list(targets, 'targets')
+        inputs = as_list(inputs, 'inputs')
+        description = name if description is None else description
+
+        # if data_master is not None:
+        #     data_master_id = data_master
+        #     data_master = self.data_master(data_master_id)
+        #     data_model_id = data_master.data_model.id
+        #     area_hierarchy_id = data_master.area_hierarchy.id
+        #     skill_hierarchy_id = data_master.skill_hierarchy.id
+        # else:
+        #     data_model_id = self.data_model(data_model).id
+        #     area_hierarchy_id = self.area_hierarchy(area_hierarchy).id
+        #     skill_hierarchy_id = self.skill_hierarchy(skill_hierarchy).id
+        # end
+
+        table = self.iPredictMasterFocussed
+        tsf_id = self._convert_id(name, table, ['ipr_conf_master_name', 'ipr_conf_master_desc'], nullable=True)
+        already_exists = tsf_id is not None
+        if already_exists and not update:
+            self.log.warning(f"Time Series {name} already existent")
+            return IPredictTimeSeries(self, tsf_id, data_master_id,)
+
+        if already_exists:
+            self.log.warning(f"Delete Time Series {name}")
+            self.delete_time_series_focussed(name)
+
+        # create the tb_ipr_conf_master_focussed
+        with self.engine.connect() as conn:
+            # 1) fill tb_ipr_conf_master_focussed
+            table = self.iPredictMasterFocussed
+            query = insert(table).values(
+                ipr_conf_master_name=name,
+                ipr_conf_master_desc=description,
+                idata_model_details_id_fk=data_model_id,
+                area_id_fk=area_hierarchy_id,
+                skill_id_fk=skill_hierarchy_id,
+                idata_id_fk=None
+            ).returning(table.c.id)
+            self.log.debug(query)
+            tsf_id = conn.execute(query).scalar()
+            # 2) fill tb_ipr_conf_detail_focussed
+            table = self.iPredictDetailFocussed
+            for measure in targets:
+                measure_id = data_model.measure(measure).id
+                query = insert(table).values(
+                    parameter_desc=measure,
+                    parameter_value='output',
+                    ipr_conf_master_id=tsf_id,
+                    parameter_id=measure_id,
+                    skill_id_fk=skill_hierarchy_id,
+                    to_populate=None,
+                    period=None
+                ).returning(table.c.id)
+                target_id = conn.execute(query).scalar()
+            # end
+            for measure in inputs:
+                measure_id = data_model.measure(measure).id
+                query = insert(table).values(
+                    parameter_desc=measure,
+                    parameter_value='input',
+                    ipr_conf_master_id=tsf_id,
+                    parameter_id=measure_id,
+                    skill_id_fk=skill_hierarchy_id,
+                    to_populate=None,
+                    period=None
+                ).returning(table.c.id)
+                input_id = conn.execute(query).scalar()
+            # end
+            conn.commit()
+        return IPredictTimeSeries(self, tsf_id, data_master_id,)
 
     # alias
     def time_series_focussed(self,
@@ -2064,16 +2738,13 @@ class IPlanObjectModel(IPlanObject):
 
         if data_master is not None:
             data_master_id: int = self.data_master(data_master).id
-            data_values_master_ids = self._select_data_values_master_ids([data_master_id], area_feature_ids)
         else:
-            data_values_master_ids, data_master_id = self._select_data_values_master_ids_by_plan(plan, area_feature_ids)
+            _, data_master_id = self._select_data_values_master_ids_by_plan(plan, area_feature_ids)
 
-        # data_values_master_ids are compatible with Data Master and Area Feature ids FOR CONSTRUCTION
-        return IPredictTimeSeries(self, pmf.id, data_master_id, data_values_master_ids)
+        return IPredictTimeSeries(self, pmf.id, data_master_id)
 
     def predict_master_focussed(self, id: Union[int, str]) -> IPredictMasterFocussed:
-        if isinstance(id, str):
-            id = self._convert_id(id, self.iPredictMasterFocussed, ['ipr_conf_master_name', 'ipr_conf_master_desc'])
+        id = self._convert_id(id, self.iPredictMasterFocussed, ['ipr_conf_master_name', 'ipr_conf_master_desc'])
         return IPredictMasterFocussed(self, id, self.iPredictMasterFocussed)
 
     # -----------------------------------------------------------------------
@@ -2082,6 +2753,22 @@ class IPlanObjectModel(IPlanObject):
 
     def save_area_skill_train_data(self, area_feature_id: int, skill_feature_id: int, measure_id: int, df: DataFrame,
                                    plan_id: Optional[int] = None, update: Optional[bool] = None):
+        """
+
+        :param area_feature_id:
+        :param skill_feature_id:
+        :param measure_id:
+        :param df:
+        :param plan_id:
+        :param update: how to update the data already present in the database
+        - None: all data is deleted and replaced
+                (delete and insert)
+        - True: the data in the dataset replaces the same data in the database
+                (update or insert)
+        - False:  all data in the database is not deleted or updated
+                (insert only):return:
+        """
+
         assert is_instance(area_feature_id, int)
         assert is_instance(skill_feature_id, int)
         assert is_instance(measure_id, int)
@@ -2108,16 +2795,16 @@ class IPlanObjectModel(IPlanObject):
                 # self.log.debug(query)
                 # conn.execute(query)
 
-                query = """
-                    DELETE FROM tb_idata_values_detail_hist
-                     WHERE state_date >= :start_date
-                       AND state_date <= :end_date
-                       AND model_detail_id_fk = :measure_id
-                       AND area_id_fk = :area_feature_id
-                       AND skill_id_fk = :skill_feature_id
-                """
+                query = text("""
+                DELETE FROM tb_idata_values_detail_hist
+                 WHERE state_date >= :start_date
+                   AND state_date <= :end_date
+                   AND model_detail_id_fk = :measure_id
+                   AND area_id_fk = :area_feature_id
+                   AND skill_id_fk = :skill_feature_id
+                """)
                 try:
-                    conn.execute(text(query), parameters=dict(
+                    conn.execute(query, parameters=dict(
                         start_date=start_date,
                         end_date=end_date,
                         measure_id=measure_id,
@@ -2176,15 +2863,15 @@ class IPlanObjectModel(IPlanObject):
                 # self.log.debug(query)
                 # conn.execute(query)
 
-                query = """
-                    DELETE FROM tb_idata_values_detail
-                     WHERE state_date >= :start_date
-                       AND state_date <= :end_date
-                       AND model_detail_id_fk = :measure_id
-                       AND skill_id_fk = :skill_feature_id
-                """
+                query = text("""
+                DELETE FROM tb_idata_values_detail
+                 WHERE state_date >= :start_date
+                   AND state_date <= :end_date
+                   AND model_detail_id_fk = :measure_id
+                   AND skill_id_fk = :skill_feature_id
+                """)
                 try:
-                    conn.execute(text(query), parameters=dict(
+                    conn.execute(query, parameters=dict(
                         start_date=start_date,
                         end_date=end_date,
                         measure_id=measure_id,
@@ -2249,6 +2936,85 @@ class IPlanObjectModel(IPlanObject):
     # skill_id_fk           -> [tb_attribute_detail]   (skill feature)
     # value                 // measure value
     #
+
+    def delete_train_data(self,
+                          data_master_id: int,
+                          data_values_master_ids: list[int],
+                          area_feature_dict: dict[int, str],
+                          skill_feature_dict: dict[int, str],
+                          measure_dict: dict[int, str]
+                          ):
+
+        assert is_instance(data_master_id, int)
+        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(area_feature_dict, dict[int, str])
+        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(measure_dict, dict[int, str])
+
+        # 1) retrieve all area/skill feature ids
+        area_feature_ids = list(area_feature_dict.keys())
+        skill_feature_ids = list(skill_feature_dict)
+        measure_ids = list(measure_dict.keys())
+
+        with self.engine.connect() as conn:
+            table = self.iDataValuesDetailHist
+
+            # 2) retrieve the data with 'skill NOT NULL'
+            query = delete(table) \
+                .where(table.c['model_detail_id_fk'].in_(measure_ids) &
+                       table.c['area_id_fk'].in_(area_feature_ids) &
+                       table.c['skill_id_fk'].in_(skill_feature_ids))
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+        return
+    # end
+
+    def delete_predict_data(self,
+                            data_master_id: int,
+                            data_values_master_ids: list[int],
+                            area_feature_dict: dict[int, str],
+                            skill_feature_dict: dict[int, str],
+                            measure_dict: dict[int, str],
+                            ):
+
+        assert is_instance(data_master_id, int)
+        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(area_feature_dict, dict[int, str])
+        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(start_date, Optional[datetime])
+        # assert is_instance(end_date, Optional[datetime])
+        # assert is_instance(freq, Literal['D', 'W', 'M'])
+
+        # 1) retrieve all area/skill feature ids
+        area_feature_ids = list(area_feature_dict.keys())
+        skill_feature_ids = list(skill_feature_dict)
+        measure_ids = list(measure_dict.keys())
+
+        with self.engine.connect() as conn:
+            qtext = """
+                    delete
+                     from tb_idata_values_detail as tivd
+                    using tb_idata_values_master as tivm 
+                    where tivd.value_master_fk in :data_values_master_ids 
+                      and tivd.model_detail_id_fk in :measure_ids 
+                      and tivd.skill_id_fk in :skill_feature_ids 
+                      and tivm.area_id in :area_feature_ids 
+                      and tivm.id in :data_values_master_ids 
+                      and tivm.id = tivd.value_master_fk 
+                    """
+            query = text(qtext)
+            self.log.debug(query)
+            conn.execute(query, parameters=dict(
+                data_values_master_ids=tuple(data_values_master_ids),
+                measure_ids=tuple(measure_ids),
+                skill_feature_ids=tuple(skill_feature_ids),
+                area_feature_ids=tuple(area_feature_ids)
+            ))
+            conn.commit()
+        return
+    # end
 
     def select_train_data(self,
                           data_master_id: int,
@@ -2316,37 +3082,7 @@ class IPlanObjectModel(IPlanObject):
         df = concatenate_no_skill_df(df_with_skill, df_no_skill, skill_feature_dict)
 
         return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format)
-
-    def delete_train_data(self,
-                          data_master_id: int,
-                          data_values_master_ids: list[int],
-                          area_feature_dict: dict[int, str],
-                          skill_feature_dict: dict[int, str],
-                          measure_dict: dict[int, str]):
-
-        assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
-
-        # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
-        measure_ids = list(measure_dict.keys())
-
-        with self.engine.connect() as conn:
-            table = self.iDataValuesDetailHist
-
-            # 2) retrieve the data with 'skill NOT NULL'
-            query = delete(table) \
-                .where(table.c['model_detail_id_fk'].in_(measure_ids) &
-                       table.c['area_id_fk'].in_(area_feature_ids) &
-                       table.c['skill_id_fk'].in_(skill_feature_ids))
-            self.log.debug(query)
-            conn.execute(query)
-            conn.commit()
-        return
+    # end
 
     def select_predict_data(self,
                             data_master_id: int,
@@ -2358,7 +3094,8 @@ class IPlanObjectModel(IPlanObject):
                             start_date: Optional[datetime] = None,
                             end_date: Optional[datetime] = None,
                             freq: Literal['D', 'W', 'M'] = 'D',
-                            new_format=False) -> DataFrame:
+                            new_format=False
+                            ) -> DataFrame:
 
         assert is_instance(data_master_id, int)
         assert is_instance(data_values_master_ids, list[int])
@@ -2404,55 +3141,6 @@ class IPlanObjectModel(IPlanObject):
 
         return df_pivoted
     # end
-
-    def delete_predict_data(self,
-                            data_master_id: int,
-                            data_values_master_ids: list[int],
-                            area_feature_dict: dict[int, str],
-                            skill_feature_dict: dict[int, str],
-                            input_measure_ids: list[int],
-                            measure_dict: dict[int, str],
-                            start_date: Optional[datetime] = None,
-                            end_date: Optional[datetime] = None,
-                            freq: Literal['D', 'W', 'M'] = 'D',
-                            new_format=False):
-
-        assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
-        assert is_instance(input_measure_ids, list[int])
-        assert is_instance(measure_dict, dict[int, str])
-        assert is_instance(start_date, Optional[datetime])
-        assert is_instance(end_date, Optional[datetime])
-        assert is_instance(freq, Literal['D', 'W', 'M'])
-
-        # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
-        measure_ids = list(measure_dict.keys())
-
-        with self.engine.connect() as conn:
-            qtext = """
-                    delete
-                     from tb_idata_values_detail as tivd, tb_idata_values_master as tivm
-                    where tivd.value_master_fk in :data_values_master_ids
-                      and tivd.model_detail_id_fk in :measure_ids
-                      and tivd.skill_id_fk in :skill_feature_ids
-                      and tivm.area_id in :area_feature_ids
-                      and tivm.id in :data_values_master_ids
-                      and tivm.id = tivd.value_master_fk
-                    """
-            query = text(qtext)
-            self.log.debug(query)
-            conn.execute(query, parameters=dict(
-                data_values_master_ids=tuple(data_values_master_ids),
-                measure_ids=tuple(measure_ids),
-                skill_feature_ids=tuple(skill_feature_ids),
-                area_feature_ids=tuple(area_feature_ids)
-            ))
-            conn.commit()
-        return
 
     # -----------------------------------------------------------------------
 
@@ -2886,7 +3574,26 @@ class IPlanObjectModel(IPlanObject):
 
         return
 
-    def _convert_id(self, what: str, table: Table, columns: list[str], idcol: str = "id") -> int:
+    def _exists_id(self, what: Union[int, str], table: Table, columns: list[str], idcol: str = "id") -> bool:
+        # with self.engine.connect() as conn:
+        #     if isinstance(what, int):
+        #         query = select(func.count()).where(table.c[idcol] == what)
+        #         self.log.debug(query)
+        #         count = conn.execute(query).scalar()
+        #         return count > 0
+        #     for col in columns:
+        #         query = select(func.count()).where(table.c[col] == what)
+        #         self.log.debug(query)
+        #         count = conn.execute(query).scalar()
+        #         if count > 0:
+        #             return True
+        #         else:
+        #             continue
+        # return False
+        return self._convert_id(what, table, columns, idcol, nullable=True) is not None
+
+    def _convert_id(self, what: Union[int, str], table: Table, columns: list[str], idcol: str = "id",
+                    nullable=False) -> Optional[int]:
         """
         Convert a string into an id
 
@@ -2896,7 +3603,7 @@ class IPlanObjectModel(IPlanObject):
         :param idcol: column containing the 'id' value
         :return: the id as integer value
         """
-        # check if 'what' is an integer in string format
+        # check if 'what' is an integer or an integer in string format
         try:
             id = int(what)
             return id
@@ -2912,6 +3619,8 @@ class IPlanObjectModel(IPlanObject):
                     # [(id,)]
                     return result[0][0]
                 continue
+        if nullable:
+            return None
         raise ValueError(f"Unable to convert '{what}' into an id using {table.name}")
 
     def _convert_name(self, id: str, table: Table, namecol: str, idcol: str = 'id') -> str:
@@ -2925,8 +3634,8 @@ class IPlanObjectModel(IPlanObject):
         """
         with self.engine.connect() as conn:
             query = select(table.c[namecol]).where(table.c[idcol] == id)
-            result = conn.execute(query).fetchone()
-            return result[0]
+            result = conn.execute(query).scalar()
+            return result
         raise ValueError(f"Unable to convert '{id}' into a name using {table.name}")
 # end
 

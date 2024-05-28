@@ -45,7 +45,7 @@ def _comb(n: int, k: int) -> int:
         k -= 1
     c = int(round(c, 0))
     return c
-# end
+
 
 comb = _comb
 
@@ -53,12 +53,10 @@ comb = _comb
 def _iset(l: Iterable[int]) -> int:
     """list -> iset"""
     return sum(1 << i for i in l)
-# end
 
 
 def _isetm(m: int, l: Collection) -> int:
-    """imask, list -> iset"""
-    """
+    """imask, list -> iset
     :param m: mask
     :param l: elements list
     :return: subset of l as integer
@@ -69,7 +67,6 @@ def _isetm(m: int, l: Collection) -> int:
         if m & (1 << i):
             s += 1 << l[i]
     return s
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -127,7 +124,7 @@ def ilowbit(S: int) -> int:
 
 # ---------------------------------------------------------------------------
 
-def parse_k(k: Union[None, int, list, tuple], n: int, b: int = 0) -> tuple:
+def parse_k(k: Union[None, int, list[int], tuple], n: int, b: int = 0) -> tuple[int, int]:
     """
     Parse k
         None        -> [0, n]
@@ -150,7 +147,6 @@ def parse_k(k: Union[None, int, list, tuple], n: int, b: int = 0) -> tuple:
     if kmax < 0:
         kmax = n + kmax
     return max(b, kmin), kmax
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -162,7 +158,6 @@ def idsign(A: int, B: int = 0) -> int:
     D = idiff(A, B)
     c = icard(D)
     return -1 if c & 1 else +1
-# end
 
 
 def iisign(A: int, B: int) -> int:
@@ -170,7 +165,6 @@ def iisign(A: int, B: int) -> int:
     I = iinterset(A, B)
     c = icard(I)
     return -1 if c & 1 else +1
-# end
 
 
 def iusign(A: int, B: int) -> int:
@@ -178,7 +172,6 @@ def iusign(A: int, B: int) -> int:
     I = iunion(A, B)
     c = icard(I)
     return -1 if c & 1 else +1
-# end
 
 
 def isdsign(A: int, B: int) -> int:
@@ -186,7 +179,6 @@ def isdsign(A: int, B: int) -> int:
     I = isdiff(A, B)
     c = icard(I)
     return -1 if c & 1 else +1
-# end
 
 
 # -----------------------------------------------------------------------------
@@ -213,7 +205,6 @@ def ilexcount(k: int, n: int) -> int:
     """number of sets with cardinality in the range [0,k]"""
     if k < 0: k = n
     return sum(_comb(n, i) for i in range(k+1))
-# end
 
 
 def ilexorder(l: int, n: int) -> int:
@@ -224,7 +215,6 @@ def ilexorder(l: int, n: int) -> int:
         k += 1
         c += _comb(n, k)
     return k
-# end
 
 
 def ilexset(i: int, n: int) -> int:
@@ -248,7 +238,6 @@ def ilexset(i: int, n: int) -> int:
         S = iadd(S, ck)
         k -= 1
     return S
-# end
 
 
 def ilexidx(S: int, n: int) -> int:
@@ -263,29 +252,41 @@ def ilexidx(S: int, n: int) -> int:
         l += ci
         i += 1
     return l
-# end
 
 
 # ---------------------------------------------------------------------------
 
+def ilexpowersetn(n: int, empty: bool = True, full: bool = True,
+                  k: Optional[Union[tuple, list[int], int]] = None) -> Iterator[int]:
+    N = (1 << n) - 1
+    return ilexpowerset(N, empty=empty, full=full, k=k)
+
+
 def ilexpowerset(N: int,
-                 empty: bool=True,
-                 full: bool=True,
-                 k: Optional[Union[tuple, list, int]]=None) -> Iterator[int]:
-    """subsets in lexicographic order"""
+                 empty: bool = True,
+                 full: bool = True,
+                 k: Optional[Union[tuple, list[int], int]] = None) -> Iterator[int]:
+    """
+    subsets in lexicographic order with cardinality in the range specified by k
+    :param N: full set
+    :param empty: if to include the empty set
+    :param full: if to include the full set
+    :param k: card | (min_card,max_card)
+    :return:
+    """
     n = icard(N)
     if k is None:
         k = 0 if empty else 1, n if full else n-1
-    return ilexsubset(0, N, k=k)
-# end
+    return ilexsubset(0, N, n=n, k=k)
+
 
 ipowerset_lex = ilexpowerset
 
 
-def ilexsubset(B: Optional[int]=None,
-               E: Optional[int]=None,
-               n: Optional[int]=None,
-               k: Optional[Union[tuple, list, int]]=None) -> Iterator[int]:
+def ilexsubset(B: Optional[int] = None,
+               E: Optional[int] = None,
+               n: Optional[int] = None,
+               k: Optional[Union[tuple, list[int], int]] = None) -> Iterator[int]:
     """
     Subsets in the range [B,E] with cardinality in the range [kmin, kmax]
     in lexicographic order
@@ -317,8 +318,9 @@ def ilexsubset(B: Optional[int]=None,
     for k in range(kmin-b, kmax-b+1):
         for C in combinations(L, k):
             S = _iset(C)
-            yield iunion(B, S)
-# end
+            U = iunion(B, S)
+            yield U
+
 
 isubsets_lex = ilexsubset
 
@@ -348,13 +350,11 @@ def ibinset(bits: Iterable[int]) -> int:
             S |= m
         m <<= 1
     return S
-# end
 
 
 def isetn(n: int) -> int:
     """Full set"""
     return (1 << n) - 1
-# end
 
 
 def iset(L: Iterable[int]) -> int:
@@ -368,10 +368,9 @@ def iset(L: Iterable[int]) -> int:
     """
     assert type(L) in [list, set, tuple, range]
     return _iset(L)
-# end
 
 
-def ilist(S: int) -> Tuple[int]:
+def ilist(S: int) -> list[int]:
     """
     Convert a bitset in the tuple of elements
 
@@ -380,12 +379,11 @@ def ilist(S: int) -> Tuple[int]:
     :param S: bitset
     :return: list of elements
     """
-    return tuple(imembers(S))
-# end
+    return list(imembers(S))
 
 
-def ilist_tuple(S: int) -> Tuple[int]:
-    return tuple(imembers(S))
+def ilist_tuple(S: int) -> list[int]:
+    return list(imembers(S))
 
 
 def ilist_set(S: int) -> Set[int]:
@@ -407,7 +405,7 @@ def icard(S: int) -> int:
         c += _BIT_COUNTS[S & 0xFF]
         S >>= 8
     return c
-# end
+
 
 icount = icard
 
@@ -415,7 +413,7 @@ icount = icard
 def iinsert(S: int, i: int) -> int:
     """Add the element i into the bitset"""
     return S | (1 << i)
-# end
+
 
 iadd = iinsert
 
@@ -426,7 +424,7 @@ def iremove(S: int, i: int) -> int:
     if S & a:
         S = S ^ a
     return S
-# end
+
 
 isub = iremove
 
@@ -434,14 +432,13 @@ isub = iremove
 def ireplace(S: int, i: int, j: int) -> int:
     """Remove the element 'i' and add the element 'j'"""
     return iinsert(iremove(S, i), j)
-# end
 
 
 # ---------------------------------------------------------------------------
 # Special operations
 # ---------------------------------------------------------------------------
 
-def isplit(S: int) -> tuple:
+def isplit(S: int) -> tuple[int, int]:
     """Split the set in two parts"""
     s = icard(S)
     t = s//2
@@ -454,7 +451,6 @@ def isplit(S: int) -> tuple:
         c += 1
     # end
     return T, idiff(S, T)
-# end
 
 
 def ireduceset(S: int, P: int, n: int, L=None):
@@ -489,7 +485,6 @@ def ireduceset(S: int, P: int, n: int, L=None):
         R = iadd(R, c)
 
     return R
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -499,31 +494,26 @@ def ireduceset(S: int, P: int, n: int, L=None):
 def iismember(S: int, i: int) -> bool:
     """Check if the element i is in the bitset"""
     return S & (1 << i) != 0
-# end
 
 
 def iissameset(S1: int, S2: int) -> bool:
     """Check if the two sets are equal"""
     return S1 == S2
-# end
 
 
 def iissubset(S1: int, S2: int) -> bool:
     """Check is S1 is a subset of S2"""
     return S1 & ~S2 == 0
-# end
 
 
 def iissuperset(S1: int, S2: int) -> bool:
     """Check if S1 is a superset of S2"""
     return S2 & ~S1 == 0
-# end
 
 
 def ihasintersect(S1: int, S2: int) -> bool:
     """Check if S1 has intersection with S2"""
     return S1 & S2 != 0
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -533,37 +523,31 @@ def ihasintersect(S1: int, S2: int) -> bool:
 def imember(S: int, i: int) -> int:
     """1 if i is in member of S else 0"""
     return 1 if S & (1 << i) else 0
-# end
 
 
 def iunion(S1: int, S2: int) -> int:
     """union"""
     return S1 | S2
-# end
 
 
 def iinterset(S1: int, S2: int) -> int:
     """intersection"""
     return S1 & S2
-# end
 
 
 def idiff(S1: int, S2: int) -> int:
     """difference"""
     return S1 & ~S2
-# end
 
 
 def isdiff(S1: int, S2: int) -> int:
     """symmetric difference"""
     return (S1 & ~S2) | (~S1 & S2)
-# end
 
 
 def idiffn(S1: int, S2: int, S3: int=0) -> int:
     """difference between 3 bitsets (S1 - S2) - S3"""
     return S1 & ~S2 & ~S3
-# end
 
 
 def idiff_gt(S1: int, S2: int) -> int:
@@ -601,14 +585,13 @@ def imembers(S: int, reverse: bool=False) -> Iterable[int]:
                 yield i
             i -= 1
     return
-# end
 
 
 # ---------------------------------------------------------------------------
 # Subsets & powersets
 # ---------------------------------------------------------------------------
 
-def ipowerset(N: int, empty: bool=True, full: bool=True) -> Iterator[int]:
+def ipowerset(N: int, empty: bool = True, full: bool = True) -> Iterator[int]:
     """all subsets of the fullset N (in binary order)"""
     s = 0 if empty else 1
     e = N if full else (N - 1)
@@ -616,13 +599,12 @@ def ipowerset(N: int, empty: bool=True, full: bool=True) -> Iterator[int]:
 # end
 
 
-def ipowersetn(n: int, empty: bool=True, full: bool=True) -> Iterator[int]:
+def ipowersetn(n: int, empty: bool = True, full: bool = True) -> Iterator[int]:
     N = (1 << n) - 1
     return ipowerset(N, empty=empty, full=full)
-# end
 
 
-def isubsets(B: int, E: Optional[int]=None, lower: bool=True, upper: bool=True):
+def isubsets(B: int, E: Optional[int] = None, lower: bool = True, upper: bool = True):
     """
     Subsets in the range [B, E].
     If card(B) > card(E), generate the subsets in the range [E, B]
@@ -648,7 +630,6 @@ def isubsets(B: int, E: Optional[int]=None, lower: bool=True, upper: bool=True):
     for S in range(b, e, s):
         U = _isetm(S, D)
         yield iunion(B, U)
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -735,7 +716,6 @@ def _algorithm_u(ns: Collection[int], m: int) -> Iterator[int]:
     for j in range(1, m + 1):
         a[n - m + j] = j - 1
     return f(m, n, 0, n, a)
-# end
 
 
 def ipartitions(S: int, size=None, reverse=False) -> Iterator[int]:
@@ -775,14 +755,13 @@ def ipartitions(S: int, size=None, reverse=False) -> Iterator[int]:
     for m in range(b, e, S):
         for P in _algorithm_u(ls, m):
             yield tuple(map(_iset, P))
-# end
 
 
 # ---------------------------------------------------------------------------
 # Special iterators
 # ---------------------------------------------------------------------------
 
-def idisjointpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
+def idisjointpairs(N: int, empty=True) -> Iterator[tuple[int, int]]:
     """
     Generate all possible pairs of disjoint sets
     :param N: fullset
@@ -791,15 +770,14 @@ def idisjointpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
     """
     n = icard(N)
     b = 0 if empty else 1
-    for S in ilexsubset(N, k=[b,n//2]):
+    for S in ilexsubset(N, k=[b, n//2]):
         s = icard(S)
         D = idiff_gt(N, S)
         for T in ilexsubset(D, k=[s, n]):
             yield S, T
-# end
 
 
-def ipowersetpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
+def ipowersetpairs(N: int, empty=True) -> Iterator[tuple[int, int]]:
     """
     Generate all possible pairs of sets with some intersection
     :param N: fullset
@@ -821,10 +799,9 @@ def ipowersetpairs(N: int, empty=True) -> Iterator[Tuple[int, int]]:
         D = idiffn(N, S, T)
         for I in ilexsubset(D):
             yield iunion(S, I), iunion(T, I)
-# end
 
 
-def isupersetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
+def isupersetpairs(N: int, same=True, empty=True) -> Iterator[tuple[int, int]]:
     """
     Generate all possible pairs of sets and supersets of the first set
     :param N: fullset
@@ -842,7 +819,7 @@ def isupersetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
 # end
 
 
-def isubsetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
+def isubsetpairs(N: int, same=True, empty=True) -> Iterator[tuple[int, int]]:
     """
     Generate all possible pairs of sets and subsets of the first set
     :param N: fullset
@@ -852,7 +829,6 @@ def isubsetpairs(N: int, same=True, empty=True) -> Iterator[Tuple[int, int]]:
     for S in ipowerset(N, empty=empty):
         for T in isubsets(S, lower=empty, upper=same):
             yield T, S
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -879,7 +855,6 @@ def irandset(n: int, rnd=None) -> int:
         if r < .5:
             S = iadd(S, i)
     return S
-# end
 
 
 # def irandsubsets(n: int, n_perm: int) -> list:
@@ -924,7 +899,6 @@ def ijaccard_index(S1: int, S2: int) -> float:
         return 1.
     else:
         return icard(iinterset(S1, S2)) / icard(iunion(S1, S2))
-# end
 
 
 def ihamming_distance(S1: int, S2: int) -> int:
@@ -938,7 +912,6 @@ def ihamming_distance(S1: int, S2: int) -> int:
     :return:
     """
     return icard(isdiff(S1, S2))
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -1016,7 +989,6 @@ def isubsetsc(S: int, l=None, u=None) -> Iterator[int]:
     for k in range(l, u+1):
         for c in combinations(S, k):
             yield iset(c)
-# end
 
 
 # ---------------------------------------------------------------------------
