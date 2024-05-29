@@ -5,7 +5,7 @@
 from numpy import ndarray, zeros, ones, diag
 from numpy.linalg import solve
 from numpy.random import rand
-from iset import *
+from stdlib.iset import *
 from stdlib.mathx import comb, iseq, sqrt
 
 

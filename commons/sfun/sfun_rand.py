@@ -21,7 +21,7 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as spi
 import numpy as np
 from random import random, gauss
-from iset import *
+from stdlib.iset import *
 from .sfun_fun import SetFunction
 
 

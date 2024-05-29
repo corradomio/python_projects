@@ -3,7 +3,7 @@ import BTrees.OOBTree
 import account
 
 
-storage = ZODB.FileStorage.FileStorage('mydata.fs')
+storage = ZODB.FileStorage.FileStorage('mydata.zodb')
 db = ZODB.DB(storage)
 connection = db.open()
 root = connection.root

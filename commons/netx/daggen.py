@@ -3,7 +3,7 @@ from random import Random
 import networkx as nx
 import numpy as np
 
-from iset import ilexsubset, imembers, iadd
+from stdlib.iset import ilexsubset, imembers, iadd
 
 
 # ---------------------------------------------------------------------------

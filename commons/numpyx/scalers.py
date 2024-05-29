@@ -93,12 +93,12 @@ class MinMaxScaler(Scaler):
 class StandardScaler(Scaler):
     """
    Apply a scaling to the array in such way that all valuer have
-   a normal distribution with parameters meanr and stdr
+   a normal distribution with parameters 'mean' and 'std'
 
    It is possible to apply the scaling globally or per column
    """
 
-    def __init__(self, mean=0., std=1., params=None, clip=None, globally=False):
+    def __init__(self, mean: float = 0., std: float = 1., params=None, clip=None, globally=False):
         """
         Initialize the transformer
 
@@ -106,6 +106,8 @@ class StandardScaler(Scaler):
 
         :param mean: mean
         :param std: standard deviation
+        :param params: optional[tuple[float, float]] alternative to 'mean'/'std'
+        :param clip: optional[min_value, max_value]
         :param globally: if to apply the transformation globally or by column
         """
         super().__init__()
@@ -121,30 +123,23 @@ class StandardScaler(Scaler):
         self.stdv = None
 
         self.globally = globally
-        self.rank = 0
 
     def fit(self, array: np.ndarray):
         assert isinstance(array, np.ndarray)
 
-        rank = len(array.shape)
         globally = self.globally
-        if globally or rank == 1:
+        if globally:
             self.meanv = array.mean()
             self.stdv = array.std()
-        elif rank == 2:
+        else:
             self.meanv = array.mean(axis=0)
             self.stdv = array.std(axis=0)
-        else:
-            raise ValueError(f"Unsupported array with rank={rank}")
-
-        self.rank = rank
         return self
 
     def transform(self, array: np.ndarray) -> np.ndarray:
         assert isinstance(array, np.ndarray)
-        assert self.rank == len(array.shape)
 
-        if self.globally or self.rank == 1:
+        if self.globally:
             scaled = self.meanr + (array - self.meanv) / self.stdv * self.stdr
         else:
             scaled = np.zeros_like(array)
@@ -159,9 +154,8 @@ class StandardScaler(Scaler):
 
     def inverse_transform(self, array: np.ndarray) -> np.ndarray:
         assert isinstance(array, np.ndarray)
-        assert self.rank == len(array.shape)
 
-        if self.globally or self.rank == 1:
+        if self.globally:
             scaled = self.meanv + (array - self.meanr) / self.stdr * self.stdv
         else:
             scaled = np.zeros_like(array)

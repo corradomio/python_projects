@@ -2,7 +2,7 @@
 # Sparset SetFunction representation
 #
 from collections import defaultdict
-from iset import iset
+from stdlib.iset import iset
 from .sfun_fun import SetFunction
 
 

@@ -4,7 +4,7 @@
 #   .
 from numpy import ndarray
 from stdlib.mathx import INF
-from iset import *
+from stdlib.iset import *
 from .sfun_fun import SetFunction
 
 
