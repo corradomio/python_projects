@@ -1,5 +1,4 @@
 import logging.config
-from datetime import datetime
 
 import pandasx as pdx
 from iplan.om import IPlanObjectModel, IPredictTimeSeries
@@ -23,8 +22,10 @@ def main():
         # for m in data_model.measures():
         #     print(m)
 
-        area_hierarchy = ipom.area_hierarchy(AREA_HIERARCHY)
-        skill_hierarchy = ipom.skill_hierarchy(SKILL_HIERARCHY)
+        area_hierarchy = ipom.hierachies().area_hierarchy(AREA_HIERARCHY)
+        area_tree = area_hierarchy.tree()
+        skill_hierarchy = ipom.hierachies().skill_hierarchy(SKILL_HIERARCHY)
+        skill_tree = skill_hierarchy.tree()
 
         # ipom.delete_data_model(DATA_MODEL)
         data_model = ipom.create_data_model(
@@ -49,24 +50,7 @@ def main():
         )
         # data_master = ipom.data_master(DATA_MASTER)
 
-        df_train = pdx.read_data(
-            "data_test/vw_food_import_kg_train_test_area_skill.csv",
-            datetime=('date', '%Y/%m/%d %H:%M:%S', 'M'),
-            na_values=['(null)'],
-            ignore=['imp_month', 'prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country'],
-        )
-
-        # 'area','skill','crude_oil_price','date','evaporation','imp_month','import_kg','max_temperature',
-        # 'mean_temperature','min_temperature','nikkei_225_japan','rainy_days','sandp_500_us','sandp_sensex_india',
-        # 'shenzhen_index_china','vap_pressure'
-        df_pred = pdx.read_data(
-            "data_test/vw_food_import_kg_pred_area_skill.csv",
-            datetime=('date', '%Y/%m/%d %H:%M:%S', 'M'),
-            na_values=['(null)'],
-            ignore=['imp_month', 'prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country'],
-        )
-
-        ipom.delete_time_series_focussed(TIME_SERIES)
+        # ipom.delete_time_series_focussed(TIME_SERIES)
         ts: IPredictTimeSeries = ipom.create_time_series_focussed(
             TIME_SERIES,
             targets='import_kg',
@@ -84,33 +68,46 @@ def main():
         # print(ts.skill_hierarchy.name)
 
         # ipom.delete_prediction_plan(PLAN_NAME, DATA_MASTER)
-        plan = ipom.create_prediction_plan(
-            PLAN_NAME, DATA_MASTER,
-            start_date=pdx.to_datetime(df_train['date'].max() + 1),
-            update=False)
+        # plan = ipom.create_prediction_plan(
+        #     PLAN_NAME, DATA_MASTER,
+        #     start_date=pdx.to_datetime(df_train['date'].max() + 1),
+        #     update=False)
         # plan = ipom.prediction_plan(PLAN_NAME, DATA_MASTER)
-
-        # -------------------------------------------------------------------
 
         ts.set_plan(PLAN_NAME)
 
-        # ts.delete_train_data(plan=PLAN_NAME)
-        # ts.delete_predict_data(plan=PLAN_NAME)
-        #
-        # ts.save_train_data(df_train, plan=PLAN_NAME)
-        # ts.save_predict_data(df_pred, plan=PLAN_NAME)
-        #
-        # dft = ts.select_train_data(plan=PLAN_NAME)
-        # dfp = ts.select_predict_data(plan=PLAN_NAME)
+        # -------------------------------------------------------------------
+        # Train
 
-        ts.delete_train_data()
-        ts.delete_predict_data()
+        df_train = pdx.read_data(
+            "data_test/vw_food_import_kg_train_test_area_skill.csv",
+            datetime=('date', '%Y/%m/%d %H:%M:%S', 'M'),
+            na_values=['(null)'],
+            ignore=['imp_month', 'prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country'],
+        )
 
-        ts.save_train_data(df_train)
-        ts.save_predict_data(df_pred)
+        # ts.delete_train_data()
+        # ts.save_train_data(df_train)
 
         dft = ts.select_train_data()
-        dfp = ts.select_predict_data()
+
+        # -------------------------------------------------------------------
+        # Predict
+
+        # 'area','skill','crude_oil_price','date','evaporation','imp_month','import_kg','max_temperature',
+        # 'mean_temperature','min_temperature','nikkei_225_japan','rainy_days','sandp_500_us','sandp_sensex_india',
+        # 'shenzhen_index_china','vap_pressure'
+        df_pred = pdx.read_data(
+            "data_test/vw_food_import_kg_pred_area_skill.csv",
+            datetime=('date', '%Y/%m/%d %H:%M:%S', 'M'),
+            na_values=['(null)'],
+            ignore=['imp_month', 'prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country'],
+        )
+
+        # ts.delete_predict_data()
+        # ts.save_predict_data(df_pred)
+
+        dfp = ts.select_predict_data(new_format=True)
 
     print("done")
 

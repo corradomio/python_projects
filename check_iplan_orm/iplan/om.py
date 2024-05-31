@@ -4,18 +4,19 @@ from deprecated import deprecated
 from stdlib import as_list
 from stdlib.is_instance import is_instance
 from stdlib.dateutilx import relativeperiods
-from stdlib.dict import reverse
+from stdlib.dict import reverse_dict
 import pandas as pd
 import pandasx as pdx
 from pandas import DataFrame
 from typing import Optional, Union, Any, Literal, Self
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date, time
 
 from sqlalchemy import MetaData, Engine, Table, Row, create_engine, URL
 from sqlalchemy import select, delete, insert, update, text, func
 
 
 CREATED_BY = "Python IPlanObjectModel"
+
 
 # ---------------------------------------------------------------------------
 # to_data
@@ -56,7 +57,7 @@ def fill_missing_dates(df_pivoted: DataFrame, start_date: datetime, end_date: da
 def safe_int(s):
     try:
         return int(s)
-    except:
+    except ValueError:
         return s
 
 
@@ -66,8 +67,8 @@ def safe_int(s):
 # ---------------------------------------------------------------------------
 
 def pivot_df(df: DataFrame,
-              area_feature_dict: dict[int, str], skill_feature_dict: [int, str], measure_dict: [int, str],
-              new_format: bool) -> DataFrame:
+             area_feature_dict: dict[int, str], skill_feature_dict: [int, str], measure_dict: [int, str],
+             new_format: bool) -> DataFrame:
 
     # 0) check if all mandatory columns are present in the dataframe
 
@@ -128,7 +129,7 @@ def pivot_df(df: DataFrame,
     return df_pivoted
 
 
-def compose_predict_df(df: DataFrame,
+def compose_predict_df(df_past: DataFrame,
                        area_feature_dict: dict[int, str],
                        skill_feature_dict: dict[int, str],
                        input_measure_ids: list[int],
@@ -136,32 +137,88 @@ def compose_predict_df(df: DataFrame,
                        start_end_dates: dict[int, tuple[datetime, datetime]],
                        freq: Literal['D', 'W', 'M'],
                        defval: Union[None, float] = 0.,
-                       new_format=False) -> DataFrame:
+                       new_format=False) -> tuple[DataFrame, DataFrame]:
+    """
+
+    :param df_past: dataframe to process
+    :param area_feature_dict: dictionary area id->name
+    :param skill_feature_dict: dictionary skill id->name
+    :param input_measure_ids: list of measures used as input features
+    :param measure_dict: dictionary measure id->name
+    :param start_end_dates: dictionary start/end dates for each area
+    :param freq: period frequency (daily, weekly, monthly)
+    :param defval: default value to use for filling
+    :param new_format: dataset format (old/new)
+    :return: processed dataset
+    """
+    assert is_instance(df_past, DataFrame)
+    assert is_instance(area_feature_dict, dict[int, str])
+    assert is_instance(skill_feature_dict, dict[int, str])
+    assert is_instance(input_measure_ids, list[int])
+    assert is_instance(measure_dict, dict[int, str])
+    assert is_instance(start_end_dates, dict[int, tuple[datetime, datetime]])
+    assert is_instance(freq, Literal['D', 'W', 'M'])
     assert is_instance(defval, Union[None, float])
 
+    df_future = _create_df_future(df_past,
+                                  area_feature_dict, skill_feature_dict,
+                                  input_measure_ids, measure_dict,
+                                  start_end_dates, freq, defval,
+                                  new_format=new_format)
+
+    df_past, df_future = _merge_df_past_future(df_past, df_future,
+                                               input_measure_ids, measure_dict,
+                                               new_format=new_format)
+    return df_past, df_future
+# end
+
+
+def _create_df_future(
+        df_past: DataFrame,
+        area_feature_dict: dict[int, str],
+        skill_feature_dict: dict[int, str],
+        input_measure_ids: list[int],
+        measure_dict: dict[int, str],
+        start_end_dates: dict[int, tuple[datetime, datetime]],
+        freq: Literal['D', 'W', 'M'],
+        defval: Union[None, float] = 0.,
+        new_format=False
+) -> DataFrame:
+
     if new_format:
-        return _compose_predict_df_new_format(
-            df,
+        df_future = _create_df_future_new_format(
+            df_past,
             area_feature_dict,
             skill_feature_dict,
             input_measure_ids,
             measure_dict,
             start_end_dates, freq,
             defval)
+
+        # return _compose_predict_df_new_format(
+        #     df_past,
+        #     area_feature_dict,
+        #     skill_feature_dict,
+        #     input_measure_ids,
+        #     measure_dict,
+        #     start_end_dates, freq,
+        #     defval)
     else:
-        return _compose_predict_df_old_format(
-            df,
+        df_future = _create_df_future_old_format(
+            df_past,
             area_feature_dict,
             skill_feature_dict,
             input_measure_ids,
             measure_dict,
             start_end_dates, freq,
             defval)
-    # end
+
+    return df_future
+# end
 
 
-def _compose_predict_df_old_format(
-    df: DataFrame,
+def _create_df_future_new_format(
+    df_past: DataFrame,
     area_feature_dict: dict[int, str],
     skill_feature_dict: dict[int, str],
     input_measure_ids: list[int],
@@ -170,9 +227,178 @@ def _compose_predict_df_old_format(
     freq: Literal['D', 'W', 'M'],
     defval: Union[None, float] = 0.) -> DataFrame:
 
-    # columns: ['skill_id_fk', 'area_id_fk', 'time', 'day', <measure_id>
+    area_feature_drev = reverse_dict(area_feature_dict)
+    skill_feature_drev = reverse_dict(skill_feature_dict)
+    measure_drev = reverse_dict(measure_dict)
 
-    target_measure_ids = set(measure_dict.keys()).difference(input_measure_ids)
+    # columns: ['area', 'skill', 'date', <measure_name>]
+
+    area_skill_list = pdx.groups_list(df_past, groups=['area', 'skill'])
+    df_future_list = []
+    for area_skill in area_skill_list:
+        area_name, skill_name = area_skill
+
+        # check if area_name, skill_name are defined
+        if area_name not in area_feature_drev or skill_name not in skill_feature_drev:
+            continue
+
+        area_feature_id = area_feature_drev[area_name]
+        # skill_feature_id = skill_feature_drev[skill_name]
+
+        # trick: 0 is used as DEFAULT datetime for all areas
+        if 0 in start_end_dates:
+            start_date, end_date = start_end_dates[0]
+        elif area_feature_id in start_end_dates:
+            start_date, end_date = start_end_dates[area_feature_id]
+        else:
+            # no start/end dates is found
+            continue
+
+        #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
+        #   MS: MonthBegin
+        #   ME: MonthEnd
+        if freq == 'M': freq = 'MS'
+
+        date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
+        # date_index = pd.period_range(start=start_date, end=end_date, freq=freq)
+
+        # create the dataframe
+        area_skill_df = DataFrame(data={
+            'area': area_name,
+            'skill': skill_name,
+            'date': date_index.to_series()
+        })
+
+        # fill the dataframe with the measures
+        for measure_name in measure_drev:
+            area_skill_df[measure_name] = defval
+
+        df_future_list.append(area_skill_df)
+        pass
+    # end
+
+    df_future = pd.concat(df_future_list, axis=0, ignore_index=True).reset_index(drop=True)
+    return df_future
+# end
+
+
+def _create_df_future_old_format(
+    df_past: DataFrame,
+    area_feature_dict: dict[int, str],
+    skill_feature_dict: dict[int, str],
+    input_measure_ids: list[int],
+    measure_dict: dict[int, str],
+    start_end_dates: dict[int, tuple[datetime, datetime]],
+    freq: Literal['D', 'W', 'M'],
+    defval: Union[None, float] = 0.) -> DataFrame:
+
+    # columns: ['skill_id_fk', 'area_id_fk', 'time', 'day', <measure_id: str>]
+
+    area_skill_list = pdx.groups_list(df_past, groups=['area_id_fk', 'skill_id_fk'])
+    df_future_list = []
+    for area_skill in area_skill_list:
+        area_feature_id = int(area_skill[0])
+        skill_feature_id = int(area_skill[1])
+
+        # check if area_name, skill_name are defined
+        if area_feature_id not in area_feature_dict or skill_feature_id not in skill_feature_dict:
+            continue
+
+        # trick: 0 is used as DEFAULT datetime for all areas
+        if 0 in start_end_dates:
+            start_date, end_date = start_end_dates[0]
+        elif area_feature_id in start_end_dates:
+            start_date, end_date = start_end_dates[area_feature_id]
+        else:
+            # no start/end dates is found
+            continue
+
+        #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
+        #   MS: MonthBegin
+        #   ME: MonthEnd
+        if freq == 'M': freq = 'MS'
+
+        date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
+        # date_index = pd.period_range(start=start_date, end=end_date, freq=freq)
+
+        # create the dataframe
+        area_skill_df = DataFrame(data={
+            'area_id_fk': area_feature_id,
+            'skill_id_fk': skill_feature_id,
+            'time': date_index.to_series()
+        })
+        area_skill_df['day'] = area_skill_df['time'].dt.day_name()
+
+        # fill the dataframe with the measures (measure_id as string)
+        for measure_id in measure_dict:
+            area_skill_df[str(measure_id)] = defval
+
+        df_future_list.append(area_skill_df)
+        pass
+    # end
+
+    df_future = pd.concat(df_future_list, axis=0, ignore_index=True).reset_index(drop=True)
+    return df_future
+# end
+
+
+def _merge_df_past_future(df_past: DataFrame, df_future: DataFrame,
+                          input_measure_ids: list[int], measure_dict: dict[int, str],
+                          new_format=True) -> DataFrame:
+    assert is_instance(df_past, DataFrame)
+    assert is_instance(df_future, DataFrame)
+    assert is_instance(input_measure_ids, list[int])
+    assert is_instance(measure_dict, dict[int, str])
+    assert sorted(df_past.columns) == sorted(df_future.columns)
+
+    groups = ['area', 'skill'] if new_format else ['area_id_fk', 'skill_id_fk']
+    date_col = 'date' if new_format else 'time'
+
+    df_past_dict = pdx.groups_split(df_past, groups=groups)
+    df_future_dict = pdx.groups_split(df_future, groups=groups)
+    df_predict_dict = {}
+
+    for group in df_future_dict:
+        if group not in df_past_dict:
+            continue
+
+        dfp = df_past_dict[group]
+        dff = df_future_dict[group]
+
+        past_min = dfp[date_col].min()
+        past_max = dfp[date_col].max()
+        future_min = dff[date_col].min()
+        future_max = dff[date_col].max()
+
+        if past_max < future_min:
+            df_predict_dict[group] = dff
+        elif past_max >= future_max:
+            continue
+        elif past_min < future_min < past_max:
+            df_predict_dict[group] = dff[dff[date_col] > past_min]
+        else:
+            continue
+    # end
+
+    df_pred = pdx.groups_merge(df_predict_dict, groups=groups)
+    df_merged = pd.concat([df_pred, df_future], axis=0, ignore_index=True)
+    return df_merged
+
+
+def _compose_predict_df_old_format(
+    df_past: DataFrame,
+    area_feature_dict: dict[int, str],
+    skill_feature_dict: dict[int, str],
+    input_measure_ids: list[int],
+    measure_dict: dict[int, str],
+    start_end_dates: dict[int, tuple[datetime, datetime]],
+    freq: Literal['D', 'W', 'M'],
+    defval: Union[None, float] = 0.) -> DataFrame:
+
+    # columns: ['skill_id_fk', 'area_id_fk', 'time', 'day', <measure_id>]
+
+    measure_ids = set(measure_dict.keys())
+    target_measure_ids = measure_ids.difference(input_measure_ids)
 
     df_list = []
     for area_feature_id in area_feature_dict:
@@ -195,17 +421,20 @@ def _compose_predict_df_old_format(
                 'time': date_index.to_series()
             })
             area_skill_df['day'] = area_skill_df['time'].dt.day_name()
+            for input_id in input_measure_ids:
+                area_skill_df[str(input_id)] = defval
+
             for target_id in target_measure_ids:
                 area_skill_df[str(target_id)] = defval
 
             df_list.append(area_skill_df)
 
-    df = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
-    return df
+    df_pred = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
+    return df_pred
 
 
 def _compose_predict_df_new_format(
-    df: DataFrame,
+    df_past: DataFrame,
     area_feature_dict: dict[int, str],
     skill_feature_dict: dict[int, str],
     input_measure_ids: list[int],
@@ -216,7 +445,8 @@ def _compose_predict_df_new_format(
 
     # columns: ['area', 'skill', 'date', <measure_name>]
 
-    target_measure_ids = set(measure_dict.keys()).difference(input_measure_ids)
+    measure_ids = set(measure_dict.keys())
+    target_measure_ids = measure_ids.difference(input_measure_ids)
 
     df_list = []
     for area_feature_id in area_feature_dict:
@@ -231,6 +461,11 @@ def _compose_predict_df_new_format(
             # no start/end dates is found
             continue
 
+        #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
+        #   MS: MonthBegin
+        #   ME: MonthEnd
+        if freq == 'M': freq = 'MS'
+
         date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
         for skill_feature_id in skill_feature_dict:
             area_skill_df = DataFrame(data={
@@ -238,16 +473,17 @@ def _compose_predict_df_new_format(
                 'skill': skill_feature_dict[skill_feature_id],
                 'date': date_index.to_series()
             })
+            for input_id in input_measure_ids:
+                input_name = measure_dict[input_id]
+                area_skill_df[input_name] = defval
             for target_id in target_measure_ids:
                 target_name = measure_dict[target_id]
                 area_skill_df[target_name] = defval
 
             df_list.append(area_skill_df)
 
-    df = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
-    return df
-
-    pass
+    df_pred = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
+    return df_pred
 
 
 # ---------------------------------------------------------------------------
@@ -318,12 +554,11 @@ def normalize_df(df: DataFrame,
     if len(extra_columns) > 0:
         df.drop(labels=extra_columns, axis=1, inplace=True)
 
-    new_format = False
     measure_ids = list(measure_dict.keys())
 
-    area_features_drev = reverse(area_features_dict)
-    skill_feature_drev = reverse(skill_features_dict)
-    measure_drev = reverse(measure_dict)
+    area_features_drev = reverse_dict(area_features_dict)
+    skill_feature_drev = reverse_dict(skill_features_dict)
+    measure_drev = reverse_dict(measure_dict)
 
     # 3) check the df structure: ensures that the format is correct
     columns = set(df.columns)
@@ -379,6 +614,7 @@ class IPlanObject:
 
         self.log = logging.getLogger(f"iplan.om.{self.__class__.__name__}")
     # end
+# end
 
 
 class IPlanData(IPlanObject):
@@ -472,6 +708,7 @@ class AttributeDetail(IPlanData):
     @property
     def hierarchy_id(self):
         return self.data['attribute_master_id']
+# end
 
 
 class AttributeHierarchy(IPlanData):
@@ -528,7 +765,7 @@ class AttributeHierarchy(IPlanData):
             if leaf_only:
                 query = select(table.c['id', 'attribute']).where(
                     (table.c['attribute_master_id'] == self.id) &
-                    (table.c['is_leafattribute'] == True)
+                    (table.c['is_leafattribute'] == True)       # WARN: DOESN'T change '== True' into 'is True'
                 )
             else:
                 query = select(table.c['id', 'attribute']).where(
@@ -571,7 +808,7 @@ class AttributeHierarchy(IPlanData):
         :return: list of attribute ids
         """
         feature_dict = self.feature_ids(with_name=True)
-        feature_drev = reverse(feature_dict)
+        feature_drev = reverse_dict(feature_dict)
         aids = []
 
         if attr is None:
@@ -595,6 +832,10 @@ class AttributeHierarchy(IPlanData):
             raise ValueError(f"Invalid attribute type {type(attr)}: unsupported in in hierarchy {self.name}")
 
         return aids
+    # end
+
+    def delete(self):
+        self.ipom.delete_attribute_hierarchy(self.id, self.type)
 # end
 
 
@@ -637,6 +878,26 @@ class PeriodHierarchy(IPlanObject):
 
     def __repr__(self):
         return f"{self._period_hierarchy}:{self._period_length}"
+# end
+
+
+class AttributeHierarchies(IPlanObject):
+
+    def __init__(self, ipom):
+        super().__init__(ipom)
+
+    def area_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
+        return self.ipom.attribute_hierarchy(id, "area")
+
+    def skill_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
+        return self.ipom.attribute_hierarchy(id, "skill")
+
+    def create_area_hierarchy(self, name: str, hierarchy_tree) -> AttributeHierarchy:
+        return self.ipom.create_attribute_hierarchy(name, hierarchy_tree, 'area')
+
+    def create_skill_hierarchy(self, name: str, hierarchy_tree) -> AttributeHierarchy:
+        return self.ipom.create_attribute_hierarchy(name, hierarchy_tree, 'skill')
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -684,6 +945,7 @@ class Measure(IPlanData):
 
     # linked_measure ???
     # period_agg_type ???
+# end
 
 
 class IDataModel(IPlanData):
@@ -729,6 +991,7 @@ class IDataModel(IPlanData):
                 self.log.debug(query)
                 ret = conn.execute(query).fetchone()
             return Measure(self.ipom, to_data(ret), table)
+# end
 
 
 class IDataMaster(IPlanData):
@@ -764,10 +1027,12 @@ class IDataMaster(IPlanData):
         period_hierarchy = self.data['period_hierarchy']
         period_length = self.data['period']
         return PeriodHierarchy(self.ipom, period_hierarchy, period_length)
+# end
 
 
 # ---------------------------------------------------------------------------
 # IDataValuesMaster == IPredictionPlans
+# IPredictionPlan
 # ---------------------------------------------------------------------------
 
 class IPredictionPlans(IPlanObject):
@@ -859,6 +1124,7 @@ class IPredictionPlans(IPlanObject):
         #
         now: datetime = datetime.now()
         area_feature_ids = as_list(area_feature_ids)
+        """:type: list[int]"""
 
         # retrieve the Data Master
         if isinstance(data_master, int | str):
@@ -882,7 +1148,7 @@ class IPredictionPlans(IPlanObject):
             area_feature_ids = af_ids
         else:
             af_count = len(area_feature_ids)
-            ai_count = len(af_ids.intersection(area_feature_ids))
+            ai_count = len(set(af_ids).intersection(area_feature_ids))
             if af_count != ai_count:
                 self.log.error("Found incompatible area_feature_ids")
                 self.log.error(f"      data_master id: {data_master_id}")
@@ -1072,6 +1338,7 @@ class IPredictionPlans(IPlanObject):
             self.log.debug(query)
             result = conn.execute(query).fetchone()
             return result[0], result[1]
+# end
 
 
 class IPredictionPlan(IPlanObject):
@@ -1094,7 +1361,7 @@ class IPredictionPlan(IPlanObject):
 
     @property
     def plan_ids(self) -> list[int]:
-        return self.ipom.select_data_values_master_ids(
+        return self.ipom.select_plan_ids(
             self.name,
             [self.data_master.id],
             self.data_master.area_hierarchy.feature_ids(leaf_only=True)
@@ -1303,7 +1570,7 @@ class IPredictDetailFocussed(IPlanData):
         measure_id = self.data['to_populate'] if write else self.data['parameter_id']
         tmeasure = self.ipom.iDataModelDetail
         return Measure(self.ipom, measure_id, tmeasure)
-
+# end
 
 
 class IPredictMasterFocussed(IPlanData):
@@ -1449,7 +1716,7 @@ class IPredictMasterFocussed(IPlanData):
             rlist = conn.execute(query).fetchall()
             # idlist: [(id,), ...]
         return [IPredictDetailFocussed(self.ipom, to_data(result), tdetail) for result in rlist]
-
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -1503,12 +1770,13 @@ class IDataValuesMaster(IPlanData):
 
     def select_data_values(self):
         return self.ipom.select_data_values(self.id)
-
+# end
 
 
 class IDataValue(IPlanData):
     def __init__(self, ipom, id, table):
         super().__init__(ipom, id, table)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -1592,20 +1860,33 @@ class IPredictTimeSeries(IPlanObject):
                           plan: Optional[str] = None,
                           area: Union[None, int, list[int]] = None,
                           skill: Union[None, int, list[int]] = None,
-                          new_format=False) \
-            -> DataFrame:
+                          new_format=True) -> DataFrame:
+        """
+        Retrieve the train data
+
+        :param plan: name of the plan used for reference
+        :param area: area(s) to select. If not specified, all available areas will be selected
+        :param skill: skill(s) to select. If not specified, all available skills will be selected
+        :param new_format: DataFrame format
+        :return: the dataframe used for training. It contains input/target features
+        """
 
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
-        assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(plan, Optional[str])
 
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
-        plan_ids = self.ipom.prediction_plan(plan, data_master_id).plan_ids
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
+        if not pplan.exists():
+            raise ValueError(f"Plan {plan} not existent")
+
+        plan_ids = pplan.plan_ids
 
         df: DataFrame = self.ipom.select_train_data(
             data_master_id,
@@ -1616,6 +1897,7 @@ class IPredictTimeSeries(IPlanObject):
             new_format=new_format
         )
         return df
+    # end
 
     def select_predict_data(self,
                             plan: Optional[str] = None,
@@ -1623,31 +1905,34 @@ class IPredictTimeSeries(IPlanObject):
                             periods: Optional[int] = None,
                             area: Union[None, int, list[int], str, list[str]] = None,
                             skill: Union[None, int, list[int], str, list[str]] = None,
-                            new_format=False) \
-            -> DataFrame:
+                            new_format=True) -> DataFrame:
         """
+        Retrieve predict data
 
         :param start_date: optional start date
         :param periods: n of periods. The period depends on the DataModel::PeriodHierarchy
+        :param plan: name of the plan used for reference
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
-        :param new_format:
-        :return: the dataframe containing the past and the future data
+        :param new_format: DataFrame format
+        :return: the dataframe used for prediction. It contains the input features only
         """
 
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(periods, Optional[int])
         assert is_instance(area, Union[None, int, list[int]])
         assert is_instance(skill, Union[None, int, list[int]])
+        assert is_instance(plan, Optional[str])
 
         end_date = None
 
-        area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
+        area_feature_dict = self.area_hierarchy.feature_ids(leaf_only=False, with_name=True)
+        skill_feature_dict = self.skill_hierarchy.feature_ids(leaf_only=False, with_name=True)
         measure_dict = self.measure_ids(with_name=True)
         input_feature_ids, _ = self.input_target_measure_ids
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
         freq = self.period_hierarchy.freq
         if periods is None:
@@ -1655,7 +1940,11 @@ class IPredictTimeSeries(IPlanObject):
         if start_date is not None:
             end_date = start_date + relativeperiods(periods=periods, freq=freq)
 
-        plan_ids = self.ipom.prediction_plan(plan, data_master_id).plan_ids
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
+        if not pplan.exists():
+            raise ValueError(f"Plan {plan} not existent")
+
+        plan_ids = pplan.plan_ids
 
         df: DataFrame = self.ipom.select_predict_data(
             data_master_id,
@@ -1713,12 +2002,19 @@ class IPredictTimeSeries(IPlanObject):
         measure_dict = self.measure_ids(with_name=True)
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
-        if plan is not None:
-            pplan = self.ipom.prediction_plan(plan, data_master_id)
-            area_plan_map = pplan.area_plan_map()
-        else:
-            area_plan_map = None
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
+        if not pplan.exists():
+            raise ValueError(f"Plan {plan} not existent")
+
+        area_plan_map = pplan.area_plan_map()
+
+        # if plan is not None:
+        #     pplan = self.ipom.prediction_plan(plan, data_master_id)
+        #     area_plan_map = pplan.area_plan_map()
+        # else:
+        #     area_plan_map = None
 
         # 1) normalize the dataframe
         #    columns: ['area_id_fk', 'skill_id_fk', 'state_date', <measure_id1>, ...]
@@ -1737,14 +2033,14 @@ class IPredictTimeSeries(IPlanObject):
                 plan_id = None if area_plan_map is None or area_feature_id not in area_plan_map \
                     else area_plan_map[area_feature_id]
                 try:
-                    self.log.debugt(f"... area:{area_name}, skill:{skill_name}, measure:{measure_name}")
-
+                    self.log.debugt(f"... [train] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    # Note: type(*_feature_id) is a numpy type! converted into Python int
                     self.ipom.save_area_skill_train_data(
-                        int(area_feature_id), int(skill_feature_id), int(measure_id),
-                        dfas, plan_id=plan_id, update=update)
+                        int(area_feature_id), int(skill_feature_id), int(measure_id), int(plan_id),
+                        dfas, update=update)
                 except Exception as e:
                     exc = traceback.format_exc()
-                    self.log.error(f"... unable to create plan for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self.log.error(f"... unable to save train data for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
                     self.log.error(f"... {e}\n{exc}")
         # end
         self.log.info("Done")
@@ -1757,8 +2053,6 @@ class IPredictTimeSeries(IPlanObject):
         """
 
         :param plan:
-        :param start_date:
-        :param periods:
         :param area:
         :param skill:
         :return:
@@ -1774,6 +2068,7 @@ class IPredictTimeSeries(IPlanObject):
         measure_dict = self.measure_ids(with_name=True)
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
         pplan = self.ipom.prediction_plan(plan, data_master_id)
         if not pplan.exists():
@@ -1813,6 +2108,7 @@ class IPredictTimeSeries(IPlanObject):
         measure_dict = self.measure_ids(with_name=True)
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
         pplan = self.ipom.prediction_plan(plan, self.data_master.id)
         if not pplan.exists():
@@ -1891,15 +2187,16 @@ class IPredictTimeSeries(IPlanObject):
                         (insert only)
         """
         assert is_instance(df, DataFrame)
-        assert is_instance(plan, str)
+        assert is_instance(plan, Optional[str])
 
-        self.log.info("Save prediction data ...")
+        self.log.info("Save predict data ...")
 
         area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
         measure_dict = self.measure_ids(with_name=True)
         data_master_id = self.data_master.id
         plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
 
         # 0) retrieve the Plan map
         #
@@ -1925,14 +2222,14 @@ class IPredictTimeSeries(IPlanObject):
                 measure_name = measure_dict[measure_id]
                 plan_id = area_plan_map[area_feature_id]
                 try:
-                    self.log.debugt(f"... area:{area_name}, skill:{skill_name}, measure:{measure_name}")
-
+                    self.log.debugt(f"... [pred] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    # Note: type(*_feature_id) is a numpy type! converted into Python int
                     self.ipom.save_area_skill_predict_data(
-                        int(area_feature_id), int(skill_feature_id), int(measure_id),
-                        dfas, plan_id=int(plan_id), update=update)
+                        int(area_feature_id), int(skill_feature_id), int(measure_id), int(plan_id),
+                        dfas, update=update)
                 except Exception as e:
                     exc = traceback.format_exc()
-                    self.log.error(f"... unable to create plan for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self.log.error(f"... unable to save predict data for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
                     self.log.error(f"... {e}\n{exc}")
         # end
         self.log.info("Done")
@@ -2002,13 +2299,18 @@ class IPlanObjectModel(IPlanObject):
     # -----------------------------------------------------------------------
     # Area/Skill hierarchy
 
-    def delete_area_hierarchy(self, id: Union[int, str]):
-        self._delete_attribute_hierarchy(id, 'area')
+    def hierachies(self) -> AttributeHierarchies:
+        return AttributeHierarchies(self)
 
-    def delete_skill_hierarchy(self, id: Union[int, str]):
-        self._delete_attribute_hierarchy(id, 'skill')
+    # --
 
-    def _delete_attribute_hierarchy(self, id: Union[int, str], attribute_type: Literal['area', 'skill']):
+    # def delete_area_hierarchy(self, id: Union[int, str]):
+    #     self.delete_attribute_hierarchy(id, 'area')
+
+    # def delete_skill_hierarchy(self, id: Union[int, str]):
+    #     self.delete_attribute_hierarchy(id, 'skill')
+
+    def delete_attribute_hierarchy(self, id: Union[int, str], attribute_type: Literal['area', 'skill']):
         assert is_instance(attribute_type, Literal['area', 'skill'])
         area_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'],
                                              nullable=True)
@@ -2033,13 +2335,16 @@ class IPlanObjectModel(IPlanObject):
 
     # --
 
-    def create_area_hierarchy(self, name: str, hierarchy_tree):
-        return self._create_attribute_hierarchy(name, hierarchy_tree, 'area')
+    # def create_area_hierarchy(self, name: str, hierarchy_tree) \
+    #         -> AttributeHierarchy:
+    #     return self.create_attribute_hierarchy(name, hierarchy_tree, 'area')
 
-    def create_skill_hierarchy(self, name: str, hierarchy_tree):
-        return self._create_attribute_hierarchy(name, hierarchy_tree, 'skill')
+    # def create_skill_hierarchy(self, name: str, hierarchy_tree) \
+    #         -> AttributeHierarchy:
+    #     return self.create_attribute_hierarchy(name, hierarchy_tree, 'skill')
 
-    def _create_attribute_hierarchy(self, name: str, hierarchy_tree, hierarchy_type: Literal['area', 'skill']):
+    def create_attribute_hierarchy(self, name: str, hierarchy_tree, hierarchy_type: Literal['area', 'skill']) \
+            -> AttributeHierarchy:
         assert is_instance(name, str)
         assert is_instance(hierarchy_type, Literal['area', 'skill'])
 
@@ -2047,8 +2352,12 @@ class IPlanObjectModel(IPlanObject):
             return self._create_simple_hierarchy(name, hierarchy_tree, hierarchy_type)
         else:
             raise ValueError(f"Unsupported hierarchy tree format: {hierarchy_tree}")
+    # end
 
-    def _create_simple_hierarchy(self, name: str, hierarchy_tree: dict[str, list[str]], hierarchy_type: Literal['area', 'skill']):
+    def _create_simple_hierarchy(self, name: str,
+                                 hierarchy_tree: dict[str, list[str]],
+                                 hierarchy_type: Literal['area', 'skill']) \
+            -> AttributeHierarchy:
         now = datetime.now()
         root_name = list(hierarchy_tree.keys())[0]
         leaf_names = hierarchy_tree[root_name]
@@ -2116,29 +2425,59 @@ class IPlanObjectModel(IPlanObject):
             hierarchy_type = conn.execute(query).fetchone()[0]
         return "area" if hierarchy_type == 1 else "skill"
 
+    # def area_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
+    #     area_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+    #     ah = AttributeHierarchy(self.ipom, area_hierarchy_id, self.AttributeMaster)
+    #     assert ah.type == "area"
+    #     return ah
+
+    @deprecated
     def area_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
-        area_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
-        ah = AttributeHierarchy(self.ipom, area_hierarchy_id, self.AttributeMaster)
-        assert ah.type == "area"
-        return ah
+        return self.attribute_hierarchy(id, "area")
 
+    @deprecated
     def area_feature(self, id: Union[int, str]) -> AttributeDetail:
-        area_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
-        af = AttributeDetail(self.ipom, area_feature_id, self.AttributeDetail)
-        assert self.hierarchy_type(af.hierarchy_id) == "area"
-        return af
+        return self.attribute_detail(id, "area")
 
+    # def area_feature(self, id: Union[int, str]) -> AttributeDetail:
+    #     area_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
+    #     af = AttributeDetail(self.ipom, area_feature_id, self.AttributeDetail)
+    #     assert self.hierarchy_type(af.hierarchy_id) == "area"
+    #     return af
+
+    # def skill_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
+    #     skill_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+    #     sh = AttributeHierarchy(self.ipom, skill_hierarchy_id, self.AttributeMaster)
+    #     assert sh.type == "skill"
+    #     return sh
+
+    @deprecated
     def skill_hierarchy(self, id: Union[int, str]) -> AttributeHierarchy:
-        skill_hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
-        sh = AttributeHierarchy(self.ipom, skill_hierarchy_id, self.AttributeMaster)
-        assert sh.type == "skill"
-        return sh
+        return self.attribute_hierarchy(id, "skill")
 
+    @deprecated
     def skill_feature(self, id: Union[int, str]) -> AttributeDetail:
-        skill_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
-        sf = AttributeDetail(self.ipom, skill_feature_id, self.AttributeDetail)
-        assert self.hierarchy_type(sf.hierarchy_id) == "skill"
-        return sf
+        return self.attribute_detail(id, "skill")
+
+    # def skill_feature(self, id: Union[int, str]) -> AttributeDetail:
+    #     skill_feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
+    #     sf = AttributeDetail(self.ipom, skill_feature_id, self.AttributeDetail)
+    #     assert self.hierarchy_type(sf.hierarchy_id) == "skill"
+    #     return sf
+
+    def attribute_hierarchy(self, id: Union[int, str], hierarchy_type: Literal['area', 'skill']) \
+            -> AttributeHierarchy:
+        hierarchy_id = self._convert_id(id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'])
+        hierarchy = AttributeHierarchy(self.ipom, hierarchy_id, self.AttributeMaster)
+        assert hierarchy.type == hierarchy_type
+        return hierarchy
+
+    def attribute_detail(self, id: Union[int, str], hierarchy_type: Literal['area', 'skill']) \
+            -> AttributeDetail:
+        feature_id = self._convert_id(id, self.AttributeDetail, ['attribute', 'description'])
+        detail = AttributeDetail(self.ipom, feature_id, self.AttributeDetail)
+        assert self.hierarchy_type(detail.hierarchy_id) == hierarchy_type
+        return detail
 
     # -----------------------------------------------------------------------
     # Data Model
@@ -2228,8 +2567,6 @@ class IPlanObjectModel(IPlanObject):
         :param name: Data Model name
         :param targets: measures used as FEED
         :param inputs: measures used as INPUT
-        :param area_hierarchy: Area Hierarchy to use
-        :param skill_hierarchy: Skill Hierarchy to use
         :param update: how to update the data already present in the database
                 - None: all data is deleted and replaced
                         (delete and insert)
@@ -2509,12 +2846,21 @@ class IPlanObjectModel(IPlanObject):
             df = pd.read_sql_query(query, self.engine)
         return df
 
+    def select_plan_ids(
+        self,
+        name: Optional[str],
+        data_master_ids: list[int],
+        area_feature_ids: list[int],
+    ) -> list[int]:
+        return self.select_data_values_master_ids(name, data_master_ids, area_feature_ids)
+
     def select_data_values_master_ids(
         self,
         name: Optional[str],
         data_master_ids: list[int],
         area_feature_ids: list[int],
     ) -> list[int]:
+        # alias: select_plan_ids(...)
         table = self.iDataValuesMaster
         if name is None:
             query = select(table.c.id).where(
@@ -2533,12 +2879,12 @@ class IPlanObjectModel(IPlanObject):
             rlist = conn.execute(query)
             return [result[0] for result in rlist]
 
-    def select_data_values_master_date_interval(self, data_values_master_ids: list[int]) \
+    def select_data_values_master_date_interval(self, plan_ids: list[int]) \
             -> Optional[tuple[datetime, datetime]]:
         with self.engine.connect() as conn:
             table = self.iDataValuesMaster
             query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
-                table.c.id.in_(data_values_master_ids)
+                table.c.id.in_(plan_ids)
             )
             self.log.debug(query)
             result = conn.execute(query).fetchone()
@@ -2751,29 +3097,31 @@ class IPlanObjectModel(IPlanObject):
     # data_values_detail_hist
     # data_values_detail
 
-    def save_area_skill_train_data(self, area_feature_id: int, skill_feature_id: int, measure_id: int, df: DataFrame,
-                                   plan_id: Optional[int] = None, update: Optional[bool] = None):
+    def save_area_skill_train_data(
+        self,
+        area_feature_id: int, skill_feature_id: int, measure_id: int, plan_id: int,
+        df: DataFrame, update: Optional[bool] = None):
         """
 
         :param area_feature_id:
         :param skill_feature_id:
         :param measure_id:
-        :param df:
         :param plan_id:
+        :param df:
         :param update: how to update the data already present in the database
-        - None: all data is deleted and replaced
-                (delete and insert)
-        - True: the data in the dataset replaces the same data in the database
-                (update or insert)
-        - False:  all data in the database is not deleted or updated
-                (insert only):return:
+            - None: all data is deleted and replaced
+                    (delete and insert)
+            - True: the data in the dataset replaces the same data in the database
+                    (update or insert)
+            - False:  all data in the database is not deleted or updated
+                    (insert only):return:
         """
 
         assert is_instance(area_feature_id, int)
         assert is_instance(skill_feature_id, int)
         assert is_instance(measure_id, int)
         assert is_instance(df, DataFrame)
-        assert is_instance(plan_id, Optional[int])
+        assert is_instance(plan_id, int)
 
         start_date = pdx.to_datetime(df['state_date'].min())
         end_date = pdx.to_datetime(df['state_date'].max())
@@ -2815,28 +3163,61 @@ class IPlanObjectModel(IPlanObject):
                     pass
 
             # TODO: BETTER IMPLEMENTATION with 'prepared_statement'
-            for i in range(n):
-                state_date = pdx.to_datetime(df['state_date'].iloc[i])
-                value = float(df[measure_id].iloc[i])
-                query = insert(table).values(
-                    area_id_fk=area_feature_id,
-                    skill_id_fk=skill_feature_id,
-                    model_detail_id_fk=measure_id,
-                    state_date=state_date,
-                    value=value,
+            # for i in range(n):
+            #     state_date = pdx.to_datetime(df['state_date'].iloc[i])
+            #     value = float(df[measure_id].iloc[i])
+            #     query = insert(table).values(
+            #         area_id_fk=area_feature_id,
+            #         skill_id_fk=skill_feature_id,
+            #         model_detail_id_fk=measure_id,
+            #         state_date=state_date,
+            #         value=value,
+            #
+            #         value_master_fk=plan_id,
+            #         updated_date=now,
+            #         value_type=None,
+            #         value_insert_time=None,
+            #     )
+            #     # self.log.debug(query)
+            #     conn.execute(query)
 
-                    value_master_fk=plan_id,
-                    updated_date=now,
-                    value_type=None,
-                    value_insert_time=None,
+            bulk_data = [
+                dict(area_id_fk=area_feature_id,
+                     skill_id_fk=skill_feature_id,
+                     model_detail_id_fk=measure_id,
+                     state_date=pdx.to_datetime(df['state_date'].iloc[i]),
+                     value=float(df[measure_id].iloc[i]),
+
+                     value_master_fk=plan_id,
+                     updated_date=now,
+                     value_type=None,
+                     value_insert_time=None,
                 )
-                # self.log.debug(query)
-                conn.execute(query)
+                for i in range(n)
+            ]
+            conn.execute(table.insert(), bulk_data)
             conn.commit()
         return
 
-    def save_area_skill_predict_data(self, area_feature_id: int, skill_feature_id: int, measure_id: int, df: DataFrame,
-                                     plan_id: int, update: Optional[bool] = None):
+    def save_area_skill_predict_data(
+        self,
+        area_feature_id: int, skill_feature_id: int, measure_id: int, plan_id: int,
+        df: DataFrame, update: Optional[bool] = None):
+        """
+
+        :param area_feature_id:
+        :param skill_feature_id:
+        :param measure_id:
+        :param plan_id:
+        :param df:
+        :param update: how to update the data already present in the database
+            - None: all data is deleted and replaced
+                    (delete and insert)
+            - True: the data in the dataset replaces the same data in the database
+                    (update or insert)
+            - False:  all data in the database is not deleted or updated
+                    (insert only)
+        """
         assert is_instance(area_feature_id, int)
         assert is_instance(skill_feature_id, int)
         assert is_instance(measure_id, int)
@@ -2867,6 +3248,7 @@ class IPlanObjectModel(IPlanObject):
                 DELETE FROM tb_idata_values_detail
                  WHERE state_date >= :start_date
                    AND state_date <= :end_date
+                   AND value_master_fk = :plan_id
                    AND model_detail_id_fk = :measure_id
                    AND skill_id_fk = :skill_feature_id
                 """)
@@ -2874,27 +3256,39 @@ class IPlanObjectModel(IPlanObject):
                     conn.execute(query, parameters=dict(
                         start_date=start_date,
                         end_date=end_date,
-                        measure_id=measure_id,
+                        plan_id=plan_id,
                         area_feature_id=area_feature_id,
-                        skill_feature_id=skill_feature_id
+                        skill_feature_id=skill_feature_id,
+                        measure_id=measure_id,
                     ))
                 except Exception as e:
                     pass
 
             # TODO: BETTER IMPLEMENTATION with 'prepared_statement'
-            for i in range(n):
-                state_date = pdx.to_datetime(df['state_date'].iloc[i])
-                value = float(df[measure_id].iloc[i])
-                query = insert(table).values(
-                    value_master_fk=plan_id,
-                    state_date=state_date,
-                    skill_id_fk=skill_feature_id,
-                    model_detail_id_fk=measure_id,
-                    value=value,
-                    updated_date=now,
-                )
-                # self.log.debug(query)
-                conn.execute(query)
+            # for i in range(n):
+            #     state_date = pdx.to_datetime(df['state_date'].iloc[i])
+            #     value = float(df[measure_id].iloc[i])
+            #     query = insert(table).values(
+            #         value_master_fk=plan_id,
+            #         state_date=state_date,
+            #         skill_id_fk=skill_feature_id,
+            #         model_detail_id_fk=measure_id,
+            #         value=value,
+            #         updated_date=now,
+            #     )
+            #     # self.log.debug(query)
+            #     conn.execute(query)
+
+            bulk_data = [
+                dict(value_master_fk=plan_id,
+                     state_date=pdx.to_datetime(df['state_date'].iloc[i]),
+                     skill_id_fk=skill_feature_id,
+                     model_detail_id_fk=measure_id,
+                     value=float(df[measure_id].iloc[i]),
+                     updated_date=now,)
+                for i in range(n)
+            ]
+            conn.execute(table.insert(), bulk_data)
             conn.commit()
         return
 
@@ -2939,14 +3333,14 @@ class IPlanObjectModel(IPlanObject):
 
     def delete_train_data(self,
                           data_master_id: int,
-                          data_values_master_ids: list[int],
+                          plan_ids: list[int],
                           area_feature_dict: dict[int, str],
                           skill_feature_dict: dict[int, str],
                           measure_dict: dict[int, str]
                           ):
 
         assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(plan_ids, list[int])
         assert is_instance(area_feature_dict, dict[int, str])
         assert is_instance(skill_feature_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
@@ -2961,7 +3355,8 @@ class IPlanObjectModel(IPlanObject):
 
             # 2) retrieve the data with 'skill NOT NULL'
             query = delete(table) \
-                .where(table.c['model_detail_id_fk'].in_(measure_ids) &
+                .where(table.c['value_master_fk'].in_(plan_ids) &
+                       table.c['model_detail_id_fk'].in_(measure_ids) &
                        table.c['area_id_fk'].in_(area_feature_ids) &
                        table.c['skill_id_fk'].in_(skill_feature_ids))
             self.log.debug(query)
@@ -2972,14 +3367,14 @@ class IPlanObjectModel(IPlanObject):
 
     def delete_predict_data(self,
                             data_master_id: int,
-                            data_values_master_ids: list[int],
+                            plan_ids: list[int],
                             area_feature_dict: dict[int, str],
                             skill_feature_dict: dict[int, str],
                             measure_dict: dict[int, str],
                             ):
 
         assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(plan_ids, list[int])
         assert is_instance(area_feature_dict, dict[int, str])
         assert is_instance(skill_feature_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
@@ -2993,21 +3388,14 @@ class IPlanObjectModel(IPlanObject):
         measure_ids = list(measure_dict.keys())
 
         with self.engine.connect() as conn:
-            qtext = """
-                    delete
-                     from tb_idata_values_detail as tivd
-                    using tb_idata_values_master as tivm 
-                    where tivd.value_master_fk in :data_values_master_ids 
-                      and tivd.model_detail_id_fk in :measure_ids 
-                      and tivd.skill_id_fk in :skill_feature_ids 
-                      and tivm.area_id in :area_feature_ids 
-                      and tivm.id in :data_values_master_ids 
-                      and tivm.id = tivd.value_master_fk 
-                    """
-            query = text(qtext)
+            table = self.iDataValuesDetail
+            query = delete(table) \
+                .where(table.c['value_master_fk'].in_(plan_ids) &
+                       table.c['model_detail_id_fk'].in_(measure_ids) &
+                       table.c['skill_id_fk'].in_(skill_feature_ids))
             self.log.debug(query)
             conn.execute(query, parameters=dict(
-                data_values_master_ids=tuple(data_values_master_ids),
+                plan_ids=tuple(plan_ids),
                 measure_ids=tuple(measure_ids),
                 skill_feature_ids=tuple(skill_feature_ids),
                 area_feature_ids=tuple(area_feature_ids)
@@ -3018,7 +3406,7 @@ class IPlanObjectModel(IPlanObject):
 
     def select_train_data(self,
                           data_master_id: int,
-                          data_values_master_ids: list[int],
+                          plan_ids: list[int],  # data_values_master_ids
                           area_feature_dict: dict[int, str],
                           skill_feature_dict: dict[int, str],
                           measure_dict: dict[int, str],
@@ -3027,7 +3415,7 @@ class IPlanObjectModel(IPlanObject):
         Retrieve the historical data from 'tb_idata_values_detail_hist' based on
 
             - data_master_id
-            - data_values_master_ids
+            - plan_ids
             - area_feature_ids
             - skill_feature_ids
             - measure_ids
@@ -3035,7 +3423,7 @@ class IPlanObjectModel(IPlanObject):
         It is possible to replace the area/skill/measure ids with the correspondent names
 
         :param data_master_id:
-        :param data_values_master_ids:
+        :param plan_ids:
         :param area_feature_dict:
         :param skill_feature_dict:
         :param measure_dict:
@@ -3049,7 +3437,7 @@ class IPlanObjectModel(IPlanObject):
         """
 
         assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(plan_ids, list[int])
         assert is_instance(area_feature_dict, dict[int, str])
         assert is_instance(skill_feature_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
@@ -3081,12 +3469,12 @@ class IPlanObjectModel(IPlanObject):
         # 4) concatenate df_with_skill WITH df_no_skill
         df = concatenate_no_skill_df(df_with_skill, df_no_skill, skill_feature_dict)
 
-        return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format)
+        return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
     # end
 
     def select_predict_data(self,
                             data_master_id: int,
-                            data_values_master_ids: list[int],
+                            plan_ids: list[int],  # data_values_master_ids
                             area_feature_dict: dict[int, str],
                             skill_feature_dict: dict[int, str],
                             input_measure_ids: list[int],
@@ -3094,11 +3482,24 @@ class IPlanObjectModel(IPlanObject):
                             start_date: Optional[datetime] = None,
                             end_date: Optional[datetime] = None,
                             freq: Literal['D', 'W', 'M'] = 'D',
-                            new_format=False
-                            ) -> DataFrame:
+                            new_format=False) -> DataFrame:
+        """
+
+        :param data_master_id:
+        :param plan_ids:
+        :param area_feature_dict:
+        :param skill_feature_dict:
+        :param input_measure_ids:
+        :param measure_dict:
+        :param start_date:
+        :param end_date:
+        :param freq:
+        :param new_format:
+        :return:
+        """
 
         assert is_instance(data_master_id, int)
-        assert is_instance(data_values_master_ids, list[int])
+        assert is_instance(plan_ids, list[int])
         assert is_instance(area_feature_dict, dict[int, str])
         assert is_instance(skill_feature_dict, dict[int, str])
         assert is_instance(input_measure_ids, list[int])
@@ -3107,13 +3508,16 @@ class IPlanObjectModel(IPlanObject):
         assert is_instance(end_date, Optional[datetime])
         assert is_instance(freq, Literal['D', 'W', 'M'])
 
+        # Note: the dataset contains all measures in 'input_measure_ids' or 'measure_dict'
+        #   plus: 'area', 'skill', 'date'
+
         # 1) retrieve all area/skill feature ids
         area_feature_ids = list(area_feature_dict.keys())
         skill_feature_ids = list(skill_feature_dict)
         measure_ids = list(measure_dict.keys())
 
         # 2) retrieve start/end dates for each area
-        start_end_date_dict = self._select_start_end_date_dict(data_values_master_ids, area_feature_ids)
+        start_end_date_dict = self._select_start_end_date_dict(plan_ids, area_feature_ids)
 
         # add the DEFAULT start/end date for the areas without a date range
         # Note: it is used 0 (ZERO) as key
@@ -3124,9 +3528,9 @@ class IPlanObjectModel(IPlanObject):
         #   DOESNT' CONTAIN 'area_id_fk'
         #   BUT it has a reference with [tb_idata_values_master] ('value_master_fk)
         #   AND 'tb_idata_values_master' contains 'area_id', that is, the required 'area_id_fk'
-        df = self._select_predict_data(data_values_master_ids, area_feature_ids, skill_feature_ids, measure_ids)
+        df = self._select_predict_data(plan_ids, area_feature_ids, skill_feature_ids, measure_ids)
 
-        df_pivoted = pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format)
+        df_pivoted = pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
 
         df_pivoted = compose_predict_df(
             df_pivoted,
@@ -3144,50 +3548,81 @@ class IPlanObjectModel(IPlanObject):
 
     # -----------------------------------------------------------------------
 
-    def _select_start_end_date_dict(self, data_values_master_ids, area_feature_ids) \
+    def _select_start_end_date_dict(self, plan_ids, area_feature_ids) \
             -> dict[int, tuple[datetime, datetime]]:
+        # data_values_master_ids -> plan_ids
         # 2) retrieve start/end dates for each area
-        qtext = """
-                select tivm.area_id as area_id_fk, tivm.start_date, tivm.end_date 
-                  from tb_idata_values_master as tivm
-                 where tivm.id in :data_values_master_ids 
-                   and tivm.area_id in :area_feature_ids
-                """
-        query = text(qtext)
+
+        # qtext = """
+        #         select tivm.area_id as area_id_fk, tivm.start_date, tivm.end_date
+        #           from tb_idata_values_master as tivm
+        #          where tivm.id in :plan_ids
+        #            and tivm.area_id in :area_feature_ids
+        #         """
+        # query = text(qtext)
+
+        table = self.iDataValuesMaster
+        query = select(table.c['area_id', 'start_date', 'end_date']).where(
+            table.c.id.in_(plan_ids) &
+            table.c['area_id'].in_(area_feature_ids)
+        )
         self.log.debug(query)
+        midnight = time(0, 0, 0)
 
         with self.engine.connect() as conn:
             rlist = conn.execute(query, parameters=dict(
-                data_values_master_ids=tuple(data_values_master_ids),
+                plan_ids=tuple(plan_ids),
                 area_feature_ids=tuple(area_feature_ids)
             )).fetchall()
             start_end_date_dict = {
-                r[0]: (r[1], r[2]) for r in rlist
+                r[0]: (
+                    datetime.combine(r[1], midnight),
+                    datetime.combine(r[2], midnight)
+                )
+                for r in rlist
             }
         return start_end_date_dict
     # end
 
     def _select_predict_data(self,
-                             data_values_master_ids: list[int],
+                             plan_ids: list[int],  # data_values_master_ids
                              area_feature_ids: list[int],
                              skill_feature_ids: list[int],
                              measure_ids: list[int]) \
             -> DataFrame:
+        # qtext = """
+        #         select tivm.area_id as area_id_fk,
+        #                tivd.skill_id_fk as skill_id_fk,
+        #                tivd.model_detail_id_fk as model_detail_id_fk,
+        #                tivd.state_date as state_date,
+        #                tivd.value as value
+        #          from tb_idata_values_detail as tivd,
+        #               tb_idata_values_master as tivm
+        #         where tivd.value_master_fk in :plan_ids
+        #           and tivd.model_detail_id_fk in :measure_ids
+        #           and tivd.skill_id_fk in :skill_feature_ids
+        #           and tivm.area_id in :area_feature_ids
+        #           and tivm.id in :plan_ids
+        #           and tivm.id = tivd.value_master_fk
+        #         """
         qtext = """
-                select tivm.area_id as area_id_fk, tivd.skill_id_fk as skill_id_fk, tivd.model_detail_id_fk as model_detail_id_fk, 
-                       tivd.state_date as state_date, tivd.value as value
-                 from tb_idata_values_detail as tivd, tb_idata_values_master as tivm
-                where tivd.value_master_fk in :data_values_master_ids
+                select tivm.area_id as area_id_fk,
+                       tivd.skill_id_fk as skill_id_fk,
+                       tivd.model_detail_id_fk as model_detail_id_fk,
+                       tivd.state_date as state_date,
+                       tivd.value as value
+                 from tb_idata_values_detail as tivd
+                 join tb_idata_values_master as tivm on tivm.id = tivd.value_master_fk
+                where tivd.value_master_fk in :plan_ids
                   and tivd.model_detail_id_fk in :measure_ids
                   and tivd.skill_id_fk in :skill_feature_ids
                   and tivm.area_id in :area_feature_ids
-                  and tivm.id in :data_values_master_ids
-                  and tivm.id = tivd.value_master_fk
-                """
+        """
         query = text(qtext)
+
         self.log.debug(query)
         df = pd.read_sql_query(query, self.engine, params=dict(
-            data_values_master_ids=tuple(data_values_master_ids),
+            plan_ids=tuple(plan_ids),
             measure_ids=tuple(measure_ids),
             skill_feature_ids=tuple(skill_feature_ids),
             area_feature_ids=tuple(area_feature_ids)
@@ -3225,82 +3660,14 @@ class IPlanObjectModel(IPlanObject):
             self.log.debug(query)
             rlist = conn.execute(query).fetchall()
             data_master_ids = list({result[1] for result in rlist})
-            data_values_master_ids = list({result[0] for result in rlist})
+            plan_ids = list({result[0] for result in rlist})
+            # data_values_master_ids -> plan_ids
 
         if len(data_master_ids) > 1:
             self.log.warning(f"Multiple Data Masters for plan {plan_name}")
 
-        return data_values_master_ids, data_master_ids[-1]
+        return plan_ids, data_master_ids[-1]
     # end
-
-    # def _select_data_values_masters_ids(self, data_model_id, area_hierarchy_id, skill_hierarchy_id) \
-    #         -> tuple[set[id], datetime, datetime]:
-    #     area_feature_dict = self.area_hierarchy(area_hierarchy_id).feature_ids(with_name=True)
-    #     area_feature_ids = list(area_feature_dict.keys())
-    #
-    #     with self.engine.connect() as conn:
-    #         # 1) retrieve all data_master_id having
-    #         #       idatamodel_id_fk == data_model_id
-    #         #       area_id_fk       == area_hierarchy_id
-    #         #       skill_id_fk      == skill_hierarchy_id
-    #         table = self.iDataMaster
-    #         query = select(table.c.id).where(
-    #             (table.c['idatamodel_id_fk'] == data_model_id) &
-    #             (table.c['area_id_fk']       == area_hierarchy_id) &
-    #             (table.c['skill_id_fk']      == skill_hierarchy_id)
-    #         )
-    #         self.log.debug(query)
-    #         rlist = conn.execute(query).fetchall()
-    #         data_master_ids = {result[0] for result in rlist}
-    #
-    #         # 2) retrieve all data_value_master_id having
-    #         #       idata_master_fk in data_master_ids
-    #         #       area_id         in area_feature_ids
-    #         table = self.iDataValuesMaster
-    #         query = select(table.c.id).where(
-    #             (table.c['idata_master_fk'].in_(data_master_ids)) &
-    #             (table.c['area_id'].in_(area_feature_ids))
-    #         )
-    #         self.log.debug(query)
-    #         rlist = conn.execute(query).fetchall()
-    #         data_values_master_ids = {result[0] for result in rlist}
-    #
-    #         # 3) retrieve start_date, end_date
-    #         table = self.iDataValuesMaster
-    #         query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
-    #             (table.c['idata_master_fk'].in_(data_master_ids)) &
-    #             (table.c['area_id'].in_(area_feature_ids))
-    #         )
-    #         self.log.debug(query)
-    #         rlist = conn.execute(query).fetchall()
-    #         if len(rlist) > 0:
-    #             start_date, end_date = rlist[0]
-    #         else:
-    #             start_date, end_date = None, None
-    #     # end
-    #     return data_values_master_ids, start_date, end_date
-    # # end
-
-    # def _select_data_values_details(self, data_values_master_ids, skill_feature_ids, measure_ids) \
-    #         -> DataFrame:
-    #     qtext = """
-    #     select tivm.area_id as area_id_fk, tivd.skill_id_fk as skill_id_fk, tivd.model_detail_id_fk as model_detail_id_fk,
-    #            tivd.state_date as state_date, tivd.value as value
-    #      from tb_idata_values_detail as tivd, tb_idata_values_master as tivm
-    #     where tivd.value_master_fk in :value_master_fk
-    #       and tivd.model_detail_id_fk in :model_detail_id_fk
-    #       and tivd.skill_id_fk in :skill_id_fk
-    #       and tivm.id = tivd.value_master_fk
-    #     """
-    #     query = text(qtext)
-    #     self.log.debug(query)
-    #     df = pd.read_sql_query(query, self.engine, params=dict(
-    #         value_master_fk=tuple(data_values_master_ids),
-    #         model_detail_id_fk=tuple(measure_ids),
-    #         skill_id_fk=tuple(skill_feature_ids)
-    #     ))
-    #     return df
-    # # end
 
     # -----------------------------------------------------------------------
 
@@ -3636,7 +4003,7 @@ class IPlanObjectModel(IPlanObject):
             query = select(table.c[namecol]).where(table.c[idcol] == id)
             result = conn.execute(query).scalar()
             return result
-        raise ValueError(f"Unable to convert '{id}' into a name using {table.name}")
+        # raise ValueError(f"Unable to convert '{id}' into a name using {table.name}")
 # end
 
 # ---------------------------------------------------------------------------

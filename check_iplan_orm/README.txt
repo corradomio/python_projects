@@ -119,3 +119,15 @@ How to fill 'tb_idata_values_detail_hist'
     value_type            // [NULL]
     value_insert_time     // [NULL]
 
+
+
+How to handle the SEQUENCES
+---------------------------
+
+    list all sequences
+
+        SELECT * FROM information_schema.sequences
+
+    update a sequence
+
+        ALTER SEQUENCE <sequence_name> RESTART WITH <start_value>

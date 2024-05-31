@@ -218,10 +218,12 @@ class dict(BuiltinDict):
 # end
 
 
-def reverse(d: Union[BuiltinDict, dict]) -> dict:
+def reverse_dict(d: Union[BuiltinDict, dict]) -> dict:
     """
     Reverse the dictionary
     :param d: dictionary
     :return: the reversed dictionary
     """
-    return {d[k]: k for k in d}
+    drev = {d[k]: k for k in d}
+    assert len(d) == len(drev)
+    return drev

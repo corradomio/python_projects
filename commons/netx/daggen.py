@@ -1,5 +1,5 @@
 from typing import Generator
-from random import Random
+import random as rnd
 import networkx as nx
 import numpy as np
 
@@ -11,24 +11,23 @@ from stdlib.iset import ilexsubset, imembers, iadd
 # extends_dag
 # ---------------------------------------------------------------------------
 
-def random_dag(n: int, m: int, connected=True, seed=None):
+def random_dag(n: int, m: int, connected=True):
     """
     Generate a random directed acyclic graph
 
     :param n: n of nodes
     :param m: minimum n of edges
     :param connected: if the DAG must be connected
-    :param seed: if specified, used to initialize the random number generator
     :returns: the generated Directed Acyclic Graph
     """
 
     G = nx.DiGraph()
     G.add_nodes_from(list(range(n)))
-    return extends_dag(G, m, connected=connected, seed=seed)
+    return extends_dag(G, m, connected=connected)
 # end
 
 
-def extends_dag(G: nx.DiGraph, m: int, connected=True, seed=None):
+def extends_dag(G: nx.DiGraph, m: int, connected=True):
     """
     Extends the DAG to have 'm' edges.
 
@@ -38,7 +37,6 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True, seed=None):
     :param seed: if specified, used to initialize the random number generator
     :returns: the original Directed Acyclic Graph with extra edges
     """
-    rnd = Random(seed)
     n = len(G.nodes)
 
     completed = m <= len(G.edges)
@@ -55,15 +53,6 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True, seed=None):
 
         # add the edge. NO cycles are created for construction
         G.add_edge(u, v)
-
-        # add the edge and check for cycles. If cycle is found, cuts it
-        # try:
-        #     G.add_edge(u, v)
-        #     cycle = nx.find_cycle(G, orientation='original')
-        #     r = rnd.choice(cycle)
-        #     G.remove_edge(r[0], r[1])
-        # except nx.NetworkXNoCycle as ex:
-        #     pass
 
         # check is the DAG must be connected OR it is reached the
         # required number of edges

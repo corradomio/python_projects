@@ -127,22 +127,11 @@ def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, a
 # groups_count
 # ---------------------------------------------------------------------------
 
-def _groups_list_by_columns(df, groups):
-    tlist = [tuple()]
-    if len(groups) == 0:
-        return tlist
+def _groups_list_by_columns(df, groups) -> list[tuple]:
 
-    for g in groups:
-        values = list(df[g].unique())
-
-        tvlist = []
-        for t in tlist:
-            for v in values:
-                tvlist.append(t + (v,))
-
-        tlist = tvlist
-    # end
-    return tlist
+    unique_values = df[groups].drop_duplicates(inplace=False, ignore_index=True).values.tolist()
+    unique_values = list(map(tuple, unique_values))
+    return unique_values
 # end
 
 
