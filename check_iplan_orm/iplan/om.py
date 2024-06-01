@@ -137,7 +137,7 @@ def compose_predict_df(df_past: DataFrame,
                        start_end_dates: dict[int, tuple[datetime, datetime]],
                        freq: Literal['D', 'W', 'M'],
                        defval: Union[None, float] = 0.,
-                       new_format=False) -> tuple[DataFrame, DataFrame]:
+                       new_format=False) -> DataFrame:
     """
 
     :param df_past: dataframe to process
@@ -1856,11 +1856,12 @@ class IPredictTimeSeries(IPlanObject):
     # Train/predict data
     # -----------------------------------------------------------------------
 
-    def select_train_data(self,
-                          plan: Optional[str] = None,
-                          area: Union[None, int, list[int]] = None,
-                          skill: Union[None, int, list[int]] = None,
-                          new_format=True) -> DataFrame:
+    def select_train_data(
+        self,
+        plan: Optional[str] = None,
+        area: Union[None, int, list[int]] = None,
+        skill: Union[None, int, list[int]] = None,
+        new_format=True) -> DataFrame:
         """
         Retrieve the train data
 
@@ -1899,32 +1900,83 @@ class IPredictTimeSeries(IPlanObject):
         return df
     # end
 
-    def select_predict_data(self,
-                            plan: Optional[str] = None,
-                            start_date: Optional[datetime] = None,
-                            periods: Optional[int] = None,
-                            area: Union[None, int, list[int], str, list[str]] = None,
-                            skill: Union[None, int, list[int], str, list[str]] = None,
-                            new_format=True) -> DataFrame:
+    def select_predict_data(
+        self,
+        plan: Optional[str] = None,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        new_format=True) -> DataFrame:
         """
         Retrieve predict data
 
-        :param start_date: optional start date
-        :param periods: n of periods. The period depends on the DataModel::PeriodHierarchy
+        :param plan:
+        :param area:
+        :param skill:
+        :param new_format:
+        :return:
+        """
+        assert is_instance(plan, Optional[str])
+        assert is_instance(area, Union[None, int, list[int]])
+        assert is_instance(skill, Union[None, int, list[int]])
+
+        area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
+        skill_feature_dict = self.skill_hierarchy.feature_ids(with_name=True)
+        measure_dict = self.measure_ids(with_name=True)
+        data_master_id = self.data_master.id
+        plan = self._plan if plan is None else plan
+        assert is_instance(plan, str)
+
+        pplan = self.ipom.prediction_plan(plan, data_master_id)
+        if not pplan.exists():
+            raise ValueError(f"Plan {plan} not existent")
+
+        plan_ids = pplan.plan_ids
+
+        df: DataFrame = self.ipom.select_predict_data(
+            data_master_id,
+            plan_ids,
+            area_feature_dict,
+            skill_feature_dict,
+            measure_dict,
+            new_format=new_format
+        )
+        return df
+    # end
+
+
+    def select_predict_data_ext(
+        self,
+        plan: Optional[str] = None,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        #
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        periods: Optional[int] = None,
+        freq: Literal['D', 'W', 'M'] = 'D',
+        #
+        new_format=True) -> DataFrame:
+        """
+        Retrieve predict data
+
         :param plan: name of the plan used for reference
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
+        :param start_date: optional start date
+        :param end_date: optional end date
+        :param periods: n of periods. The period depends on the DataModel::PeriodHierarchy
+        :param freq: period frequency
         :param new_format: DataFrame format
         :return: the dataframe used for prediction. It contains the input features only
         """
-
-        assert is_instance(start_date, Optional[datetime])
-        assert is_instance(periods, Optional[int])
+        assert is_instance(plan, Optional[str])
         assert is_instance(area, Union[None, int, list[int]])
         assert is_instance(skill, Union[None, int, list[int]])
-        assert is_instance(plan, Optional[str])
 
-        end_date = None
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+        assert is_instance(periods, Optional[int])
+        assert is_instance(freq, Literal['D', 'W', 'M'])
 
         area_feature_dict = self.area_hierarchy.feature_ids(leaf_only=False, with_name=True)
         skill_feature_dict = self.skill_hierarchy.feature_ids(leaf_only=False, with_name=True)
@@ -1934,10 +1986,9 @@ class IPredictTimeSeries(IPlanObject):
         plan = self._plan if plan is None else plan
         assert is_instance(plan, str)
 
-        freq = self.period_hierarchy.freq
-        if periods is None:
-            periods = self.period_hierarchy.periods
-        if start_date is not None:
+        freq = self.period_hierarchy.freq if freq is None else freq
+        periods = self.period_hierarchy.periods if periods is None else periods
+        if start_date is not None and end_date is None:
             end_date = start_date + relativeperiods(periods=periods, freq=freq)
 
         pplan = self.ipom.prediction_plan(plan, data_master_id)
@@ -1946,7 +1997,7 @@ class IPredictTimeSeries(IPlanObject):
 
         plan_ids = pplan.plan_ids
 
-        df: DataFrame = self.ipom.select_predict_data(
+        df: DataFrame = self.ipom.select_predict_data_ext(
             data_master_id,
             plan_ids,
             area_feature_dict, skill_feature_dict,
@@ -3404,13 +3455,14 @@ class IPlanObjectModel(IPlanObject):
         return
     # end
 
-    def select_train_data(self,
-                          data_master_id: int,
-                          plan_ids: list[int],  # data_values_master_ids
-                          area_feature_dict: dict[int, str],
-                          skill_feature_dict: dict[int, str],
-                          measure_dict: dict[int, str],
-                          new_format=False) -> DataFrame:
+    def select_train_data(
+        self,
+        data_master_id: int,
+        plan_ids: list[int],  # data_values_master_ids
+        area_feature_dict: dict[int, str],
+        skill_feature_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        new_format=False) -> DataFrame:
         """
         Retrieve the historical data from 'tb_idata_values_detail_hist' based on
 
@@ -3472,17 +3524,73 @@ class IPlanObjectModel(IPlanObject):
         return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
     # end
 
-    def select_predict_data(self,
-                            data_master_id: int,
-                            plan_ids: list[int],  # data_values_master_ids
-                            area_feature_dict: dict[int, str],
-                            skill_feature_dict: dict[int, str],
-                            input_measure_ids: list[int],
-                            measure_dict: dict[int, str],
-                            start_date: Optional[datetime] = None,
-                            end_date: Optional[datetime] = None,
-                            freq: Literal['D', 'W', 'M'] = 'D',
-                            new_format=False) -> DataFrame:
+    def select_predict_data(
+        self,
+        data_master_id: int,
+        plan_ids: list[int],  # data_values_master_ids
+        area_feature_dict: dict[int, str],
+        skill_feature_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        new_format=False) -> DataFrame:
+        """
+
+        :param data_master_id:
+        :param plan_ids:
+        :param area_feature_dict:
+        :param skill_feature_dict:
+        :param measure_dict:
+        :param new_format:
+        :return:
+        """
+
+        assert is_instance(data_master_id, int)
+        assert is_instance(plan_ids, list[int])
+        assert is_instance(area_feature_dict, dict[int, str])
+        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(measure_dict, dict[int, str])
+
+        # 1) retrieve all area/skill feature ids
+        area_feature_ids = list(area_feature_dict.keys())
+        skill_feature_ids = list(skill_feature_dict)
+        measure_ids = list(measure_dict.keys())
+
+        # 2) retrieve the data with 'skill NOT NULL'
+        qtext = """
+                select tivm.area_id as area_id_fk,
+                       tivd.skill_id_fk as skill_id_fk,
+                       tivd.model_detail_id_fk as model_detail_id_fk,
+                       tivd.state_date as state_date,
+                       tivd.value as value
+                 from tb_idata_values_detail as tivd
+                 join tb_idata_values_master as tivm on tivm.id = tivd.value_master_fk
+                where tivd.value_master_fk in :plan_ids
+                  and tivd.model_detail_id_fk in :measure_ids
+                  and tivd.skill_id_fk in :skill_feature_ids
+                  and tivm.area_id in :area_feature_ids
+                """
+        query = text(qtext)
+        self.log.debug(query)
+        df = pd.read_sql_query(query, self.engine, params=dict(
+            plan_ids=tuple(plan_ids),
+            measure_ids=tuple(measure_ids),
+            skill_feature_ids=tuple(skill_feature_ids),
+            area_feature_ids=tuple(area_feature_ids)
+        ))
+
+        return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
+
+    def select_predict_data_ext(
+        self,
+        data_master_id: int,
+        plan_ids: list[int],  # data_values_master_ids
+        area_feature_dict: dict[int, str],
+        skill_feature_dict: dict[int, str],
+        input_measure_ids: list[int],
+        measure_dict: dict[int, str],
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+        freq: Literal['D', 'W', 'M'] = 'D',
+        new_format=False) -> DataFrame:
         """
 
         :param data_master_id:
@@ -3619,7 +3727,6 @@ class IPlanObjectModel(IPlanObject):
                   and tivm.area_id in :area_feature_ids
         """
         query = text(qtext)
-
         self.log.debug(query)
         df = pd.read_sql_query(query, self.engine, params=dict(
             plan_ids=tuple(plan_ids),

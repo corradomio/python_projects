@@ -16,7 +16,7 @@ def main():
         ts: IPredictTimeSeries = ipom.time_series_focussed("68", plan="13356658")
 
         # df = ts.select_train_data(new_format=True)
-        df = ts.select_predict_data(start_date=datetime.now(), new_format=True)
+        df = ts.select_predict_data(new_format=True)
         print(df.shape)
 
     print("done")

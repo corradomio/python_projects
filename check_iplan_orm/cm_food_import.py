@@ -108,7 +108,7 @@ def main():
         # ts.save_predict_data(df_pred)
 
         dfp = ts.select_predict_data(new_format=True)
-
+    pass
     print("done")
 
 
