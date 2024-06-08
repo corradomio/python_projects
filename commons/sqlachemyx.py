@@ -1,6 +1,9 @@
-from sqlalchemy import *
 import sqlalchemy as sqla
 
+
+# ---------------------------------------------------------------------------
+# Simple Table operations
+# ---------------------------------------------------------------------------
 
 def get_table(table_name: str, engine: sqla.engine.Engine):
     metadata = sqla.MetaData()

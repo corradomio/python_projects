@@ -1,21 +1,15 @@
 import logging.config
 
 import pandasx as pdx
-from iplan.om import IPlanObjectModel, IPredictTimeSeries
+from iplan.om import IPlanObjectModel, IPredictTimeSeries, DataModel
 from stdlib.jsonx import load
+from commons import *
 
 
 def main():
     # datasource_dict = load('datasource.json')
     datasource_dict = load('datasource_localhost.json')
     ipom = IPlanObjectModel(datasource_dict)
-
-    PLAN_NAME = 'Plan Food Import'
-    DATA_MODEL = "CM Data Model Food Import"
-    DATA_MASTER = "CM Data Master Food Import"
-    AREA_HIERARCHY = "ImportCountries"
-    SKILL_HIERARCHY = "ImportFoods"
-    TIME_SERIES = "CM Time Series Food Import"
 
     with ipom.connect():
         # data_model = ipom.data_model('CM Data Model Master')
@@ -27,20 +21,34 @@ def main():
         skill_hierarchy = ipom.hierachies().skill_hierarchy(SKILL_HIERARCHY)
         skill_tree = skill_hierarchy.tree()
 
-        # ipom.delete_data_model(DATA_MODEL)
-        data_model = ipom.create_data_model(
-            DATA_MODEL,
+        data_model: DataModel = ipom.data_models().data_model(DATA_MODEL)
+        print(data_model.exists())
+        # data_model.delete()
+        data_model.create(
             targets='import_kg',
             inputs=["prod_kg", "avg_retail_price_src_country",
                     "producer_price_tonne_src_country", "crude_oil_price", "sandp_500_us",
                     "sandp_sensex_india", "shenzhen_index_china", "nikkei_225_japan", "max_temperature",
                     "mean_temperature", "min_temperature", "vap_pressure", "evaporation", "rainy_days"],
-            update=False)
+            update=False
+        )
+
+        # ipom.delete_data_model(DATA_MODEL)
+        # data_model = ipom.create_data_model(
+        #     DATA_MODEL,
+        #     targets='import_kg',
+        #     inputs=["prod_kg", "avg_retail_price_src_country",
+        #             "producer_price_tonne_src_country", "crude_oil_price", "sandp_500_us",
+        #             "sandp_sensex_india", "shenzhen_index_china", "nikkei_225_japan", "max_temperature",
+        #             "mean_temperature", "min_temperature", "vap_pressure", "evaporation", "rainy_days"],
+        #     update=False)
         # data_model = ipom.data_model(DATA_MODEL)
 
         # ipom.delete_data_master(DATA_MASTER)
-        data_master = ipom.create_data_master(
-            DATA_MASTER,
+        data_master = ipom.data_masters().data_master(DATA_MASTER)
+        print(data_master.exists())
+        # data_master.delete()
+        data_master.create(
             data_model=DATA_MODEL,
             area_hierarchy=AREA_HIERARCHY,
             skill_hierarchy=SKILL_HIERARCHY,
@@ -48,7 +56,16 @@ def main():
             periods=12,
             update=False
         )
-        # data_master = ipom.data_master(DATA_MASTER)
+        # data_master = ipom.create_data_master(
+        #     DATA_MASTER,
+        #     data_model=DATA_MODEL,
+        #     area_hierarchy=AREA_HIERARCHY,
+        #     skill_hierarchy=SKILL_HIERARCHY,
+        #     period_hierarchy='month',
+        #     periods=12,
+        #     update=False
+        # )
+        # data_master = ipom.data_masters().data_master(DATA_MASTER)
 
         # ipom.delete_time_series_focussed(TIME_SERIES)
         ts: IPredictTimeSeries = ipom.create_time_series_focussed(

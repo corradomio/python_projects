@@ -39,8 +39,10 @@ __version__ = '1.0.1'
 __all__ = [
     'is_instance',
     'All',
-    'Const',        # equivalent to 'Final'
-    'Immutable'
+    'Const',            # equivalent to 'Final'
+    'Immutable',
+
+    'IS_INSTANCE_OF'    # used for extensions
 ]
 
 # ---------------------------------------------------------------------------
@@ -311,6 +313,9 @@ class IsInstance:
 # ---------------------------------------------------------------------------
 
 class IsAny(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
     def is_instance(self, obj) -> bool:
         return True
 
@@ -676,7 +681,7 @@ IS_INSTANCE_OF = {
     'typing.AsyncIterable': HasAttribute('__aiter__'),
     'typing.AsyncIterator': HasAttribute('__aiter__', '__anext__'),
 
-    'extend.Literal': IsLiteralExtend
+    'extend.Literal': IsLiteralExtend,
 }
 
 
@@ -689,6 +694,8 @@ def type_name(a_type: type) -> str:
         return 'extend.Literal'
     elif isinstance(a_type, _LiteralGenericAlias):
         return 'typing.Literal'
+    elif isinstance(a_type, _GenericAlias):
+        a_type = a_type.__origin__
     elif hasattr(a_type, '__supertype__'):
         return f'typing.NewType'
 
@@ -752,6 +759,7 @@ def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str] = N
     if not valid and msg is not None:
         raise AssertionError(msg + " " + missing)
     return valid
+
 
 # ---------------------------------------------------------------------------
 # End

@@ -81,13 +81,13 @@ def main4():
     datasource_dict = load('datasource.json')
     ipom = IPlanObjectModel(datasource_dict)
 
-    with ipom.connect() as conn:
-        dvm = ipom.data_values_master(13355950)
-
-        ah = dvm.area_hierarchy
-
-        pass
-    # end
+    # with ipom.connect() as conn:
+    #     dvm = ipom.data_values_master(13355950)
+    #
+    #     ah = dvm.area_hierarchy
+    #
+    #     pass
+    # # end
     print("done")
 # end
 
@@ -152,7 +152,7 @@ def main1():
         # for measure in measures:
         #     print(measure)
 
-        # data_master = ipom.data_master('IXD NEW')
+        # data_master = ipom.data_masters().data_master('IXD NEW')
         # print(data_master.data_model)
         # print(data_master.area_hierarchy)
         # print(data_master.skill_hierarchy)
@@ -172,7 +172,7 @@ def main1():
         # root = area.tree()
         # print(root.name, ":", root.description)
         #
-        # skill = ipom.skill_hierarchy('Foods')
+        # skill = ipom.hierachies().skill_hierarchy('Foods')
         # print(skill.name)
         # print(skill.description)
         #

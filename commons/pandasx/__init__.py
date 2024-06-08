@@ -8,10 +8,13 @@ from .freq import infer_freq, FREQUENCIES
 from .onehot import onehot_encode
 from .binhot import binhot_encode
 from .resample import resample
+# register 'is_instance' extensions
+from . import is_instance
 
+import typing
 import pandas as pd
 import numpy as np
-
+from stdlib import method_of
 
 # ---------------------------------------------------------------------------
 # Add 'DatetimeIndex.week' compatibility property
@@ -43,19 +46,20 @@ if not hasattr(pd.PeriodIndex, "weekinmonth"):
     pd.Period.weekinmonth = property(fget=_p_weekinmonth)
 
 
-# if not hasattr(pd.DatetimeIndex, "weekinmonth"):
-#     def _pi_weekinmonth(self: pd.DatetimeIndex):
-#         day = self[0].day
-#         dow = self[0].dayofweek
-#         dow = (dow-day+1) % 7
-#         return pd.Index((self.day - 1 + dow) // 7)
-#         # return pd.Index((self.day - 1) // 7)
-#     pd.DatetimeIndex.weekinmonth = property(fget=_pi_weekinmonth)
+# ---------------------------------------------------------------------------
+# __class_getitem__
 
-# if not hasattr(pd.Period, "weekinmonth"):
-#     def _p_weekinmonth(self: pd.Period):
-#         day = self.day
-#         dow = self.dayofweek
-#         return (day - 1 + dow)//7
-#         # return (self.day - 1) // 7
-#     pd.Period.weekinmonth = property(fget=_p_weekinmonth)
+if not hasattr(pd.Series, "__class_getitem__"):
+    @classmethod
+    def series_class_getitem(cls, item):
+        return typing._GenericAlias(pd.Series, item)
+    pd.Series.__class_getitem__ = series_class_getitem
+
+
+if not hasattr(pd.DataFrame, "__class_getitem__"):
+    @classmethod
+    def dataframe_class_getitem(cls, item):
+        if not isinstance(item, tuple):
+            item = (item,)
+        return typing._GenericAlias(pd.DataFrame, item)
+    pd.DataFrame.__class_getitem__ = dataframe_class_getitem

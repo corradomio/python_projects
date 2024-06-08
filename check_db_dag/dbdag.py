@@ -1,13 +1,11 @@
-from sqlalchemy import MetaData, Engine, create_engine, URL
+from typing import Union, Optional
+from stdlib import is_instance
+import logging
+from collections import deque
+from sqlalchemy import MetaData, Engine, create_engine, URL, Table, ForeignKey
 
-from .tseries import *
 
-
-# ---------------------------------------------------------------------------
-# IPlanObjectModel
-# ---------------------------------------------------------------------------
-
-class IPlanObjectModel(IPlanObject):
+class DatabaseDAG:
 
     def __init__(self, url: Union[str, dict, URL], **kwargs):
         assert is_instance(url, Union[str, dict, URL])
@@ -16,14 +14,12 @@ class IPlanObjectModel(IPlanObject):
             url = URL.create(**datasource_dict)
 
         self.engine: Optional[Engine] = None
-        super().__init__(self)
         self.url = url
         self.metadata: Optional[MetaData] = None
         self.kwargs = kwargs
-
-    # -----------------------------------------------------------------------
-
-    def connect(self, **kwargs) -> "IPlanObjectModel":
+        self.log = logging.getLogger(f"dbdag.{self.__class__.__name__}")
+        
+    def connect(self, **kwargs) -> "DatabaseDAG":
         """
         It creates a 'connection' to the DBMS, NOT a connection to execute queries (a 'session')
         This step is used to create the data structures necessary to access the specific database
@@ -35,7 +31,7 @@ class IPlanObjectModel(IPlanObject):
         self.engine = create_engine(self.url, **kwargs)
         self._load_metadata()
 
-        self.log.info(f"connected to {self.url}")
+        self.log.info(f"connected")
         return self
 
     def disconnect(self):
@@ -63,51 +59,102 @@ class IPlanObjectModel(IPlanObject):
         pass
 
     # -----------------------------------------------------------------------
-    # Area/Skill hierarchy
+    #
+    def scan_all(self):
 
-    def hierachies(self) -> AttributeHierarchies:
-        return AttributeHierarchies(self)
+        processed = set()
+        waiting = deque(list(self.metadata.tables.values()))
+
+        index = 1
+        while len(waiting) > 0:
+            s = waiting.pop()
+            if s in processed:
+                continue
+            processed.add(s)
+
+            print(f"{index:3}: {s.name}")
+            index += 1
+
+            fkey: ForeignKey = ForeignKey('')
+            for fkey in s.foreign_keys:
+                # s)ource.column
+                # t)arget.column
+                c = fkey.column
+                t = fkey.parent.table
+                f = fkey.parent
+
+                print("...", c, "->", f)
+
+                waiting.appendleft(t)
+                pass
+        print("done")
+    # end
+
+    def scan(self, table: Table):
+
+        # print("... primary_key")
+        # print("... ...", table.primary_key)
+        # print("... foreign_keys")
+        # for fkey in table.foreign_keys:
+        #     print("... ...", fkey)
+        # print("... constraints")
+        # for con in table.constraints:
+        #     print("... ...", con)
+        #
+        # print("... foreign_key_constraints")
+        # for fkc in table.foreign_key_constraints:
+        #     print("... ...", fkc)
+        # print("done")
+
+        processed = set()
+        waiting = deque([table])
+
+        while len(waiting) > 0:
+            s = waiting.pop()
+            if s in processed:
+                continue
+            processed.add(s)
+
+            fkey: ForeignKey = ForeignKey('')
+            for fkey in s.foreign_keys:
+                # s)ource.column
+                # t)arget.column
+                c = fkey.column
+                t = fkey.parent.table
+                f = fkey.parent
+
+                print("...", c, "->", f)
+
+                waiting.appendleft(t)
+                pass
+
+        print(table)
+    # end
 
     # -----------------------------------------------------------------------
-    # Data Model
-
-    def data_models(self) -> DataModels:
-        return DataModels(self)
-
-    # -----------------------------------------------------------------------
-    # Data Master
-
-    def data_masters(self) -> DataMasters:
-        return DataMasters(self)
-
-    # -----------------------------------------------------------------------
-    # Prediction Plan
-
-    def plans(self) -> PredictionPlans:
-        return PredictionPlans(self)
-
-    # -----------------------------------------------------------------------
-    # Time Series Focussed
-
-    def time_series(self):
-        return IPlanTimeSeries(self)
-
-    # -----------------------------------------------------------------------
+    # Metadata
 
     def _load_metadata(self):
+        self.log.info("... loading metadata")
         self.metadata = MetaData()
         self.metadata.reflect(self.engine)
+        # print(self.metadata.tables.keys())
+        # print("n tables:", len(self.metadata.tables.keys()))
 
         # -------------------------------------------------------------------
         # Main data
         # -------------------------------------------------------------------
 
         # Data Model
+        # self.iDataModelMaster \
+        #     = Table('tb_idata_model_master', self.metadata, autoload_with=self.engine)
         self.iDataModelMaster = self.metadata.tables["tb_idata_model_master"]
         # [tb_idata_model_master]
         # id (bigint)
         # description (varchar(256))
 
+        # self.iDataModelDetail \
+        #     = Table('tb_idata_model_detail', self.metadata, autoload_with=self.engine)
         self.iDataModelDetail = self.metadata.tables["tb_idata_model_detail"]
         # [tb_idata_model_detail]
         # id (bigint)
@@ -131,12 +178,16 @@ class IPlanObjectModel(IPlanObject):
         # period_agg_type (varchar(256))
 
         # iData Module
+        # self.iDataModuleMaster \
+        #     = Table('tb_idata_module_master', self.metadata, autoload_with=self.engine)
         self.iDataModuleMaster = self.metadata.tables["tb_idata_module_master"]
         # [tb_idata_module_master]
         # id (bigint)
         # module_id (varchar(20))
         # module_description (varchar(200))
 
+        # self.iDataModuleDetail \
+        #     = Table('tb_idata_module_details', self.metadata, autoload_with=self.engine)
         self.iDataModuleDetail = self.metadata.tables["tb_idata_module_details"]
         # [tb_idata_module_details]
         # id (bigint)
@@ -146,6 +197,8 @@ class IPlanObjectModel(IPlanObject):
         # is_enabled (varchar(1))
 
         # iData Master
+        # self.iDataMaster \
+        #     = Table('tb_idata_master', self.metadata, autoload_with=self.engine)
         self.iDataMaster = self.metadata.tables["tb_idata_master"]
         # [tb_idata_master]
         # id (bigint)
@@ -159,6 +212,8 @@ class IPlanObjectModel(IPlanObject):
         # baseline_enabled (char(1))
         # opti_enabled (char(1))
 
+        # self.iDataValuesMaster \
+        #     = Table('tb_idata_values_master', self.metadata, autoload_with=self.engine)
         self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
         # [tb_idata_values_master]
         # id (bigint)
@@ -188,6 +243,8 @@ class IPlanObjectModel(IPlanObject):
         # skill_id_fk (bigint)
         # value (double precision)
 
+        # self.iDataValuesDetailHistory \
+        #     = Table('tb_idata_values_detail_hist', self.metadata, autoload_with=self.engine)
         self.iDataValuesDetailHistory = self.metadata.tables["tb_idata_values_detail_hist"]
         # [tb_idata_values_detail_hist]
         # id (bigint)
@@ -202,6 +259,8 @@ class IPlanObjectModel(IPlanObject):
         # area_id_fk (bigint)
 
         # Area/Skill Hierarchies
+        # self.AttributeMaster \
+        #     = Table('tb_attribute_master', self.metadata, autoload_with=self.engine)
         self.AttributeMaster = self.metadata.tables["tb_attribute_master"]
         # [tb_attribute_master]
         # id (bigint)
@@ -211,6 +270,8 @@ class IPlanObjectModel(IPlanObject):
         # createddate (date)
         # hierarchy_type (bigint)
 
+        # self.AttributeDetail \
+        #     = Table('tb_attribute_detail', self.metadata, autoload_with=self.engine)
         self.AttributeDetail = self.metadata.tables["tb_attribute_detail"]
         # [tb_attribute_detail
         # id (bigint)
@@ -236,6 +297,8 @@ class IPlanObjectModel(IPlanObject):
         # skill_id_fk (bigint)
         # idata_id_fk (bigint)
 
+        # self.iPredictDetailFocussed \
+        #     = Table('tb_ipr_conf_detail_focussed', self.metadata, autoload_with=self.engine)
         self.iPredictDetailFocussed = self.metadata.tables["tb_ipr_conf_detail_focussed"]
         # [tb_ipr_conf_detail_focussed]
         # id (bigint)
@@ -247,18 +310,24 @@ class IPlanObjectModel(IPlanObject):
         # skill_id_fk (bigint)
         # period (varchar(256))
 
+        # self.iPredictModelDetailFocussed \
+        #     = Table('tb_ipr_model_detail_focussed', self.metadata, autoload_with=self.engine)
         self.iPredictModelDetailFocussed = self.metadata.tables["tb_ipr_model_detail_focussed"]
         # [tb_ipr_model_detail_focussed]
         # id(bigint)
         # best_model(text)
         # best_model_name(text)
-        # best_r_2(double precision)
-        # best_wape(double precision)
+        # best_r_2(double
+        # precision)
+        # best_wape(double
+        # precision)
         # ohmodels_catftr(text)
         # area_id_fk(bigint)
         # ipr_conf_master_id_fk(bigint)
         # skill_id_fk(bigint)
 
+        # self.iPredictTrainDataFocussed \
+        #     = Table('tb_ipr_train_data_focussed', self.metadata, autoload_with=self.engine)
         self.iPredictTrainDataFocussed = self.metadata.tables["tb_ipr_train_data_focussed"]
         # [tb_ipr_train_data_focussed]
         # ipr_conf_master_id_fk (bigint)
@@ -286,6 +355,8 @@ class IPlanObjectModel(IPlanObject):
         #   area_id_fk (bigint)
         # -------------------------------------------------------------------
 
+        # self.iDataValuesMaster \
+        #     = Table('tb_idata_values_master', self.metadata, autoload_with=self.engine)
         self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
         # [tb_idata_values_master]
         # id (bigint)
@@ -303,6 +374,8 @@ class IPlanObjectModel(IPlanObject):
         # published_id (bigint)
         # note (text)
 
+        # self.iDataValuesDetail \
+        #     = Table('tb_idata_values_detail', self.metadata, autoload_with=self.engine)
         self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
         # [tb_idata_values_detail]
         # id (bigint)
@@ -313,6 +386,8 @@ class IPlanObjectModel(IPlanObject):
         # skill_id_fk (bigint)
         # value (double precision)
 
+        # self.iDataValuesDetailHist \
+        #     = Table('tb_idata_values_detail_hist', self.metadata, autoload_with=self.engine)
         self.iDataValuesDetailHist = self.metadata.tables["tb_idata_values_detail_hist"]
         # [tb_idata_values_detail_hist]
         # id (bigint)
@@ -329,73 +404,4 @@ class IPlanObjectModel(IPlanObject):
         # -------------------------------------------------------------------
 
         return
-
-    def _exists_id(self, what: Union[int, str], table: Table, columns: list[str], idcol: str = "id") -> bool:
-        # with self.engine.connect() as conn:
-        #     if isinstance(what, int):
-        #         query = select(func.count()).where(table.c[idcol] == what)
-        #         self.log.debug(query)
-        #         count = conn.execute(query).scalar()
-        #         return count > 0
-        #     for col in columns:
-        #         query = select(func.count()).where(table.c[col] == what)
-        #         self.log.debug(query)
-        #         count = conn.execute(query).scalar()
-        #         if count > 0:
-        #             return True
-        #         else:
-        #             continue
-        # return False
-        return self._convert_id(what, table, columns, idcol, nullable=True) is not None
-
-    def _convert_id(self, what: Union[int, str], table: Table, columns: list[str], idcol: str = "id",
-                    nullable=False) -> Optional[int]:
-        """
-        Convert a string into an id
-
-        :param what: string to convert
-        :param table: table to use
-        :param columns: list of columns where to search the text
-        :param idcol: column containing the 'id' value
-        :return: the id as integer value
-        """
-        # check if 'what' is an integer or an integer in string format
-        try:
-            id = int(what)
-            return id
-        except:
-            pass
-
-        # 'what' is a string. Check a record with this string in one of the selected columns
-        with self.engine.connect() as conn:
-            for col in columns:
-                query = select(table.c[idcol]).where(table.c[col] == what)
-                rlist = conn.execute(query).fetchall()
-                if len(rlist) > 0:
-                    # [(id,)]
-                    return rlist[0][0]
-                continue
-        if nullable:
-            return None
-        raise ValueError(f"Unable to convert '{what}' into an id using {table.name}")
-
-    def _convert_name(self, id: int, table: Table, namecol: str, idcol: str = 'id') -> str:
-        """
-
-        :param id: id to convert
-        :param table: table to use
-        :param namecol: column containing the name
-        :param idcol: column containing the 'id' value
-        :return: the found name
-        """
-        assert is_instance(id, int)
-
-        with self.engine.connect() as conn:
-            query = select(table.c[namecol]).where(table.c[idcol] == id)
-            result = conn.execute(query).scalar()
-            return result
 # end
-
-# ---------------------------------------------------------------------------
-# End
-# ---------------------------------------------------------------------------

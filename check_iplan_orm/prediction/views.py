@@ -1,0 +1,4 @@
+
+def prediction(request):
+    pass
+

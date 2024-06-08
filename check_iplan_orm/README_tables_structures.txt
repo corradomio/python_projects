@@ -41,7 +41,7 @@ THEN:
 # Used in iPredict Server
 -----------------------------------------------------------------------------
 
-tb_ipr_conf_master_focussed
+tb_ipr_conf_master_focussed     [TimeSeries]
     id
     ipr_conf_master_name
     ipr_conf_master_desc
@@ -50,7 +50,7 @@ tb_ipr_conf_master_focussed
     skill_id_fk
     idata_id_fk
 
-tb_ipr_conf_detail_focussed
+tb_ipr_conf_detail_focussed     [TimeSeries details: in/out measures]
     id
     parameter_desc
     parameter_value
@@ -110,24 +110,6 @@ tb_idata_values_detail      [Prediction Data]
     ?area_id_fk
 
 
-
------------------------------------------------------------------------------
-# Not used in iPredict Server
------------------------------------------------------------------------------
-
-tb_ipr_conf_master
-    id
-    ipr_conf_master_name
-    ipr_conf_master_desc
-
-
-tb_ipr_conf_detail
-    id
-    ipr_conf_master_id
-    parameter_id
-    parameter_value
-
-
 -----------------------------------------------------------------------------
 # Not used in iPredict Server
 -----------------------------------------------------------------------------
@@ -154,3 +136,43 @@ tb_ipr_master
     ipr_data_id
     skill_hierarchy_fk
     idatamaster_id_fk
+
+
+-----------------------------------------------------------------------------
+# Python ML models Models
+-----------------------------------------------------------------------------
+#  tb_ipr_conf_detail
+#  tb_ipr_conf_master
+
+#  tb_ipr_data_detail
+#  tb_ipr_data_master
+#  tb_ipr_master
+
+
+#
+# where to save the models
+#
+tb_ipr_model_detail_focussed
+    id                      seq
+    best_model              JSON ???
+    best_model_name         model name
+    best_r_2                r2 score
+    best_wape               wape score
+    ohmodels_catftr         ???
+    area_id_fk              area feature
+    skill_id_fk             skill feature
+    ipr_conf_master_id_fk   time series
+
+
+#
+# where to save the test data & predicted data
+#
+tb_ipr_train_data_focussed
+    ipr_conf_master_id_fk
+    area_id_fk
+    skill_id_fk
+    target
+    actual
+    predicted
+    state_date
+
