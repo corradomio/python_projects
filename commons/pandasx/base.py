@@ -96,12 +96,14 @@ def validate_columns(df: pd.DataFrame, columns: Union[None, str, list[str]]):
 
 
 def to_datetime(dt) -> datetime:
+    if isinstance(dt, str):
+        dt = pd.to_datetime(dt)
+    if isinstance(dt, pd.Timestamp):
+        return dt.to_pydatetime()
     if isinstance(dt, datetime):
         return dt
-    elif isinstance(dt, pd.Period):
+    if isinstance(dt, pd.Period):
         return dt.to_timestamp().to_pydatetime()
-    elif isinstance(dt, pd.Timestamp):
-        return dt.to_pydatetime()
     else:
         raise ValueError(f"Unsupported datetime {dt}")
 

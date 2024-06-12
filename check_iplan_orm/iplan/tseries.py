@@ -1,7 +1,10 @@
 import traceback
+
+import pandas as pd
 from sqlalchemy import text
-from stdlib.dict import reverse_dict
+
 from .plans import *
+
 
 # ---------------------------------------------------------------------------
 # TimeSeriesFocussed Operations
@@ -13,6 +16,18 @@ class TSFOperations(IPlanObject):
         super().__init__(tsf.ipom)
         self._tsf = tsf
         self._plan = self._tsf.plan
+
+        # train data
+        self.iDataValuesDetailHist = self.ipom.iDataValuesDetailHist
+        # predict data
+        self.iDataValuesDetail = self.ipom.iDataValuesDetail
+        # save test/predict data
+        self.iPredictTestPredictionValuesFocussed = self.ipom.iPredictTestPredictionValuesFocussed
+        # save predicted data
+        self.iPredictPredictedValuesFocussed = self.ipom.iPredictPredictedValuesFocussed
+        # save models data
+        self.iPredictModelDetailFocussed = self.ipom.iPredictModelDetailFocussed
+    # end
 
     # ----------------------------------------
 
@@ -49,62 +64,84 @@ class TSFOperations(IPlanObject):
 #
 
 class TrainFocussed(TSFOperations):
+
     def __init__(self, tsf: "TimeSeriesFocussed"):
-        super().__init__(tsf.ipom)
-        self._tsf = tsf
-        self._plan = self._tsf.plan
-    # end
+        super().__init__(tsf)
 
     # -----------------------------------------------------------------------
     # delete
     # -----------------------------------------------------------------------
 
-    def delete(self):
+    def delete(
+        self,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
+    ):
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+
         data_master = self._tsf.data_master
         data_master_id = data_master.id
         plan_ids = self._plan.plan_ids
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
 
         self._delete_train_data(
             data_master_id=data_master_id,
             plan_ids=plan_ids,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
-            measure_dict=measure_dict
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=start_date,
+            end_date=end_date
         )
         return self
 
     def _delete_train_data(
-            self, *,
-            data_master_id: int,
-            plan_ids: list[int],
-            area_feature_dict: dict[int, str],
-            skill_feature_dict: dict[int, str],
-            measure_dict: dict[int, str]):
-
+        self, *,
+        data_master_id: int,
+        plan_ids: list[int],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime]
+    ):
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesDetailHist
+            table = self.iDataValuesDetailHist
 
             # 2) retrieve the data with 'skill NOT NULL'
             query = delete(table) \
                 .where(table.c['value_master_fk'].in_(plan_ids) &
                        table.c['model_detail_id_fk'].in_(measure_ids) &
-                       table.c['area_id_fk'].in_(area_feature_ids) &
-                       table.c['skill_id_fk'].in_(skill_feature_ids))
+                       table.c['area_id_fk'].in_(area_ids) &
+                       table.c['skill_id_fk'].in_(skill_ids))
+
+            query = where_start_end_date(
+                table, query,
+                start_date=start_date,
+                end_date=end_date
+            )
+
             self.log.debug(query)
             conn.execute(query)
             conn.commit()
@@ -144,36 +181,36 @@ class TrainFocussed(TSFOperations):
         """
         assert is_instance(df, DataFrame)
 
-        self.log.info("Save train data ...")
+        self.log.info("Saving train data ...")
 
         freq = self._tsf.freq
         area_plan_map = self._plan.area_plan_map()
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
 
         # 1) normalize the dataframe
         #    columns: ['area_id_fk', 'skill_id_fk', 'state_date', <measure_id1>, ...]
-        df = normalize_df(df, area_feature_dict, skill_feature_dict, measure_dict, freq)
+        df = normalize_df(df, area_dict, skill_dict, measure_dict, freq)
 
         # 2) split df by area/skill (and drop the columns)
         dfdict = pdx.groups_split(df, groups=['area_id_fk', 'skill_id_fk'], drop=True)
         for area_skill in dfdict:
-            area_feature_id: int = area_skill[0]
-            skill_feature_id: int = area_skill[1]
+            area_id: int = area_skill[0]
+            skill_id: int = area_skill[1]
             dfas = dfdict[area_skill]
             for measure_id in measure_dict.keys():
-                area_name = area_feature_dict[area_feature_id]
-                skill_name = skill_feature_dict[skill_feature_id]
+                area_name = area_dict[area_id]
+                skill_name = skill_dict[skill_id]
                 measure_name = measure_dict[measure_id]
-                plan_id = None if area_plan_map is None or area_feature_id not in area_plan_map \
-                    else area_plan_map[area_feature_id]
+                plan_id = None if area_plan_map is None or area_id not in area_plan_map \
+                    else area_plan_map[area_id]
                 try:
                     self.log.debugt(f"... [train] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
                     # Note: type(*_feature_id) is a numpy type! converted into Python int
                     self._save_area_skill_train_data(
-                        int(area_feature_id), int(skill_feature_id), int(measure_id), int(plan_id),
+                        int(area_id), int(skill_id), int(measure_id), int(plan_id),
                         dfas)
                 except Exception as e:
                     exc = traceback.format_exc()
@@ -185,19 +222,19 @@ class TrainFocussed(TSFOperations):
 
     def _save_area_skill_train_data(
         self,
-        area_feature_id: int, skill_feature_id: int, measure_id: int, plan_id: int,
+        area_id: int, skill_id: int, measure_id: int, plan_id: int,
         df: DataFrame):
         """
 
-        :param area_feature_id:
-        :param skill_feature_id:
+        :param area_id:
+        :param skill_id:
         :param measure_id:
         :param plan_id:
         :param df:
         """
 
-        assert is_instance(area_feature_id, int)
-        assert is_instance(skill_feature_id, int)
+        assert is_instance(area_id, int)
+        assert is_instance(skill_id, int)
         assert is_instance(measure_id, int)
         assert is_instance(df, DataFrame)
         assert is_instance(plan_id, int)
@@ -205,15 +242,14 @@ class TrainFocussed(TSFOperations):
         # start_date = pdx.to_datetime(df['state_date'].min())
         # end_date = pdx.to_datetime(df['state_date'].max())
         n = len(df)
-
         now = datetime.now()
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesDetailHist
+            table = self.iDataValuesDetailHist
 
             bulk_data = [
-                dict(area_id_fk=area_feature_id,
-                     skill_id_fk=skill_feature_id,
+                dict(area_id_fk=area_id,
+                     skill_id_fk=skill_id,
                      model_detail_id_fk=measure_id,
                      state_date=pdx.to_datetime(df['state_date'].iloc[i]),
                      value=float(df[measure_id].iloc[i]),
@@ -235,61 +271,64 @@ class TrainFocussed(TSFOperations):
     # -----------------------------------------------------------------------
 
     def select(
-        self,
+        self, start_date: datetime, *,
         area: Union[None, int, list[int], str, list[str]] = None,
         skill: Union[None, int, list[int], str, list[str]] = None,
-        start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
         periods: Optional[int] = None,
+        use_plan: bool = False,
         new_format=True) -> DataFrame:
         """
         Retrieve the train data
-        It is possible to specify a date range
+        It is mandatory to pass 'start_date' because, if no data is available, it is not possible to
+        generate the 'fake' values.
 
-        :param plan: name of the plan used for reference
+        Number of periods and frequency can retrieved from the Data Master
+
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
         :param start_date: optional start date
-        :param end_date: optional end date
-        :param periods: optional number of periods
+        :param periods: if not specified, it is inferred from the Data Master
+                the frequency is inferred from the Data Master
+        :param use_plan: used to enable the query using the plan
+                Note: in theory the plan is not used with the train data
         :param new_format: DataFrame format
         :return: the dataframe used for training. It contains input/target features
         """
 
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
-        assert is_instance(start_date, Optional[datetime])
-        assert is_instance(end_date, Optional[datetime])
+        assert is_instance(start_date, datetime)
         assert is_instance(periods, Optional[int])
 
-        # area & skill == 0 are converted in None
-        if area == 0: area = None
-        if skill == 0: skill = None
-
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
         data_master_id = self._tsf.data_master.id
 
         # plan, for training, is optional?
-        plan_ids = self._plan.plan_ids if self._plan is not None else None
+        plan_ids = self._plan.plan_ids if use_plan and self._plan is not None else None
 
         # freq & periods are retrieved from the Data Master
         freq = self._tsf.data_master.period_hierarchy.freq
         if periods is None or periods <= 0:
             periods = self._tsf.data_master.period_hierarchy.periods
 
-        start_date, end_date = start_end_dates(start_date, end_date, periods, freq)
+        start_date, end_date = start_end_dates(start_date, None, periods, freq, True)
 
-        df: DataFrame = self._select_train_data(
+        df_selected = self._select_train_data(
             data_master_id,
             plan_ids,
-            area_feature_dict,
-            skill_feature_dict,
+            area_dict,
+            skill_dict,
             measure_dict,
             start_date, end_date,
-            new_format=new_format
-        )
+            new_format=new_format)
+
+        df = fill_missing_dates(
+            df_selected,
+            area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+            start_date=start_date, periods=periods, freq=freq)
+
         return df
     # end
 
@@ -297,26 +336,27 @@ class TrainFocussed(TSFOperations):
         self,
         data_master_id: int,
         plan_ids: Optional[list[int]],  # data_values_master_ids
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
         measure_dict: dict[int, str],
-        start_date: Optional[datetime], end_date: Optional[datetime],
-        new_format=False) -> DataFrame:
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+        new_format) -> DataFrame:
         """
         Retrieve the historical data from 'tb_idata_values_detail_hist' based on
 
             - data_master_id
             - plan_ids
-            - area_feature_ids
-            - skill_feature_ids
+            - area_ids
+            - skill_ids
             - measure_ids
 
         It is possible to replace the area/skill/measure ids with the correspondent names
 
         :param data_master_id:
         :param plan_ids:
-        :param area_feature_dict:
-        :param skill_feature_dict:
+        :param area_dict:
+        :param skill_dict:
         :param measure_dict:
         :param start_date:
         :param end_date:
@@ -329,62 +369,66 @@ class TrainFocussed(TSFOperations):
                     columns: ['skill_id_fk:int', 'area_id_fk:int', 'time:datetime', 'day:str', <measure_1: float>, ...]
         """
 
-        assert is_instance(data_master_id, int)
-        assert is_instance(plan_ids, Optional[list[int]])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(data_master_id, int)
+        # assert is_instance(plan_ids, Optional[list[int]])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(start_date, Optional[datetime])
+        # assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
-        table = self.ipom.iDataValuesDetailHist
+        table = self.iDataValuesDetailHist
 
         # 2) retrieve the data with 'skill NOT NULL'
         query = select(table.c['area_id_fk', 'skill_id_fk', 'model_detail_id_fk', 'state_date', 'value']) \
-            .where(table.c['model_detail_id_fk'].in_(measure_ids)
-                   & table.c['area_id_fk'].in_(area_feature_ids)
-                   & table.c['skill_id_fk'].in_(skill_feature_ids)
-                   # & table.c['value_master_fk'].in_(plan_ids)
+            .where(table.c['model_detail_id_fk'].in_(measure_ids) &
+                   table.c['area_id_fk'].in_(area_ids) &
+                   table.c['skill_id_fk'].in_(skill_ids)
             )
         # 2.1) plan_ids is optional!
         if plan_ids is not None:
             query = query.where(table.c['value_master_fk'].in_(plan_ids))
-        # 2.2) start/end dates are optional
-        if start_date is not None and end_date is not None:
-            query = query.where(
-                (table.c['state_date'] >= start_date) &
-                (table.c['state_date'] < end_date)
-            )
+
+        query = where_start_end_date(
+            table, query,
+            start_date=start_date,
+            end_date=end_date)
 
         self.log.debug(query)
         df_with_skill = pd.read_sql_query(query, self.engine)
 
+        #
+        # TODO: WHY there are configurations where 'skill' is NOT DEFINED ???
+        #
+
         # 3) retrieve the data with 'skill IS NULL'
         query = select(table.c['area_id_fk', 'skill_id_fk', 'model_detail_id_fk', 'state_date', 'value']) \
             .where(table.c['model_detail_id_fk'].in_(measure_ids) &
-                   table.c['area_id_fk'].in_(area_feature_ids) &
+                   table.c['area_id_fk'].in_(area_ids) &
                    (table.c['skill_id_fk'] == None)
             )
         # 3.1) plan_ids is optional!
         if plan_ids is not None:
             query = query.where(table.c['value_master_fk'].in_(plan_ids))
-        # 3.2) start/end dates are optional
-        if start_date is not None and end_date is not None:
-            query = query.where(
-                (table.c['state_date'] >= start_date) &
-                (table.c['state_date'] < end_date)
-            )
+
+        query = where_start_end_date(
+            table, query,
+            start_date=start_date,
+            end_date=end_date
+        )
 
         self.log.debug(query)
         df_no_skill = pd.read_sql_query(query, self.engine)
 
         # 4) concatenate df_with_skill WITH df_no_skill
-        df = concatenate_no_skill_df(df_with_skill, df_no_skill, skill_feature_dict)
-
-        return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
+        df = concatenate_no_skill_df(df_with_skill, df_no_skill, skill_dict)
+        df = pivot_df(df, area_dict, skill_dict, measure_dict, new_format=new_format)
+        return df
     # end
 
     # -----------------------------------------------------------------------
@@ -394,44 +438,61 @@ class TrainFocussed(TSFOperations):
 
 
 class TestFocussed(TSFOperations):
+
     def __init__(self, tsf: "TimeSeriesFocussed"):
-        super().__init__(tsf.ipom)
-        self._tsf = tsf
-        self._plan = self._tsf.plan
+        super().__init__(tsf)
 
     # -----------------------------------------------------------------------
     # delete
     # -----------------------------------------------------------------------
 
-    def delete(self):
+    def delete(
+        self,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ):
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+
         time_series_id = self._tsf.id
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
 
         self._delete_test_data(
             time_series_id=time_series_id,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
-            measure_dict=measure_dict
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=start_date,
+            end_date=end_date
         )
         return self
 
     def _delete_test_data(
         self, *,
         time_series_id: int,
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str],
-        measure_dict: dict[int, str]):
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+    ):
         assert is_instance(time_series_id, int)
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
         # WARN: in theory it is not necessary to check for
@@ -439,21 +500,25 @@ class TestFocussed(TSFOperations):
         # BUT in this way we can resolve also implementation's
         # errors!
         #
-        # WARN: the colum 'target' has A WRONG name, it should be
-        #
-        #       model_detail_id_fk
-        #
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesDetailHist
+            table = self.iPredictTestPredictionValuesFocussed
 
             query = delete(table) \
                 .where(
                 (table.c['ipr_conf_master_id_fk'] == time_series_id) &
-                table.c['area_id_fk'].in_(area_feature_ids) &
-                table.c['skill_id_fk'].in_(skill_feature_ids) &
-                table.c['target'].in_(measure_ids)
+                table.c['area_id_fk'].in_(area_ids) &
+                table.c['skill_id_fk'].in_(skill_ids) &
+                table.c['model_detail_id_fk'].in_(measure_ids)
             )
+
+            query = where_start_end_date(
+                table, query,
+                start_date=start_date,
+                end_date=end_date,
+                end_included=True
+            )
+
             self.log.debug(query)
             conn.execute(query)
             conn.commit()
@@ -463,72 +528,217 @@ class TestFocussed(TSFOperations):
     # save
     # -----------------------------------------------------------------------
 
-    def save(self, test: DataFrame, predict: DataFrame):
+    def save(self, df_test: DataFrame, df_pred: DataFrame):
+        assert is_instance(df_test, DataFrame)
+        assert is_instance(df_pred, DataFrame)
 
-        pass
+        #
+        # Note: in THEORY df_test and dt_pred could be inconsistent NOT ONLY on the columns
+        # BUT ALSO in the timestamps, area/skill
+        # Area & skill are checks, targets also, BUT NOT the timestamp, FOR NOW
+        #
+
+        # check dataframe compatibilities
+        assert len(df_test) == len(df_pred), "Invalid dataframes: different lengths"
+        assert len(df_test.columns.intersection(df_pred.columns)) > 0, \
+            "Invalid dataframes: no all pred's columns are in the test's columns"
+
+        self.log.info("Saving test data ...")
+
+        time_series_id = self._tsf.id
+        freq = self._tsf.freq
+        area_plan_map = self._plan.area_plan_map()
+
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True, use_type='target')
+
+        # 1) normalize the dataframes
+        #    columns: ['area_id_fk', 'skill_id_fk', 'state_date', <measure_id1>, ...]
+        df_test = normalize_df(df_test, area_dict, skill_dict, measure_dict, freq)
+        df_pred = normalize_df(df_pred, area_dict, skill_dict, measure_dict, freq)
+
+        # 2) split df by area/skill (and drop the columns)
+        df_test_dict = pdx.groups_split(df_test, groups=['area_id_fk', 'skill_id_fk'], drop=True)
+        df_pred_dict = pdx.groups_split(df_pred, groups=['area_id_fk', 'skill_id_fk'], drop=True)
+
+        assert len(df_test_dict) == len(df_pred_dict), \
+            "Invalid dataframes: missing or extra (area,skill)s"
+
+        for area_skill in df_pred_dict:
+            if area_skill not in df_test_dict:
+                self.log.warn(f"Missing pred {area_skill} in test dataframe: skipped")
+                continue
+
+            area_id: int = area_skill[0]
+            skill_id: int = area_skill[1]
+            dftas = df_test_dict[area_skill]
+            dfpas = df_pred_dict[area_skill]
+
+            for measure_id in measure_dict:
+                area_name = area_dict[area_id]
+                skill_name = skill_dict[skill_id]
+                measure_name = measure_dict[measure_id]
+
+                try:
+                    self.log.debugt(f"... [test] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self._save_area_skill_test_data(
+                        time_series_id=time_series_id,
+                        area_id=int(area_id),
+                        skill_id=int(skill_id),
+                        measure_id=int(measure_id),
+                        df_test=dftas,
+                        df_pred=dfpas
+                    )
+                except Exception as e:
+                    exc = traceback.format_exc()
+                    self.log.error(
+                        f"... unable to save predict data for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self.log.error(f"... {e}\n{exc}")
+            # end
+        # end
+        self.log.info("Done")
+        return self
+
+    def _save_area_skill_test_data(
+        self,
+        time_series_id: int,
+        area_id: int, skill_id: int, measure_id: int,
+        df_test: DataFrame, df_pred: DataFrame):
+        """
+
+        :param area_id:
+        :param skill_id:
+        :param measure_id:
+        :return:
+        """
+
+        assert is_instance(time_series_id, int)
+        assert is_instance(area_id, int)
+        assert is_instance(skill_id, int)
+        assert is_instance(measure_id, int)
+        assert is_instance(df_test, DataFrame)
+        assert is_instance(df_pred, DataFrame)
+
+        n = len(df_pred)
+        now = datetime.now()
+
+        with self.engine.connect() as conn:
+            table = self.iPredictTestPredictionValuesFocussed
+
+            bulk_data = [
+                dict(
+                    updated_date=now,
+                    ipr_conf_master_id_fk=time_series_id,
+                    area_id_fk=area_id,
+                    skill_id_fk=skill_id,
+                    model_detail_id_fk=measure_id,
+                    actual=df_test[measure_id].iloc[i],
+                    predicted=df_pred[measure_id].iloc[i],
+                    state_date=df_pred['state_date'].iloc[i]
+                )
+                for i in range(n)
+            ]
+
+            conn.execute(table.insert(), bulk_data)
+            conn.commit()
+        return
+
+    # -----------------------------------------------------------------------
+    # select
+    # -----------------------------------------------------------------------
+
+    def select(self, df_pred: DataFrame):
+        assert is_instance(df_pred, DataFrame)
+        return self
 # end
 
 
 class PredictFocussed(TSFOperations):
+
     def __init__(self, tsf: "TimeSeriesFocussed"):
-        super().__init__(tsf.ipom)
-        self._tsf = tsf
-        self._plan = self._tsf.plan
+        super().__init__(tsf)
 
     # -----------------------------------------------------------------------
     # delete
     # -----------------------------------------------------------------------
 
-    def delete(self):
+    def delete(
+        self,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ):
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+
         data_master = self._tsf.data_master
         data_master_id = data_master.id
         plan_ids = self._plan.plan_ids
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
 
         self._delete_predict_data(
             data_master_id=data_master_id,
             plan_ids=plan_ids,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
-            measure_dict=measure_dict
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=start_date,
+            end_date=end_date
         )
         return self
 
     def _delete_predict_data(
-            self, *,
-            data_master_id: int,
-            plan_ids: list[int],
-            area_feature_dict: dict[int, str],
-            skill_feature_dict: dict[int, str],
-            measure_dict: dict[int, str]):
+        self, *,
+        data_master_id: int,
+        plan_ids: list[int],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+    ):
 
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesDetail
+            table = self.iDataValuesDetail
 
             query = delete(table) \
                 .where(table.c['value_master_fk'].in_(plan_ids) &
                        table.c['model_detail_id_fk'].in_(measure_ids) &
-                       table.c['skill_id_fk'].in_(skill_feature_ids))
+                       table.c['skill_id_fk'].in_(skill_ids))
+
+            query = where_start_end_date(
+                table, query,
+                start_date=start_date,
+                end_date=end_date,
+                end_included=True
+            )
+
             self.log.debug(query)
             conn.execute(query, parameters=dict(
                 plan_ids=tuple(plan_ids),
                 measure_ids=tuple(measure_ids),
-                skill_feature_ids=tuple(skill_feature_ids),
-                area_feature_ids=tuple(area_feature_ids)
+                skill_ids=tuple(skill_ids),
+                area_ids=tuple(area_ids)
             ))
             conn.commit()
         return
@@ -579,76 +789,80 @@ class PredictFocussed(TSFOperations):
         """
         assert is_instance(df, DataFrame)
 
-        self.log.info("Save predict data ...")
+        self.log.info("Saving predict data ...")
 
         freq = self._tsf.freq
         area_plan_map = self._plan.area_plan_map()
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
 
         # 1) normalize the dataframe
         #    columns: ['area_id_fk', 'skill_id_fk', 'state_date', <measure_id1>, ...]
-        df = normalize_df(df, area_feature_dict, skill_feature_dict, measure_dict, freq)
+        df = normalize_df(df, area_dict, skill_dict, measure_dict, freq)
 
         # 2) split df by area/skill (and drop the columns)
         dfdict = pdx.groups_split(df, groups=['area_id_fk', 'skill_id_fk'], drop=True)
         for area_skill in dfdict:
-            area_feature_id: int = area_skill[0]
-            skill_feature_id: int = area_skill[1]
+
+            area_id: int = area_skill[0]
+            skill_id: int = area_skill[1]
             dfas = dfdict[area_skill]
+
             for measure_id in measure_dict:
-                area_name = area_feature_dict[area_feature_id]
-                skill_name = skill_feature_dict[skill_feature_id]
+                area_name = area_dict[area_id]
+                skill_name = skill_dict[skill_id]
                 measure_name = measure_dict[measure_id]
-                plan_id = area_plan_map[area_feature_id]
+                plan_id = area_plan_map[area_id]
+
                 try:
                     self.log.debugt(f"... [pred] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
                     # Note: type(*_feature_id) is a numpy type! converted into Python int
                     self._save_area_skill_predict_data(
-                        int(area_feature_id), int(skill_feature_id), int(measure_id), int(plan_id),
+                        int(area_id), int(skill_id), int(measure_id), int(plan_id),
                         dfas)
                 except Exception as e:
                     exc = traceback.format_exc()
                     self.log.error(
                         f"... unable to save predict data for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
                     self.log.error(f"... {e}\n{exc}")
+            # end
         # end
         self.log.info("Done")
         return
 
     def _save_area_skill_predict_data(
         self,
-        area_feature_id: int, skill_feature_id: int, measure_id: int, plan_id: int,
+        area_id: int, skill_id: int, measure_id: int, plan_id: int,
         df: DataFrame):
         """
 
-        :param area_feature_id:
-        :param skill_feature_id:
+        :param area_id:
+        :param skill_id:
         :param measure_id:
         :param plan_id:
         :param df:
         """
-        assert is_instance(area_feature_id, int)
-        assert is_instance(skill_feature_id, int)
+        assert is_instance(area_id, int)
+        assert is_instance(skill_id, int)
         assert is_instance(measure_id, int)
         assert is_instance(plan_id, int)
         assert is_instance(df, DataFrame)
 
         # start_date = pdx.to_datetime(df['state_date'].min())
         # end_date = pdx.to_datetime(df['state_date'].max())
-        n = len(df)
 
+        n = len(df)
         now = datetime.now()
 
         with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesDetail
+            table = self.iDataValuesDetail
 
             bulk_data = [
                 dict(value_master_fk=plan_id,
                      state_date=pdx.to_datetime(df['state_date'].iloc[i]),
-                     skill_id_fk=skill_feature_id,
+                     skill_id_fk=skill_id,
                      model_detail_id_fk=measure_id,
                      value=float(df[measure_id].iloc[i]),
                      updated_date=now,)
@@ -664,11 +878,10 @@ class PredictFocussed(TSFOperations):
     # -----------------------------------------------------------------------
 
     def select(
-        self,
+        self, *,
         area: Union[None, int, list[int], str, list[str]] = None,
         skill: Union[None, int, list[int], str, list[str]] = None,
         start_date: Optional[datetime] = None,
-        end_date: Optional[datetime] = None,
         periods: Optional[int] = None,
         new_format=True) -> DataFrame:
         """
@@ -679,22 +892,20 @@ class PredictFocussed(TSFOperations):
         :param skill: skill(s) to select. If not specified, all available skills will be selected
         :param start_date: optional start date
         :param end_date: optional end date
+        :param start_included: if to include the start date
         :param periods: optional number of periods
         :param new_format: DataFrame format
         :return: the dataframe used for prediction. It contains input/target features
         """
-        assert is_instance(area, Union[None, int, list[int]])
-        assert is_instance(skill, Union[None, int, list[int]])
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
         assert is_instance(start_date, Optional[datetime])
-        assert is_instance(end_date, Optional[datetime])
         assert is_instance(periods, Optional[int])
 
-        # area & skill == 0 are converted in None
-        if area == 0: area = None
-        if skill == 0: skill = None
+        assert self._plan is not None, "Prediction data can be retrieved only if it is specified a plan"
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
         data_master_id = self._tsf.data_master.id
         plan_ids = self._plan.plan_ids
@@ -704,17 +915,23 @@ class PredictFocussed(TSFOperations):
         if periods is None or periods <= 0:
             periods = self._tsf.data_master.period_hierarchy.periods
 
-        start_date, end_date = start_end_dates(start_date, end_date, periods, freq)
+        start_date, end_date = start_end_dates(start_date, None, periods, freq, which_date=None)
 
-        df: DataFrame = self._select_predict_data(
+        df_selected = self._select_predict_data(
             data_master_id,
             plan_ids,
-            area_feature_dict,
-            skill_feature_dict,
+            area_dict,
+            skill_dict,
             measure_dict,
             start_date, end_date,
             new_format=new_format
         )
+
+        df = fill_missing_dates(
+            df_selected,
+            area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+            start_date=start_date, periods=periods, freq=freq)
+
         return df
     # end
 
@@ -722,33 +939,35 @@ class PredictFocussed(TSFOperations):
         self,
         data_master_id: int,
         plan_ids: list[int],  # data_values_master_ids
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
         measure_dict: dict[int, str],
-        start_date: Optional[datetime], end_date: Optional[datetime],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
         new_format=False) -> DataFrame:
         """
 
         :param data_master_id:
         :param plan_ids:
-        :param area_feature_dict:
-        :param skill_feature_dict:
+        :param area_dict:
+        :param skill_dict:
         :param measure_dict:
         :param start_date:
         :param end_date:
         :param new_format:
         :return:
         """
-
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
         assert is_instance(measure_dict, dict[int, str])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict)
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
         # 2) retrieve the data with 'skill NOT NULL'
@@ -762,57 +981,228 @@ class PredictFocussed(TSFOperations):
                  join tb_idata_values_master as tivm on tivm.id = tivd.value_master_fk
                 where tivd.value_master_fk in :plan_ids
                   and tivd.model_detail_id_fk in :measure_ids
-                  and tivd.skill_id_fk in :skill_feature_ids
-                  and tivm.area_id in :area_feature_ids
-                """
-        if start_date is not None and end_date is not None:
-            qtext += """
-                and tivd.state_date >= :start_date
-                and tivd.state_date <  :end_date
-                """
+                  and tivd.skill_id_fk in :skill_ids
+                  and tivm.area_id in :area_ids"""
+        if start_date is not None:
+            qtext += """ and tivd.state_date >= :start_date """
+        if end_date is not None:
+            qtext += """ and tivd.state_date <  :end_date """
+
         query = text(qtext)
         self.log.debug(query)
         df = pd.read_sql_query(query, self.engine, params=dict(
             plan_ids=tuple(plan_ids),
             measure_ids=tuple(measure_ids),
-            skill_feature_ids=tuple(skill_feature_ids),
-            area_feature_ids=tuple(area_feature_ids),
+            skill_ids=tuple(skill_ids),
+            area_ids=tuple(area_ids),
             start_date=start_date,
             end_date=end_date
         ))
 
-        return pivot_df(df, area_feature_dict, skill_feature_dict, measure_dict, new_format=new_format)
+        # area_id_fk, skill_id_fk, model_detail_id_fk, state_date, state_date
+
+        df = pivot_df(df, area_dict, skill_dict, measure_dict, new_format=new_format)
+        return df
+    # end
 # end
 
 
 class PredictedFocussed(TSFOperations):
+
     def __init__(self, tsf: "TimeSeriesFocussed"):
-        super().__init__(tsf.ipom)
-        self._tsf = tsf
-        self._plan = self._tsf.plan
+        super().__init__(tsf)
 
     # -----------------------------------------------------------------------
     # delete
     # -----------------------------------------------------------------------
 
-    def delete(self):
-        raise NotImplemented()
+    def delete(
+        self,
+        area: Union[None, int, list[int], str, list[str]] = None,
+        skill: Union[None, int, list[int], str, list[str]] = None,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None
+    ):
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+
+        time_series_id = self._tsf.id
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
+        measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
+
+        self._delete_predicted_data(
+            time_series_id=time_series_id,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=start_date,
+            end_date=end_date
+        )
         return self
+
+    def _delete_predicted_data(
+        self, *,
+        time_series_id: int,
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
+        measure_dict: dict[int, str],
+        start_date: Optional[datetime],
+        end_date: Optional[datetime],
+    ):
+        assert is_instance(time_series_id, int)
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
+        assert is_instance(measure_dict, dict[int, str])
+        assert is_instance(start_date, Optional[datetime])
+        assert is_instance(end_date, Optional[datetime])
+
+        # 1) retrieve all area/skill feature ids
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict)
+        measure_ids = list(measure_dict.keys())
+
+        # WARN: in theory it is not necessary to check for
+        # ALL measures, but ONLY for the targets.
+        # BUT in this way we can resolve also implementation's
+        # errors!
+        #
+
+        with self.engine.connect() as conn:
+            table = self.iPredictPredictedValuesFocussed
+
+            query = delete(table) \
+                .where(
+                (table.c['ipr_conf_master_id_fk'] == time_series_id) &
+                table.c['area_id_fk'].in_(area_ids) &
+                table.c['skill_id_fk'].in_(skill_ids) &
+                table.c['model_detail_id_fk'].in_(measure_ids)
+            )
+
+            query = where_start_end_date(
+                table, query,
+                start_date=start_date,
+                end_date=end_date,
+                end_included=True
+            )
+
+            self.log.debug(query)
+            conn.execute(query)
+            conn.commit()
+        return
 
     # -----------------------------------------------------------------------
     # save
     # -----------------------------------------------------------------------
 
-    def save(self, df: DataFrame):
-        raise NotImplemented()
+    def save(self, df_pred: DataFrame):
+        assert is_instance(df_pred, DataFrame)
+
+        #
+        # Note: in THEORY df_test and dt_pred could be inconsistent NOT ONLY on the columns
+        # BUT ALSO in the timestamps, area/skill
+        # Area & skill are checks, targets also, BUT NOT the timestamp, FOR NOW
+        #
+
+        self.log.info("Saving predicted data ...")
+
+        time_series_id = self._tsf.id
+        freq = self._tsf.freq
+        area_plan_map = self._plan.area_plan_map()
+
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True, use_type='target')
+
+        # 1) normalize the dataframes
+        #    columns: ['area_id_fk', 'skill_id_fk', 'state_date', <measure_id1>, ...]
+        df_pred = normalize_df(df_pred, area_dict, skill_dict, measure_dict, freq)
+
+        # 2) split df by area/skill (and drop the columns)
+        df_pred_dict = pdx.groups_split(df_pred, groups=['area_id_fk', 'skill_id_fk'], drop=True)
+
+        for area_skill in df_pred_dict:
+
+            area_id: int = area_skill[0]
+            skill_id: int = area_skill[1]
+            dfpas = df_pred_dict[area_skill]
+
+            for measure_id in measure_dict:
+                area_name = area_dict[area_id]
+                skill_name = skill_dict[skill_id]
+                measure_name = measure_dict[measure_id]
+
+                try:
+                    self.log.debugt(f"... [test] saving area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self._save_area_skill_predicted_data(
+                        time_series_id=time_series_id,
+                        area_id=int(area_id),
+                        skill_id=int(skill_id),
+                        measure_id=int(measure_id),
+                        df_pred=dfpas
+                    )
+                except Exception as e:
+                    exc = traceback.format_exc()
+                    self.log.error(
+                        f"... unable to save predict data for area:{area_name}, skill:{skill_name}, measure:{measure_name}")
+                    self.log.error(f"... {e}\n{exc}")
+            # end
+        # end
+        self.log.info("Done")
         return self
+
+    def _save_area_skill_predicted_data(
+        self,
+        time_series_id: int,
+        area_id: int, skill_id: int, measure_id: int,
+        df_pred: DataFrame):
+        """
+
+        :param area_id:
+        :param skill_id:
+        :param measure_id:
+        :param df_pred:  DataFrame([actual, predict]
+        :return:
+        """
+
+        assert is_instance(time_series_id, int)
+        assert is_instance(area_id, int)
+        assert is_instance(skill_id, int)
+        assert is_instance(measure_id, int)
+        assert is_instance(df_pred, DataFrame)
+
+        n = len(df_pred)
+        now = datetime.now()
+
+        with self.engine.connect() as conn:
+            table = self.iPredictPredictedValuesFocussed
+
+            bulk_data = [
+                dict(
+                    updated_date=now,
+                    ipr_conf_master_id_fk=time_series_id,
+                    area_id_fk=area_id,
+                    skill_id_fk=skill_id,
+                    model_detail_id_fk=measure_id,
+                    predicted=df_pred[measure_id].iloc[i],
+                    state_date=df_pred['state_date'].iloc[i]
+                )
+                for i in range(n)
+            ]
+
+            conn.execute(table.insert(), bulk_data)
+            conn.commit()
+        return
+    # end
 
     # -----------------------------------------------------------------------
     # select
     # -----------------------------------------------------------------------
 
-    def select(self):
-        raise NotImplemented()
+    def select(self, df_pred: DataFrame):
+        assert is_instance(df_pred, DataFrame)
         return self
 # end
 
@@ -822,45 +1212,44 @@ class PredictedFocussed(TSFOperations):
 # ---------------------------------------------------------------------------
 
 class ModelsFocussed(TSFOperations):
+
     def __init__(self, tsf: "TimeSeriesFocussed"):
-        super().__init__(tsf.ipom)
-        self._tsf = tsf
-        self._plan = self._tsf.plan
+        super().__init__(tsf)
 
     # -----------------------------------------------------------------------
     # delete
     # -----------------------------------------------------------------------
 
     def delete(self):
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
 
         self._delete_models(
             time_series_id=self._tsf.id,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
         )
         return self
 
     def _delete_models(
         self, *,
         time_series_id: int,
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str]
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str]
     ):
         assert is_instance(time_series_id, int)
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
 
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict.keys())
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict.keys())
 
         with self.engine.connect() as conn:
-            table = self.ipom.iPredictModelDetailFocussed
+            table = self.iPredictModelDetailFocussed
             query = delete(table).where(
                 (table.c['ipr_conf_master_id_fk'] == time_series_id) &
-                table.c['area_id_fk'].in_(area_feature_ids) &
-                table.c['skill_id_fk'].in_(skill_feature_ids)
+                table.c['area_id_fk'].in_(area_ids) &
+                table.c['skill_id_fk'].in_(skill_ids)
             )
             self.log.debug(query)
             conn.execute(query)
@@ -891,33 +1280,33 @@ class ModelsFocussed(TSFOperations):
         area_skill_key = list(models.keys())[0]
         new_format = is_instance(area_skill_key, tuple[str, str])
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
 
         self._save_models(
             models=models,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
             new_format=new_format)
         return self
 
     def _save_models(
         self, *,
         models: dict[Union[tuple[int, int], tuple[str, str]], dict],
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
         new_format: bool):
 
-        area_feature_drev = reverse_dict(area_feature_dict)
-        skill_feature_drev = reverse_dict(skill_feature_dict)
+        area_drev = reverse_dict(area_dict)
+        skill_drev = reverse_dict(skill_dict)
 
         bulk_data = []
 
         for area_skill_key in models:
             if new_format:
                 area, skill = area_skill_key
-                area_id = area_feature_drev[area]
-                skill_id = skill_feature_drev[skill]
+                area_id = area_drev[area]
+                skill_id = skill_drev[skill]
             else:
                 area_id, skill_id = area_skill_key
             # end
@@ -935,7 +1324,7 @@ class ModelsFocussed(TSFOperations):
             ))
 
         with self.engine.connect() as conn:
-            table = self.ipom.iPredictModelDetailFocussed
+            table = self.iPredictModelDetailFocussed
             conn.execute(table.insert(), bulk_data)
             conn.commit()
         pass
@@ -955,48 +1344,48 @@ class ModelsFocussed(TSFOperations):
             dict]:
         assert is_instance(new_format, bool)
 
-        area_feature_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_feature_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
 
         self._select_models(
             time_series_id=self._tsf.id,
-            area_feature_dict=area_feature_dict,
-            skill_feature_dict=skill_feature_dict,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
         )
         return self
 
     def _select_models(
         self, *,
         time_series_id: int,
-        area_feature_dict: dict[int, str],
-        skill_feature_dict: dict[int, str],
+        area_dict: dict[int, str],
+        skill_dict: dict[int, str],
         new_format: bool
     ) -> dict[
             Union[tuple[int, int], tuple[str, str]],
         dict]:
         assert is_instance(time_series_id, int)
-        assert is_instance(area_feature_dict, dict[int, str])
-        assert is_instance(skill_feature_dict, dict[int, str])
+        assert is_instance(area_dict, dict[int, str])
+        assert is_instance(skill_dict, dict[int, str])
         assert is_instance(new_format, bool)
 
-        area_feature_ids = list(area_feature_dict.keys())
-        skill_feature_ids = list(skill_feature_dict.keys())
+        area_ids = list(area_dict.keys())
+        skill_ids = list(skill_dict.keys())
 
-        area_feature_drev = reverse_dict(area_feature_dict)
-        skill_feature_drev = reverse_dict(skill_feature_dict)
+        area_drev = reverse_dict(area_dict)
+        skill_drev = reverse_dict(skill_dict)
 
         models: dict[tuple[int, int], dict] = {}
 
         with (self.engine.connect() as conn):
-            table = self.ipom.iPredictModelDetailFocussed
+            table = self.iPredictModelDetailFocussed
             query = select(table.c[
                                'area_id_fk', 'skill_id_fk',
                                'best_model_name', 'best_model', 'ohmodels_catftr',
                                'best_r_2', 'best_wape'
                            ]).where(
                 (table.c['ipr_conf_master_id_fk'] == time_series_id) &
-                table.c['area_id_fk'].in_(area_feature_ids) &
-                table.c['skill_id_fk'].in_(skill_feature_ids)
+                table.c['area_id_fk'].in_(area_ids) &
+                table.c['skill_id_fk'].in_(skill_ids)
             )
             self.log.debug(query)
             for res in conn.execute(query):
@@ -1004,7 +1393,8 @@ class ModelsFocussed(TSFOperations):
 
                 # new_format: area/skill as strings
                 area_skill_key: Union[tuple[int, int], tuple[str, str]] = \
-                    (area_feature_drev[area_id], skill_feature_drev[skill_id]) if new_format else (area_id, skill_id)
+                    (area_drev[area_id], skill_drev[skill_id]) \
+                        if new_format else (area_id, skill_id)
 
                 models[area_skill_key] = dict(
                     name=name,
@@ -1079,6 +1469,13 @@ class TimeSeriesFocussed(IPlanData):
         self._plan: Optional[PredictionPlan] = None
         self._data_master: Optional[DataMaster] = None
         self._parameters: list[TSFParameter] = []
+
+        # self._train_handler = TrainFocussed(self)
+        # self._predict_handler = PredictFocussed(self)
+        # self._predicted_handler = PredictedFocussed(self)
+        # self._test_handler = TestFocussed(self)
+        # self._models_handler = ModelsFocussed(self)
+    # end
 
     # -----------------------------------------------------------------------
     # Properties
@@ -1177,7 +1574,7 @@ class TimeSeriesFocussed(IPlanData):
         :return: ([<target measure>, ...], [<input feature measure>, ...])
         """
         tsf_id = self._id
-        skill_hierarchy_id = self.skill_hierarchy.id
+        skill_ids = self.skill_hierarchy.feature_ids()
         inputs: list[Measure] = []
         targets: list[Measure] = []
         with self.engine.connect() as conn:
@@ -1185,7 +1582,7 @@ class TimeSeriesFocussed(IPlanData):
             query = select(table.c['parameter_id', 'parameter_value', 'to_populate']) \
                 .where(
                     (table.c['ipr_conf_master_id'] == tsf_id) &
-                    (table.c['skill_id_fk'] == skill_hierarchy_id)
+                    table.c['skill_id_fk'].in_(skill_ids)
                 )
             self.log.debug(query)
             rlist = conn.execute(query).fetchall()
@@ -1216,19 +1613,42 @@ class TimeSeriesFocussed(IPlanData):
 
         raise ValueError(f"No parameters assigned to measure {measure}")
 
-    def measure_ids(self, with_name=False) -> Union[list[int], dict[int, str]]:
+    def measure_ids(self, with_name=False, use_type: Literal['all', 'target', 'input']='all') \
+            -> Union[list[int], dict[int, str]]:
         """
         Retrieve the list of measures used as 'target' and 'input features'
 
         :return: ([<target measure>, ...], [<input feature measure>, ...])
         """
         assert is_instance(with_name, bool)
+        assert is_instance(use_type, Literal['all', 'target', 'input'])
+
         if with_name:
             target_dict, input_dict = self._measure_dict()
-            return target_dict | input_dict
+
+            if use_type == 'all':
+                measure_dict = target_dict | input_dict
+                assert len(measure_dict) > 0, "No measures found"
+            elif use_type == 'target':
+                measure_dict = target_dict
+                assert len(measure_dict) > 0, "No measures found"
+            else:
+                measure_dict = input_dict
+
+            return measure_dict
         else:
             target_list, input_list = self._measure_ids()
-            return target_list + input_list
+
+            if use_type == 'all':
+                measure_list = target_list + input_list
+                assert len(measure_list) > 0, "No measures found"
+            elif use_type == 'target':
+                measure_list = target_list
+                assert len(measure_list) > 0, "No measures found"
+            else:
+                measure_list = input_list
+
+            return measure_list
 
     def target_input_ids(self, with_name=False) \
         -> Union[
@@ -1243,22 +1663,23 @@ class TimeSeriesFocussed(IPlanData):
 
     def _measure_dict(self) -> tuple[dict[int, str], dict[int, str]]:
         tsf_id = self._id
-        skill_feature_ids: list[int] = self.skill_hierarchy.feature_ids()
+        skill_ids: list[int] = self.skill_hierarchy.feature_ids()
         input_dict: dict[int, str] = {}
         target_dict: dict[int, str] = {}
+
         with self.engine.connect() as conn:
             query = text("""
                 select ticd.parameter_id measure_id, ticd.parameter_value parameter_type, timd.measure_id measure_name
                   from tb_ipr_conf_detail_focussed ticd,
                        tb_idata_model_detail timd
                  where ticd.ipr_conf_master_id = :tsf_id
-                   and ticd.skill_id_fk in :skill_feature_ids
+                   and ticd.skill_id_fk in :skill_ids
                    and ticd.parameter_id = timd.id
             """)
             self.log.debug(query)
             rlist = conn.execute(query, parameters=dict(
                 tsf_id=tsf_id,
-                skill_feature_ids=tuple(skill_feature_ids)
+                skill_ids=tuple(skill_ids)
             )).fetchall()
             for res in rlist:
                 measure_id, parameter_type, measure_name = res
@@ -1310,9 +1731,12 @@ class TimeSeriesFocussed(IPlanData):
     def plan(self) -> Optional[PredictionPlan]:
         return self._plan
 
-    def set_plan(self, plan: str, data_master: Union[None, int, str] = None):
-        assert is_instance(plan, str)
+    def set_plan(self, plan: Union[int, str], data_master: Union[None, int, str] = None):
+        assert is_instance(plan, Union[int, str])
         assert is_instance(data_master, Union[None, int, str])
+
+        if is_instance(plan, int):
+            plan, data_master = self._get_plan_name_and_data_master(plan)
 
         # if data_master is not specified, try the Data Master assigned to the
         # Time Series, IF it is present
@@ -1323,7 +1747,7 @@ class TimeSeriesFocussed(IPlanData):
         # if data_master is not specified yet, try the Data Master assigned to the
         # Plan, IF it is present and UNIQUE
         if data_master is None:
-            data_master = self._find_plan_data_master_id(plan)
+            data_master = self._find_data_master_id_by_plan_name(plan)
 
         self._plan = self.ipom.plans().plan(plan, data_master)
         assert self._plan.exists(), f"Unknown plan {plan}"
@@ -1347,10 +1771,13 @@ class TimeSeriesFocussed(IPlanData):
         return self
 
     # alias_of(set_plan)
-    def using_plan(self, plan: str, data_master: Union[None, int, str] = None):
-        return self.set_plan(plan, data_master)
+    def using_plan(self, plan: Union[int, str, PredictionPlan], data_master: Union[None, int, str] = None):
+        if isinstance(plan, PredictionPlan):
+            return self.set_plan(plan.name, plan.data_master.id)
+        else:
+            return self.set_plan(plan, data_master)
 
-    def _find_plan_data_master_id(self, plan: str) -> Optional[int]:
+    def _find_data_master_id_by_plan_name(self, plan: str) -> Optional[int]:
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
             query = select(table.c['idata_master_fk'], func.count(table.c['idata_master_fk'])) \
@@ -1365,6 +1792,18 @@ class TimeSeriesFocussed(IPlanData):
 
         data_master_id = rlist[0][0]
         return data_master_id
+
+
+    def _get_plan_name_and_data_master(self, plan_id: int) -> tuple[str, int]:
+        assert is_instance(plan_id, int)
+
+        with self.engine.connect() as conn:
+            table = self.ipom.iDataValuesMaster
+            query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
+            self.log.debug(query)
+            plan_name, data_master_id = conn.execute(query).fetchone()
+            return plan_name, data_master_id
+    # end
 
     # -----------------------------------------------------------------------
 
@@ -1386,30 +1825,35 @@ class TimeSeriesFocussed(IPlanData):
         TS Manager used to save the train data
         """
         return TrainFocussed(self)
+        # return self._train_handler
 
     def predict(self) -> PredictFocussed:
         """
         TS Manager used to save the prediction input features
         """
         return PredictFocussed(self)
+        # return self._predict_handler
 
     def predicted(self) -> PredictedFocussed:
         """
         TS Manager used to save the predicted values
         """
         return PredictedFocussed(self)
+        # return self._predicted_handler
 
     def test(self) -> TestFocussed:
         """
-        TS Magaser used to save the test data: (actual/predicted)
+        TS Manager used to save the test data: (actual/predicted)
         """
-        return TestFocussed()
+        return TestFocussed(self)
+        # return self._test_handler
 
     def models(self) -> ModelsFocussed:
         """
         TS Manager used to save the trained models
         """
         return ModelsFocussed(self)
+        # return self._models_handler
 
     # -----------------------------------------------------------------------
     # Operations
@@ -1424,10 +1868,12 @@ class TimeSeriesFocussed(IPlanData):
             return self
 
         # delete all train/predict data
+        # and related dependencies
         self.train().delete()
+        self.test().delete()
         self.predict().delete()
-        self.models().delete()
         self.predicted().delete()
+        self.models().delete()
 
         # delete the TS definition
         self._name = self.name

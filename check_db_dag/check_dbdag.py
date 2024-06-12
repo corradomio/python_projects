@@ -3,7 +3,7 @@ import networkx as nx
 import sqlalchemy as sa
 import stdlib
 from stdlib.jsonx import load
-from dbdag import DatabaseDAG
+from dbdag import DBDAGScanner
 
 
 def main():
@@ -14,9 +14,9 @@ def main():
 
     # datasource_dict = load('datasource.json')
     datasource_dict = load('datasource_localhost.json')
-    ddag = DatabaseDAG(datasource_dict)
+    dbdag = DBDAGScanner(datasource_dict)
 
-    with ddag.connect():
+    with dbdag.connect():
 
         # table: Table = ddag.iDataMaster
         # query = select(table)
@@ -25,8 +25,15 @@ def main():
         # log.debug(query)
         # query = query.where(table.c.skill_id_fk == 1)
         # log.debug(query)
-        ddag.scan_all()
+        dag = dbdag.scan_all()
         # ddag.scan(ddag.iDataMaster)
+
+    print(dag)
+
+    for n in dag.nodes:
+        print(n, dag.in_degree(n), dag.out_degree(n))
+
+    pass
 
 
 if __name__ == "__main__":

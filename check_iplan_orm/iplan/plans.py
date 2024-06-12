@@ -1,6 +1,5 @@
 from sqlalchemy import func
 
-from stdlib.dateutilx import relativeperiods
 from .datamasters import *
 
 
@@ -47,31 +46,31 @@ class PredictionPlan(IPlanObject):
         self,
         name: Optional[str],
         data_master_ids: list[int],
-        area_feature_ids: list[int],
+        area_ids: list[int],
     ) -> list[int]:
         # alias: select_plan_ids(...)
         table = self.ipom.iDataValuesMaster
         if name is None:
             query = select(table.c.id).where(
                 table.c['idata_master_fk'].in_(data_master_ids) &
-                table.c['area_id'].in_(area_feature_ids)
+                table.c['area_id'].in_(area_ids)
             )
             self.log.debug(query)
         else:
             query = select(table.c.id).where(
                 (table.c['name'] == name) &
                 table.c['idata_master_fk'].in_(data_master_ids) &
-                table.c['area_id'].in_(area_feature_ids)
+                table.c['area_id'].in_(area_ids)
             )
             self.log.debug(query)
         with self.engine.connect() as conn:
             rlist = conn.execute(query)
             return [result[0] for result in rlist]
-
+    # end
 
     def area_plan_map(self) -> dict[int, int]:
         """
-        Map area_feature_id -> plan_id
+        Map area_id -> plan_id
         """
         name = self._name
         data_master_id = self._data_master.id
@@ -86,7 +85,7 @@ class PredictionPlan(IPlanObject):
             pmap = {}
             rlist = conn.execute(query)
             for r in rlist:
-                # area_feature_id -> plan_id
+                # area_id -> plan_id
                 pmap[r[0]] = r[1]
 
         return pmap
@@ -172,14 +171,14 @@ class PredictionPlan(IPlanObject):
 
         # STUPID implementation
         data_master_id = self.data_master.id
-        area_feature_dict = self.area_hierarchy.feature_ids(with_name=True)
+        area_dict = self.area_hierarchy.feature_ids(with_name=True)
         now: datetime = datetime.now()
         note = "created by " + CREATED_BY if note is None else note
         count = 0
         with (self.engine.connect() as conn):
             table = self.ipom.iDataValuesMaster
-            for area_feature_id in area_feature_dict:
-                area_name = area_feature_dict[area_feature_id]
+            for area_id in area_dict:
+                area_name = area_dict[area_id]
                 self.log.debugt(f"... create plan for {area_name}")
 
                 stmt = insert(table).values(
@@ -192,7 +191,7 @@ class PredictionPlan(IPlanObject):
                     published='N',
                     isscenario='N',
                     temp_ind='N',
-                    area_id=area_feature_id,
+                    area_id=area_id,
                     last_updated_date=None,
                     published_id=None,
                     note=note
@@ -207,7 +206,7 @@ class PredictionPlan(IPlanObject):
     # end
 
     def __repr__(self):
-        return f"{self.name}[{self._data_master.name}]"
+        return f"{self.name}[{self._data_master.name}:{self._data_master.id}]"
 # end
 
 
@@ -239,22 +238,36 @@ class PredictionPlans(IPlanObject):
 
     # -----------------------------------------------------------------------
 
-    def plan(self, name: Union[str, datetime], data_master: Union[None, int, str] = None) -> "PredictionPlan":
-        assert is_instance(name, Union[str, datetime])
+    def plan(self, name: Union[int, str, datetime], data_master: Union[None, int, str] = None) -> "PredictionPlan":
+        assert is_instance(name, Union[int, str, datetime])
         assert is_instance(data_master, Union[None, int, str])
+
+        plan_id: Union[int, str] = safe_int(name)
 
         if is_instance(name, datetime):
             now: datetime = datetime.now()
             now_str = now.strftime('%Y-%m-%d %H:%M:%S')
             name = f"Auto_Plan_OM_{now_str}"
+        elif is_instance(plan_id, int):
+            name, data_master = self._get_plan_name_and_data_master(plan_id)
 
         return PredictionPlan(self.ipom, name, data_master)
+
+    def _get_plan_name_and_data_master(self, plan_id: int) -> tuple[str, int]:
+        assert is_instance(plan_id, int)
+
+        with self.engine.connect() as conn:
+            table = self.ipom.iDataValuesMaster
+            query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
+            self.log.debug(query)
+            plan_name, data_master_id = conn.execute(query).fetchone()
+            return plan_name, data_master_id
 
     # -----------------------------------------------------------------------
 
     def select_date_interval(self, id_or_name_or_date: Union[None, int, str, datetime] = None,
                              data_master_id: int = 0,
-                             area_feature_ids: Union[None, int, list[int]] = None) \
+                             area_ids: Union[None, int, list[int]] = None) \
             -> Optional[tuple[datetime, datetime]]:
         """
         Retrieve the date interval used for the prediction based on several rules:
@@ -271,25 +284,25 @@ class PredictionPlans(IPlanObject):
 
         :param id_or_name_or_date: Prediction Plan id or name or date contained in the prediction interval
         :data_master_id: id of the Data Master to use
-        :param area_feature_ids: specific area(s) to consider
+        :param area_ids: specific area(s) to consider
         :return: (start_date, end_date) OR None if no interval is found
         """
         assert is_instance(id_or_name_or_date, Union[None, int, str, datetime])
         assert is_instance(data_master_id, int)
-        assert is_instance(area_feature_ids, Union[None, int, list[int]])
+        assert is_instance(area_ids, Union[None, int, list[int]])
 
-        area_feature_ids: list[int] = as_list(area_feature_ids)
+        area_ids: list[int] = as_list(area_ids)
         # convert a string representing an integer value into a integer
         id_or_name_or_date = safe_int(id_or_name_or_date)
 
         if id_or_name_or_date is None:
-            return self._select_by_data_master(data_master_id, area_feature_ids)
+            return self._select_by_data_master(data_master_id, area_ids)
         elif isinstance(id_or_name_or_date, datetime):
-            start_end_date = self._select_by_date(id_or_name_or_date, data_master_id, area_feature_ids)
+            start_end_date = self._select_by_date(id_or_name_or_date, data_master_id, area_ids)
         elif isinstance(id_or_name_or_date, int):
-            start_end_date = self._select_by_id(id_or_name_or_date, data_master_id, area_feature_ids)
+            start_end_date = self._select_by_id(id_or_name_or_date, data_master_id, area_ids)
         elif isinstance(id_or_name_or_date, str):
-            start_end_date = self._select_by_name(id_or_name_or_date, data_master_id, area_feature_ids)
+            start_end_date = self._select_by_name(id_or_name_or_date, data_master_id, area_ids)
         else:
             raise ValueError(f"Unsupported type for value {id_or_name_or_date}")
 
@@ -299,27 +312,27 @@ class PredictionPlans(IPlanObject):
         else:
             return start_end_date
 
-    def _select_by_data_master(self, data_master_id: int, area_feature_ids: list[int]) -> tuple[datetime, datetime]:
+    def _select_by_data_master(self, data_master_id: int, area_ids: list[int]) -> tuple[datetime, datetime]:
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
-            if len(area_feature_ids) == 0:
+            if len(area_ids) == 0:
                 query = select(table.c['start_date', 'end_date']).where(
                     (table.c['idata_master_fk'] == data_master_id)
                 )
             else:
                 query = select(table.c['start_date', 'end_date']).where(
                     (table.c['idata_master_fk'] == data_master_id) &
-                    (table.c['area_id'].in_(area_feature_ids))
+                    (table.c['area_id'].in_(area_ids))
                 )
             self.log.debug(query)
             result = conn.execute(query).fetchone()
             return result[0], result[1]
 
-    def _select_by_id(self, ppid: int, data_master_id: int, area_feature_ids: list[int]) -> tuple[datetime, datetime]:
-        # data_master_id & area_feature_ids are not necessary BUT they are used to force consistency
+    def _select_by_id(self, ppid: int, data_master_id: int, area_ids: list[int]) -> tuple[datetime, datetime]:
+        # data_master_id & area_ids are not necessary BUT they are used to force consistency
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
-            if len(area_feature_ids) == 0:
+            if len(area_ids) == 0:
                 query = select(table.c['start_date', 'end_date']).where(
                     (table.c['idata_master_fk'] == data_master_id) &
                     (table.c.id == ppid)
@@ -328,16 +341,16 @@ class PredictionPlans(IPlanObject):
                 query = select(table.c['start_date', 'end_date']).where(
                     (table.c.id == ppid) &
                     (table.c['idata_master_fk'] == data_master_id) &
-                    (table.c['area_id'].in_(area_feature_ids))
+                    (table.c['area_id'].in_(area_ids))
                 )
             self.log.debug(query)
             result = conn.execute(query).fetchone()
             return result[0], result[1]
 
-    def _select_by_name(self, name: str, data_master_id: int, area_feature_ids: list[int]) -> tuple[datetime, datetime]:
+    def _select_by_name(self, name: str, data_master_id: int, area_ids: list[int]) -> tuple[datetime, datetime]:
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
-            if len(area_feature_ids) == 0:
+            if len(area_ids) == 0:
                 query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
                     (table.c['idata_master_fk'] == data_master_id) &
                     (table.c['name'].like(f"%{name}%"))
@@ -346,17 +359,17 @@ class PredictionPlans(IPlanObject):
                 query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
                     (table.c['idata_master_fk'] == data_master_id) &
                     (table.c['name'].like(f"%{name}%")) &
-                    (table.c['area_id'].in_(area_feature_ids))
+                    (table.c['area_id'].in_(area_ids))
                 )
             self.log.debug(query)
             result = conn.execute(query).fetchone()
             return (None, None) if result is None else result[0], result[1]
 
-    def _select_by_date(self, when: datetime, data_master_id: int, area_feature_ids: list[int]) -> tuple[
+    def _select_by_date(self, when: datetime, data_master_id: int, area_ids: list[int]) -> tuple[
         datetime, datetime]:
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
-            if len(area_feature_ids) == 0:
+            if len(area_ids) == 0:
                 query = select(func.min(table.c['start_date']), func.max(table.c['end_date'])).where(
                     (table.c['idata_master_fk'] == data_master_id) &
                     (table.c['start_date'] <= when) &
@@ -367,7 +380,7 @@ class PredictionPlans(IPlanObject):
                     (table.c['idata_master_fk'] == data_master_id) &
                     (table.c['start_date'] <= when) &
                     (table.c['end_date'] >= when) &
-                    (table.c['area_id'].in_(area_feature_ids))
+                    (table.c['area_id'].in_(area_ids))
                 )
             self.log.debug(query)
             result = conn.execute(query).fetchone()

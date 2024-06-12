@@ -42,7 +42,8 @@ __all__ = [
     'Const',            # equivalent to 'Final'
     'Immutable',
 
-    'IS_INSTANCE_OF'    # used for extensions
+    'IS_INSTANCE_OF',   # used for extensions
+    'IsInstance'
 ]
 
 # ---------------------------------------------------------------------------

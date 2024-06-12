@@ -22,18 +22,49 @@ def safe_int(s):
         return s
 
 
-def start_end_dates(start_date: Optional[datetime], end_date: Optional[datetime], periods: Optional[int],
-                    freq: Literal['D', 'W', 'M']) \
-    -> tuple[Optional[datetime], Optional[datetime]]:
+def start_end_dates(
+    start_date: Optional[datetime],
+    end_date: Optional[datetime],
+    periods: Optional[int],
+    freq: Literal['D', 'W', 'M'],
+    which_date: Optional[bool] = None
+) -> tuple[Optional[datetime], Optional[datetime]]:
+    """
+    Compute the start/end dates based on the passed dates,
+    the number of periods and the period frequency
+
+    It is possible to specify which date to compute:
+
+        - None: both dates
+        - True: end_date
+        - False: start_date
+
+    :param start_date: start date
+    :param end_date: end date
+    :param periods: number of periods
+    :param freq: period length (frequency)
+    :param which_date: which date to compute
+    :return:
+    """
     assert is_instance(start_date, Optional[datetime])
     assert is_instance(end_date, Optional[datetime])
     assert is_instance(periods, Optional[int])
     assert is_instance(freq, Literal['D', 'W', 'M'])
 
+    # not date specified: none to do
     if start_date is None and end_date is None:
         return None, None
+    # both dates already specified: none to do
     if start_date is not None and end_date is not None:
         return start_date, end_date
+    # start date specified and requires the start date: none to do
+    if start_date is not None and which_date is False:
+        return start_date, end_date
+    # end date specified and it is required the end date: none to do
+    if end_date is not None and which_date is True:
+        return start_date, end_date
+
+    # periods and freq MUST be specified
     if periods is None or periods <= 0 or freq is None:
         raise ValueError("Unable to resolve start_date/end_date: missing periods or frequency")
 
@@ -50,6 +81,7 @@ def start_end_dates(start_date: Optional[datetime], end_date: Optional[datetime]
 # ---------------------------------------------------------------------------
 # Pandas utilities
 # ---------------------------------------------------------------------------
+# concatenate_no_skill_df
 
 def concatenate_no_skill_df(df_with_skill: DataFrame, df_no_skill: DataFrame, skill_features_dict: dict[int, str]):
     # this code implements the same logic implemented in 'replicateUnskilledMeasuresAgainstAllSkilledMeasures(...)'
@@ -60,18 +92,116 @@ def concatenate_no_skill_df(df_with_skill: DataFrame, df_no_skill: DataFrame, sk
     return df_with_skill
 
 
-def fill_missing_measures(df_pivoted: DataFrame, measure_dict: dict[int, str], new_format: bool) -> DataFrame:
-    measure_ids = measure_dict.keys()
-    # add missing columns (str(measure_id) OR measure_name) if necessary
-    for mid in measure_ids:
-        mname = measure_dict[mid] if new_format else str(mid)
-        if mname not in df_pivoted.columns:
-            df_pivoted[mname] = 0.
+# def fill_missing_measures(df_pivoted: DataFrame, measure_dict: dict[int, str], new_format: bool) -> DataFrame:
+#     measure_ids = measure_dict.keys()
+#     # add missing columns (str(measure_id) OR measure_name) if necessary
+#     for mid in measure_ids:
+#         mname = measure_dict[mid] if new_format else str(mid)
+#         if mname not in df_pivoted.columns:
+#             df_pivoted[mname] = 0.
+#     return df_pivoted
+
+
+# ---------------------------------------------------------------------------
+# fill_missing_dates
+
+def fill_missing_dates(
+    df_data: DataFrame,
+    area_dict: dict[int, str],
+    skill_dict: dict[int, str],
+    measure_dict: dict[int, str],
+    start_date: datetime,
+    periods: int,
+    freq: Literal['D', 'W', 'M']) -> DataFrame:
+    """
+    Fill the dataframe with the missing values to reach the end_date
+    :param df_data: dataframe containing the data
+    :param area_dict: areas to populate
+    :param skill_dict: skills to populate
+    :param measure_dict: measures to generate
+    :param start_date: starting date
+    :param periods: number of periods to generate
+    :param freq: frequency.
+            In theory, the frequency is not necessary if df is not empty,
+            but it is mandatory if the df is empty
+    :return:
+    """
+    assert is_instance(df_data, DataFrame)
+    assert is_instance(area_dict, dict[int, str])
+    assert is_instance(skill_dict, dict[int, str])
+    assert is_instance(measure_dict, dict[int, str])
+    assert is_instance(start_date, datetime)
+    assert is_instance(periods, int)
+    assert is_instance(freq, Literal['D', 'W', 'M'])
+
+    new_format = 'area' in df_data.columns
+
+    df_default = create_default_dataframe(
+        start_date=start_date, periods=periods, freq=freq,
+        area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+        new_format=new_format
+    )
+
+    df_merged = merge_dataframes(df_data, df_default)
+
+    return df_data
+
+
+# ---------------------------------------------------------------------------
+# create_default_dataframe
+# merge_default_dataframe
+# ---------------------------------------------------------------------------
+
+def create_default_dataframe(
+    start_date: Union[datetime, pd.Timestamp], periods: int, freq: Literal['D', 'W', 'M'],
+    area_dict: dict[int, str], skill_dict: dict[int, str], measure_dict: dict[int, str],
+    new_format
+):
+    """
+    Create the default dataframe using the
+    :param start_date:
+    :param periods:
+    :param freq:
+    :param area_dict:
+    :param skill_dict:
+    :param measure_dict:
+    :return:
+    """
+    # assert is_instance(start_date, Union[datetime, pd.Timestamp])
+    # assert is_instance(periods, int)
+    # assert is_instance(freq, Literal['D', 'W', 'M'])
+    # assert is_instance(area_dict, dict[int, str])
+    # assert is_instance(skill_dict, dict[int, str])
+    # assert is_instance(measure_dict, dict[int, str])
+
+    date_range = pd.date_range(start_date, periods=periods, freq=freq)
+
+    # compose the dataframe with for all areas/skill/daterange/measures
+    df_list = []
+    for area_id in area_dict:
+        for skill_id in skill_dict:
+            for measure_id in measure_dict:
+                df_area_skill = DataFrame(index=list(range(periods)))
+                df_area_skill['state_date'] = date_range.to_series().reset_index(drop=True)
+                df_area_skill['area_id_fk'] = area_id
+                df_area_skill['skill_id_fk'] = skill_id
+                df_area_skill['model_detail_id_fk'] = measure_id
+                df_area_skill['value'] = float(0)
+                df_list.append(df_area_skill)
+    # end
+    df_flatten = pd.concat(df_list, axis=0, ignore_index=True)
+    df_pivoted = pivot_df(df_flatten, area_dict, skill_dict, measure_dict, new_format=new_format)
     return df_pivoted
 
 
-def fill_missing_dates(df_pivoted: DataFrame, start_date: datetime, end_date: datetime) -> DataFrame:
-    return df_pivoted
+def merge_dataframes(df_data: DataFrame, df_default: DataFrame) -> DataFrame:
+    assert is_instance(df_default, DataFrame)
+    assert is_instance(df_data, DataFrame)
+
+    if len(df_data) == 0:
+        return df_default
+
+    return df_data
 
 
 # ---------------------------------------------------------------------------
@@ -79,18 +209,23 @@ def fill_missing_dates(df_pivoted: DataFrame, start_date: datetime, end_date: da
 # compose_predict_df
 # ---------------------------------------------------------------------------
 
+# DON'T' TOUCH the order!
+INDEX_COLUMNS = ['state_date', 'skill_id_fk', 'area_id_fk']
+DATE_COLUMN = 'state_date'
+VALUE_COLUMN = 'value'
+PIVOT_COLUMNS = ['model_detail_id_fk']
+FLATTEN_FORMAT_COLUMNS = INDEX_COLUMNS + PIVOT_COLUMNS + [VALUE_COLUMN]
+
+
 def pivot_df(df: DataFrame,
-             area_feature_dict: dict[int, str], skill_feature_dict: [int, str], measure_dict: [int, str],
+             area_dict: dict[int, str], skill_dict: [int, str], measure_dict: [int, str],
              new_format: bool) -> DataFrame:
+
     # 0) check if all mandatory columns are present in the dataframe
+    #    dataframe in 'flatten format'
+    #   'area_id_fk', 'skill_id_fk', 'state_date', 'model_detail_id_fk', 'value'
 
-    INDEX_COLUMNS = ['state_date', 'skill_id_fk', 'area_id_fk']
-    DATE_COLUMN = 'state_date'
-    VALUE_COLUMN = 'value'
-    PIVOT_COLUMNS = ['model_detail_id_fk']
-    DATA_MANDATORY_COLUMNS = INDEX_COLUMNS + PIVOT_COLUMNS + [VALUE_COLUMN]
-
-    assert len(df.columns.intersection(DATA_MANDATORY_COLUMNS)) == len(DATA_MANDATORY_COLUMNS)
+    assert len(df.columns.intersection(FLATTEN_FORMAT_COLUMNS)) == len(FLATTEN_FORMAT_COLUMNS)
 
     # 1) transpose the dataframe
     df_pivoted = df.pivot_table(
@@ -99,25 +234,31 @@ def pivot_df(df: DataFrame,
         values=VALUE_COLUMN
     ).fillna(0)
 
-    # 2) move the multiindex as columns
-    #    force the date column values to be of type 'datetime'
+    # 2.1) move the multiindex as columns
     df_pivoted.reset_index(inplace=True, names=INDEX_COLUMNS)
-    df_pivoted[DATE_COLUMN] = pd.to_datetime(df_pivoted[DATE_COLUMN])
+
+    # 2.2) force the datetime column values to be of type 'datetime'
+    dtcol = df_pivoted[DATE_COLUMN]
+    df_pivoted[DATE_COLUMN] = pd.to_datetime(dtcol)
 
     if new_format:
-        # replace area/skill ids with names
+        # 'area', 'skill', 'date', <measure_name: str>, ...
+        #         area & skill: string
+
+        # 1) replace area/skill ids with names
         df_pivoted.replace(to_replace={
-            'area_id_fk': area_feature_dict,
-            'skill_id_fk': skill_feature_dict,
+            'area_id_fk': area_dict,
+            'skill_id_fk': skill_dict,
             'model_detail_id_fk': measure_dict
         }, inplace=True)
 
-        # rename the columns
+        # 2) rename the columns
         df_pivoted.rename(columns=measure_dict | {
             'area_id_fk': 'area',
             'skill_id_fk': 'skill',
             'state_date': 'date'
         }, inplace=True)
+
         pass
     else:
         # COMPATIBILITY with the original format
@@ -128,409 +269,27 @@ def pivot_df(df: DataFrame,
         # 'state_date' -> 'time'
         # measure_id: int
 
-        # used to convert a column with an integer as name into a string
-        cdict = {mid: str(mid) for mid in measure_dict} | {
-            'state_date': 'time'
-        }
-        df_pivoted.rename(columns=cdict, inplace=True)
+        # # used to convert a column with an integer as name into a string
+        # cdict = {mid: str(mid) for mid in measure_dict} | {
+        #     'state_date': 'time'
+        # }
+        # df_pivoted.rename(columns=cdict, inplace=True)
+        #
+        # # add the column 'day', based on the column 'time'
+        # df_pivoted['day'] = df_pivoted['time'].dt.day_name()
 
-        # add the column 'day', based on the column 'time'
-        df_pivoted['day'] = df_pivoted['time'].dt.day_name()
+        #
+        # BETTER: KEEP PIVOTED FORMAT
+        #
         pass
     # end
     return df_pivoted
 
 
-# def compose_predict_df(df_past: DataFrame,
-#                        area_feature_dict: dict[int, str],
-#                        skill_feature_dict: dict[int, str],
-#                        input_measure_ids: list[int],
-#                        measure_dict: dict[int, str],
-#                        start_end_dates: dict[int, tuple[datetime, datetime]],
-#                        freq: Literal['D', 'W', 'M'],
-#                        defval: Union[None, float] = 0.,
-#                        new_format=False) -> DataFrame:
-#     """
-#
-#     :param df_past: dataframe to process
-#     :param area_feature_dict: dictionary area id->name
-#     :param skill_feature_dict: dictionary skill id->name
-#     :param input_measure_ids: list of measures used as input features
-#     :param measure_dict: dictionary measure id->name
-#     :param start_end_dates: dictionary start/end dates for each area
-#     :param freq: period frequency (daily, weekly, monthly)
-#     :param defval: default value to use for filling
-#     :param new_format: dataset format (old/new)
-#     :return: processed dataset
-#     """
-#     assert is_instance(df_past, DataFrame)
-#     assert is_instance(area_feature_dict, dict[int, str])
-#     assert is_instance(skill_feature_dict, dict[int, str])
-#     assert is_instance(input_measure_ids, list[int])
-#     assert is_instance(measure_dict, dict[int, str])
-#     assert is_instance(start_end_dates, dict[int, tuple[datetime, datetime]])
-#     assert is_instance(freq, Literal['D', 'W', 'M'])
-#     assert is_instance(defval, Union[None, float])
-#
-#     df_future = _create_df_future(
-#         df_past,
-#         area_feature_dict, skill_feature_dict,
-#         input_measure_ids, measure_dict,
-#         start_end_dates, freq, defval,
-#         new_format=new_format)
-#
-#     df_future = _merge_df_past_future(
-#         df_past, df_future,
-#         input_measure_ids, measure_dict,
-#         new_format=new_format)
-#     return df_future
-
-
-# def _create_df_future(
-#     df_past: DataFrame,
-#     area_feature_dict: dict[int, str],
-#     skill_feature_dict: dict[int, str],
-#     input_measure_ids: list[int],
-#     measure_dict: dict[int, str],
-#     start_end_dates: dict[int, tuple[datetime, datetime]],
-#     freq: Literal['D', 'W', 'M'],
-#     defval: Union[None, float] = 0.,
-#     new_format=False
-# ) -> DataFrame:
-#     if new_format:
-#         df_future = _create_df_future_new_format(
-#             df_past,
-#             area_feature_dict,
-#             skill_feature_dict,
-#             input_measure_ids,
-#             measure_dict,
-#             start_end_dates, freq,
-#             defval)
-#
-#         # return _compose_predict_df_new_format(
-#         #     df_past,
-#         #     area_feature_dict,
-#         #     skill_feature_dict,
-#         #     input_measure_ids,
-#         #     measure_dict,
-#         #     start_end_dates, freq,
-#         #     defval)
-#     else:
-#         df_future = _create_df_future_old_format(
-#             df_past,
-#             area_feature_dict,
-#             skill_feature_dict,
-#             input_measure_ids,
-#             measure_dict,
-#             start_end_dates, freq,
-#             defval)
-#
-#     return df_future
-
-
-# def _create_df_future_new_format(
-#     df_past: DataFrame,
-#     area_feature_dict: dict[int, str],
-#     skill_feature_dict: dict[int, str],
-#     input_measure_ids: list[int],
-#     measure_dict: dict[int, str],
-#     start_end_dates: dict[int, tuple[datetime, datetime]],
-#     freq: Literal['D', 'W', 'M'],
-#     defval: Union[None, float] = 0.) -> DataFrame:
-#     area_feature_drev = reverse_dict(area_feature_dict)
-#     skill_feature_drev = reverse_dict(skill_feature_dict)
-#     measure_drev = reverse_dict(measure_dict)
-#
-#     # columns: ['area', 'skill', 'date', <measure_name>]
-#
-#     area_skill_list = pdx.groups_list(df_past, groups=['area', 'skill'])
-#     df_future_list = []
-#     for area_skill in area_skill_list:
-#         area_name, skill_name = area_skill
-#
-#         # check if area_name, skill_name are defined
-#         if area_name not in area_feature_drev or skill_name not in skill_feature_drev:
-#             continue
-#
-#         area_feature_id = area_feature_drev[area_name]
-#         # skill_feature_id = skill_feature_drev[skill_name]
-#
-#         # trick: 0 is used as DEFAULT datetime for all areas
-#         if 0 in start_end_dates:
-#             start_date, end_date = start_end_dates[0]
-#         elif area_feature_id in start_end_dates:
-#             start_date, end_date = start_end_dates[area_feature_id]
-#         else:
-#             # no start/end dates is found
-#             continue
-#
-#         #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
-#         #   MS: MonthBegin
-#         #   ME: MonthEnd
-#         if freq == 'M': freq = 'MS'
-#
-#         date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
-#         # date_index = pd.period_range(start=start_date, end=end_date, freq=freq)
-#
-#         # create the dataframe
-#         area_skill_df = DataFrame(data={
-#             'area': area_name,
-#             'skill': skill_name,
-#             'date': date_index.to_series()
-#         })
-#
-#         # fill the dataframe with the measures
-#         for measure_name in measure_drev:
-#             area_skill_df[measure_name] = defval
-#
-#         df_future_list.append(area_skill_df)
-#         pass
-#     # end
-#     df_future = pd.concat(df_future_list, axis=0, ignore_index=True).reset_index(drop=True)
-#     return df_future
-
-
-def _create_df_future_old_format(
-    df_past: DataFrame,
-    area_feature_dict: dict[int, str],
-    skill_feature_dict: dict[int, str],
-    input_measure_ids: list[int],
-    measure_dict: dict[int, str],
-    start_end_dates: dict[int, tuple[datetime, datetime]],
-    freq: Literal['D', 'W', 'M'],
-    defval: Union[None, float] = 0.) -> DataFrame:
-    # columns: ['skill_id_fk', 'area_id_fk', 'time', 'day', <measure_id: str>]
-
-    area_skill_list = pdx.groups_list(df_past, groups=['area_id_fk', 'skill_id_fk'])
-    df_future_list = []
-    for area_skill in area_skill_list:
-        area_feature_id = int(area_skill[0])
-        skill_feature_id = int(area_skill[1])
-
-        # check if area_name, skill_name are defined
-        if area_feature_id not in area_feature_dict or skill_feature_id not in skill_feature_dict:
-            continue
-
-        # trick: 0 is used as DEFAULT datetime for all areas
-        if 0 in start_end_dates:
-            start_date, end_date = start_end_dates[0]
-        elif area_feature_id in start_end_dates:
-            start_date, end_date = start_end_dates[area_feature_id]
-        else:
-            # no start/end dates is found
-            continue
-
-        #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
-        #   MS: MonthBegin
-        #   ME: MonthEnd
-        if freq == 'M': freq = 'MS'
-
-        date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
-        # date_index = pd.period_range(start=start_date, end=end_date, freq=freq)
-
-        # create the dataframe
-        area_skill_df = DataFrame(data={
-            'area_id_fk': area_feature_id,
-            'skill_id_fk': skill_feature_id,
-            'time': date_index.to_series()
-        })
-        area_skill_df['day'] = area_skill_df['time'].dt.day_name()
-
-        # fill the dataframe with the measures (measure_id as string)
-        for measure_id in measure_dict:
-            area_skill_df[str(measure_id)] = defval
-
-        df_future_list.append(area_skill_df)
-        pass
-    # end
-
-    df_future = pd.concat(df_future_list, axis=0, ignore_index=True).reset_index(drop=True)
-    return df_future
-
-
-def _merge_df_past_future(df_past: DataFrame, df_future: DataFrame,
-                          input_measure_ids: list[int], measure_dict: dict[int, str],
-                          new_format=True) -> DataFrame:
-    assert is_instance(df_past, DataFrame)
-    assert is_instance(df_future, DataFrame)
-    assert is_instance(input_measure_ids, list[int])
-    assert is_instance(measure_dict, dict[int, str])
-    assert sorted(df_past.columns) == sorted(df_future.columns)
-
-    groups = ['area', 'skill'] if new_format else ['area_id_fk', 'skill_id_fk']
-    date_col = 'date' if new_format else 'time'
-
-    df_past_dict = pdx.groups_split(df_past, groups=groups)
-    df_future_dict = pdx.groups_split(df_future, groups=groups)
-    df_predict_dict = {}
-
-    for group in df_future_dict:
-        if group not in df_past_dict:
-            continue
-
-        dfp = df_past_dict[group]
-        dff = df_future_dict[group]
-
-        past_min = dfp[date_col].min()
-        past_max = dfp[date_col].max()
-        future_min = dff[date_col].min()
-        future_max = dff[date_col].max()
-
-        if past_max < future_min:
-            df_predict_dict[group] = dff
-        elif past_max >= future_max:
-            continue
-        elif past_min < future_min < past_max:
-            df_predict_dict[group] = dff[dff[date_col] > past_min]
-        else:
-            continue
-    # end
-
-    df_pred = pdx.groups_merge(df_predict_dict, groups=groups)
-    df_merged = pd.concat([df_pred, df_future], axis=0, ignore_index=True)
-    return df_merged
-
-
-def _compose_predict_df_old_format(
-    df_past: DataFrame,
-    area_feature_dict: dict[int, str],
-    skill_feature_dict: dict[int, str],
-    input_measure_ids: list[int],
-    measure_dict: dict[int, str],
-    start_end_dates: dict[int, tuple[datetime, datetime]],
-    freq: Literal['D', 'W', 'M'],
-    defval: Union[None, float] = 0.) -> DataFrame:
-    # columns: ['skill_id_fk', 'area_id_fk', 'time', 'day', <measure_id>]
-
-    measure_ids = set(measure_dict.keys())
-    target_measure_ids = measure_ids.difference(input_measure_ids)
-
-    df_list = []
-    for area_feature_id in area_feature_dict:
-        start_date, end_date = None, None
-
-        # trick: 0 is used as DEFAULT datetime for all areas
-        if 0 in start_end_dates:
-            start_date, end_date = start_end_dates[0]
-        if area_feature_id in start_end_dates:
-            start_date, end_date = start_end_dates[area_feature_id]
-        if start_date is None:
-            # no start/end dates is found
-            continue
-
-        date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
-        for skill_feature_id in skill_feature_dict:
-            area_skill_df = DataFrame(data={
-                'area_id_fk': area_feature_id,
-                'skill_id_fk': skill_feature_id,
-                'time': date_index.to_series()
-            })
-            area_skill_df['day'] = area_skill_df['time'].dt.day_name()
-            for input_id in input_measure_ids:
-                area_skill_df[str(input_id)] = defval
-
-            for target_id in target_measure_ids:
-                area_skill_df[str(target_id)] = defval
-
-            df_list.append(area_skill_df)
-
-    df_pred = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
-    return df_pred
-
-
-def _compose_predict_df_new_format(
-    df_past: DataFrame,
-    area_feature_dict: dict[int, str],
-    skill_feature_dict: dict[int, str],
-    input_measure_ids: list[int],
-    measure_dict: dict[int, str],
-    start_end_dates: dict[int, tuple[datetime, datetime]],
-    freq: Literal['D', 'W', 'M'],
-    defval: Union[None, float] = 0.) -> DataFrame:
-    # columns: ['area', 'skill', 'date', <measure_name>]
-
-    measure_ids = set(measure_dict.keys())
-    target_measure_ids = measure_ids.difference(input_measure_ids)
-
-    df_list = []
-    for area_feature_id in area_feature_dict:
-        start_date, end_date = None, None
-
-        # trick: 0 is used as DEFAULT datetime for all areas
-        if 0 in start_end_dates:
-            start_date, end_date = start_end_dates[0]
-        if area_feature_id in start_end_dates:
-            start_date, end_date = start_end_dates[area_feature_id]
-        if start_date is None:
-            # no start/end dates is found
-            continue
-
-        #  FutureWarning: 'M' is deprecated and will be removed in a future version, please use 'ME' instead.
-        #   MS: MonthBegin
-        #   ME: MonthEnd
-        if freq == 'M': freq = 'MS'
-
-        date_index = pd.date_range(start=start_date, end=end_date, freq=freq)
-        for skill_feature_id in skill_feature_dict:
-            area_skill_df = DataFrame(data={
-                'area': area_feature_dict[area_feature_id],
-                'skill': skill_feature_dict[skill_feature_id],
-                'date': date_index.to_series()
-            })
-            for input_id in input_measure_ids:
-                input_name = measure_dict[input_id]
-                area_skill_df[input_name] = defval
-            for target_id in target_measure_ids:
-                target_name = measure_dict[target_id]
-                area_skill_df[target_name] = defval
-
-            df_list.append(area_skill_df)
-
-    df_pred = pd.concat(df_list, axis=0, ignore_index=True).reset_index(drop=True)
-    return df_pred
-
-
 # ---------------------------------------------------------------------------
 # normalize_df
 # ---------------------------------------------------------------------------
-# df can have the following formats
-#
-# old format:
-#   index: not used
-#   'area_id_fk':     integer values
-#   'skill_id_fk':    integer values
-#   'time':           datetime
-#   'day':            str
-#   <measure_id>:     float values
-#   ...
-#
-#   Note: <measure_id> can be an integer or a string
-#
-# old_format/multiindex
-#   index: ['area_id_fk'/'skill_id_fk'/'time']
-#   'day':            str
-#   <measure_id>:     float values
-#   ...
-#
-#   Note: <measure_id> can be an integer or a string
-#
-# new format:
-#   index: not used
-#   'area':           string values
-#   'skill':          string values
-#   'date':           datetime
-#   <measure_name>:   float values
-#   ...
-#
-# new format/multiindex:
-#   index: ['area'/'skill'/'date']
-#   measure_name:   float values
-#
-# normalized format:
-#   'area_id_fk': int values
-#   'skill_id_fk': int values
-#   'state_date": timestamp
-#   <measure_id>: column as integer, float values
+# To see 'README_dataframe_format
 #
 
 def normalize_df(df: DataFrame,
@@ -576,7 +335,7 @@ def normalize_df(df: DataFrame,
     an exception.
 
     WARN: HOW TO SPECIFY the timestamp?
-        Pandas 'timestamp' or 'period'
+        Pandas 'timestamp' or 'period' or Python 'datetime' ???
 
     :param df: dataframe to process
     :param area_features_dict:  dict area_id->area_name
@@ -598,8 +357,9 @@ def normalize_df(df: DataFrame,
 
     # 2.1) collect the mandatory columns:
     mandatory_columns = ['area', 'skill', 'date', 'area_id_fk', 'area_id_fk', 'time']
+    # 2.2) collect the data columns as integer, integer as string, name
     for mid in measure_dict:
-        # add measure_id (int|str) and measure_name (str)
+        # add measure_id as int, str and name (str)
         mandatory_columns += [mid, str(mid), measure_dict[mid]]
 
     # 2.2) identifies the extra columns and drop then
@@ -610,7 +370,7 @@ def normalize_df(df: DataFrame,
     measure_ids = list(measure_dict.keys())
 
     area_features_drev = reverse_dict(area_features_dict)
-    skill_feature_drev = reverse_dict(skill_features_dict)
+    skill_drev = reverse_dict(skill_features_dict)
     measure_drev = reverse_dict(measure_dict)
 
     # 3) check the df structure: ensures that the format is correct
@@ -648,7 +408,7 @@ def normalize_df(df: DataFrame,
     if new_format:
         df.replace(to_replace={
             'area': area_features_drev,
-            'skill': skill_feature_drev
+            'skill': skill_drev
         }, inplace=True)
         df.rename(columns=measure_drev | {
             'area': 'area_id_fk',
@@ -661,4 +421,53 @@ def normalize_df(df: DataFrame,
         }, inplace=True)
 
     return df
+
+
+# ---------------------------------------------------------------------------
+# where_start_end_date
+# ---------------------------------------------------------------------------
+
+def where_start_end_date(
+    table, query, *,
+    start_date: Optional[datetime], end_date: Optional[datetime],
+    dtcol: str = 'state_date',
+    start_included: bool = True,
+    end_included: bool = False,
+):
+    """
+    Add optional conditions on start/end dates
+
+    :param table: table to use
+    :param dtcol: datetime column name
+    :param query: query to use
+    :param start_date: optional start date
+    :param end_date: optional end date
+    :param start_included: if to include the start date
+    :param end_included: if to include the end date
+    :return: updated query
+    """
+
+    assert is_instance(dtcol, str)
+    assert is_instance(start_date, Optional[datetime])
+    assert is_instance(end_date, Optional[datetime])
+    assert is_instance(start_included, bool)
+    assert is_instance(end_included, bool)
+
+    if start_date is not None:
+        if start_included:
+            query = query.where(table.c[dtcol] >= start_date)
+        else:
+            query = query.where(table.c[dtcol] > start_date)
+    if end_date is not None:
+        if end_included:
+            query = query.where(table.c[dtcol] <= end_date)
+        else:
+            query = query.where(table.c[dtcol] < end_date)
+    return query
+# end
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------
 

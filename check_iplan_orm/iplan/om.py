@@ -9,14 +9,27 @@ from .tseries import *
 
 class IPlanObjectModel(IPlanObject):
 
+    @staticmethod
+    def connect_using(url: Union[str, dict, URL], **kwargs):
+        ipom = IPlanObjectModel(url, **kwargs)
+        return ipom.connect()
+
     def __init__(self, url: Union[str, dict, URL], **kwargs):
         assert is_instance(url, Union[str, dict, URL])
-        if is_instance(url, dict):
-            datasource_dict: dict = url
-            url = URL.create(**datasource_dict)
 
+        if is_instance(url, dict):
+            url_props: dict = {} | url
+            kwargs = url_props | kwargs
+
+            if 'readonly' in url_props:
+                del url_props['readonly']
+
+            url = URL.create(**url_props)
+
+        # NOTE: keep this orser
         self.engine: Optional[Engine] = None
         super().__init__(self)
+
         self.url = url
         self.metadata: Optional[MetaData] = None
         self.kwargs = kwargs
@@ -61,6 +74,13 @@ class IPlanObjectModel(IPlanObject):
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.disconnect()
         pass
+
+    # -----------------------------------------------------------------------
+    # Properties
+
+    @property
+    def read_only(self):
+        return self.kwargs.get('read_only', False)
 
     # -----------------------------------------------------------------------
     # Area/Skill hierarchy
@@ -159,48 +179,6 @@ class IPlanObjectModel(IPlanObject):
         # baseline_enabled (char(1))
         # opti_enabled (char(1))
 
-        self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
-        # [tb_idata_values_master]
-        # id (bigint)
-        # start_date (date)
-        # end_date (date)
-        # name (varchar(256))
-        # created_date (timestamp(6))
-        # idata_master_fk (bigint)
-        # loan_updated_time (timestamp)
-        # published (char(1))
-        # isscenario (char(1))
-        # temp_ind (char(1))
-        # area_id (bigint)
-        # last_updated_date (timestamp)
-        # published_id (bigint)
-        # note (text)
-
-        # self.iDataValuesDetail \
-        #     = Table('tb_idata_values_detail', self.metadata, autoload_with=self.engine)
-        self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
-        # [tb_idata_values_detail]
-        # id (bigint)
-        # value_master_fk (bigint)
-        # state_date (date)
-        # updated_date (date)
-        # model_detail_id_fk (bigint)
-        # skill_id_fk (bigint)
-        # value (double precision)
-
-        self.iDataValuesDetailHistory = self.metadata.tables["tb_idata_values_detail_hist"]
-        # [tb_idata_values_detail_hist]
-        # id (bigint)
-        # value_master_fk (bigint)
-        # state_date (date)
-        # updated_date (date)
-        # model_detail_id_fk (bigint)
-        # skill_id_fk (bigint)
-        # value (double precision)
-        # value_type (varchar(256))
-        # value_insert_time (varchar(256))
-        # area_id_fk (bigint)
-
         # Area/Skill Hierarchies
         self.AttributeMaster = self.metadata.tables["tb_attribute_master"]
         # [tb_attribute_master]
@@ -247,6 +225,46 @@ class IPlanObjectModel(IPlanObject):
         # skill_id_fk (bigint)
         # period (varchar(256))
 
+        self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
+        # [tb_idata_values_master]
+        # id (bigint)
+        # start_date (date)
+        # end_date (date)
+        # name (varchar(256))
+        # created_date (timestamp(6))
+        # idata_master_fk (bigint)
+        # loan_updated_time (timestamp)
+        # published (char(1))
+        # isscenario (char(1))
+        # temp_ind (char(1))
+        # area_id (bigint)
+        # last_updated_date (timestamp)
+        # published_id (bigint)
+        # note (text)
+
+        self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
+        # [tb_idata_values_detail]
+        # id (bigint)
+        # value_master_fk (bigint)
+        # state_date (date)
+        # updated_date (date)
+        # model_detail_id_fk (bigint)
+        # skill_id_fk (bigint)
+        # value (double precision)
+
+        self.iDataValuesDetailHistory = self.metadata.tables["tb_idata_values_detail_hist"]
+        # [tb_idata_values_detail_hist]
+        # id (bigint)
+        # value_master_fk (bigint)
+        # state_date (date)
+        # updated_date (date)
+        # model_detail_id_fk (bigint)
+        # skill_id_fk (bigint)
+        # value (double precision)
+        # value_type (varchar(256))
+        # value_insert_time (varchar(256))
+        # area_id_fk (bigint)
+
         self.iPredictModelDetailFocussed = self.metadata.tables["tb_ipr_model_detail_focussed"]
         # [tb_ipr_model_detail_focussed]
         # id(bigint)
@@ -259,7 +277,28 @@ class IPlanObjectModel(IPlanObject):
         # ipr_conf_master_id_fk(bigint)
         # skill_id_fk(bigint)
 
-        self.iPredictTrainDataFocussed = self.metadata.tables["tb_ipr_train_data_focussed"]
+        self.iPredictTestPredictionValuesFocussed = self.metadata.tables["tb_ipr_test_prediction_values_detail_focussed"]
+        # ipr_conf_master_id_fk (int8)
+        # area_id_fk (int8)
+        # skill_id_fk (int8)
+        # model_detail_id_fk (int8)
+        # actual (numeric)
+        # predicted (numeric)
+        # state_date (date)
+
+        self.iPredictPredictedValuesFocussed = self.metadata.tables["tb_ipr_predicted_values_detail_focussed"]
+        # ipr_conf_master_id_fk (int8)
+        # area_id_fk (int8)
+        # skill_id_fk (int8)
+        # model_detail_id_fk (int8)
+        # actual (numeric)
+        # predicted (numeric)
+        # state_date (date)
+
+        #
+        # OLD/UNUSED TABLES
+        #
+        # self.iPredictTrainDataFocussed = self.metadata.tables["tb_ipr_train_data_focussed"]
         # [tb_ipr_train_data_focussed]
         # ipr_conf_master_id_fk (bigint)
         # area_id_fk (bigint)

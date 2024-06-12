@@ -54,8 +54,13 @@ def _to_datetime(df, dtname, format, freq):
             dt_series = dt_series.apply(remove_tz)
     # np.dtypes.DateTime64DType == "datetime64[ns]"
     # np.dtypes.ObjectDType
-    if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
-        dt_series = dt_series.astype("datetime64[ns]")
+    # available in numpy v1.26.4
+    #       NOT in numpy v1.24.3
+    try:
+        if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
+            dt_series = dt_series.astype("datetime64[ns]")
+    except:
+        pass
 
     if freq is not None:
         dt_series = dt_series.dt.to_period(freq)

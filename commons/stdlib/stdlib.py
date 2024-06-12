@@ -100,7 +100,7 @@ def as_list(obj: Union[NoneType, str, list, tuple], param=None):
     :return: a list
     """
     tl = type(obj)
-    assert tl in (NoneType, str, list, tuple), f"'{param}' not of type None, str, int, list, tuple"
+    assert tl in (NoneType, int, str, list, tuple), f"'{param}' not of type None, int, str, list, tuple"
     if tl is NoneType:
         return []
     elif tl == list:

@@ -237,7 +237,7 @@ def reverse_dict(d: Union[BuiltinDict, dict]) -> dict:
 # Extends 'is_instance'
 # ---------------------------------------------------------------------------
 
-from . import is_inst_impl as iii
+from . import is_instance as iii
 
 iii.IS_INSTANCE_OF['stdlib.dict.dict'] = iii.IsDict
 

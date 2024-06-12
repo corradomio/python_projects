@@ -29,6 +29,8 @@ def main():
         ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES)
         ts.using_plan(PLAN_NAME)
 
+        print(ts.measures)
+
         # ts.train().delete()
         # ts.predict().delete()
         # print("ok")

@@ -3,9 +3,10 @@ from stdlib import is_instance
 import logging
 from collections import deque
 from sqlalchemy import MetaData, Engine, create_engine, URL, Table, ForeignKey
+from netx import MultiDiGraph
 
 
-class DatabaseDAG:
+class DBDAGScanner:
 
     def __init__(self, url: Union[str, dict, URL], **kwargs):
         assert is_instance(url, Union[str, dict, URL])
@@ -19,7 +20,7 @@ class DatabaseDAG:
         self.kwargs = kwargs
         self.log = logging.getLogger(f"dbdag.{self.__class__.__name__}")
         
-    def connect(self, **kwargs) -> "DatabaseDAG":
+    def connect(self, **kwargs) -> "DBDAGScanner":
         """
         It creates a 'connection' to the DBMS, NOT a connection to execute queries (a 'session')
         This step is used to create the data structures necessary to access the specific database
@@ -60,7 +61,10 @@ class DatabaseDAG:
 
     # -----------------------------------------------------------------------
     #
-    def scan_all(self):
+
+    def scan_all(self) -> MultiDiGraph:
+
+        dag = MultiDiGraph(loops=True)
 
         processed = set()
         waiting = deque(list(self.metadata.tables.values()))
@@ -79,57 +83,28 @@ class DatabaseDAG:
             for fkey in s.foreign_keys:
                 # s)ource.column
                 # t)arget.column
-                c = fkey.column
-                t = fkey.parent.table
-                f = fkey.parent
 
-                print("...", c, "->", f)
+                scol = fkey.parent
+                dcol = fkey.column
 
-                waiting.appendleft(t)
+                print("...", scol, "->", dcol)
+
+                dag.add_edge(scol.table, dcol.table, fkey=fkey)
+
+                waiting.appendleft(dcol.table)
                 pass
         print("done")
-    # end
+        return dag
 
-    def scan(self, table: Table):
+    def delete_cascade(self, table: Table, ids: list[int]):
+        """
+        Delete the content of the table and all backward dependencies
 
-        # print("... primary_key")
-        # print("... ...", table.primary_key)
-        # print("... foreign_keys")
-        # for fkey in table.foreign_keys:
-        #     print("... ...", fkey)
-        # print("... constraints")
-        # for con in table.constraints:
-        #     print("... ...", con)
-        #
-        # print("... foreign_key_constraints")
-        # for fkc in table.foreign_key_constraints:
-        #     print("... ...", fkc)
-        # print("done")
-
-        processed = set()
-        waiting = deque([table])
-
-        while len(waiting) > 0:
-            s = waiting.pop()
-            if s in processed:
-                continue
-            processed.add(s)
-
-            fkey: ForeignKey = ForeignKey('')
-            for fkey in s.foreign_keys:
-                # s)ource.column
-                # t)arget.column
-                c = fkey.column
-                t = fkey.parent.table
-                f = fkey.parent
-
-                print("...", c, "->", f)
-
-                waiting.appendleft(t)
-                pass
-
-        print(table)
-    # end
+        :param table: table to process
+        :param ids: list of ids to delete
+        :return:
+        """
+        return
 
     # -----------------------------------------------------------------------
     # Metadata
@@ -146,16 +121,12 @@ class DatabaseDAG:
         # -------------------------------------------------------------------
 
         # Data Model
-        # self.iDataModelMaster \
-        #     = Table('tb_idata_model_master', self.metadata, autoload_with=self.engine)
-        self.iDataModelMaster = self.metadata.tables["tb_idata_model_master"]
+        # self.iDataModelMaster = self.metadata.tables["tb_idata_model_master"]
         # [tb_idata_model_master]
         # id (bigint)
         # description (varchar(256))
 
-        # self.iDataModelDetail \
-        #     = Table('tb_idata_model_detail', self.metadata, autoload_with=self.engine)
-        self.iDataModelDetail = self.metadata.tables["tb_idata_model_detail"]
+        # self.iDataModelDetail = self.metadata.tables["tb_idata_model_detail"]
         # [tb_idata_model_detail]
         # id (bigint)
         # measure_id (varchar(256))
@@ -177,18 +148,14 @@ class DatabaseDAG:
         # linked_measure (varchar(256))
         # period_agg_type (varchar(256))
 
-        # iData Module
-        # self.iDataModuleMaster \
-        #     = Table('tb_idata_module_master', self.metadata, autoload_with=self.engine)
-        self.iDataModuleMaster = self.metadata.tables["tb_idata_module_master"]
+        # Data Module
+        # self.iDataModuleMaster = self.metadata.tables["tb_idata_module_master"]
         # [tb_idata_module_master]
         # id (bigint)
         # module_id (varchar(20))
         # module_description (varchar(200))
 
-        # self.iDataModuleDetail \
-        #     = Table('tb_idata_module_details', self.metadata, autoload_with=self.engine)
-        self.iDataModuleDetail = self.metadata.tables["tb_idata_module_details"]
+        # self.iDataModuleDetail = self.metadata.tables["tb_idata_module_details"]
         # [tb_idata_module_details]
         # id (bigint)
         # master_id (bigint)
@@ -196,10 +163,8 @@ class DatabaseDAG:
         # display_name (varchar(100))
         # is_enabled (varchar(1))
 
-        # iData Master
-        # self.iDataMaster \
-        #     = Table('tb_idata_master', self.metadata, autoload_with=self.engine)
-        self.iDataMaster = self.metadata.tables["tb_idata_master"]
+        # Data Master
+        # self.iDataMaster = self.metadata.tables["tb_idata_master"]
         # [tb_idata_master]
         # id (bigint)
         # area_id_fk (bigint)
@@ -212,9 +177,7 @@ class DatabaseDAG:
         # baseline_enabled (char(1))
         # opti_enabled (char(1))
 
-        # self.iDataValuesMaster \
-        #     = Table('tb_idata_values_master', self.metadata, autoload_with=self.engine)
-        self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
+        # self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
         # [tb_idata_values_master]
         # id (bigint)
         # start_date (date)
@@ -231,9 +194,7 @@ class DatabaseDAG:
         # published_id (bigint)
         # note (text)
 
-        # self.iDataValuesDetail \
-        #     = Table('tb_idata_values_detail', self.metadata, autoload_with=self.engine)
-        self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
+        # self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
         # [tb_idata_values_detail]
         # id (bigint)
         # value_master_fk (bigint)
@@ -243,9 +204,7 @@ class DatabaseDAG:
         # skill_id_fk (bigint)
         # value (double precision)
 
-        # self.iDataValuesDetailHistory \
-        #     = Table('tb_idata_values_detail_hist', self.metadata, autoload_with=self.engine)
-        self.iDataValuesDetailHistory = self.metadata.tables["tb_idata_values_detail_hist"]
+        # self.iDataValuesDetailHistory = self.metadata.tables["tb_idata_values_detail_hist"]
         # [tb_idata_values_detail_hist]
         # id (bigint)
         # value_master_fk (bigint)
@@ -259,9 +218,7 @@ class DatabaseDAG:
         # area_id_fk (bigint)
 
         # Area/Skill Hierarchies
-        # self.AttributeMaster \
-        #     = Table('tb_attribute_master', self.metadata, autoload_with=self.engine)
-        self.AttributeMaster = self.metadata.tables["tb_attribute_master"]
+        # self.AttributeMaster = self.metadata.tables["tb_attribute_master"]
         # [tb_attribute_master]
         # id (bigint)
         # attribute_master_name (varchar(256))
@@ -270,9 +227,7 @@ class DatabaseDAG:
         # createddate (date)
         # hierarchy_type (bigint)
 
-        # self.AttributeDetail \
-        #     = Table('tb_attribute_detail', self.metadata, autoload_with=self.engine)
-        self.AttributeDetail = self.metadata.tables["tb_attribute_detail"]
+        # self.AttributeDetail = self.metadata.tables["tb_attribute_detail"]
         # [tb_attribute_detail
         # id (bigint)
         # attribute_master_id (bigint)
@@ -285,9 +240,7 @@ class DatabaseDAG:
         # is_leafattribute (boolean)
 
         # IPredict Focussed
-        # self.iPredictMasterFocussed \
-        #     = Table('tb_ipr_conf_master_focussed', self.metadata, autoload_with=self.engine)
-        self.iPredictMasterFocussed = self.metadata.tables["tb_ipr_conf_master_focussed"]
+        # self.iPredictMasterFocussed = self.metadata.tables["tb_ipr_conf_master_focussed"]
         # [tb_ipr_conf_master_focussed]
         # id (bigint)
         # ipr_conf_master_name (varchar(256))
@@ -297,9 +250,7 @@ class DatabaseDAG:
         # skill_id_fk (bigint)
         # idata_id_fk (bigint)
 
-        # self.iPredictDetailFocussed \
-        #     = Table('tb_ipr_conf_detail_focussed', self.metadata, autoload_with=self.engine)
-        self.iPredictDetailFocussed = self.metadata.tables["tb_ipr_conf_detail_focussed"]
+        # self.iPredictDetailFocussed = self.metadata.tables["tb_ipr_conf_detail_focussed"]
         # [tb_ipr_conf_detail_focussed]
         # id (bigint)
         # parameter_desc (varchar(256))
@@ -310,9 +261,7 @@ class DatabaseDAG:
         # skill_id_fk (bigint)
         # period (varchar(256))
 
-        # self.iPredictModelDetailFocussed \
-        #     = Table('tb_ipr_model_detail_focussed', self.metadata, autoload_with=self.engine)
-        self.iPredictModelDetailFocussed = self.metadata.tables["tb_ipr_model_detail_focussed"]
+        # self.iPredictModelDetailFocussed = self.metadata.tables["tb_ipr_model_detail_focussed"]
         # [tb_ipr_model_detail_focussed]
         # id(bigint)
         # best_model(text)
@@ -326,9 +275,7 @@ class DatabaseDAG:
         # ipr_conf_master_id_fk(bigint)
         # skill_id_fk(bigint)
 
-        # self.iPredictTrainDataFocussed \
-        #     = Table('tb_ipr_train_data_focussed', self.metadata, autoload_with=self.engine)
-        self.iPredictTrainDataFocussed = self.metadata.tables["tb_ipr_train_data_focussed"]
+        # self.iPredictTrainDataFocussed = self.metadata.tables["tb_ipr_train_data_focussed"]
         # [tb_ipr_train_data_focussed]
         # ipr_conf_master_id_fk (bigint)
         # area_id_fk (bigint)
@@ -355,9 +302,7 @@ class DatabaseDAG:
         #   area_id_fk (bigint)
         # -------------------------------------------------------------------
 
-        # self.iDataValuesMaster \
-        #     = Table('tb_idata_values_master', self.metadata, autoload_with=self.engine)
-        self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
+        # self.iDataValuesMaster = self.metadata.tables["tb_idata_values_master"]
         # [tb_idata_values_master]
         # id (bigint)
         # start_date (date)
@@ -374,9 +319,7 @@ class DatabaseDAG:
         # published_id (bigint)
         # note (text)
 
-        # self.iDataValuesDetail \
-        #     = Table('tb_idata_values_detail', self.metadata, autoload_with=self.engine)
-        self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
+        # self.iDataValuesDetail = self.metadata.tables["tb_idata_values_detail"]
         # [tb_idata_values_detail]
         # id (bigint)
         # value_master_fk (bigint)
@@ -386,9 +329,7 @@ class DatabaseDAG:
         # skill_id_fk (bigint)
         # value (double precision)
 
-        # self.iDataValuesDetailHist \
-        #     = Table('tb_idata_values_detail_hist', self.metadata, autoload_with=self.engine)
-        self.iDataValuesDetailHist = self.metadata.tables["tb_idata_values_detail_hist"]
+        # self.iDataValuesDetailHist = self.metadata.tables["tb_idata_values_detail_hist"]
         # [tb_idata_values_detail_hist]
         # id (bigint)
         # value_master_fk (bigint)
