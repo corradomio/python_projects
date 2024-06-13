@@ -7,6 +7,19 @@ from .datamodels import *
 # IDataMaster   (DataMaster)
 # ---------------------------------------------------------------------------
 
+PERIOD_LIT_TO_NAME_MAP = {
+    'D': 'day',
+    'W': 'week',
+    'M': 'month'
+}
+
+PERIOD_NAME_TO_LIT_MAP = {
+    'day': 'D',
+    'week': 'W',
+    'month': 'M'
+}
+
+
 class DataMaster(IPlanData):
     def __init__(self, ipom, id):
         super().__init__(ipom, id, ipom.iDataMaster)
@@ -75,7 +88,7 @@ class DataMaster(IPlanData):
             table = self.ipom.iDataValuesMaster
             query = select(table.c.id).where(table.c['idata_master_fk'] == data_master_id)
             self.log.debug(query)
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             plan_ids = [res[0] for res in rlist]
 
             # delete historical data
@@ -114,21 +127,27 @@ class DataMaster(IPlanData):
                data_model: Union[int, str],
                area_hierarchy: Union[int, str],
                skill_hierarchy: Union[int, str],
-               period_hierarchy: Literal['day', 'week', 'month'] = 'day',
+               freq: Literal['D', 'W', 'M'] = 'D',
                periods: int = 90):
+
+        assert is_instance(self._name, str), "Missing Data Master name"
+
+        assert is_instance(data_model, Union[int, str])
+        assert is_instance(area_hierarchy, Union[int, str])
+        assert is_instance(skill_hierarchy, Union[int, str])
+        assert is_instance(freq, Literal['D', 'W', 'M'])
+        assert is_instance(periods, int) and periods > 0
 
         if self._id != NO_ID:
             self.log.warning(f"Data Master '{self._name}' already existent")
             return self
-
-        assert is_instance(self._name, str), "Missing Data Master name"
 
         self._id = self._create_data_master(
             self._name,
             data_model=data_model,
             area_hierarchy=area_hierarchy,
             skill_hierarchy=skill_hierarchy,
-            period_hierarchy=period_hierarchy,
+            freq=freq,
             periods=periods
         )
 
@@ -137,13 +156,13 @@ class DataMaster(IPlanData):
     # end
 
     def _create_data_master(
-        self,
-        name: str,
-        data_model: Union[int, str],
-        area_hierarchy: Union[int, str],
-        skill_hierarchy: Union[int, str],
-        period_hierarchy: Literal['day', 'week', 'month'] = 'day',
-        periods: int = 90) -> int:
+            self,
+            name: str,
+            data_model: Union[int, str],
+            area_hierarchy: Union[int, str],
+            skill_hierarchy: Union[int, str],
+            freq: Literal['D', 'W', 'M'],
+            periods: int = 90):
         """
         Create a Data Master
 
@@ -151,21 +170,22 @@ class DataMaster(IPlanData):
         :param data_model: Data Model to use
         :param area_hierarchy: Area Hierarchy to use
         :param skill_hierarchy: Skill Hirerachy to use
-        :param period_hierarchy: Period Hierarchy to use
+        :param freq: Period Hierarchy to use
         :param periods: period length to use
         :return:
         """
-        assert is_instance(period_hierarchy, Literal['day', 'week', 'month'])
+        assert is_instance(freq, Literal['D', 'W', 'M'])
         assert is_instance(periods, int) and periods > 0
 
         data_model_id = self.ipom.data_models().data_model(data_model).id
         area_hierarchy_id = self.ipom.hierachies().area_hierarchy(area_hierarchy).id
         skill_hierarchy_id = self.ipom.hierachies().skill_hierarchy(skill_hierarchy).id
+        period_hierarchy = PERIOD_LIT_TO_NAME_MAP[freq]
 
-        table = self.ipom.iDataMaster
-        data_master_id = self.ipom._convert_id(name, table, ['description'], nullable=True)
+        # data_master_id = self.ipom._convert_id(name, table, ['description'], nullable=True)
 
         with self.engine.connect() as conn:
+            table = self.ipom.iDataMaster
             query = insert(table) \
                 .values(
                     description=name,

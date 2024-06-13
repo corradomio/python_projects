@@ -1,10 +1,9 @@
+import typing
 from datetime import datetime
-from typing import Union, Any, Literal, Optional
 
 import pandas as pd
 from pandas import DataFrame
 
-import pandasx as pdx
 import stdlib.loggingx as logging
 from stdlib.dateutilx import relativeperiods
 from stdlib.dict import reverse_dict
@@ -23,12 +22,12 @@ def safe_int(s):
 
 
 def start_end_dates(
-    start_date: Optional[datetime],
-    end_date: Optional[datetime],
-    periods: Optional[int],
-    freq: Literal['D', 'W', 'M'],
-    which_date: Optional[bool] = None
-) -> tuple[Optional[datetime], Optional[datetime]]:
+    start_date: typing.Optional[datetime],
+    end_date: typing.Optional[datetime],
+    periods: typing.Optional[int],
+    freq: typing.Literal['D', 'W', 'M'],
+    which_date: typing.Optional[bool] = None
+) -> tuple[typing.Optional[datetime], typing.Optional[datetime]]:
     """
     Compute the start/end dates based on the passed dates,
     the number of periods and the period frequency
@@ -46,10 +45,10 @@ def start_end_dates(
     :param which_date: which date to compute
     :return:
     """
-    assert is_instance(start_date, Optional[datetime])
-    assert is_instance(end_date, Optional[datetime])
-    assert is_instance(periods, Optional[int])
-    assert is_instance(freq, Literal['D', 'W', 'M'])
+    assert is_instance(start_date, typing.Optional[datetime])
+    assert is_instance(end_date, typing.Optional[datetime])
+    assert is_instance(periods, typing.Optional[int])
+    assert is_instance(freq, typing.Literal['D', 'W', 'M'])
 
     # not date specified: none to do
     if start_date is None and end_date is None:
@@ -106,45 +105,40 @@ def concatenate_no_skill_df(df_with_skill: DataFrame, df_no_skill: DataFrame, sk
 # fill_missing_dates
 
 def fill_missing_dates(
-    df_data: DataFrame,
+    df_data: DataFrame, *,
     area_dict: dict[int, str],
     skill_dict: dict[int, str],
     measure_dict: dict[int, str],
-    start_date: datetime,
-    periods: int,
-    freq: Literal['D', 'W', 'M']) -> DataFrame:
+    date_range) -> DataFrame:
     """
     Fill the dataframe with the missing values to reach the end_date
+    There are two cases:
+
+        1) it is specified end_date: used to expand the train data
+        2) it is specified (start_date, periods): used to expand the predict data
+
     :param df_data: dataframe containing the data
     :param area_dict: areas to populate
     :param skill_dict: skills to populate
     :param measure_dict: measures to generate
-    :param start_date: starting date
-    :param periods: number of periods to generate
-    :param freq: frequency.
-            In theory, the frequency is not necessary if df is not empty,
-            but it is mandatory if the df is empty
     :return:
     """
     assert is_instance(df_data, DataFrame)
-    assert is_instance(area_dict, dict[int, str])
-    assert is_instance(skill_dict, dict[int, str])
-    assert is_instance(measure_dict, dict[int, str])
-    assert is_instance(start_date, datetime)
-    assert is_instance(periods, int)
-    assert is_instance(freq, Literal['D', 'W', 'M'])
+    # assert is_instance(area_dict, dict[int, str])
+    # assert is_instance(skill_dict, dict[int, str])
+    # assert is_instance(measure_dict, dict[int, str])
 
+    # check the dataframe format
     new_format = 'area' in df_data.columns
 
     df_default = create_default_dataframe(
-        start_date=start_date, periods=periods, freq=freq,
+        date_range,
         area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
         new_format=new_format
     )
 
     df_merged = merge_dataframes(df_data, df_default)
-
-    return df_data
+    return df_merged
 
 
 # ---------------------------------------------------------------------------
@@ -153,7 +147,7 @@ def fill_missing_dates(
 # ---------------------------------------------------------------------------
 
 def create_default_dataframe(
-    start_date: Union[datetime, pd.Timestamp], periods: int, freq: Literal['D', 'W', 'M'],
+    date_range,
     area_dict: dict[int, str], skill_dict: dict[int, str], measure_dict: dict[int, str],
     new_format
 ):
@@ -174,7 +168,7 @@ def create_default_dataframe(
     # assert is_instance(skill_dict, dict[int, str])
     # assert is_instance(measure_dict, dict[int, str])
 
-    date_range = pd.date_range(start_date, periods=periods, freq=freq)
+    periods = len(date_range)
 
     # compose the dataframe with for all areas/skill/daterange/measures
     df_list = []
@@ -200,8 +194,11 @@ def merge_dataframes(df_data: DataFrame, df_default: DataFrame) -> DataFrame:
 
     if len(df_data) == 0:
         return df_default
+    if len(df_default) == 0:
+        return df_data
 
-    return df_data
+    df_merged = pd.concat([df_data, df_default]).reset_index(drop=True)
+    return df_merged
 
 
 # ---------------------------------------------------------------------------
@@ -296,7 +293,7 @@ def normalize_df(df: DataFrame,
                  area_features_dict: dict[int, str],
                  skill_features_dict: dict[int, str],
                  measure_dict: dict[int, str],
-                 freq: Literal['D', 'W', 'M']) -> DataFrame:
+                 freq: typing.Literal['D', 'W', 'M']) -> DataFrame:
     """
     Normalize the dataframe 'df'
     There are two possible dataframe formats:
@@ -429,7 +426,7 @@ def normalize_df(df: DataFrame,
 
 def where_start_end_date(
     table, query, *,
-    start_date: Optional[datetime], end_date: Optional[datetime],
+    start_date: typing.Optional[datetime], end_date: typing.Optional[datetime],
     dtcol: str = 'state_date',
     start_included: bool = True,
     end_included: bool = False,
@@ -448,8 +445,8 @@ def where_start_end_date(
     """
 
     assert is_instance(dtcol, str)
-    assert is_instance(start_date, Optional[datetime])
-    assert is_instance(end_date, Optional[datetime])
+    assert is_instance(start_date, typing.Optional[datetime])
+    assert is_instance(end_date, typing.Optional[datetime])
     assert is_instance(start_included, bool)
     assert is_instance(end_included, bool)
 

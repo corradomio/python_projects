@@ -6,16 +6,15 @@ import random
 import warnings
 import numpy as np
 import pandas as pd
+import datetime
 from typing import Union, Optional, Collection
 from pandas import CategoricalDtype
 from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
-from datetime import datetime
+from datetime import datetime, date
 
 __all__ = [
     # "find_binary",
     # "binary_encode",
-    "to_datetime",
-
     "dataframe_sort",
 
     "groups_list",
@@ -93,19 +92,6 @@ def validate_columns(df: pd.DataFrame, columns: Union[None, str, list[str]]):
             invalid.append(col)
     if len(invalid) > 0:
         raise ValueError(f"Columns {invalid} not present in DataFrame")
-
-
-def to_datetime(dt) -> datetime:
-    if isinstance(dt, str):
-        dt = pd.to_datetime(dt)
-    if isinstance(dt, pd.Timestamp):
-        return dt.to_pydatetime()
-    if isinstance(dt, datetime):
-        return dt
-    if isinstance(dt, pd.Period):
-        return dt.to_timestamp().to_pydatetime()
-    else:
-        raise ValueError(f"Unsupported datetime {dt}")
 
 
 # ---------------------------------------------------------------------------

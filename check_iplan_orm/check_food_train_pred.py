@@ -104,7 +104,7 @@ def save_all(ipom, from_date):
 
 def main():
 
-    datasource_dict = load('datasource_localhost.json')
+    datasource_dict = load('datasource_local.json')
     ipom = IPlanObjectModel(datasource_dict)
     from_date = datetime.strptime('2021-01-01', '%Y-%m-%d')
 

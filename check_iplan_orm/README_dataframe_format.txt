@@ -5,10 +5,10 @@ There are 2 possible DataFrame formats:
 
     horrible old format
     -------------------
-        passed to the algorithms
+        passed to Sid's algorithms
 
         'area_id_fk', 'skill_id_fk', 'time', 'day', <measure_id: str>, ...
-        area & skill: numeric
+        area & skill: int
 
 
     flatten format
@@ -23,7 +23,7 @@ There are 2 possible DataFrame formats:
         pivoted from flatten format
 
         'area_id_fk', 'skill_id_fk', 'state_date', <measure_id: int>, ...
-        area & skill: numeric
+        area & skill: int
 
 
     new clean format

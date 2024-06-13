@@ -7,8 +7,8 @@ from stdlib.jsonx import load
 
 
 def main():
-    # datasource_dict = load('datasource.json')
-    datasource_dict = load('datasource_localhost.json')
+    # datasource_dict = load('datasource_remote.json')
+    datasource_dict = load('datasource_local.json')
     ipom = IPlanObjectModel(datasource_dict)
 
     df_train = pdx.read_data(
@@ -23,6 +23,26 @@ def main():
     foods = df_train['skill'].unique().tolist()
 
     with ipom.connect():
+
+        area_hierarchy = ipom.hierachies().area_hierarchy(AREA_HIERARCHY)
+        if not area_hierarchy.exists():
+            area_hierarchy.create({'WORLD': countries})
+
+        skill_hierarchy = ipom.hierachies().skill_hierarchy(SKILL_HIERARCHY)
+        if not skill_hierarchy.exists():
+            skill_hierarchy.create({'FOODS': foods})
+
+        data_model = ipom.data_models().data_model(DATA_MODEL)
+        if not data_model.exists():
+            data_model.create(TS_TARGETS, TS_INPUTS)
+
+        print(data_model.measures)
+
+        data_master = ipom.data_masters().data_master(DATA_MASTER)
+        data_master.delete()
+        if not data_master.exists():
+            data_master.create(DATA_MODEL, AREA_HIERARCHY, SKILL_HIERARCHY, 'W', 12)
+
         # ipom.time_series().focussed(TIME_SERIES).delete()
         # ipom.data_masters().data_master(DATA_MASTER).delete()
         # ipom.data_models().data_model(DATA_MODEL).delete()
@@ -31,7 +51,7 @@ def main():
         # ah: AttributeHierarchy = ipom.hierachies().area_hierarchy(AREA_HIERARCHY).delete()
         # sh: AttributeHierarchy = ipom.hierachies().skill_hierarchy(SKILL_HIERARCHY).delete()
         # ah.create({'WORLD': countries})
-        # sh.create({'FEEDS': foods})
+        # sh.create({'FOODS': foods})
 
         # dmodel = ipom.data_models().data_model(DATA_MODEL) \
         #     .create(
@@ -56,6 +76,7 @@ def main():
         # plan.delete()
         # plan.create(datetime.strptime('2024-01-01', '%Y-%m-%d'))
         # print(plan.exists())
+        print("done")
         pass
     pass
 

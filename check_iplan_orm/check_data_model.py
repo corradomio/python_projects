@@ -7,8 +7,8 @@ from stdlib.jsonx import load
 
 
 def main():
-    # datasource_dict = load('datasource.json')
-    datasource_dict = load('datasource_localhost.json')
+    # datasource_dict = load('datasource_remote.json')
+    datasource_dict = load('datasource_local.json')
     ipom = IPlanObjectModel(datasource_dict)
 
     with ipom.connect():

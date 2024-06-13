@@ -1,4 +1,4 @@
-PLAN_NAME = 'Plan Food Import'
+PLAN_NAME = 'CM Plan Food Import'
 DATA_MODEL = "CM Data Model Food Import"
 DATA_MASTER = "CM Data Master Food Import"
 AREA_HIERARCHY = "ImportCountries"

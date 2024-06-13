@@ -74,7 +74,7 @@ class DataModel(IPlanData):
             table = self.ipom.iDataModelDetail
             query = select(table.c.id, table.c['measure_id']).where(table.c['data_model_id_fk'] == self.id)
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             if with_name:
                 return {res[0]: res[1] for res in rlist}
             else:
@@ -86,9 +86,9 @@ class DataModel(IPlanData):
             table = self.ipom.iDataModelDetail
             query = select(table).where(table.c['data_model_id_fk'] == self.id)
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             # idlist: [(id,), ...]
-        return [Measure(self.ipom, to_data(result)) for result in rlist]
+            return [Measure(self.ipom, to_data(res)) for res in rlist]
 
     def measure(self, id: Union[int, str]) -> Measure:
         with self.engine.connect() as conn:
@@ -194,11 +194,24 @@ class DataModel(IPlanData):
     def create(self,
                targets: Union[str, list[str]],
                inputs: Union[None, str, list[str]]):
+        """
+
+        :param targets: measures of type 'FEED'
+        :param inputs:  measures of type 'INPUT'
+        :return:
+        """
+
+        assert is_instance(targets, Union[str, list[str]])
+        assert is_instance(targets, Union[None, str, list[str]])
+
         if self._id != NO_ID:
             self.log.warning(f"Data Model '{self._name}' already existent")
             return self
 
         assert is_instance(self._name, str), "Missing Data Model name"
+
+        targets = as_list(targets, "targets")
+        inputs = as_list(inputs, "targets")
 
         self._id = self._create_data_model(
             targets=targets,
@@ -206,10 +219,7 @@ class DataModel(IPlanData):
         self._name = None
         return self
 
-    def _create_data_model(
-        self, *,
-        targets: Union[str, list[str]],
-        inputs: Union[None, str, list[str]]):
+    def _create_data_model(self, targets: list[str], inputs: list[str]):
         """
 
         :param name: Data Model name
@@ -217,12 +227,10 @@ class DataModel(IPlanData):
         :param inputs: measures used as INPUT
         :return:
         """
-        assert is_instance(targets, Union[str, list[str]])
-        assert is_instance(inputs, Union[None, str, list[str]])
+        assert is_instance(targets, list[str])
+        assert is_instance(inputs, list[str])
 
         name = self._name
-        targets = as_list(targets, 'targets')
-        inputs = as_list(inputs, 'inputs')
 
         # ensure that inputs DOESN'T contain targets
         common = set(inputs).intersection(targets)

@@ -4,41 +4,34 @@ import pandasx as pdx
 from commons import *
 from iplan.om import IPlanObjectModel, TimeSeriesFocussed
 from stdlib.jsonx import load
+from datetime import datetime
 
 
 def main():
-    # datasource_dict = load('datasource.json')
-    datasource_dict = load('datasource_localhost.json')
+    datasource_dict = load('datasource_local.json')
     ipom = IPlanObjectModel(datasource_dict)
 
-    df_train = pdx.read_data(
-        "data_test/vw_food_import_kg_train_test_area_skill.csv",
-        datetime=('date', '%Y/%m/%d %H:%M:%S', 'M'),
-        # categorical=['imp_month'],
-        na_values=['(null)'],
-        ignore=['prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country', 'imp_month'],
-    )
-
     with ipom.connect():
+        assert ipom.hierachies().area_hierarchy(AREA_HIERARCHY).exists()
+        assert ipom.hierachies().skill_hierarchy(SKILL_HIERARCHY).exists()
+        assert ipom.data_models().data_model(DATA_MODEL).exists()
+        assert ipom.data_masters().data_master(DATA_MASTER).exists()
+        assert ipom.plans().plan(PLAN_NAME, DATA_MASTER).exists()
+
+        data_model = ipom.data_models().data_model(DATA_MODEL)
+
+        print(data_model.measures)
 
         ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES)
-        print(TIME_SERIES, ts.exists())
-        # ts.delete()
-        # ts.create(
-        #     targets=TS_TARGETS,
-        #     populate=None,
-        #     inputs=TS_INPUTS,
-        #     data_master=DATA_MASTER
-        # )
-        # ts.set_plan(PLAN_NAME, DATA_MASTER)
-        ts.set_plan(PLAN_NAME)
+        if not ts.exists():
+            ts.create(targets=TS_TARGETS, inputs=TS_INPUTS, data_master=DATA_MASTER)
 
         print(ts.parameters)
         print(ts.measures)
-        print(ts.measure_ids(with_name=False))
-        print(ts.measure_ids(with_name=True))
 
-    pass
+        ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES).using_plan(PLAN_NAME, DATA_MASTER)
+        # ts = ipom.time_series().focussed(TIME_SERIES).using_plan(13357333)
+        pass
 
 
 if __name__ == "__main__":

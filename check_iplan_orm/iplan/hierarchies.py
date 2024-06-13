@@ -1,4 +1,4 @@
-from typing import Optional, Union
+from typing import Optional, Union, Literal
 from stdlib import as_list
 from sqlalchemy import delete, insert
 
@@ -90,9 +90,9 @@ class AttributeHierarchy(IPlanData):
             table = self.ipom.AttributeDetail
             query = select(table).where(table.c['attribute_master_id'] == self.id)
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             # idlist: [(id,), ...]
-        return [AttributeDetail(self.ipom, to_data(result)) for result in rlist]
+            return [AttributeDetail(self.ipom, to_data(res)) for res in rlist]
 
     # alias
     def features(self) -> list[AttributeDetail]:
@@ -120,10 +120,10 @@ class AttributeHierarchy(IPlanData):
                 )
 
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             # rlist: [(id, name), ...]
             if with_name:
-                return {rec[0]: rec[1] for rec in rlist}
+                return {res[0]: res[1] for res in rlist}
             else:
                 return [rec[0] for rec in rlist]
 
@@ -327,17 +327,17 @@ class PeriodHierarchy(IPlanObject):
     def periods(self) -> int:
         return self._period_length
 
-    def date_range(self, start=None, end=None, periods=None) -> pd.DatetimeIndex:
-        assert is_instance(start, Union[None, datetime])
-        assert is_instance(end, Union[None, datetime])
-        assert is_instance(periods, Union[None, int])
-        return pd.date_range(start=start, end=end, periods=periods, freq=self.freq)
+    # def date_range(self, start=None, end=None, periods=None) -> pd.DatetimeIndex:
+    #     assert is_instance(start, Union[None, datetime])
+    #     assert is_instance(end, Union[None, datetime])
+    #     assert is_instance(periods, Union[None, int])
+    #     return pd.date_range(start=start, end=end, periods=periods, freq=self.freq)
 
-    def period_range(self, start=None, end=None, periods=None) -> pd.PeriodIndex:
-        assert is_instance(start, Union[None, datetime])
-        assert is_instance(end, Union[None, datetime])
-        assert is_instance(periods, Union[None, int])
-        return pd.period_range(start=start, end=end, periods=periods, freq=self.freq)
+    # def period_range(self, start=None, end=None, periods=None) -> pd.PeriodIndex:
+    #     assert is_instance(start, Union[None, datetime])
+    #     assert is_instance(end, Union[None, datetime])
+    #     assert is_instance(periods, Union[None, int])
+    #     return pd.period_range(start=start, end=end, periods=periods, freq=self.freq)
 
     def __repr__(self):
         return f"{self._period_hierarchy}:{self._period_length}"
@@ -360,7 +360,8 @@ class AttributeHierarchies(IPlanObject):
     def _attribute_hierarchy(self, id: Union[int, str], hierarchy_type: Literal['area', 'skill']) \
             -> AttributeHierarchy:
         hierarchy_id = self._convert_id(
-            id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'], nullable=True)
+            id, self.AttributeMaster, ['attribute_master_name', 'attribute_desc'], nullable=True
+        )
 
         if hierarchy_id is None:
             hierarchy = AttributeHierarchy(self.ipom, NO_ID)

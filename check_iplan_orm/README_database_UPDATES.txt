@@ -77,13 +77,6 @@ ALTER TABLE public.tb_ipr_predicted_values_detail_focussed ADD CONSTRAINT tb_ipr
 -----------------------------------------------------------------------------
 - INCONSISTENCIES
 -----------------------------------------------------------------------------
-E' UN BORDELLO!!!!!
-
-    idata_model_details_id_fk/ model_detail_id_fk
-    data_model_id_fk/ idatamodel_id_fk
-    area_id_fk/area_id
-.
-
 
 There are SEVERAL inconsistencies in the name of the columns.
 

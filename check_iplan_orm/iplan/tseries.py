@@ -1,9 +1,10 @@
 import traceback
+from typing import Literal
 
-import pandas as pd
 from sqlalchemy import text
 
 from .plans import *
+import pandasx as pdx
 
 
 # ---------------------------------------------------------------------------
@@ -86,8 +87,8 @@ class TrainFocussed(TSFOperations):
 
         data_master = self._tsf.data_master
         data_master_id = data_master.id
-        plan_ids = self._plan.plan_ids
 
+        plan_ids = self._plan.plan_ids if self._plan is not None else None
         area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
@@ -115,9 +116,9 @@ class TrainFocussed(TSFOperations):
     ):
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(measure_dict, dict[int, str])
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(end_date, Optional[datetime])
 
@@ -184,7 +185,7 @@ class TrainFocussed(TSFOperations):
         self.log.info("Saving train data ...")
 
         freq = self._tsf.freq
-        area_plan_map = self._plan.area_plan_map()
+        area_plan_map = self._plan.area_plan_map
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
@@ -239,8 +240,6 @@ class TrainFocussed(TSFOperations):
         assert is_instance(df, DataFrame)
         assert is_instance(plan_id, int)
 
-        # start_date = pdx.to_datetime(df['state_date'].min())
-        # end_date = pdx.to_datetime(df['state_date'].max())
         n = len(df)
         now = datetime.now()
 
@@ -269,13 +268,26 @@ class TrainFocussed(TSFOperations):
     # -----------------------------------------------------------------------
     # select
     # -----------------------------------------------------------------------
+    # date_range: there are several possibilities
+    #
+    #   0) 'freq' is specified by the Data Master
+    #
+    #   1) 'end-date' is passed as parameter: the train data is 'clipped' BEFORE
+    #      this date OR it is extended with 'fake' values to reach the correct
+    #      timestamp
+    #   2) 'use_plan' is true: it is used to retrieve the 'end_date'
+    #
+    #   3) it is retrieve the data as is
+    #
+    # We SUPPOSE that ALL areas have the SAME start/end dates
+    #
 
     def select(
-        self, start_date: datetime, *,
+        self, *,
         area: Union[None, int, list[int], str, list[str]] = None,
         skill: Union[None, int, list[int], str, list[str]] = None,
-        periods: Optional[int] = None,
         use_plan: bool = False,
+        end_date: Optional[datetime] = None,
         new_format=True) -> DataFrame:
         """
         Retrieve the train data
@@ -286,7 +298,7 @@ class TrainFocussed(TSFOperations):
 
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
-        :param start_date: optional start date
+        :param end_date: optional start date
         :param periods: if not specified, it is inferred from the Data Master
                 the frequency is inferred from the Data Master
         :param use_plan: used to enable the query using the plan
@@ -297,8 +309,13 @@ class TrainFocussed(TSFOperations):
 
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
-        assert is_instance(start_date, datetime)
-        assert is_instance(periods, Optional[int])
+        assert is_instance(end_date, Optional[datetime])
+
+        # check for use_plan and the plan
+        assert use_plan and self._plan is not None or not use_plan, "A plan is required for 'use_plan=true'"
+
+        if use_plan and end_date is not None:
+            self.log.warn(f"If 'use_plan' is tru,e it is not necessary to specify 'end_date'. Used 'end_date'")
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
@@ -310,24 +327,51 @@ class TrainFocussed(TSFOperations):
 
         # freq & periods are retrieved from the Data Master
         freq = self._tsf.data_master.period_hierarchy.freq
-        if periods is None or periods <= 0:
-            periods = self._tsf.data_master.period_hierarchy.periods
+        if end_date is None and use_plan:
+            _, end_date = self._plan.date_range
 
-        start_date, end_date = start_end_dates(start_date, None, periods, freq, True)
-
+        # 1) select the data clipped to the specified 'end_date'
         df_selected = self._select_train_data(
-            data_master_id,
-            plan_ids,
-            area_dict,
-            skill_dict,
-            measure_dict,
-            start_date, end_date,
+            data_master_id=data_master_id,
+            plan_ids=plan_ids,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=None,
+            end_date=end_date,
             new_format=new_format)
 
-        df = fill_missing_dates(
-            df_selected,
-            area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
-            start_date=start_date, periods=periods, freq=freq)
+        # 1) specified 'use_plane' and no data found
+        if use_plan and len(df_selected) == 0:
+            # no train data found
+            start_date, end_date = self._plan.date_range
+            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='left')
+
+            df_default = create_default_dataframe(
+                date_range,
+                area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+                new_format=new_format
+            )
+
+            return df_default
+
+        # 2) 'use_plan' and 'end_date' are not used
+        elif not use_plan and end_date is None:
+            return df_selected
+
+        # 3) 'end_date' is specified and 'df_selected' is not empty
+        else:
+            dtcol = 'date' if new_format else 'state_date'
+            start_date = pdx.to_datetime(df_selected[dtcol].max())
+            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='neither')
+
+            # Note that it is necessary to SKIP the first timestamp because
+            # it is equal to the LAST dataframe timestamp
+
+            df = fill_missing_dates(
+                df_selected,
+                area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+                date_range=date_range)
 
         return df
     # end
@@ -382,9 +426,8 @@ class TrainFocussed(TSFOperations):
         skill_ids = list(skill_dict)
         measure_ids = list(measure_dict.keys())
 
-        table = self.iDataValuesDetailHist
-
         # 2) retrieve the data with 'skill NOT NULL'
+        table = self.iDataValuesDetailHist
         query = select(table.c['area_id_fk', 'skill_id_fk', 'model_detail_id_fk', 'state_date', 'value']) \
             .where(table.c['model_detail_id_fk'].in_(measure_ids) &
                    table.c['area_id_fk'].in_(area_ids) &
@@ -484,9 +527,9 @@ class TestFocussed(TSFOperations):
         end_date: Optional[datetime],
     ):
         assert is_instance(time_series_id, int)
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(measure_dict, dict[int, str])
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(end_date, Optional[datetime])
 
@@ -547,7 +590,7 @@ class TestFocussed(TSFOperations):
 
         time_series_id = self._tsf.id
         freq = self._tsf.freq
-        area_plan_map = self._plan.area_plan_map()
+        area_plan_map = self._plan.area_plan_map
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
@@ -704,12 +747,11 @@ class PredictFocussed(TSFOperations):
         start_date: Optional[datetime],
         end_date: Optional[datetime],
     ):
-
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(measure_dict, dict[int, str])
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(end_date, Optional[datetime])
 
@@ -792,7 +834,7 @@ class PredictFocussed(TSFOperations):
         self.log.info("Saving predict data ...")
 
         freq = self._tsf.freq
-        area_plan_map = self._plan.area_plan_map()
+        area_plan_map = self._plan.area_plan_map
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
@@ -876,6 +918,17 @@ class PredictFocussed(TSFOperations):
     # -----------------------------------------------------------------------
     # select
     # -----------------------------------------------------------------------
+    # date_range: there are several possibilities:
+    #
+    #   0) 'freq' is specified by the Data Master
+    #
+    #   1) ('start_date', 'periods'), ('start_date', 'end_date') are passed as a parameters
+    #   2) 'start_date' is passed as argument and
+    #   2.1)    'periods'  is specified by the Data Master
+    #   2.2)    'end_date' is specified by PredictionPlan   ??? (I don't like this solution)
+    #   3) 'start_date' is None
+    #   3.1)    ('start_date', 'end_date') are specified by PredictionPlan
+    #
 
     def select(
         self, *,
@@ -886,21 +939,27 @@ class PredictFocussed(TSFOperations):
         new_format=True) -> DataFrame:
         """
         Retrieve predict data
+        If the data is not available, it is generated a dataframe with 'fake' values.
+        The start_date can be passed as parameter or retrieved from the plan.
+        We SUPPOSE that all areas will have the same (start_date, end_date) pair.
+        We SUPPOSE that end_date can be computed as
 
-        :param plan: name of the plan used for reference
+            start_date + periods*freq
+
+        where periods and freq are inferred from the Data Master
+
+        :param start_date: start date
+            This date is mandatory because it is used to generate the 'fake' values
+        :param periods: optional number of periods
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
-        :param start_date: optional start date
-        :param end_date: optional end date
-        :param start_included: if to include the start date
-        :param periods: optional number of periods
         :param new_format: DataFrame format
         :return: the dataframe used for prediction. It contains input/target features
         """
-        assert is_instance(area, Union[None, int, list[int], str, list[str]])
-        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(periods, Optional[int])
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
 
         assert self._plan is not None, "Prediction data can be retrieved only if it is specified a plan"
 
@@ -909,13 +968,27 @@ class PredictFocussed(TSFOperations):
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
         data_master_id = self._tsf.data_master.id
         plan_ids = self._plan.plan_ids
+        end_date: datetime = None
+        date_range: pd.DatetimeIndex = None
 
         # freq & periods are retrieved from the Data Master
         freq = self._tsf.data_master.period_hierarchy.freq
         if periods is None or periods <= 0:
             periods = self._tsf.data_master.period_hierarchy.periods
 
-        start_date, end_date = start_end_dates(start_date, None, periods, freq, which_date=None)
+        # 1) start date is not specified: (start_date, end_date) retrieved from the Plan
+        if start_date is None:
+            start_date, end_date = self._plan.date_range
+            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='left')
+
+        # 2) it is specified (start_date, end_date)
+        elif start_date is not None and end_date is not None:
+            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='left')
+
+        # 3) it is specified (start_date, periods)
+        elif start_date is not None and periods > 0:
+            end_date = start_date + relativeperiods(periods, freq)
+            date_range = pdx.date_range(start=start_date, periods=periods, freq=freq, inclusive='left')
 
         df_selected = self._select_predict_data(
             data_master_id,
@@ -930,7 +1003,7 @@ class PredictFocussed(TSFOperations):
         df = fill_missing_dates(
             df_selected,
             area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
-            start_date=start_date, periods=periods, freq=freq)
+            date_range=date_range)
 
         return df
     # end
@@ -942,8 +1015,8 @@ class PredictFocussed(TSFOperations):
         area_dict: dict[int, str],
         skill_dict: dict[int, str],
         measure_dict: dict[int, str],
-        start_date: Optional[datetime],
-        end_date: Optional[datetime],
+        start_date: datetime,
+        end_date: datetime,
         new_format=False) -> DataFrame:
         """
 
@@ -959,11 +1032,6 @@ class PredictFocussed(TSFOperations):
         """
         assert is_instance(data_master_id, int)
         assert is_instance(plan_ids, list[int])
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
-        assert is_instance(start_date, Optional[datetime])
-        assert is_instance(end_date, Optional[datetime])
 
         # 1) retrieve all area/skill feature ids
         area_ids = list(area_dict.keys())
@@ -1053,9 +1121,9 @@ class PredictedFocussed(TSFOperations):
         end_date: Optional[datetime],
     ):
         assert is_instance(time_series_id, int)
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
-        assert is_instance(measure_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(measure_dict, dict[int, str])
         assert is_instance(start_date, Optional[datetime])
         assert is_instance(end_date, Optional[datetime])
 
@@ -1110,7 +1178,7 @@ class PredictedFocussed(TSFOperations):
 
         time_series_id = self._tsf.id
         freq = self._tsf.freq
-        area_plan_map = self._plan.area_plan_map()
+        area_plan_map = self._plan.area_plan_map
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
@@ -1238,8 +1306,8 @@ class ModelsFocussed(TSFOperations):
         skill_dict: dict[int, str]
     ):
         assert is_instance(time_series_id, int)
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
 
         area_ids = list(area_dict.keys())
         skill_ids = list(skill_dict.keys())
@@ -1364,8 +1432,8 @@ class ModelsFocussed(TSFOperations):
             Union[tuple[int, int], tuple[str, str]],
         dict]:
         assert is_instance(time_series_id, int)
-        assert is_instance(area_dict, dict[int, str])
-        assert is_instance(skill_dict, dict[int, str])
+        # assert is_instance(area_dict, dict[int, str])
+        # assert is_instance(skill_dict, dict[int, str])
         assert is_instance(new_format, bool)
 
         area_ids = list(area_dict.keys())
@@ -1441,7 +1509,6 @@ class TSFParameter(IPlanData):
     def measure(self) -> Measure:
         """
         Retrieve the measure containing the data
-        the predicted data
         """
 
         self.check_data()
@@ -1459,7 +1526,7 @@ class TSFParameter(IPlanData):
         return None if measure_id is None else Measure(self.ipom, measure_id)
 
     def __repr__(self):
-        return f"{self.name}[{self.id}, {self.measure.name}:{'out' if self.is_target else 'in'}]"
+        return f"{self.name}[{self.id}, {'out' if self.is_target else 'in'}={self.measure}]"
 # end
 
 
@@ -1468,13 +1535,9 @@ class TimeSeriesFocussed(IPlanData):
         super().__init__(ipom, id, ipom.iPredictMasterFocussed)
         self._plan: Optional[PredictionPlan] = None
         self._data_master: Optional[DataMaster] = None
+        self._data_model: Optional[DataModel] = None
+        # local cache
         self._parameters: list[TSFParameter] = []
-
-        # self._train_handler = TrainFocussed(self)
-        # self._predict_handler = PredictFocussed(self)
-        # self._predicted_handler = PredictedFocussed(self)
-        # self._test_handler = TestFocussed(self)
-        # self._models_handler = ModelsFocussed(self)
     # end
 
     # -----------------------------------------------------------------------
@@ -1496,9 +1559,13 @@ class TimeSeriesFocussed(IPlanData):
 
     @property
     def data_model(self) -> DataModel:
+        if self._data_model is not None:
+            return self._data_model
+
         self.check_data()
         data_model_id = self._data['idata_model_details_id_fk']
-        return self.ipom.data_models().data_model(data_model_id)
+        self._data_model = self.ipom.data_models().data_model(data_model_id)
+        return self._data_model
 
     @property
     def area_hierarchy(self) -> AttributeHierarchy:
@@ -1553,17 +1620,26 @@ class TimeSeriesFocussed(IPlanData):
             return self._parameters
 
         tsf_id = self._id
-        skill_hierarchy_id = self.skill_hierarchy.id
+
+        #
+        # WARN: 'skill_id_fk' IS NOT the 'skill_hierarchy_id'
+        #   BUT a STRANGE trick to force the assignment of the time series
+        #   to a SPECIFIC skill feature!
+        #   This HAS NO SENSE in terms of Time Series.
+        #   It HAS SENSE in terms of application.
+        #   To limit time series to a specific skill, IT IS ENOUGH TO SPECIFY
+        #   which skill to use by program!
+        #
+
         with self.engine.connect() as conn:
             table = self.ipom.iPredictDetailFocussed
             query = select(table).where(
-                (table.c['ipr_conf_master_id'] == tsf_id) &
-                (table.c['skill_id_fk'] == skill_hierarchy_id)
+                (table.c['ipr_conf_master_id'] == tsf_id)
             )
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             # idlist: [(id,), ...]
-        self._parameters = [TSFParameter(self.ipom, to_data(result)) for result in rlist]
+            self._parameters = [TSFParameter(self.ipom, to_data(result)) for result in rlist]
         return self._parameters
 
     @property
@@ -1574,18 +1650,26 @@ class TimeSeriesFocussed(IPlanData):
         :return: ([<target measure>, ...], [<input feature measure>, ...])
         """
         tsf_id = self._id
-        skill_ids = self.skill_hierarchy.feature_ids()
+
+        #
+        # WARN: 'skill_id_fk' IS NOT the 'skill_hierarchy_id'
+        #   BUT a STRANGE trick to force the assignment of the time series
+        #   to a SPECIFIC skill feature!
+        #   This HAS NO SENSE in terms of Time Series.
+        #   It HAS SENSE in terms of application.
+        #   To limit time series to a specific skill, IT IS ENOUGH TO SPECIFY
+        #   which skill to use by program!
+        #
+
         inputs: list[Measure] = []
         targets: list[Measure] = []
         with self.engine.connect() as conn:
             table = self.ipom.iPredictDetailFocussed
-            query = select(table.c['parameter_id', 'parameter_value', 'to_populate']) \
-                .where(
-                    (table.c['ipr_conf_master_id'] == tsf_id) &
-                    table.c['skill_id_fk'].in_(skill_ids)
+            query = select(table.c['parameter_id', 'parameter_value', 'to_populate']).where(
+                    (table.c['ipr_conf_master_id'] == tsf_id)
                 )
             self.log.debug(query)
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             for res in rlist:
                 measure_id, parameter_type, populate_id = res
                 if parameter_type == 'input':
@@ -1663,9 +1747,18 @@ class TimeSeriesFocussed(IPlanData):
 
     def _measure_dict(self) -> tuple[dict[int, str], dict[int, str]]:
         tsf_id = self._id
-        skill_ids: list[int] = self.skill_hierarchy.feature_ids()
         input_dict: dict[int, str] = {}
         target_dict: dict[int, str] = {}
+
+        #
+        # WARN: 'skill_id_fk' IS NOT the 'skill_hierarchy_id'
+        #   BUT a STRANGE trick to force the assignment of the time series
+        #   to a SPECIFIC skill feature!
+        #   This HAS NO SENSE in terms of Time Series.
+        #   It HAS SENSE in terms of application.
+        #   To limit time series to a specific skill, IT IS ENOUGH TO SPECIFY
+        #   which skill to use by program!
+        #
 
         with self.engine.connect() as conn:
             query = text("""
@@ -1673,14 +1766,12 @@ class TimeSeriesFocussed(IPlanData):
                   from tb_ipr_conf_detail_focussed ticd,
                        tb_idata_model_detail timd
                  where ticd.ipr_conf_master_id = :tsf_id
-                   and ticd.skill_id_fk in :skill_ids
                    and ticd.parameter_id = timd.id
             """)
             self.log.debug(query)
             rlist = conn.execute(query, parameters=dict(
-                tsf_id=tsf_id,
-                skill_ids=tuple(skill_ids)
-            )).fetchall()
+                tsf_id=tsf_id
+            ))  #.fetchall()
             for res in rlist:
                 measure_id, parameter_type, measure_name = res
                 if parameter_type == 'input':
@@ -1693,19 +1784,26 @@ class TimeSeriesFocussed(IPlanData):
 
     def _measure_ids(self) -> tuple[list[int], list[int]]:
         tsf_id = self._id
-        skill_hierarchy_id = self.skill_hierarchy.id
         input_ids: list[int] = []
         target_ids: list[int] = []
+
+        #
+        # WARN: 'skill_id_fk' IS NOT the 'skill_hierarchy_id'
+        #   BUT a STRANGE trick to force the assignment of the time series
+        #   to a SPECIFIC skill feature!
+        #   This HAS NO SENSE in terms of Time Series.
+        #   It HAS SENSE in terms of application.
+        #   To limit time series to a specific skill, IT IS ENOUGH TO SPECIFY
+        #   which skill to use by program!
+        #
+
         with self.engine.connect() as conn:
             table = self.ipom.iPredictDetailFocussed
-            query = select(table.c['parameter_id', 'parameter_value', 'to_populate']) \
-                .where(
-                (table.c['ipr_conf_master_id'] == tsf_id) &
-                (table.c['skill_id_fk'] == skill_hierarchy_id)
+            query = select(table.c['parameter_id', 'parameter_value', 'to_populate']).where(
+                (table.c['ipr_conf_master_id'] == tsf_id)
             )
             self.log.debug(query)
-            rlist = conn.execute(query).fetchall()
-
+            rlist = conn.execute(query)#.fetchall()
             for res in rlist:
                 measure_id, parameter_type, populate_id = res
                 if parameter_type == 'input':
@@ -1731,90 +1829,86 @@ class TimeSeriesFocussed(IPlanData):
     def plan(self) -> Optional[PredictionPlan]:
         return self._plan
 
-    def set_plan(self, plan: Union[int, str], data_master: Union[None, int, str] = None):
-        assert is_instance(plan, Union[int, str])
-        assert is_instance(data_master, Union[None, int, str])
-
-        if is_instance(plan, int):
-            plan, data_master = self._get_plan_name_and_data_master(plan)
-
-        # if data_master is not specified, try the Data Master assigned to the
-        # Time Series, IF it is present
-        if data_master is None:
-            if self.data_master is not None:
-                data_master = self.data_master.id
-
-        # if data_master is not specified yet, try the Data Master assigned to the
-        # Plan, IF it is present and UNIQUE
-        if data_master is None:
-            data_master = self._find_data_master_id_by_plan_name(plan)
-
-        self._plan = self.ipom.plans().plan(plan, data_master)
-        assert self._plan.exists(), f"Unknown plan {plan}"
-
-        # is the TS Data Master is None, it is used the Plan's Data Matsre
-        if self._data_master is None:
-            self._data_master = self._plan.data_master
-
-        self_data_master = self.data_master
-        plan_data_master = self._plan.data_master
-
-        assert plan_data_master.area_hierarchy.id == self.area_hierarchy.id and \
-            plan_data_master.skill_hierarchy.id == self.skill_hierarchy.id and \
-            plan_data_master.data_model.id == self.data_model.id, \
-            (f"Inconsistent Data Master {data_master} with Time Series "
-             f"({self.data_model.name}, {self.area_hierarchy.name}, {self.skill_hierarchy.name},)")
-
-        assert self_data_master.id == plan_data_master.id, \
-            f"Inconsistent Plan Data Master '{plan_data_master.name}' with Time Series Data Master '{self_data_master.name}'"
-
-        return self
-
     # alias_of(set_plan)
     def using_plan(self, plan: Union[int, str, PredictionPlan], data_master: Union[None, int, str] = None):
-        if isinstance(plan, PredictionPlan):
-            return self.set_plan(plan.name, plan.data_master.id)
-        else:
-            return self.set_plan(plan, data_master)
+        self._plan = self.ipom.plans().plan(plan, data_master)
+        self._data_master = self._plan.data_master
+        self._data_model = self._data_master.data_model
+        return self
 
-    def _find_data_master_id_by_plan_name(self, plan: str) -> Optional[int]:
-        with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesMaster
-            query = select(table.c['idata_master_fk'], func.count(table.c['idata_master_fk'])) \
-                .where(table.c['name'] == plan) \
-                .group_by(table.c['idata_master_fk'])
-            self.log.debug(query)
-            rlist = conn.execute(query).fetchall()
-            if len(rlist) > 1:
-                raise ValueError(f"Invalid plan '{plan}': assigned to {len(rlist)} Data Masters")
-            elif len(rlist) == 0:
-                raise ValueError(f"Invalid plan '{plan}': no Data Masters assigned")
+    # def set_plan(self, plan: Union[int, str], data_master: Union[None, int, str] = None):
+    #     assert is_instance(plan, Union[int, str])
+    #     assert is_instance(data_master, Union[None, int, str])
+    #
+    #     if is_instance(plan, int):
+    #         plan, data_master = self._get_plan_name_and_data_master(plan)
+    #
+    #     # if data_master is not specified, try the Data Master assigned to the
+    #     # Time Series, IF it is present
+    #     if data_master is None:
+    #         if self.data_master is not None:
+    #             data_master = self.data_master.id
+    #
+    #     # if data_master is not specified yet, try the Data Master assigned to the
+    #     # Plan, IF it is present and UNIQUE
+    #     if data_master is None:
+    #         data_master = self._find_data_master_id_by_plan_name(plan)
+    #
+    #     self._plan = self.ipom.plans().plan(plan, data_master)
+    #     assert self._plan.exists(), f"Unknown plan {plan}"
+    #
+    #     # is the TS Data Master is None, it is used the Plan's Data Matsre
+    #     if self._data_master is None:
+    #         self._data_master = self._plan.data_master
+    #
+    #     self_data_master = self.data_master
+    #     plan_data_master = self._plan.data_master
+    #
+    #     assert plan_data_master.area_hierarchy.id == self.area_hierarchy.id and \
+    #         plan_data_master.skill_hierarchy.id == self.skill_hierarchy.id and \
+    #         plan_data_master.data_model.id == self.data_model.id, \
+    #         (f"Inconsistent Data Master {data_master} with Time Series "
+    #          f"({self.data_model.name}, {self.area_hierarchy.name}, {self.skill_hierarchy.name},)")
+    #
+    #     assert self_data_master.id == plan_data_master.id, \
+    #         f"Inconsistent Plan Data Master '{plan_data_master.name}' with Time Series Data Master " \
+    #         + "'{self_data_master.name}'"
+    #
+    #     return self
 
-        data_master_id = rlist[0][0]
-        return data_master_id
+    # def _find_data_master_id_by_plan_name(self, plan: str) -> Optional[int]:
+    #     with self.engine.connect() as conn:
+    #         table = self.ipom.iDataValuesMaster
+    #         query = select(table.c['idata_master_fk'], func.count(table.c['idata_master_fk'])) \
+    #             .where(table.c['name'] == plan) \
+    #             .group_by(table.c['idata_master_fk'])
+    #         self.log.debug(query)
+    #         rlist = conn.execute(query).fetchall()
+    #         if len(rlist) > 1:
+    #             raise ValueError(f"Invalid plan '{plan}': assigned to {len(rlist)} Data Masters")
+    #         elif len(rlist) == 0:
+    #             raise ValueError(f"Invalid plan '{plan}': no Data Masters assigned")
+    #
+    #     data_master_id = rlist[0][0]
+    #     return data_master_id
 
-
-    def _get_plan_name_and_data_master(self, plan_id: int) -> tuple[str, int]:
-        assert is_instance(plan_id, int)
-
-        with self.engine.connect() as conn:
-            table = self.ipom.iDataValuesMaster
-            query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
-            self.log.debug(query)
-            plan_name, data_master_id = conn.execute(query).fetchone()
-            return plan_name, data_master_id
-    # end
+    # def _get_plan_name_and_data_master(self, plan_id: int) -> tuple[str, int]:
+    #     assert is_instance(plan_id, int)
+    #
+    #     with self.engine.connect() as conn:
+    #         table = self.ipom.iDataValuesMaster
+    #         query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
+    #         self.log.debug(query)
+    #         plan_name, data_master_id = conn.execute(query).fetchone()
+    #         return plan_name, data_master_id
+    # # end
 
     # -----------------------------------------------------------------------
 
-    def set_data_master(self, data_master: Union[int, str]):
-        assert is_instance(data_master,  Union[int, str])
-        self._data_master = self.ipom.data_masters().data_master(data_master)
-        return self
-
-    # alias_of(set_data_master)
     def using_data_master(self, data_master: Union[int, str]):
-        return self.set_data_master(data_master)
+        self._data_master = self.ipom.data_masters().data_master(data_master)
+        self._data_model = self._data_master.data_model
+        return self
 
     # -----------------------------------------------------------------------
     # Data
@@ -1825,35 +1919,30 @@ class TimeSeriesFocussed(IPlanData):
         TS Manager used to save the train data
         """
         return TrainFocussed(self)
-        # return self._train_handler
 
     def predict(self) -> PredictFocussed:
         """
         TS Manager used to save the prediction input features
         """
         return PredictFocussed(self)
-        # return self._predict_handler
 
     def predicted(self) -> PredictedFocussed:
         """
         TS Manager used to save the predicted values
         """
         return PredictedFocussed(self)
-        # return self._predicted_handler
 
     def test(self) -> TestFocussed:
         """
         TS Manager used to save the test data: (actual/predicted)
         """
         return TestFocussed(self)
-        # return self._test_handler
 
     def models(self) -> ModelsFocussed:
         """
         TS Manager used to save the trained models
         """
         return ModelsFocussed(self)
-        # return self._models_handler
 
     # -----------------------------------------------------------------------
     # Operations
@@ -1902,25 +1991,40 @@ class TimeSeriesFocussed(IPlanData):
         return
 
     def create(
-        self, *,
-        targets: Union[str, list[str]],
-        populate: Union[None, str, list[str]] = None,
-        inputs: Union[None, str, list[str]] = None,
-        data_master: Union[None, int, str] = None,
-        description: Optional[str] = None):
+            self, *,
+            targets: Union[str, list[str]],
+            inputs: Union[None, str, list[str]] = None,
+            data_master: Union[None, int, str] = None,
+            populate: Union[None, str, list[str]] = None,
+            description: Optional[str] = None):
+        """
+        Create the Focussed Time Series.
+        The definition requires a Data Master
+
+        Note
+        """
+
         assert is_instance(targets, Union[str, list[str]])
         assert is_instance(populate, Union[None, str, list[str]])
         assert is_instance(inputs, Union[None, str, list[str]])
         assert is_instance(data_master, Union[None, int, str])
         assert is_instance(description, Optional[str])
-        """
-        Create the TS.
-        Note 
-        """
 
         if self._id != NO_ID:
             self.log.warning(f"Time Series '{self._name}' already existent")
             return self
+
+        if self._data_master is not None and data_master is not None:
+            dm = self.ipom.data_masters.data_master(data_master)
+            if self.data_master.id != dm.id:
+                self.log.warn(f"Data Master passed as parameter ({dm}) is different than "
+                              f"the Data Master assigned to the Time Series ({self._data_master}). "
+                              f"Ignored")
+        elif data_master is not None:
+            self._data_master = self.ipom.data_masters().data_master(data_master)
+            assert self._data_master.exists(), f"Data Master {data_master} doesn't exist"
+
+        assert self._data_master is not None, "To create the Time Series it is necessary to specify a Data Master"
 
         targets = as_list(targets)
         populate = as_list(populate)
@@ -1933,17 +2037,15 @@ class TimeSeriesFocussed(IPlanData):
             targets=targets,
             populate=populate,
             inputs=inputs,
-            data_master=data_master,
             description=description
         )
+        self._name = None
         return self
 
     def _create_time_series_focussed(
-        self, name: str, *,
-        targets: Union[str, list[str]],
+        self, name: str, targets: Union[str, list[str]], *,
         populate: Union[None, str, list[str]],
         inputs: Union[None, str, list[str]] = None,
-        data_master: Union[None, int, str] = None,
         description: Optional[str] = None) -> int:
         """
         Create a time series
@@ -1955,23 +2057,18 @@ class TimeSeriesFocussed(IPlanData):
         :param data_master: Data Master
         :param description: description
         """
-
         assert is_instance(name, str)
-        assert is_instance(targets, Union[str, list[str]])
-        assert is_instance(populate, Union[str, list[str]])
-        assert is_instance(inputs, Union[None, str, list[str]])
-        assert is_instance(data_master, Union[None, int, str])
+        assert is_instance(targets, list[str])
+        assert is_instance(populate, list[str])
+        assert is_instance(inputs, list[str])
         assert is_instance(description, Optional[str])
 
-        data_master = self.ipom.data_masters().data_master(data_master)
-        data_model: DataModel = data_master.data_model
+        data_master = self.data_master
+        data_model = data_master.data_model
         data_model_id = data_model.id
         area_hierarchy_id = data_master.area_hierarchy.id
         skill_hierarchy_id = data_master.skill_hierarchy.id
 
-        targets = as_list(targets, 'targets')
-        populate = as_list(populate, 'populate')
-        inputs = as_list(inputs, 'inputs')
         description = name if description is None else description
         n_targets = len(targets)
 
@@ -1999,6 +2096,7 @@ class TimeSeriesFocussed(IPlanData):
             ).returning(table.c.id)
             self.log.debug(query)
             tsf_id = conn.execute(query).scalar()
+
             # 2) fill tb_ipr_conf_detail_focussed
             table = self.ipom.iPredictDetailFocussed
             for i in range(n_targets):
@@ -2008,20 +2106,30 @@ class TimeSeriesFocussed(IPlanData):
                 topop = populate_list[i]
                 topop_id = None if topop is None else data_model.measure(topop).id
 
-                # NOT SUPPORTED yet
-                period = None
+                # 'period': NOT SUPPORTED yet
+
+                #
+                # WARN: 'skill_id_fk' IS NOT the 'skill_hierarchy_id'
+                #   BUT a STRANGE trick to force the assignment of the time series
+                #   to a SPECIFIC skill feature!
+                #   This HAS NO SENSE in terms of Time Series.
+                #   It HAS SENSE in terms of application.
+                #   To limit time series to a specific skill, IT IS ENOUGH TO SPECIFY
+                #   which skill to use by program!
+                #
 
                 query = insert(table).values(
                     parameter_desc=measure,
                     parameter_value='output',
                     ipr_conf_master_id=tsf_id,
                     parameter_id=measure_id,
-                    skill_id_fk=skill_hierarchy_id,
+                    skill_id_fk=None,
                     to_populate=topop_id,
-                    period=period
+                    period=None
                 ).returning(table.c.id)
                 target_id = conn.execute(query).scalar()
             # end
+
             for measure in inputs:
                 measure_id = data_model.measure(measure).id
                 query = insert(table).values(
@@ -2029,7 +2137,7 @@ class TimeSeriesFocussed(IPlanData):
                     parameter_value='input',
                     ipr_conf_master_id=tsf_id,
                     parameter_id=measure_id,
-                    skill_id_fk=skill_hierarchy_id,
+                    skill_id_fk=None,
                     to_populate=None,
                     period=None
                 ).returning(table.c.id)
@@ -2037,6 +2145,7 @@ class TimeSeriesFocussed(IPlanData):
             # end
             conn.commit()
         return tsf_id
+    # end
 
     # -----------------------------------------------------------------------
     # End

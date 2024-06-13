@@ -7,6 +7,8 @@ from commons import *
 
 
 def main():
+    datasource_dict = load('datasource_local.json')
+    ipom = IPlanObjectModel(datasource_dict)
 
     df_train = pdx.read_data(
         "data_test/vw_food_import_kg_train_test_area_skill.csv",
@@ -22,25 +24,26 @@ def main():
         ignore=['imp_month', 'prod_kg', 'avg_retail_price_src_country', 'producer_price_tonne_src_country'],
     )
 
-    datasource_dict = load('datasource_localhost.json')
-    ipom = IPlanObjectModel(datasource_dict)
-
     with ipom.connect():
-        ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES)
-        ts.using_plan(PLAN_NAME)
+        ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES).using_plan(PLAN_NAME, DATA_MASTER)
+        assert ts.exists()
 
         print(ts.measures)
 
-        # ts.train().delete()
-        # ts.predict().delete()
-        # print("ok")
+        ts.test().delete()
+        ts.predicted().delete()
+        print("ok")
 
-        # ts.train().save(df_train)
-        # ts.predict().save(df_pred)
+        ts.train().delete()
+        ts.train().save(df_train)
+
+        ts.predict().delete()
+        ts.predict().save(df_pred)
 
         dst = ts.train().select(area='ARGENTINA', skill='ANIMAL FEED')
         dsp = ts.predict().select(area='ARGENTINA', skill='ANIMAL FEED')
 
+        print("done")
     return
 
 

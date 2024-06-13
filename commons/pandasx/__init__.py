@@ -11,6 +11,8 @@ from .onehot import onehot_encode
 from .periodic import periodic_encode, set_datetime_index, last_week_in_month
 from .preprocessing import *
 from .resample import resample
+from .dt import *
+
 
 # ---------------------------------------------------------------------------
 # Add 'DatetimeIndex.week' compatibility property

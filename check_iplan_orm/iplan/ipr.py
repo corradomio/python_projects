@@ -131,10 +131,10 @@ class IPredictMasterFocussed(IPlanData):
             query = select(tdetail.c['parameter_id', 'parameter_value']).where(
                 tdetail.c['ipr_conf_master_id'] == self.id)
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
-            for result in rlist:
-                id = result[0]
-                type = result[1]
+            rlist = conn.execute(query)#.fetchall()
+            for res in rlist:
+                id = res[0]
+                type = res[1]
                 if type == 'output':
                     target_ids.append(id)
                 elif type == 'input':
@@ -179,9 +179,9 @@ class IPredictMasterFocussed(IPlanData):
             tdetail = self.ipom.iPredictDetailFocussed
             query = select(tdetail).where(tdetail.c['ipr_conf_master_id'] == self.id)
             self.log.debug(f"{query}")
-            rlist = conn.execute(query).fetchall()
+            rlist = conn.execute(query)#.fetchall()
             # idlist: [(id,), ...]
-        return [IPredictDetailFocussed(self.ipom, to_data(result)) for result in rlist]
+            return [IPredictDetailFocussed(self.ipom, to_data(result)) for result in rlist]
 
     # -----------------------------------------------------------------------
 
@@ -220,48 +220,50 @@ class IPredictMasterFocussed(IPlanData):
                targets: Union[str, list[str]],
                inputs: Union[None, str, list[str]] = None,
                data_master: Union[None, int, str] = None,
-               # data_model: Union[None, int, str] = None,
-               # area_hierarchy: Union[None, int, str] = None,
-               # skill_hierarchy: Union[None, int, str] = None,
                description: Optional[str] = None
                ):
+
+        assert is_instance(targets, Union[str, list[str]])
+        assert is_instance(inputs, Union[None, str, list[str]])
+        assert is_instance(data_master, Union[None, int, str])
+        assert is_instance(description, Optional[str])
+
+        assert data_master is not None or self._data_master is not None
+
+        targets = as_list(targets, "targets")
+        inputs = as_list(inputs, "inputs")
+
+        if data_master is not None:
+            self._data_master = self.ipom.data_masters().data_master(data_master)
+
         assert isinstance(self._name, str)
         self._id = self._create_time_series_focussed(
             self._name,
             targets=targets,
             inputs=inputs,
-            data_master=data_master,
+            # data_master=data_master,
             description=description,
         )
         self._name = None
 
-    def _create_time_series_focussed(self, name: str, *,
-                                    targets: Union[str, list[str]],
-                                    inputs: Union[None, str, list[str]] = None,
-                                    data_master: Union[None, int, str] = None,
-                                    # data_model: Union[None, int, str] = None,
-                                    # area_hierarchy: Union[None, int, str] = None,
-                                    # skill_hierarchy: Union[None, int, str] = None,
-                                    description: Optional[str] = None) -> int:
+    def _create_time_series_focussed(self, name: str,
+                                     # data_master: Union[int, str], *,
+                                     targets: list[str],
+                                     inputs: list[str],
+                                     description: Optional[str] = None) -> int:
         """
         Create a time series
 
         :param name: Time Series name
         :param targets: list of target measures
         :param inputs: list of input measures
-        :param data_master: Data Master, alternative to (data_model, area_hierarchy, skill_hierarchy)
         :param description:  Time Series description
         """
 
-        assert is_instance(name, str)
-        assert is_instance(targets, Union[str, list[str]])
-        assert is_instance(inputs, Union[None, str, list[str]])
-        assert is_instance(data_master, Union[None, int, str])
-        assert is_instance(description, Optional[str])
+        assert is_instance(targets, list[str] )
+        assert is_instance(inputs, list[str] )
 
-        data_master_id = data_master
-        data_master = self.ipom.data_masters().data_master(data_master_id)
-        data_master_id = data_master.id
+        data_master = self._data_master
         data_model: DataModel = data_master.data_model
         data_model_id = data_model.id
         area_hierarchy_id = data_master.area_hierarchy.id
@@ -270,20 +272,6 @@ class IPredictMasterFocussed(IPlanData):
         targets = as_list(targets, 'targets')
         inputs = as_list(inputs, 'inputs')
         description = name if description is None else description
-
-        # if data_master is not None:
-        #     data_master_id = data_master
-        #     data_master = self.data_master(data_master_id)
-        #     data_model_id = data_master.data_model.id
-        #     area_hierarchy_id = data_master.area_hierarchy.id
-        #     skill_hierarchy_id = data_master.skill_hierarchy.id
-        # else:
-        #     data_model_id = self.data_model(data_model).id
-        #     area_hierarchy_id = self.area_hierarchy(area_hierarchy).id
-        #     skill_hierarchy_id = self.skill_hierarchy(skill_hierarchy).id
-        # end
-
-        table = self.ipom.iPredictMasterFocussed
 
         # create the tb_ipr_conf_master_focussed
         with self.engine.connect() as conn:
