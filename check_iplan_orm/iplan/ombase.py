@@ -39,6 +39,7 @@ class IPlanObject:
         self._convert_id = ipom._convert_id
 
         self.log = logging.getLogger(f"iplan.om.{self.__class__.__name__}")
+        self.logsql = logging.getLogger(f"iplan.om.sql.{self.__class__.__name__}")
     # end
 # end
 

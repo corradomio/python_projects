@@ -373,12 +373,12 @@ class IPlanObjectModel(IPlanObject):
         # with self.engine.connect() as conn:
         #     if isinstance(what, int):
         #         query = select(func.count()).where(table.c[idcol] == what)
-        #         self.log.debug(query)
+        #         self.logsql.debug(query)
         #         count = conn.execute(query).scalar()
         #         return count > 0
         #     for col in columns:
         #         query = select(func.count()).where(table.c[col] == what)
-        #         self.log.debug(query)
+        #         self.logsql.debug(query)
         #         count = conn.execute(query).scalar()
         #         if count > 0:
         #             return True

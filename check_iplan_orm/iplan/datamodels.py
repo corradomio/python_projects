@@ -98,14 +98,14 @@ class DataModel(IPlanData):
                     (table.c['measure_id'] == id) &
                     (table.c['data_model_id_fk'] == self.id)
                 )
-                self.log.debug(query)
+                self.logsql.debug(query)
                 ret = conn.execute(query).fetchone()
             else:
                 query = select(table).where(
                     (table.c.id == id) &
                     (table.c['data_model_id_fk'] == self.id)
                 )
-                self.log.debug(query)
+                self.logsql.debug(query)
                 ret = conn.execute(query).fetchone()
             return Measure(self.ipom, to_data(ret))
     # end
@@ -133,7 +133,7 @@ class DataModel(IPlanData):
             #     WHERE timd.data_model_id_fk = :data_model_id
             # )
             # """)
-            # self.log.debug(query)
+            # self.logsql.debug(query)
             # conn.execute(query, parameters=dict(
             #     data_model_id=data_model_id
             # ))
@@ -146,7 +146,7 @@ class DataModel(IPlanData):
             # query = delete(table).where(
             #     table.c['idata_model_details_id_fk'] == data_model_id
             # )
-            # self.log.debug(query)
+            # self.logsql.debug(query)
             # conn.execute(query, parameters=dict(
             #     data_model_id=data_model_id
             # ))
@@ -158,7 +158,7 @@ class DataModel(IPlanData):
             #     WHERE tim.idatamodel_id_fk = :data_model_id
             # )
             # """)
-            # self.log.debug(query)
+            # self.logsql.debug(query)
             # conn.execute(query, parameters=dict(
             #     data_model_id=data_model_id
             # ))
@@ -167,7 +167,7 @@ class DataModel(IPlanData):
             # DELETE FROM tb_idata_master AS tim
             # WHERE tim.idatamodel_id_fk = :data_model_id
             # """)
-            # self.log.debug(query)
+            # self.logsql.debug(query)
             # conn.execute(query, parameters=dict(
             #     data_model_id=data_model_id
             # ))
@@ -177,7 +177,7 @@ class DataModel(IPlanData):
             query = delete(table).where(
                 table.c['data_model_id_fk'] == data_model_id
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # 2) delete tb_data_model_master
@@ -185,7 +185,7 @@ class DataModel(IPlanData):
             query = delete(table).where(
                 table.c.id == data_model_id
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -247,7 +247,7 @@ class DataModel(IPlanData):
             query = insert(table).values(
                 description=name,
             ).returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             data_model_id: int = conn.execute(query).scalar()
 
             # 2) create data model detail
@@ -274,7 +274,7 @@ class DataModel(IPlanData):
                     linked_measure=None,
                     period_agg_type=None
                 ).returning(table.c.id)
-                if count == 0: self.log.debug(query)
+                if count == 0: self.logsql.debug(query)
                 measure_id: int = conn.execute(query).scalar()
                 count += 1
             conn.commit()

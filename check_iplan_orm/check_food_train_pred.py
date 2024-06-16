@@ -9,7 +9,7 @@ def save_single(ipom, from_date):
 
     with ipom.connect():
         ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES)
-        ts.using_plan(PLAN_NAME)
+        ts.using_plan(PLAN_NAME, DATA_MASTER)
         print(ts.exists())
 
         dst = ts.train().select(area='ARGENTINA', skill='ANIMAL FEED', end_date=from_date)
@@ -26,6 +26,8 @@ def save_single(ipom, from_date):
 
         ts.predicted().delete()
         ts.predicted().save(predictions)
+
+        print("done")
     return
 
 
@@ -50,6 +52,8 @@ def save_multiple_areas(ipom, from_date):
 
         ts.predicted().delete()
         ts.predicted().save(predictions)
+
+        print("done")
     return
 
 
@@ -57,7 +61,8 @@ def save_multiple_skills(ipom, from_date):
 
     with ipom.connect():
         ts: TimeSeriesFocussed = ipom.time_series().focussed(TIME_SERIES)
-        ts.using_plan(PLAN_NAME)
+        ts.using_plan(PLAN_NAME, DATA_MASTER)
+
         print(ts.exists())
 
         dst = ts.train().select(area='ARGENTINA', end_date=from_date)

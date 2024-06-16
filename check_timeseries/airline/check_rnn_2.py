@@ -8,7 +8,7 @@ from sktime.transformations.series.detrend import Detrender
 from sktime.utils.plotting import plot_series
 
 import pandasx as pdx
-from pandasx.preprocessing import LinearMinMaxScaler
+from pandasx.preprocessing import MinMaxScaler
 from sktimex import RNNLinearForecaster
 
 
@@ -28,7 +28,7 @@ def main():
     # plt.show()
 
     # y_orig = y
-    mmn = LinearMinMaxScaler(method="piecewise")
+    mmn = MinMaxScaler(method="piecewise")
     y = mmn.fit_transform(y_orig)
 
     # plot_series(y_orig, y, labels=["y_orig", "y"], title="airline")

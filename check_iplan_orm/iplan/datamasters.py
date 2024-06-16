@@ -87,38 +87,38 @@ class DataMaster(IPlanData):
             # 1) delete dependencies
             table = self.ipom.iDataValuesMaster
             query = select(table.c.id).where(table.c['idata_master_fk'] == data_master_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query)#.fetchall()
             plan_ids = [res[0] for res in rlist]
 
             # delete historical data
             table = self.ipom.iDataValuesDetailHist
             query = delete(table).where(table.c['value_master_fk'].in_(plan_ids))
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # delete prediction data
             table = self.ipom.iDataValuesDetail
             query = delete(table).where(table.c['value_master_fk'].in_(plan_ids))
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # delete plans
             table = self.ipom.iDataValuesMaster
             query = delete(table).where(table.c.id.in_(plan_ids))
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # delete TS focussed
             table = self.ipom.iPredictMasterFocussed
             update(table).where(table.c['idata_id_fk'] == data_master_id).values(idata_id_fk=None)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # 2) delete data master
             table = self.ipom.iDataMaster
             query = delete(table).where(table.c.id == data_master_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
     # end
@@ -198,7 +198,7 @@ class DataMaster(IPlanData):
                     baseline_enabled='N',
                     opti_enabled='N') \
                 .returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             data_master_id = conn.execute(query).scalar()
             conn.commit()
         return data_master_id

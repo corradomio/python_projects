@@ -213,13 +213,13 @@ class AttributeHierarchy(IPlanData):
             # 2) delete tb_attribute_details
             table = self.ipom.AttributeDetail
             query = delete(table).where(table.c['attribute_master_id'] == area_hierarchy_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # 3) delete tb_attribute_master
             table = self.ipom.AttributeMaster
             query = delete(table).where(table.c.id == area_hierarchy_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -263,7 +263,7 @@ class AttributeHierarchy(IPlanData):
                 createddate=now,
                 hierarchy_type=1 if hierarchy_type == 'area' else 2
             ).returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             hierarchy_id = conn.execute(query).scalar()
             # 2) create tb_attribute_detail
             #    simple format: {root: list[leaf]}
@@ -279,7 +279,7 @@ class AttributeHierarchy(IPlanData):
                 createddate=now,
                 is_leafattribute=False
             ).returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             parent_id = conn.execute(query).scalar()
             # 2.2) create the leaves
             for leaf in leaf_names:

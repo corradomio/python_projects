@@ -62,7 +62,7 @@ class PredictionPlan(IPlanObject):
                 (table.c['name'] == plan_name) &
                 (table.c['idata_master_fk'] == data_master_id)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             pmap = {}
             rlist = conn.execute(query)
             for res in rlist:
@@ -84,14 +84,14 @@ class PredictionPlan(IPlanObject):
                 table.c['idata_master_fk'].in_(data_master_ids) &
                 table.c['area_id'].in_(area_ids)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
         else:
             query = select(table.c.id).where(
                 (table.c['name'] == plan_name) &
                 table.c['idata_master_fk'].in_(data_master_ids) &
                 table.c['area_id'].in_(area_ids)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
         with self.engine.connect() as conn:
             rlist = conn.execute(query)
             return [result[0] for result in rlist]
@@ -113,7 +113,7 @@ class PredictionPlan(IPlanObject):
                 (table.c['name'] == plan_name) &
                 (table.c['idata_master_fk'] == data_master_id)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query)
 
             start_end_date_all = None
@@ -159,7 +159,7 @@ class PredictionPlan(IPlanObject):
                 query = query.where(
                     (table.c['idata_master_fk'] == self._data_master.id)
                 )
-            self.log.debug(query)
+            self.logsql.debug(query)
             count = conn.execute(query).scalar()
         return count > 0
 
@@ -177,7 +177,7 @@ class PredictionPlan(IPlanObject):
                 query = query.where(
                     (table.c['idata_master_fk'] == self._data_master.id)
                 )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return self
@@ -326,7 +326,7 @@ class PredictionPlans(IPlanObject):
         with self.engine.connect() as conn:
             table = self.ipom.iDataValuesMaster
             query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
 
             plan_name_data_master_id = conn.execute(query).fetchone()
             if plan_name_data_master_id is None:
@@ -395,7 +395,7 @@ class PredictionPlans(IPlanObject):
     #                 (table.c['idata_master_fk'] == data_master_id) &
     #                 (table.c['area_id'].in_(area_ids))
     #             )
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         result = conn.execute(query).fetchone()
     #         return result[0], result[1]
     #
@@ -414,7 +414,7 @@ class PredictionPlans(IPlanObject):
     #                 (table.c['idata_master_fk'] == data_master_id) &
     #                 (table.c['area_id'].in_(area_ids))
     #             )
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         result = conn.execute(query).fetchone()
     #         return result[0], result[1]
     #
@@ -432,7 +432,7 @@ class PredictionPlans(IPlanObject):
     #                 (table.c['name'].like(f"%{name}%")) &
     #                 (table.c['area_id'].in_(area_ids))
     #             )
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         result = conn.execute(query).fetchone()
     #         return (None, None) if result is None else result[0], result[1]
     #
@@ -452,7 +452,7 @@ class PredictionPlans(IPlanObject):
     #                 (table.c['end_date'] >= when) &
     #                 (table.c['area_id'].in_(area_ids))
     #             )
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         result = conn.execute(query).fetchone()
     #         return result[0], result[1]
 # end

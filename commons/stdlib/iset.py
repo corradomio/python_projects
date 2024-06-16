@@ -217,24 +217,25 @@ def ilexorder(l: int, n: int) -> int:
     return k
 
 
-def ilexset(i: int, n: int) -> int:
+def ilexset(L: int, n: int) -> int:
     """lexicographic index to set"""
     S = 0
     k = -1
     nk = _comb(n, k)
-    while nk <= i:
-        i -= nk
+    while nk <= L:
+        L -= nk
         k += 1
         nk = _comb(n, k)
+        continue
 
     while k > 0:
         ck = 0
         ckk = _comb(ck, k)
-        while ckk <= i:
+        while ckk <= L:
             ck += 1
             ckk = _comb(ck, k)
         ck -= 1
-        i -= _comb(ck, k)
+        L -= _comb(ck, k)
         S = iadd(S, ck)
         k -= 1
     return S
@@ -243,15 +244,23 @@ def ilexset(i: int, n: int) -> int:
 def ilexidx(S: int, n: int) -> int:
     """set to lexicographic index"""
     m = icard(S)
-    l = 0
+    L = 0
     for k in range(m):
-        l += _comb(n, k)
+        L += _comb(n, k)
     i = 0
-    for e in imembers(S):
-        ci = _comb(e, (i+1))
-        l += ci
-        i += 1
-    return l
+    # for e in imembers(S):
+    #     i += 1
+    #     ci = _comb(e, i)
+    #     l += ci
+    for e in range(n):
+        if S & 1:
+            i += 1
+            ci = _comb(e, i)
+            L += ci
+        elif S == 0:
+            break
+        S >>= 1
+    return L
 
 
 # ---------------------------------------------------------------------------

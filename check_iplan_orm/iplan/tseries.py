@@ -143,7 +143,7 @@ class TrainFocussed(TSFOperations):
                 end_date=end_date
             )
 
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -442,7 +442,7 @@ class TrainFocussed(TSFOperations):
             start_date=start_date,
             end_date=end_date)
 
-        self.log.debug(query)
+        self.logsql.debug(query)
         df_with_skill = pd.read_sql_query(query, self.engine)
 
         #
@@ -465,7 +465,7 @@ class TrainFocussed(TSFOperations):
             end_date=end_date
         )
 
-        self.log.debug(query)
+        self.logsql.debug(query)
         df_no_skill = pd.read_sql_query(query, self.engine)
 
         # 4) concatenate df_with_skill WITH df_no_skill
@@ -562,7 +562,7 @@ class TestFocussed(TSFOperations):
                 end_included=True
             )
 
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -775,7 +775,7 @@ class PredictFocussed(TSFOperations):
                 end_included=True
             )
 
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query, parameters=dict(
                 plan_ids=tuple(plan_ids),
                 measure_ids=tuple(measure_ids),
@@ -1057,7 +1057,7 @@ class PredictFocussed(TSFOperations):
             qtext += """ and tivd.state_date <  :end_date """
 
         query = text(qtext)
-        self.log.debug(query)
+        self.logsql.debug(query)
         df = pd.read_sql_query(query, self.engine, params=dict(
             plan_ids=tuple(plan_ids),
             measure_ids=tuple(measure_ids),
@@ -1156,7 +1156,7 @@ class PredictedFocussed(TSFOperations):
                 end_included=True
             )
 
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -1319,7 +1319,7 @@ class ModelsFocussed(TSFOperations):
                 table.c['area_id_fk'].in_(area_ids) &
                 table.c['skill_id_fk'].in_(skill_ids)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         # end
@@ -1455,7 +1455,7 @@ class ModelsFocussed(TSFOperations):
                 table.c['area_id_fk'].in_(area_ids) &
                 table.c['skill_id_fk'].in_(skill_ids)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             for res in conn.execute(query):
                 area_id, skill_id, name, model, ohmodels_catftr, r2, wape = res
 
@@ -1668,7 +1668,7 @@ class TimeSeriesFocussed(IPlanData):
             query = select(table.c['parameter_id', 'parameter_value', 'to_populate']).where(
                     (table.c['ipr_conf_master_id'] == tsf_id)
                 )
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query)#.fetchall()
             for res in rlist:
                 measure_id, parameter_type, populate_id = res
@@ -1768,7 +1768,7 @@ class TimeSeriesFocussed(IPlanData):
                  where ticd.ipr_conf_master_id = :tsf_id
                    and ticd.parameter_id = timd.id
             """)
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query, parameters=dict(
                 tsf_id=tsf_id
             ))  #.fetchall()
@@ -1802,7 +1802,7 @@ class TimeSeriesFocussed(IPlanData):
             query = select(table.c['parameter_id', 'parameter_value', 'to_populate']).where(
                 (table.c['ipr_conf_master_id'] == tsf_id)
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query)#.fetchall()
             for res in rlist:
                 measure_id, parameter_type, populate_id = res
@@ -1831,6 +1831,9 @@ class TimeSeriesFocussed(IPlanData):
 
     # alias_of(set_plan)
     def using_plan(self, plan: Union[int, str, PredictionPlan], data_master: Union[None, int, str] = None):
+        assert is_instance(plan, int) or is_instance(plan, str) and data_master is not None, \
+            "If Plan is specified by name, it is necessary to specify the Data Master"
+
         self._plan = self.ipom.plans().plan(plan, data_master)
         self._data_master = self._plan.data_master
         self._data_model = self._data_master.data_model
@@ -1882,7 +1885,7 @@ class TimeSeriesFocussed(IPlanData):
     #         query = select(table.c['idata_master_fk'], func.count(table.c['idata_master_fk'])) \
     #             .where(table.c['name'] == plan) \
     #             .group_by(table.c['idata_master_fk'])
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         rlist = conn.execute(query).fetchall()
     #         if len(rlist) > 1:
     #             raise ValueError(f"Invalid plan '{plan}': assigned to {len(rlist)} Data Masters")
@@ -1898,7 +1901,7 @@ class TimeSeriesFocussed(IPlanData):
     #     with self.engine.connect() as conn:
     #         table = self.ipom.iDataValuesMaster
     #         query = select(table.c['name', 'idata_master_fk']).where(table.c.id == plan_id)
-    #         self.log.debug(query)
+    #         self.logsql.debug(query)
     #         plan_name, data_master_id = conn.execute(query).fetchone()
     #         return plan_name, data_master_id
     # # end
@@ -1977,7 +1980,7 @@ class TimeSeriesFocussed(IPlanData):
             query = delete(table).where(
                 table.c['ipr_conf_master_id'] == tsf_id
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # 2) delete master
@@ -1985,7 +1988,7 @@ class TimeSeriesFocussed(IPlanData):
             query = delete(table).where(
                 table.c.id == tsf_id
             )
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -2094,7 +2097,7 @@ class TimeSeriesFocussed(IPlanData):
                 skill_id_fk=skill_hierarchy_id,
                 idata_id_fk=None
             ).returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             tsf_id = conn.execute(query).scalar()
 
             # 2) fill tb_ipr_conf_detail_focussed

@@ -163,7 +163,7 @@ class IPredictMasterFocussed(IPlanData):
         with self.engine.connect() as conn:
             tmeasure = self.ipom.iDataModelDetail
             query = select(tmeasure.c['id', 'measure_id']).where(tmeasure.c['id'].in_(measure_ids))
-            self.log.debug(query)
+            self.logsql.debug(query)
             rlist = conn.execute(query)
             for id, name in rlist:
                 mdict[id] = name
@@ -204,13 +204,13 @@ class IPredictMasterFocussed(IPlanData):
             # 1) delete tb_ipr_conf_detail_focussed
             table = self.ipom.iPredictDetailFocussed
             query = delete(table).where(table.c['ipr_conf_master_id'] == tsf_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
 
             # 2) delete tb_ipr_conf_master_focussed
             table = self.ipom.iPredictMasterFocussed
             query = delete(table).where(table.c['id'] == tsf_id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             conn.execute(query)
             conn.commit()
         return
@@ -285,7 +285,7 @@ class IPredictMasterFocussed(IPlanData):
                 skill_id_fk=skill_hierarchy_id,
                 idata_id_fk=None
             ).returning(table.c.id)
-            self.log.debug(query)
+            self.logsql.debug(query)
             tsf_id = conn.execute(query).scalar()
             # 2) fill tb_ipr_conf_detail_focussed
             table = self.ipom.iPredictDetailFocussed
