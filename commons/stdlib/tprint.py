@@ -6,7 +6,7 @@ TIMEDELAY = 3  # seconds
 TIMESTAMP = 0  # last timestamp
 
 
-def tprint(*args, force=True, **nargs):
+def tprint(*args, force=False, **nargs):
     """
     As "print" but it prints the message ONLY each TIMEDELAY seconds
 
@@ -22,6 +22,9 @@ def tprint(*args, force=True, **nargs):
         TIMESTAMP = now
         print(time.strftime("[%H:%M:%S] "), end="")
         print(*args, **nargs)
+    if force:
+        TIMESTAMP -= TIMEDELAY+1
+
 # end
 
 

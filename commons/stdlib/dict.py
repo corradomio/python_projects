@@ -212,7 +212,7 @@ class dict(BuiltinDict):
         Note that:
 
             list(dict)      -> [key1, ...]
-            dict,keys()     -> dict_keys([key1, ...])
+            dict.keys()     -> dict_keys([key1, ...])
             dict.values()   -> dict_values([value1, ...])
             dict.to_list()  -> [(key, value1), ...]
 

@@ -1,3 +1,4 @@
+import logging.config
 from iPredict_17.train_predict import import_from, json_load
 
 
@@ -18,4 +19,6 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.config.fileConfig("logging_config.ini")
+    logging.getLogger("root").info("Logging initialized")
     main()

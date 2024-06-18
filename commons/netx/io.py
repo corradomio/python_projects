@@ -70,7 +70,7 @@ def read_vecsv(path: str, comments="#", header=True, separator=",", create_using
             nattrs = dict()
             for i in range(1, len(columns)):
                 nattrs[columns[i]] = props[i]
-            g.nodes[node].update(nattrs)
+            g.nodes_[node].update(nattrs)
         # end
 
     # read edges

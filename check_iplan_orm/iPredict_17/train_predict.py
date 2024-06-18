@@ -1,6 +1,6 @@
 # views.py
 import logging
-from typing import Any
+from typing import Any, cast
 from datetime import datetime
 
 import numpy as np
@@ -203,7 +203,7 @@ def train(dft: pd.DataFrame, hp: dict = {}) -> dict[tuple[int,int], dict[str, An
     :param DataFrame dft: dataframe used for the training.
         The dataframe must have the following columns:
 
-            ['area_id_fk', 'skill_id_fk', 'state_date', <inputFeatureId:str...>, <targetFeatureId:str>]
+            ['area_id_fk', 'skill_id_fk', 'state_date',  <inputFeatureId:str...>, <targetFeatureId:str>]
             ['area_id_fk', 'skill_id_fk', 'time', 'day', <inputFeatureId:str...>, <targetFeatureId:str>]
 
         where 'day' is the day of week as string
@@ -248,6 +248,7 @@ def train(dft: pd.DataFrame, hp: dict = {}) -> dict[tuple[int,int], dict[str, An
     dowCol = dict_hp['dowCol']
 
     # 6) prepare the dictionary containing ALL results
+    #   (area, skill) -> { ... }
     results: dict[tuple[int, int], dict[str, Any]] = {}
 
     for area_skill in dict_of_regions_train:
@@ -331,6 +332,7 @@ def train(dft: pd.DataFrame, hp: dict = {}) -> dict[tuple[int,int], dict[str, An
         df_train = df_train_areas.drop(areaFeature, axis=1)
         df_scores = df_acc_areas.drop(areaFeature).sort_values(by=['wape'], ascending=True)
 
+        area_skill: tuple[int, int] = cast(tuple[int, int], area_skill)
         results[area_skill] = {
             "df_train": df_train,
             "df_scores": df_scores,
@@ -349,14 +351,14 @@ def train(dft: pd.DataFrame, hp: dict = {}) -> dict[tuple[int,int], dict[str, An
 # predict
 # ---------------------------------------------------------------------------
 
-def predict(dfp: pd.DataFrame, models: dict[tuple[int,int], dict[str, Any]], hp: dict = {}):
+def predict(dfp: pd.DataFrame, models: dict[tuple[int, int], dict[str, Any]], hp: dict = {}):
     """
     Generate the predictions for the dataframe 'dfp' using the models passed in 'models'
 
     :param dfp: dataframe used for the training.
         The dataframe must have the following columns:
 
-            ['area_id_fk', 'skill_id_fk', 'state_date', <inputFeatureId:str...>, <targetFeatureId:str>]
+            ['area_id_fk', 'skill_id_fk', 'state_date',  <inputFeatureId:str...>, <targetFeatureId:str>]
             ['area_id_fk', 'skill_id_fk', 'time', 'day', <inputFeatureId:str...>, <targetFeatureId:str>]
 
         where 'day' is the day of week as string

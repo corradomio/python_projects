@@ -1,5 +1,4 @@
-from typing import List, Dict, Set, Tuple, Sized, Union
-from collections import defaultdict
+from typing import List, Dict, Set
 
 import networkx as nx
 from networkx import Graph
@@ -42,7 +41,7 @@ def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, d
 
     # force partitions to be a list
     partitions = list(partitions)
-    in_part = in_partition(len(g.nodes))
+    in_part = in_partition(g.order())
     for u, v in list(g.edges):
         cu = in_part[u]
         cv = in_part[v]
@@ -135,8 +134,8 @@ def closure_coarsening_graph(g: nx.DiGraph, create_using=None, direct=True, **kw
 
 
 def print_graph_stats(g:nx.Graph):
-    n = len(g.nodes)
-    m = len(g.edges)
+    n = len(g.order())
+    m = len(g.size())
     if g.is_directed():
         print(f"G={{V: {n}, E: {m}}}")
     else:
