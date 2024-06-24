@@ -1,0 +1,35 @@
+path
+h5py
+
+numpy
+scipy
+pandas
+
+matplotlib
+seaborn
+
+networkx
+# igraph
+
+scikit-learn
+catboost
+xgboost
+
+
+--extra-index-url https://download.pytorch.org/whl/cu118
+torch
+skorch
+
+# available ONLY for Python 3.7, 3.8
+# mindspore
+
+gcastle
+dowhy
+econml
+catenets
+causica
+pygam
+causalpy
+
+pydot
+# pygraphviz

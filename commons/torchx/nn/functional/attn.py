@@ -42,6 +42,7 @@ from torch.nn.functional import tanh
 def t(x):
     return transpose(x, -2, -1)
 
+
 #
 # @: matrix      multiplication
 # *: elementwise multiplication

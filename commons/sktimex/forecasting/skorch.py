@@ -1,15 +1,20 @@
-import logging
-
-from .nn import *
-from ..utils import FH_TYPES, PD_TYPES
-from ..utils import as_dict, kwparams, qualified_name
-from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
-import torchx.nn as nnx
 
 __all__ = [
     'SkorchForecaster',
-    # "ScikitForecastRegressor"
 ]
+
+import logging
+from typing import Sized, cast, Optional
+from sktime.forecasting.base import ForecastingHorizon
+from stdlib import import_from
+
+import skorchx
+import pandas as pd
+from .nn import *
+from ..utils import FH_TYPES, PD_TYPES
+from ..utils import as_dict, kwparams, qualified_name
+from ..transform.nn import NNTrainTransform, NNPredictTransform
+import torchx.nn as nnx
 
 
 # skorch.NeuralNet()
@@ -50,7 +55,7 @@ __all__ = [
 # ScikitForecaster
 # ---------------------------------------------------------------------------
 
-class SkorchForecaster(BaseNNForecaster):
+class SkorchForecaster(_BaseNNForecaster):
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -78,59 +83,54 @@ class SkorchForecaster(BaseNNForecaster):
     # 2) is more flexible
     #
 
-    def __init__(self,
-                 lags: Union[int, list, tuple, dict],
-                 tlags: Union[int, list[int]],
+    def __init__(
+        self, *,
 
-                 flavour="default",
-                 scale=True,
+        # -- torch model
 
-                 # -- model
+        module,
+        module_kwargs: Optional[dict] = None,
 
-                 module=None,
-                 module_params=None,
+        # -- skorch
 
-                 # -- opt/loss
+        engine: Optional[dict] = None
 
-                 criterion=None,
-                 optimizer=None,
-                 lr=0.01,
+        # criterion=None,
+        # optimizer=None,
+        # lr=0.01,
+        # batch_size=16,
+        # max_epochs=300,
+        # callbacks=None,
+        # patience=0,
 
-                 batch_size=16,
-                 max_epochs=300,
-                 callbacks=None,
-
-                 patience=0,
-                 **kwargs):
-
+        # -- extra params
+    ):
         assert module is not None, "Parameter 'module' is mandatory"
         assert isinstance(module, str) or issubclass(module, nnx.Module)
 
         super().__init__(
-            lags=lags,
-            tlags=tlags,
-            scale=scale,
-            flavours=flavour,
-
-            criterion=criterion,
-            optimizer=optimizer,
-            lr=lr,
-            batch_size=batch_size,
-            max_epochs=max_epochs,
-            callbacks=callbacks,
-            patience=patience,
-            **kwargs
+            # criterion=criterion,
+            # optimizer=optimizer,
+            # lr=lr,
+            # batch_size=batch_size,
+            # max_epochs=max_epochs,
+            # callbacks=callbacks,
+            # patience=patience,
         )
 
+        # Configuration parameters [read-only]
         # convert the module class into string to permit the serialization
         # into a JSON file
         #
         # TODO: there are other configurations to make serializable
         #
         self.module_class = qualified_name(module)
-        self.module_params = module_params
+        self.module_kwargs = module_kwargs
 
-        self._module_params = as_dict(module_params) | kwparams(kwargs, 'module__')
+        # Effective parameters
+        # Note: module_params could be None, 'as_dict' ensure an empty dictionary
+        # Note: extracts parameters defined as 'module__*'
+        self._module_kwargs = module_kwargs or {}
 
         name = self.module_class
         self._log = logging.getLogger(f"ScikitForecaster.{name}")
@@ -142,8 +142,8 @@ class SkorchForecaster(BaseNNForecaster):
 
     def get_params(self, deep=True):
         params = super().get_params(deep=deep) | {
-            'module':self.module_class,
-            'module_params': self.module_params
+            'module': self.module_class,
+            'module_kwargs': self.module_kwargs
         }
         return params
 
@@ -159,7 +159,7 @@ class SkorchForecaster(BaseNNForecaster):
     #                          predict(fh, X[y:]
     #
 
-    def _fit(self, y, X=None, fh: FH_TYPES = None):
+    def _fit(self, y, X=None, fh=None):
 
         input_shape, output_shape = self._compute_input_output_shapes()
 
@@ -167,7 +167,7 @@ class SkorchForecaster(BaseNNForecaster):
 
         yh, Xh = self.transform(y, X)
 
-        tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=False)
+        tt = NNTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=False)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(y=yt, X=Xt)
@@ -182,7 +182,7 @@ class SkorchForecaster(BaseNNForecaster):
             module = module_class(
                 input_shape=input_shape,
                 output_shape=output_shape,
-                **self.module_params
+                **self.module_kwargs
             )
         except Exception as e:
             self._log.fatal("Unable to create the NN module.")
@@ -196,7 +196,7 @@ class SkorchForecaster(BaseNNForecaster):
         #   optimizer: optimizer
         #   lr
         #
-        model = skorch.NeuralNetRegressor(
+        model = skorchx.NeuralNetRegressor(
             module=module,
             **self._skt_args
         )
@@ -212,10 +212,11 @@ class SkorchForecaster(BaseNNForecaster):
         yh, Xh = self.transform(self._y, self._X)
         _, Xs = self.transform(None, X)
 
-        fh, fhp = self._make_fh_relative_absolute(fh)
+        # fh, fhp = self._make_fh_relative_absolute(fh)
+        # nfh = int(fh[-1])
+        nfh = len(cast(Sized, fh))
 
-        nfh = int(fh[-1])
-        pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
+        pt = NNPredictTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=True)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
         i = 0
@@ -227,19 +228,13 @@ class SkorchForecaster(BaseNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self.inverse_transform(ys)
-        yp = self._from_numpy(ys, fhp)
+        yp = self.inverse_transform(ys)
         return yp
     # end
 
     # -----------------------------------------------------------------------
     # Support
     # -----------------------------------------------------------------------
-
-    def get_state(self) -> bytes:
-        import pickle
-        state: bytes = pickle.dumps(self)
-        return state
 
     def __repr__(self):
         return f"SkorchForecaster[{self.estimator}]"

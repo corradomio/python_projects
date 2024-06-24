@@ -1,10 +1,11 @@
-from typing import Union
-import torch.nn as nn
-from torch.nn.utils import weight_norm
 
 __all__ = [
     'TemporalConvNetwork'
 ]
+
+from typing import Union
+import torch.nn as nn
+from torch.nn.utils import weight_norm
 
 # ---------------------------------------------------------------------------
 # https://www.kaggle.com/code/ceshine/pytorch-temporal-convolutional-networks

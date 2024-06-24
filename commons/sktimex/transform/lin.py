@@ -1,8 +1,8 @@
 import numpy as np
 
 from deprecated import deprecated
-from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
-from ..lags import lmax
+from .base import TimeseriesTransform, ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
+from ..lags import lmax,tlags_start
 
 
 # ---------------------------------------------------------------------------
@@ -18,13 +18,13 @@ from ..lags import lmax
 #
 
 @deprecated(reason="You should use LagsTrainTransform")
-class LinearTrainTransform(ModelTrainTransform):
+class LinearTrainTransform(TimeseriesTransform):
 
-    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
-        if ylags is not None:
-            slots = [xlags, ylags]
-        super().__init__(slots=slots, tlags=tlags)
-    # end
+    def __init__(self, xlags=None, ylags=None, tlags=(0,), flatten=True):
+        # super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
+        self.xlags: list = xlags
+        self.ylags: list = ylags
+        self.tlags: list = tlags
 
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF=None, fh=None) -> tuple:
         X, y = self._check_Xy(X, y, fh)
@@ -36,7 +36,8 @@ class LinearTrainTransform(ModelTrainTransform):
         sx = len(xlags)
         sy = len(ylags)
         st = len(tlags)
-        s = len(self.slots)
+        # s = len(self.slots)
+        s = max(lmax(xlags), lmax(ylags))
         t = lmax(tlags) + 1
         r = t + s
 
@@ -70,16 +71,30 @@ class LinearTrainTransform(ModelTrainTransform):
 
 
 @deprecated(reason="You should use LagsPredictTransform")
-class LinearPredictTransform(ModelPredictTransform):
+class LinearPredictTransform(TimeseriesTransform):
 
-    def __init__(self, slots=None, xlags=None, ylags=None, tlags=(0,)):
-        if ylags is not None:
-            slots = [xlags, ylags]
-        super().__init__(slots=slots, tlags=tlags)
+    def __init__(self, xlags=None, ylags=None, tlags=(0,), flatten=True):
+        # super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
+        self.xlags: list = xlags
+        self.ylags: list = ylags
+        self.tlags: list = tlags
+        self.tstart: int = tlags_start(tlags)
+
+        self.Xh = None  # X history
+        self.yh = None  # y history
+
+        self.Xp = None  # X prediction past
+        self.yp = None  # y prediction future
+    # end
+
+    def fit(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None):
+        self.Xh = X
+        self.yh = y
+        return self
     # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None):
-        fh, X = super().transform(fh, X, y)
+        # fh, X = super().transform(fh, X, y)
 
         Xh = self.Xh
         yh = self.yh
@@ -106,7 +121,7 @@ class LinearPredictTransform(ModelPredictTransform):
         self.Xp = X
         self.yp = yp
 
-        return self.to_pandas(yp)
+        return yp
     # end
 
     def _xat(self, i):
@@ -137,5 +152,35 @@ class LinearPredictTransform(ModelPredictTransform):
         return Xt
 
     def update(self, i, y_pred, t=None):
-        return super().update(i, y_pred, t)
+        # return super().update(i, y_pred, t)
+        # Note:
+        #   the parameter 't' is used to override tlags
+        #   'tlags' is at minimum [0]
+        #
+        # Extension:
+        #   it is possible to use tlags=[-3,-2,-1,0,1]
+        #   in this case, it is necessary to start with the position '3'
+        #   and advance 'i' ONLY of 2 slots.
+        #   Really usable slots: [0,1]
+        assert isinstance(i, (int, np.int32)), "The argument 'i' must be the location update (an integer)"
+
+        tlags = self.tlags if t is None else [t]
+        tstart = self.tstart if t is None else 0
+
+        st = len(tlags)  # length of tlags
+        mt = max(tlags)  # max tlags index
+        nfh = len(self.yp)  # length of fh
+
+        for j in range(tstart, st):
+            k = i + tlags[j]
+            if k < nfh:
+                try:
+                    if y_pred.ndim == 1:
+                        self.yp[k] = y_pred[0]
+                    else:
+                        self.yp[k] = y_pred[0, j]
+                except IndexError:
+                    pass
+
+        return i + mt + 1
 # end

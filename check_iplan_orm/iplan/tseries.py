@@ -1,10 +1,10 @@
 import traceback
-from typing import Literal
 
+import pandas as pd
 from sqlalchemy import text
 
+from stdlib.dateutilx import relativeperiods
 from .plans import *
-import pandasx as pdx
 
 
 # ---------------------------------------------------------------------------
@@ -298,9 +298,7 @@ class TrainFocussed(TSFOperations):
 
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
-        :param end_date: optional start date
-        :param periods: if not specified, it is inferred from the Data Master
-                the frequency is inferred from the Data Master
+        :param end_date: optional end date, excluded
         :param use_plan: used to enable the query using the plan
                 Note: in theory the plan is not used with the train data
         :param new_format: DataFrame format
@@ -315,7 +313,7 @@ class TrainFocussed(TSFOperations):
         assert use_plan and self._plan is not None or not use_plan, "A plan is required for 'use_plan=true'"
 
         if use_plan and end_date is not None:
-            self.log.warn(f"If 'use_plan' is tru,e it is not necessary to specify 'end_date'. Used 'end_date'")
+            self.log.warn(f"If 'use_plan' is true it is not necessary to specify 'end_date'. Used 'end_date'")
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
@@ -368,10 +366,12 @@ class TrainFocussed(TSFOperations):
             # Note that it is necessary to SKIP the first timestamp because
             # it is equal to the LAST dataframe timestamp
 
-            df = fill_missing_dates(
-                df_selected,
-                area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
-                date_range=date_range)
+            # df = fill_missing_dates(
+            #     df_selected,
+            #     area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+            #     date_range=date_range)
+
+            df = df_selected
 
         return df
     # end
@@ -443,7 +443,7 @@ class TrainFocussed(TSFOperations):
             end_date=end_date)
 
         self.logsql.debug(query)
-        df_with_skill = pd.read_sql_query(query, self.engine)
+        df_with_skill = pdx.read_sql_query(query, self.engine)
 
         #
         # TODO: WHY there are configurations where 'skill' is NOT DEFINED ???
@@ -466,10 +466,12 @@ class TrainFocussed(TSFOperations):
         )
 
         self.logsql.debug(query)
-        df_no_skill = pd.read_sql_query(query, self.engine)
+        df_no_skill = pdx.read_sql_query(query, self.engine)
 
         # 4) concatenate df_with_skill WITH df_no_skill
         df = concatenate_no_skill_df(df_with_skill, df_no_skill, skill_dict)
+
+        # 5) pivot the table
         df = pivot_df(df, area_dict, skill_dict, measure_dict, new_format=new_format)
         return df
     # end
@@ -932,92 +934,161 @@ class PredictFocussed(TSFOperations):
 
     def select(
         self, *,
+        start_date: Optional[datetime] = None,
+        end_date: Optional[datetime] = None,
         area: Union[None, int, list[int], str, list[str]] = None,
         skill: Union[None, int, list[int], str, list[str]] = None,
-        start_date: Optional[datetime] = None,
-        periods: Optional[int] = None,
+        plan_id: Optional[int] = None,
         new_format=True) -> DataFrame:
         """
-        Retrieve predict data
-        If the data is not available, it is generated a dataframe with 'fake' values.
-        The start_date can be passed as parameter or retrieved from the plan.
-        We SUPPOSE that all areas will have the same (start_date, end_date) pair.
-        We SUPPOSE that end_date can be computed as
+        Select the predict input features based on the start date
 
-            start_date + periods*freq
-
-        where periods and freq are inferred from the Data Master
-
-        :param start_date: start date
-            This date is mandatory because it is used to generate the 'fake' values
-        :param periods: optional number of periods
         :param area: area(s) to select. If not specified, all available areas will be selected
         :param skill: skill(s) to select. If not specified, all available skills will be selected
+        :param plan_id: specific Prediction Plan to use. Otherwise it is used ALL area plans specified
+            in the time series
+        :param start_date: start date for the data selection. If not specified, it is used the
+            start_date of the prediction plan
         :param new_format: DataFrame format
-        :return: the dataframe used for prediction. It contains input/target features
+        :return:
         """
+
         assert is_instance(start_date, Optional[datetime])
-        assert is_instance(periods, Optional[int])
+        assert is_instance(end_date, Optional[datetime])
         assert is_instance(area, Union[None, int, list[int], str, list[str]])
         assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+        assert is_instance(plan_id, Optional[int])
 
         assert self._plan is not None, "Prediction data can be retrieved only if it is specified a plan"
 
         area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
         skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
         measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
+
         data_master_id = self._tsf.data_master.id
-        plan_ids = self._plan.plan_ids
-        end_date: datetime = None
-        date_range: pd.DatetimeIndex = None
+        plan_ids = self._plan.plan_ids if plan_id is None else [plan_id]
 
-        # freq & periods are retrieved from the Data Master
-        freq = self._tsf.data_master.period_hierarchy.freq
-        if periods is None or periods <= 0:
-            periods = self._tsf.data_master.period_hierarchy.periods
-
-        # 1) start date is not specified: (start_date, end_date) retrieved from the Plan
+        # 1) start date is not specified:
+        #       start_date retrieve from Plan
+        #       periods, frequency from Data Master
         if start_date is None:
-            start_date, end_date = self._plan.date_range
-            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='left')
-
-        # 2) it is specified (start_date, end_date)
-        elif start_date is not None and end_date is not None:
-            date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='left')
-
-        # 3) it is specified (start_date, periods)
-        elif start_date is not None and periods > 0:
-            end_date = start_date + relativeperiods(periods, freq)
-            date_range = pdx.date_range(start=start_date, periods=periods, freq=freq, inclusive='left')
+            start_date, _ = self._plan.date_range
 
         df_selected = self._select_predict_data(
-            data_master_id,
-            plan_ids,
-            area_dict,
-            skill_dict,
-            measure_dict,
-            start_date, end_date,
+            data_master_id=data_master_id,
+            plan_ids=plan_ids,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            start_date=start_date,
+            end_date=end_date,
             new_format=new_format
         )
 
-        df = fill_missing_dates(
-            df_selected,
-            area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
-            date_range=date_range)
+        return df_selected
 
-        return df
-    # end
+    # def select_fake(
+    #     self, *,
+    #     area: Union[None, int, list[int], str, list[str]] = None,
+    #     skill: Union[None, int, list[int], str, list[str]] = None,
+    #     plan_id: Optional[int] = None,
+    #     start_date: Optional[datetime] = None,
+    #     periods: Optional[int] = None,
+    #     new_format=True) -> DataFrame:
+    #     """
+    #     Retrieve predict data
+    #     If the data is not available, it is generated a dataframe with 'fake' values.
+    #     The start_date can be passed as parameter or retrieved from the plan.
+    #     We SUPPOSE that all areas will have the same (start_date, end_date) pair.
+    #     We SUPPOSE that end_date can be computed as
+    #
+    #         start_date + periods*freq
+    #
+    #     where periods and freq are inferred from the Data Master
+    #
+    #     :param start_date: start date
+    #         This date is mandatory because it is used to generate the 'fake' values
+    #     :param periods: optional number of periods
+    #     :param area: area(s) to select. If not specified, all available areas will be selected
+    #     :param skill: skill(s) to select. If not specified, all available skills will be selected
+    #     :param new_format: DataFrame format
+    #     :return: the dataframe used for prediction. It contains input/target features
+    #     """
+    #     assert is_instance(start_date, Optional[datetime])
+    #     assert is_instance(periods, Optional[int])
+    #     assert is_instance(area, Union[None, int, list[int], str, list[str]])
+    #     assert is_instance(skill, Union[None, int, list[int], str, list[str]])
+    #
+    #     assert self._plan is not None, "Prediction data can be retrieved only if it is specified a plan"
+    #
+    #     area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+    #     skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
+    #     measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
+    #     data_master_id = self._tsf.data_master.id
+    #     plan_ids = self._plan.plan_ids if plan_id is None else [plan_id]
+    #     end_date: datetime = None
+    #     date_range: pd.DatetimeIndex = None
+    #
+    #     # freq & periods are retrieved from the Data Master
+    #     freq = self._tsf.data_master.period_hierarchy.freq
+    #     if periods is None or periods <= 0:
+    #         periods = self._tsf.data_master.period_hierarchy.periods
+    #
+    #     # 1) start date is not specified:
+    #     #       start_date retrieve from Plan
+    #     #       periods, frequency from Data Master
+    #     if start_date is None:
+    #         start_date, _ = self._plan.date_range
+    #         date_range = pdx.date_range(start=start_date, periods=periods, freq=freq, inclusive='both')
+    #
+    #     # 2) it is specified (start_date, end_date)
+    #     #       frequency from Data Master
+    #     elif start_date is not None and end_date is not None:
+    #         date_range = pdx.date_range(start=start_date, end=end_date, freq=freq, inclusive='both')
+    #
+    #     # 3) it is specified (start_date, periods)
+    #     #       frequency from Data Master
+    #     elif start_date is not None and periods > 0:
+    #         end_date = start_date + relativeperiods(periods, freq)
+    #         date_range = pdx.date_range(start=start_date, periods=periods, freq=freq, inclusive='both')
+    #     # 4) it is specified start_date only
+    #     #       periods, frequency from Data Master
+    #     elif start_date is not None and periods <= 0:
+    #         # already handled because periods is already retrieved from the Data Master
+    #         # if not specified
+    #         pass
+    #
+    #     df_selected = self._select_predict_data(
+    #         data_master_id,
+    #         plan_ids,
+    #         area_dict,
+    #         skill_dict,
+    #         measure_dict,
+    #         start_date, end_date,
+    #         new_format=new_format
+    #     )
+    #
+    #     # df = fill_missing_dates(
+    #     #     df_selected,
+    #     #     area_dict=area_dict, skill_dict=skill_dict, measure_dict=measure_dict,
+    #     #     date_range=date_range)
+    #
+    #     df = df_selected
+    #
+    #     return df
+    # # end
 
     def _select_predict_data(
-        self,
+        self, *,
         data_master_id: int,
         plan_ids: list[int],  # data_values_master_ids
         area_dict: dict[int, str],
         skill_dict: dict[int, str],
         measure_dict: dict[int, str],
         start_date: datetime,
-        end_date: datetime,
-        new_format=False) -> DataFrame:
+        end_date: Optional[datetime],
+        new_format
+    ) -> DataFrame:
         """
 
         :param data_master_id:
@@ -1058,7 +1129,7 @@ class PredictFocussed(TSFOperations):
 
         query = text(qtext)
         self.logsql.debug(query)
-        df = pd.read_sql_query(query, self.engine, params=dict(
+        df = pdx.read_sql_query(query, self.engine, params=dict(
             plan_ids=tuple(plan_ids),
             measure_ids=tuple(measure_ids),
             skill_ids=tuple(skill_ids),
@@ -1067,10 +1138,15 @@ class PredictFocussed(TSFOperations):
             end_date=end_date
         ))
 
-        # area_id_fk, skill_id_fk, model_detail_id_fk, state_date, state_date
+        # 3) create the standard dataframe with horizontal columns
+        #    area_id_fk, skill_id_fk, model_detail_id_fk, state_date, <measure_id>, ...
+        df_pivoted = pivot_df(df, area_dict, skill_dict, measure_dict, new_format=new_format)
 
-        df = pivot_df(df, area_dict, skill_dict, measure_dict, new_format=new_format)
-        return df
+        # 4) add missing measures
+        #    this is necessary when the query returns ZERO rows
+        df_filled = fill_missing_measures(df_pivoted, measure_dict)
+
+        return df_filled
     # end
 # end
 
@@ -1271,8 +1347,123 @@ class PredictedFocussed(TSFOperations):
 
     def select(self, df_pred: DataFrame):
         assert is_instance(df_pred, DataFrame)
-        return self
+
+        raise NotImplemented("Not implemented yet")
 # end
+
+
+class PastFutureFocussed(TSFOperations):
+
+    def __init__(self, tsf: "TimeSeriesFocussed"):
+        super().__init__(tsf)
+
+    # -----------------------------------------------------------------------
+    # select
+    # -----------------------------------------------------------------------
+
+    def select(self, *,
+            area: Union[None, int, list[int], str, list[str]] = None,
+            skill: Union[None, int, list[int], str, list[str]] = None,
+            plan_id: Optional[int] = None,
+            start_date: Optional[datetime] = None,
+            periods: Optional[int] = None,
+            new_format=True
+        ) -> DataFrame:
+
+        # 1) retrieve start_date and periods from current Plan and Data Master
+        if start_date is None:
+            start_date, _ = self._tsf.plan.date_range
+        if periods is None or periods <= 0:
+            periods = self._tsf.periods
+
+        freq = self._tsf.freq
+        date_delta = relativeperiods(periods=1, freq=freq)
+
+        end_date = start_date + relativeperiods(periods=periods,freq=freq)
+
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
+        measure_dict: dict[int, str] = self._tsf.measure_ids(with_name=True)
+        target_dict: dict[int, str] = self._tsf.measure_ids(with_name=True, use_type='target')
+
+        # 2) retrieve the past data
+        df_past = self._tsf.train().select(
+            area=area,
+            skill=skill,
+            end_date=start_date,
+            new_format=new_format
+        )
+
+        # 3) retrieve the future data
+        df_future = self._tsf.predict().select(
+            area=area,
+            skill=skill,
+            plan_id=plan_id,
+            start_date=start_date,
+            end_date=end_date,
+            new_format=new_format
+        )
+
+        # 4) consistency check: 2 dataframe with the same list of columns
+        assert len(df_past.columns) == len(df_future.columns)
+        assert len(df_past.columns.intersection(df_future.columns)) == len(df_past.columns)
+
+        # 5) the 'tricked' merge:
+        #    we already know that df_past's end_date < df_future's start_date
+        #    BUT the dataframes CAN BE EMPTY.
+        #    In this case, because the date are excluded from the interval
+        #    we generate 'fake' date
+        #
+        past_last_date = df_past['state_date'].max() if len(df_past) > 0 \
+            else pd.Timestamp(start_date) - date_delta
+        future_first_date = df_future['start_date'].min() if len(df_future) > 0 \
+            else pd.Timestamp(start_date) + date_delta
+
+        # 6) generate the DatetimeIndex to fill the missing dates from
+        #       df_past.last_date -> df_future.first_date
+        last_first_date_range = pdx.date_range(
+            past_last_date, future_first_date, delta=date_delta, inclusive='neither',
+            name='state_date')
+
+        # 6) create the dataframe used to fill the missing data
+        df_past_to_future = create_default_dataframe(
+            last_first_date_range,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            new_format=new_format
+        )
+
+        # 7) retrieve the end_date of df_future
+        future_last_date = df_future['state_date'].max() if len(df_future) > 0 else pd.Timestamp(start_date)
+
+        # 8) generate the DatetimeIndex to fill the missing dates from
+        #       df_future.last_date -> end_date
+        last_end_date_range = pdx.date_range(
+            future_last_date, end_date, freq=freq, inclusive='neither',
+            name='state_date'
+        )
+
+        # 9) create the dataframe used to fill the missing data
+        df_future_to_end = create_default_dataframe(
+            last_end_date_range,
+            area_dict=area_dict,
+            skill_dict=skill_dict,
+            measure_dict=measure_dict,
+            new_format=new_format
+        )
+
+        # 10) concatenate all previous selected/generated dataframes
+        len_df_all = len(df_past) + len(df_past_to_future) + len(df_future) + len(df_future_to_end)
+        df_all = pd.concat([df_past, df_past_to_future, df_future, df_future_to_end], axis='rows', ignore_index=True)
+
+        assert len(df_all) == len_df_all
+
+        # 11) FORCE the target columns to be 'NA'
+        df = set_nan_values(df_all, start_date, target_dict)
+
+        # End) Thats' all Folks!
+        return df
 
 
 # ---------------------------------------------------------------------------
@@ -1406,21 +1597,27 @@ class ModelsFocussed(TSFOperations):
     # }
     # new_format: area & skill in string format
 
-    def select(self, new_format=False) \
+    def select(self,
+               area: Union[None, int, list[int], str, list[str]] = None,
+               skill: Union[None, int, list[int], str, list[str]] = None,
+               new_format=False) \
         -> dict[
             Union[tuple[int, int], tuple[str, str]],
             dict]:
+        assert is_instance(area, Union[None, int, list[int], str, list[str]])
+        assert is_instance(skill, Union[None, int, list[int], str, list[str]])
         assert is_instance(new_format, bool)
 
-        area_dict: dict[int, str] = self._tsf.area_hierarchy.feature_ids(with_name=True)
-        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.feature_ids(with_name=True)
+        area_dict: dict[int, str] = self._tsf.area_hierarchy.to_ids(area, with_name=True)
+        skill_dict: dict[int, str] = self._tsf.skill_hierarchy.to_ids(skill, with_name=True)
 
-        self._select_models(
+        models = self._select_models(
             time_series_id=self._tsf.id,
             area_dict=area_dict,
             skill_dict=skill_dict,
+            new_format=new_format
         )
-        return self
+        return models
 
     def _select_models(
         self, *,
@@ -1609,6 +1806,14 @@ class TimeSeriesFocussed(IPlanData):
     @property
     def freq(self) -> Literal['D', 'W', 'M']:
         return self.data_master.period_hierarchy.freq
+
+    @property
+    def periods(self) -> int:
+        return self.data_master.period_hierarchy.periods
+
+    # @property
+    # def plan_start_date(self) -> datetime:
+    #     return self.plan.date_range[0]
 
     # -----------------------------------------------------------------------
     # Time Series parameters/measures
@@ -1940,6 +2145,9 @@ class TimeSeriesFocussed(IPlanData):
         TS Manager used to save the test data: (actual/predicted)
         """
         return TestFocussed(self)
+
+    def past_future(self):
+        return PastFutureFocussed(self)
 
     def models(self) -> ModelsFocussed:
         """

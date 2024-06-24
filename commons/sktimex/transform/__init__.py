@@ -1,7 +1,3 @@
 from .base import TimeseriesTransform, ModelTrainTransform, ModelPredictTransform
-from .lin import LinearTrainTransform, LinearPredictTransform
-from .cnn import CNNTrainTransform, CNNPredictTransform
-from .rnn import RNNTrainTransform, RNNPredictTransform
 from .lags import LagsTrainTransform, LagsPredictTransform
-from .cnn_slots import CNNSlotsTrainTransform, CNNSlotsPredictTransform
-from .rnn_slots import RNNSlotsTrainTransform, RNNSlotsPredictTransform
+from .lin import LinearTrainTransform, LinearPredictTransform

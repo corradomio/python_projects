@@ -31,7 +31,6 @@ def main():
     forecaster = CNNLinearForecaster(
         lags=[0, 12],
         flavour="cnn",
-        scale=True,
 
         hidden_size=10,
 

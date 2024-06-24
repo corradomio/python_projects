@@ -44,7 +44,6 @@ def main():
     forecaster = RNNLinearForecaster(
         lags=[0, 12],
         flavour="lstm",
-        scale=True,
 
         num_layers=1,
         bidirectional=False,

@@ -33,9 +33,14 @@ class NeuralNetRegressor(skorch.NeuralNetRegressor):
             **kwargs
         )
 
+    def fit(self, X, y, **fit_params):
+        super().fit(X, y, **fit_params)
+        return self
+
     def predict(self, X, **predict_params):
         """Extended with 'predict_params'"""
-        return self.predict_proba(X, **predict_params)
+        predicted = self.predict_proba(X, **predict_params)
+        return predicted
 
     def predict_proba(self, X, **predict_params):
         """Extended with 'predict_params'"""

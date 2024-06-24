@@ -1,0 +1,124 @@
+
+path
+multimethod
+tabulate
+
+numpy
+scipy
+pandas
+
+matplotlib
+seaborn
+
+pillow
+tqdm
+
+opencv-python
+
+
+scikit-learn
+category_encoders
+xgboost
+catboost
+# imbalanced-learn
+
+
+sktime
+pmdarima
+statsmodels
+
+ipython
+jupyter
+
+# better to use Python=3.11
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.1
+torchvision
+torchaudio
+torchtext
+
+
+# https://github.com/intel/
+# intel-extension-for-transformers
+
+# lightning
+skorch
+
+# https://facebookresearch.github.io/xformers/
+# xformers
+# https://pypi.org/project/omegaconf/
+# omegaconf
+
+# pytorch-forecasting
+# pytorch-geometric
+# pytorch-geometric-temporal
+# gpytorch
+# torch_geometric
+
+pyarrow
+# fastparquet
+
+huggingface_hub
+diffusers
+transformers
+tokenizers
+
+accelerate
+safetensors
+datasets
+
+evaluate
+trl         # transformer reinforcement learning
+
+sentence-transformers
+sentencepiece
+
+# fine tuning
+bitsandbytes-windows
+peft
+wandb
+
+
+# https://github.com/Dao-AILab/flash-attention
+# Not available in Windows
+# flash_attn
+
+
+# opendatasets
+# flwr[simulation]
+
+# https://www.fast.ai/
+# fastai
+
+# 
+# gym
+
+# https://github.com/arogozhnikov/einops
+# einops
+
+# pycocotools 
+# onnxruntime 
+# onnx
+# skl2onnx
+
+
+# https://arrayfire.org/arrayfire-python/#
+#arrayfire
+
+# openstreetmap
+# osmnx
+
+# https://omegaconf.readthedocs.io/en/2.3_branch/
+# omegaconf
+
+# https://umap-learn.readthedocs.io/en/latest/index.html
+umap-learn
+# https://github.com/eamid/trimap
+trimap
+
+
+# https://pypi.org/project/mlx/ (Apple Silicon)
+# mlx
+
+# https://github.com/lyogavin/Anima/tree/main/air_llm
+# airllm

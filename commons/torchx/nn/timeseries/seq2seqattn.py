@@ -1,16 +1,17 @@
 #
 # Sequence to sequence for Time Series
 #
+
+__all__ = [
+    "TSSeq2SeqAttn",
+]
+
 import torch
 
 from stdlib import kwexclude, kwparams
 from .ts import TimeSeriesModel
 from .tsutils import apply_if
 from ... import nn as nnx
-
-__all__ = [
-    "TSSeq2SeqAttn",
-]
 
 #
 # Native RNN returned hidden state:

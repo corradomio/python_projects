@@ -1,7 +1,7 @@
 import numpy as np
 
+from stdlib import NoneType, RangeType
 from .base import ARRAY_OR_DF, ModelTrainTransform, ModelPredictTransform
-from .base import NoneType, RangeType
 from ..utils import is_instance
 from ..lags import lmax
 
@@ -130,7 +130,7 @@ class LagsTrainTransform(ModelTrainTransform):
         assert is_instance(encoder, (NoneType, int, str)), f"Invalid 'encoder' value: {encoder}"
         assert is_instance(decoder, (NoneType, int, str)), f"Invalid 'decoder' value: {decoder}"
 
-        super().__init__(slots=[xlags, ylags], tlags=tlags)
+        super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
 
         self.flatten = flatten
         self.concat = concat
@@ -329,7 +329,7 @@ class LagsPredictTransform(ModelPredictTransform):
         assert is_instance(encoder, (NoneType, int)), f"Invalid 'encoder' value: {encoder}"
         assert is_instance(decoder, (NoneType, int)), f"Invalid 'decoder' value: {encoder}"
 
-        super().__init__(slots=[xlags, ylags], tlags=tlags)
+        super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
 
         self.flatten = flatten
         self.concat = concat
@@ -354,7 +354,8 @@ class LagsPredictTransform(ModelPredictTransform):
         self.fh = fh
 
         y_pred = self._prepare_data(X, fh)
-        return self.to_pandas(y_pred)
+        # return self.to_pandas(y_pred)
+        return y_pred
 
     def _prepare_data(self, X, fh):
         # saved with 'fit'

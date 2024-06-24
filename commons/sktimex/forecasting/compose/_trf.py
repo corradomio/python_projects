@@ -1,13 +1,11 @@
-from typing import Union
+from typing import Union, cast
 
 import numpy as np
-import pandas as pd
 from sklearn.base import clone
-from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.compose._reduce import _Reducer
 
-from ...lags import resolve_lags
+from sktime.forecasting.compose._reduce import _Reducer
 from ...transform import LinearTrainTransform, LinearPredictTransform
+from ...utils import PD_TYPES
 
 
 # ---------------------------------------------------------------------------
@@ -15,10 +13,10 @@ from ...transform import LinearTrainTransform, LinearPredictTransform
 # ---------------------------------------------------------------------------
 
 class ITabularEstimator:
-    def fit(self, X, y):
+    def fit(self, X, y) -> "ITabularEstimator":
         ...
 
-    def predict(self, X):
+    def predict(self, X) -> np.ndarray:
         ...
 
 
@@ -34,10 +32,13 @@ class ITabularEstimator:
 #       (n,m,F)     [[1..n], [1..m]]
 #       (n,m,T)     [[1..n], [0..m]]
 #
+#   ilags:  input lags
+#   tlags:  target lags
+#
 
 class WindowLength:
 
-    def __init__(self, window_length: Union[int, list, tuple]):
+    def __init__(self, window_length: Union[int, list, tuple], target=False):
         assert isinstance(window_length, (int, list, tuple))
 
         # n
@@ -63,12 +64,14 @@ class WindowLength:
         else:
             raise ValueError(f"Invalid `windows_length`: {window_length}")
 
+        s = 1
+
         # n : None
         if target_lags is None:
             target_lags = []
         # n : int
         elif isinstance(target_lags, int):
-            target_lags = list(range(1, target_lags + 1))
+            target_lags = list(range(s, target_lags + s))
 
         # m : None
         if input_lags is None:
@@ -108,18 +111,6 @@ class WindowLength:
 # end
 
 
-def _to_numpy(x):
-    if x is None:
-        return None
-    if isinstance(x, (pd.Series, pd.DataFrame)):
-        return x.to_numpy()
-    elif isinstance(x, np.ndarray):
-        return x
-    else:
-        raise ValueError(f"Not a np.ndarray compatible typ")
-# end
-
-
 def _is_fh_seq(fh):
     """ Check if fh is [1,2,...n]"""
     return len(fh) == fh[-1]
@@ -135,76 +126,102 @@ def _to_tlags(fh):
     if fh is None:
         tlags = [0]
     elif fh.is_relative:
-        tlags = [f-1 for f in fh]
+        tlags = [int(f-1) for f in fh]
     else:
         raise ValueError("fh is not relative")
     return tlags
+
 
 # ---------------------------------------------------------------------------
 # TabularRegressorForecaster
 # ---------------------------------------------------------------------------
 
-class TabularRegressorForecaster(_Reducer):
+class StrategyBasedRegressorForecaster(_Reducer):
     strategy = "any"
 
     _tags = {
+        "y_inner_mtype": "np.ndarray",
+        "X_inner_mtype": "np.ndarray",
+        "scitype:y": "both",
         "requires-fh-in-fit": True,  # is the forecasting horizon required in fit?
         "ignores-exogeneous-X": False,
     }
+
+    # -----------------------------------------------------------------------
+    # Constructor
+    # -----------------------------------------------------------------------
 
     def __init__(
         self,
         estimator,
         window_length=10,
+        prediction_length=1,
         transformers=None,
+        windows_identical=True,
         pooling="local",
     ):
-        super().__init__(estimator, window_length, transformers, pooling)
+        super().__init__(
+            estimator=estimator,
+            window_length=window_length,
+            transformers=transformers,
+            pooling=pooling,
+        )
+        self.prediction_length = prediction_length
+        self.windows_identical = windows_identical
+
         self._estimators: list[ITabularEstimator] = []
         self.window_length_ = WindowLength(window_length)
+        self.prediction_length_ = WindowLength(window_length, True)
 
-    def get_params(self, deep=True):
-        params = {
-            'estimator': self.estimator,
-            'window_length': self.window_length
-        }
-        return params
-    # end
+    # -----------------------------------------------------------------------
+    # Operations
+    # -----------------------------------------------------------------------
 
     def _transform(self, y, X=None) -> tuple[np.ndarray, np.ndarray]:
-        X = _to_numpy(X)
-        y = _to_numpy(y)
+        # assert isinstance(y, np.ndarray)
+        # assert isinstance(X, (type(None), np.ndarray))
 
-        fh: ForecastingHorizon = self.fh
+        fh = self.fh
         if not fh.is_relative:
             fh = fh.to_relative(self.cutoff)
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
-        slots = resolve_lags([xlags, ylags])
-        # tlags = list(fh - 1)
         tlags = _to_tlags(fh)
 
-        lt = LinearTrainTransform(slots=slots, tlags=tlags)
+        lt = LinearTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags)
 
         Xt, yt = lt.fit_transform(y=y, X=X)
         return yt, Xt
 
-    def _fit(self, y, X=None, fh=None):
-        assert fh is self._fh and fh is self.fh
+    def _fit(self,  y, X=None, fh=None):
+        assert fh is self._fh
 
         yt, Xt = self._transform(y, X)
 
-        self.estimators_ = []
+        self.estimators_: list[ITabularEstimator] = []
 
+        if self.strategy in ["direct", "dirrec"]:
+            self._fit_multiple(Xt, yt)
+        elif self.strategy in ["recursive", "multioutput"]:
+            self._fit_single(Xt, yt)
+        else:
+            raise ValueError(f"Unsupported strategy {self.strategy}")
+        return self
+
+    def _fit_single(self, Xt, yt):
+        self.estimator.fit(Xt, yt)
+        self.estimators_.append(self.estimator)
+
+    def _fit_multiple(self, Xt, yt):
         for i in range(yt.shape[1]):
             yti = yt[:, i]
 
-            estimator: ITabularEstimator = clone(self.estimator)
+            estimator: ITabularEstimator = cast(ITabularEstimator, clone(self.estimator))
             estimator.fit(Xt, yti)
 
             self.estimators_.append(estimator)
-        return self
+    # end
 
     def _predict(self, fh, X=None):
         # fh MUST BE passed!
@@ -212,38 +229,65 @@ class TabularRegressorForecaster(_Reducer):
         self._check_X_y(X=X)
         self._check_fh(fh=fh)
 
-        # X, yh, Xh
-        Xp = _to_numpy(X)
-        yh = _to_numpy(self._y)
-        Xh = _to_numpy(self._X)
+        Xp = X
+        yh = self._y
+        Xh = self._X
 
         # n of timeslots to predict
-        fh = fh.to_relative(self.cutoff)
-        n = len(fh)
+        if not fh.is_relative:
+            fh = fh.to_relative(self.cutoff)
+        nfh = len(fh)
 
         xlags = self.window_length_.xlags
         ylags = self.window_length_.ylags
-        slots = resolve_lags([xlags, ylags])
         tlags = _to_tlags(self._fh)
 
-        pt = LinearPredictTransform(slots=slots, tlags=tlags)
-        y_pred = pt.fit(y=yh, X=Xh).transform(fh=n, X=Xp)
+        pt = LinearPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
+        res = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xp)
+
+        if self.strategy in ["direct", "dirrec"]:
+            return self._predict_single(nfh, pt, tlags)
+        elif self.strategy in ["recursive", "multioutput"]:
+            return self._predict_multiple(nfh, pt)
+        else:
+            raise ValueError(f"Unsupported strategy {self.strategy}")
+
+    def _predict_multiple(self, nfh, pt):
+        y_pred = pt.yp
 
         i = 0
-        while i < n:
+        while i < nfh:
             Xt = pt.step(i)
 
+            yp: np.ndarray = self.estimator.predict(Xt)
+
+            i = pt.update(i, yp)
+        # end
+        return y_pred
+
+    def _predict_single(self, nfh, pt, tlags):
+        y_pred = pt.yp
+
+        i = 0
+        while i < nfh:
+            Xt = pt.step(i)
+
+            it = i
             for j, estimator in enumerate(self.estimators_):
                 t = tlags[j]
-                if i+t >= n: continue
 
                 yp: np.ndarray = estimator.predict(Xt)
 
-                i = pt.update(i, yp, t)
+                it = pt.update(i, yp, t)
+
+                if it >= nfh: break
+            i = it
         # end
-        # add the index
-        y_pred = self._from_numpy(y_pred, fh)
         return y_pred
+
+    # -----------------------------------------------------------------------
+    # Utilities
+    # -----------------------------------------------------------------------
 
     def _check_fh(self, fh):
         # if self._fh is not [1,2,...], fh and self._fh must be equals
@@ -273,9 +317,28 @@ class TabularRegressorForecaster(_Reducer):
 
         return super()._check_X_y(X=X, y=y)
 
-    def _from_numpy(self, ys: np.ndarray, fh: ForecastingHorizon) -> pd.Series:
-        ys = ys.reshape(-1)
-        y_index = fh.to_absolute(self.cutoff)
-        yp = pd.Series(data=ys, index=y_index.to_pandas())
-        return yp
-# end
+    # def _from_numpy(self, ys: np.ndarray, fh: ForecastingHorizon) -> pd.Series:
+    #     ys = ys.reshape(-1)
+    #     y_index = fh.to_absolute(self.cutoff)
+    #     yp = pd.Series(data=ys, index=y_index.to_pandas())
+    #     return yp
+
+    # -----------------------------------------------------------------------
+    #
+    # -----------------------------------------------------------------------
+
+
+class FlexibeDirectRegressionForecaster(StrategyBasedRegressorForecaster):
+    strategy = "direct"
+
+
+class FlexibleRecursiveRegressionForecaster(StrategyBasedRegressorForecaster):
+    strategy = "recursive"
+
+
+class FlexibleMultioutputRegressionForecaster(StrategyBasedRegressorForecaster):
+    strategy = "multioutput"
+
+
+class FlexibleDirRecRegressionForecaster(StrategyBasedRegressorForecaster):
+    strategy = "dirrec"

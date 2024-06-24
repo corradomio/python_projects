@@ -1,5 +1,6 @@
 import logging
 import traceback
+
 import iPredict_17.autoreg.AutoRegHelper as arh
 import iPredict_17.traintest.TrainTestHelper as tth
 import iPredict_17.autoreg.AutoRegPredictHelper as pdh
@@ -7,7 +8,8 @@ import pandas as pd
 import numpy as np
 import copy
 
-LOG = logging.getLogger("TrainingPredictionRunner")
+
+TPR_LOGGER = None
 
 
 def prepare_autoregressive_train_data(df, dict_hp):
@@ -76,10 +78,12 @@ def prepare_autoregressive_pred_data(dfp, targetFeature, targetWeekLag, targetDa
 def run_training(df, dict_hp, list_regression_models):
 
     # prepare_autoregressive_train_data
-    list_ohmodels_catFtr, train, test, train_X, train_Y, test_X, test_Y = prepare_autoregressive_train_data(df, dict_hp)
+    list_ohmodels_catFtr, train, test, train_X, train_Y, test_X, test_Y \
+        = prepare_autoregressive_train_data(df, dict_hp)
 
     # Run training and find best model
-    list_regression_results, bestModelName, bestModel, bestWape, bestR2, bestDfPred = run_regression(train_X, train_Y, test_X, test_Y, list_regression_models, False)
+    list_regression_results, bestModelName, bestModel, bestWape, bestR2, bestDfPred \
+        = run_regression(train_X, train_Y, test_X, test_Y, list_regression_models, False)
 
     return test, bestDfPred, bestModelName, bestWape, bestR2, list_regression_results, list_ohmodels_catFtr, bestModel
 
@@ -116,7 +120,6 @@ def run_training_prediction(dict_hp, df, dfp, list_regression_models):
 
 
 def run_training_by_area(df_train, dict_hp, list_regression_models):
-
     dateCol = dict_hp['dateCol']
     areaFeature = dict_hp['areaFeature']
     targetFeature = dict_hp['targetFeature']
@@ -152,11 +155,10 @@ def run_training_by_area(df_train, dict_hp, list_regression_models):
 
         # run main training and prediction for that area and get required outputs
         try:
-            test, bestDfPred, bestModelName, bestWape, bestR2, list_regression_results, list_ohmodels_catFtr, bestModel = run_training(
-                df, dict_hp, list_regression_models)
+            test, bestDfPred, bestModelName, bestWape, bestR2, list_regression_results, list_ohmodels_catFtr, bestModel \
+                = run_training(df, dict_hp, list_regression_models)
         except Exception as e:
             exc = traceback.format_exc()
-            LOG.error(f"{e}\n{exc}")
             # print(str(curArea) + ' \t is skipping, Something went wrong when trying to do training')
             continue
 
@@ -176,13 +178,15 @@ def run_training_by_area(df_train, dict_hp, list_regression_models):
         df_tr = df_tr.rename(columns={targetFeature: 'actual'})
         # df_train_areas = df_train_areas.append(df_tr)
         df_train_areas = pd.concat([df_train_areas, df_tr], axis=0, join='outer')
-    # end
 
     return dict_ohmodels_catFtr_areas, dict_best_model_areas, df_train_areas, df_acc_areas
 
 
 
 def run_prediction_by_area(df_pred, dict_hp, dict_ohmodels_catFtr_areas, dict_best_model_areas):
+    global TPR_LOGGER
+    TPR_LOGGER = logging.getLogger("ipredict.sid")
+    TPR_LOGGER.info("run_prediction_by_area")
 
     dateCol = dict_hp['dateCol']
     areaFeature = dict_hp['areaFeature']
@@ -197,22 +201,34 @@ def run_prediction_by_area(df_pred, dict_hp, dict_ohmodels_catFtr_areas, dict_be
     # Start loop for each area
     for key in dict_of_regions_pred:
         curArea = key
+        log = logging.getLogger(f"ipredict.sid.{curArea}")
+        log.info("start processing")
+
         dfp = dict_of_regions_pred[key].copy()
 
-        list_ohmodels_catFtr_reload = dict_ohmodels_catFtr_areas.get(key)
+        list_ohmodels_catFtr_reload = dict_ohmodels_catFtr_areas.get(curArea)
         if list_ohmodels_catFtr_reload is None:
             # print(str(curArea) + ' \t No categorical model found')
+            log.warning(f"No categorical models found")
             continue
 
-        bestModel_reload = dict_best_model_areas.get(key)
+        bestModel_reload = dict_best_model_areas.get(curArea)
 
-        #print('Best model pred:', key, ' - ', dict_best_model_areas.get(key))
+        # print('Best model pred:', key, ' - ', dict_best_model_areas.get(key))
 
         # print("Running prediction for : " + str(curArea))
 
         # run main prediction for that area and get required outputs
-        dfp, pred_period = run_prediction(dict_hp, dfp, list_ohmodels_catFtr_reload, bestModel_reload)
+        try:
+            log.info(f"run prediction using {bestModel_reload}")
 
+            dfp, pred_period = run_prediction(dict_hp, dfp, list_ohmodels_catFtr_reload, bestModel_reload)
+        except Exception  as e:
+            # print(curArea + ' \t DATA_ERROR: cant perform prediction')
+            log.error(f"prediction failed:")
+            exc = traceback.format_exc()
+            log.error(f"... {e}\n{exc}")
+            continue
 
         # prepare prediction output
         # numpy version 1.8.0 is required for below to work

@@ -1,0 +1,199 @@
+#
+#
+#
+# https://github.com/jaraco/path
+path
+
+# https://pypi.org/project/joblib/
+joblib
+
+# https://pypi.org/project/docstring-parser/
+docstring-parser
+
+
+#
+# Jupyter
+#
+# https://jupyter.org/
+jupyter
+ipykernel
+
+#
+# Useful libraries
+#
+# https://numpy.org
+numpy
+
+# https://scipy.org/
+scipy
+
+# https://pandas.pydata.org/
+pandas
+
+# https://github.com/pydata/pandas-datareader
+pandas_datareader
+
+# https://pypi.org/project/category-encoders/
+category_encoders
+
+# https://geopandas.org/en/stable/
+geopandas
+
+
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+
+# https://arrow.apache.org/docs/python/index.html
+pyarrow
+
+# https://pypi.org/project/fastparquet/
+fastparquet
+
+
+#
+# Database drivers
+#
+# https://www.psycopg.org/
+psycopg2
+#psycopg2-binary
+# v3.0
+#psycopg[binary]
+
+# https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
+mysql-connector-python
+pymysql
+
+# https://www.sqlalchemy.org/
+# https://docs.sqlalchemy.org/en/14/dialects/mysql.html
+# https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
+sqlalchemy
+
+
+#
+# Gradient Boosting
+#
+# https://scikit-learn.org/
+scikit-learn
+
+# https://lightgbm.readthedocs.io/en/v3.3.2/
+lightgbm
+
+# https://xgboost.readthedocs.io/en/stable/
+xgboost
+
+# https://catboost.ai/en/docs/concepts/python-quickstart
+catboost
+
+
+#
+# Time series libraries
+#
+# https://www.statsmodels.org/stable/index.html (used by sktime)
+statsmodels
+
+# http://alkaline-ml.com/pmdarima/ (used by sktime)
+pmdarima
+
+# https://pypi.org/project/prophet/
+prophet
+
+# https://pypi.org/project/tbats/
+tbats
+
+# https://pypi.org/project/statsforecast/
+statsforecast
+
+# https://www.sktime.org/en/stable/
+sktime
+
+
+#
+# Neural Network (pytorch)
+#
+# --extra-index-url https://download.pytorch.org/whl/cu116
+# torch[cu116]
+
+# https://pytorch.org/
+torch
+
+# https://skorch.readthedocs.io/en/stable/
+skorch
+
+# https://www.pytorchlightning.ai/
+# https://pytorch-lightning.readthedocs.io/en/stable/starter/installation.html
+# pytorch-lightning
+#lightning
+
+# https://pytorch-forecasting.readthedocs.io/en/stable/
+# pytorch-forecasting[mqf2]
+#pytorch-forecasting
+
+
+#
+# Extras
+#
+# https://github.com/albahnsen/pycircular
+# pycircular
+
+# https://github.com/alan-turing-institute/mlaut
+# mlaut
+
+
+#
+# Pandas alternatives
+#
+# https://dask.org/
+# dask
+
+# https://vaex.io/
+# vaex
+
+# https://www.pola.rs/
+# polars
+
+# https://rapids.ai/
+# rapids
+
+# https://unit8co.github.io/darts/generated_api/darts.html (based on torch)
+# darts
+
+# https://www.ray.io/
+# ray
+
+# https://modin.readthedocs.io/ (based on Ray or Dask)
+# modin
+
+
+#
+# Web interface
+#
+# https://github.com/humiaozuzu/awesome-flask
+#
+# https://flask.palletsprojects.com/en/2.2.x/
+flask<3.0.0
+
+# https://flask-restx.readthedocs.io/en/latest/
+flask-restx
+
+# https://flask-cors.readthedocs.io/en/latest/
+flask-cors
+
+# https://www.djangoproject.com/
+django
+
+
+#
+# Utilities
+#
+# https://github.com/tantale/deprecated
+deprecated
+
+
+# https://pypi.org/project/jsonpickle/
+jsonpickle
+

@@ -1,9 +1,11 @@
+from typing import Union, Optional
+
 import torch
 import torch.nn as nn
 from stdlib import is_instance
 from . import nn as nnx
 
-from .activation import activation_function
+from .nn_init import activation_function
 
 
 # ---------------------------------------------------------------------------
@@ -13,12 +15,19 @@ from .activation import activation_function
 class LinearEncoderDecoder(nn.Module):
 
     def __init__(self, *,
-                 input_size,
-                 output_size,
-                 hidden_size=None,
-                 activation=None,
-                 activation_params=None):
+                 input_size: Union[int, tuple[int, int]],
+                 output_size: Union[int, tuple[int, int]],
+                 hidden_size: Union[None, int, tuple[int, int]] = None,
+                 activation: Optional[str] = None,
+                 activation_kwargs: Optional[dict] = None):
         super().__init__()
+
+        assert is_instance(input_size, Union[int, tuple[int, int]])
+        assert is_instance(output_size, Union[int, tuple[int, int]])
+        assert is_instance(hidden_size, Union[None, int, tuple[int, int]])
+        assert is_instance(activation, Optional[str])
+        assert is_instance(activation_kwargs, Optional[dict])
+
         self.input_size = input_size
         self.output_size = output_size
         self.hidden_size = hidden_size
@@ -27,7 +36,7 @@ class LinearEncoderDecoder(nn.Module):
             self.lin = nnx.Linear(in_features=input_size, out_features=output_size)
         else:
             self.enc = nnx.Linear(in_features=input_size, out_features=hidden_size)
-            self.activation = activation_function(activation, activation_params)
+            self.activation = activation_function(activation, activation_kwargs)
             self.dec = nnx.Linear(in_features=hidden_size, out_features=output_size)
 
     def forward(self, x):
@@ -35,7 +44,7 @@ class LinearEncoderDecoder(nn.Module):
             return self.lin.forward(x)
         else:
             t = self.enc(x)
-            t = self.activation(t) if self.activation else t
+            t = self.activation(t)
             return self.dec(t)
 # end
 
@@ -68,35 +77,57 @@ class LinearEncoderDecoder(nn.Module):
 class LSTMLinear(nnx.LSTM):
 
     def __init__(self, *,
-                 input_size,
-                 output_size,
+                 input_shape,
+                 output_shape,
+                 # LSTM specific
                  hidden_size=1,
                  num_layers=1,
                  activation=None,
-                 activation_params=None,
+                 activation_kwargs=None,
                  batch_first=True,
                  **kwargs):
-        assert is_instance(input_size, tuple[int, int])
-        assert is_instance(output_size, tuple[int, int])
+        """
+        A simple NN model composed by a LSTM layer followed bay a Linear layer.
+        The parameters 'input_shape' and 'output_shape' are used to specify:
+
+            input_shape: (n_steps, input_size|n_features)
+            ouput_shape: (n_steps, output_size)
+
+        :param input_shape:
+        :param output_shape:
+        :param hidden_size:
+        :param num_layers:
+        :param activation:
+        :param activation_kwargs:
+        :param batch_first:
+        :param kwargs:
+        """
+
+        assert is_instance(input_shape, tuple[int, int])
+        assert is_instance(output_shape, tuple[int, int])
         assert is_instance(hidden_size, int)
-        super().__init__(input_size=input_size[1],
+
+        super().__init__(input_size=input_shape[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
+
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        steps = input_size[0]
-
-        self.activation = activation_function(activation, activation_params)
-        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
-        self.output_size = output_size
+        steps = input_shape[0]
+        self.activation = activation_function(activation, activation_kwargs)
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_shape)
+        return
 
     def forward(self, input, hx=None):
         # t, h = super().forward(input, hx)
         t = super().forward(input, hx)
-        t = self.activation(t) if self.activation else t
+        t = self.activation(t)
         # t = torch.reshape(t, (len(input), -1))
         output = self.lin(t) if self.lin else t
         return output
@@ -125,38 +156,58 @@ class LSTMLinear(nnx.LSTM):
 class GRULinear(nnx.GRU):
 
     def __init__(self, *,
-                 input_size,
-                 output_size,
+                 input_shape,
+                 output_shape,
+                 # GRU specific
                  hidden_size=1,
                  num_layers=1,
                  activation=None,
-                 activation_params=None,
+                 activation_kwargs=None,
                  batch_first=True,
                  **kwargs):
-        assert is_instance(input_size, tuple[int, int])
-        assert is_instance(output_size, tuple[int, int])
+        """
+        A simple NN model composed by a GRU layer followed bay a Linear layer.
+        The parameters 'input_shape' and 'output_shape' are used to specify:
+
+            input_shape: (n_steps, input_size|n_features)
+            ouput_shape: (n_steps, output_size)
+
+        :param input_shape:
+        :param output_shape:
+        :param hidden_size:
+        :param num_layers:
+        :param activation:
+        :param activation_kwargs:
+        :param batch_first:
+        :param kwargs:
+        """
+        assert is_instance(input_shape, tuple[int, int])
+        assert is_instance(output_shape, tuple[int, int])
         assert is_instance(hidden_size, int)
         #
         # Note: if output_size is <=0, no nn.Linear is created
         #
-        super().__init__(input_size=input_size[1],
+        super().__init__(input_size=input_shape[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
+
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        steps = input_size[0]
-
-        self.activation = activation_function(activation, activation_params)
-        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
-        self.output_size = output_size
+        steps = input_shape[0]
+        self.activation = activation_function(activation, activation_kwargs)
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_shape)
+        return
 
     def forward(self, input, hx=None):
         # t, h = super().forward(input, hx)
         t = super().forward(input, hx)
-        t = self.activation(t) if self.activation else t
+        t = self.activation(t)
         # t = torch.reshape(t, (len(input), -1))
         output = self.lin(t) if self.lin else t
         return output
@@ -186,40 +237,39 @@ class GRULinear(nnx.GRU):
 class RNNLinear(nnx.RNN):
 
     def __init__(self, *,
-                 input_size,
+                 input_shape,
+                 output_shape,
+                 # RNN specific
                  hidden_size,
                  num_layers=1,
-                 output_size=1,
-                 steps=1,
                  activation=None,
-                 activation_params=None,
+                 activation_kwargs=None,
                  batch_first=True,
                  **kwargs):
-        assert is_instance(input_size, tuple[int, int])
-        assert is_instance(output_size, tuple[int, int])
+        assert is_instance(input_shape, tuple[int, int])
+        assert is_instance(output_shape, tuple[int, int])
         assert is_instance(hidden_size, int)
 
-        super().__init__(input_size=input_size[1],
+        super().__init__(input_size=input_shape[1],
                          hidden_size=hidden_size,
                          num_layers=num_layers,
                          batch_first=batch_first,
                          **kwargs)
 
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.num_layers = num_layers
+        self.input_shape = input_shape
+        self.output_shape = output_shape
+
         f = (2 if self.bidirectional else 1)
         self.D = f*self.num_layers
 
-        steps = input_size[0]
-        self.activation = activation_function(activation, activation_params)
-        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_size)
-        self.output_size = output_size
+        steps = input_shape[0]
+        self.activation = activation_function(activation, activation_kwargs)
+        self.lin = nnx.Linear(in_features=f * hidden_size * steps, out_features=output_shape)
+        return
 
     def forward(self, input, hx=None):
-        t, h = super().forward(input, hx)
-        t = self.activation(t) if self.activation else t
+        t = super().forward(input, hx)
+        t = self.activation(t)
         # t = torch.reshape(t, (len(input), -1))
         output = self.lin(t) if self.lin else t
         return output
@@ -248,7 +298,7 @@ class Conv1dLinear(nnx.Conv1d):
                  hidden_size=1,
                  # steps=1,
                  activation=None,
-                 activation_params=None,
+                 activation_kwargs=None,
                  kernel_size=1,
                  stride=1,
                  padding=0,
@@ -269,7 +319,7 @@ class Conv1dLinear(nnx.Conv1d):
                          **kwargs)
 
         steps = input_size[0]
-        self.activation = activation_function(activation, activation_params)
+        self.activation = activation_function(activation, activation_kwargs)
 
         self.lin = nnx.Linear(in_features=steps * hidden_size, out_features=output_size)
         self.output_size = output_size
@@ -277,7 +327,7 @@ class Conv1dLinear(nnx.Conv1d):
 
     def forward(self, input):
         t = super().forward(input)
-        t = self.activation(t) if self.activation else t
+        t = self.activation(t)
         # t = torch.reshape(t, (len(input), -1))
         t = self.lin(t) if self.lin else t
         return t

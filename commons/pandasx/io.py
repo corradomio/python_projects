@@ -172,6 +172,7 @@ def read_data(file: str,
               binhot=None,          # categorical columns to convert using binary hot encoding.
 
               index=None,           # columns to use as index
+              datetime_index=None,  # columns to use as datetime_index
               ignore=None,          # columns to ignore
               ignore_unnamed=False, # if to ignore 'Unnamed *' columns
 
@@ -247,7 +248,8 @@ def read_data(file: str,
             With multiple columns, it is created a MultiIndex following the columns order.
             Used to specify the index for a dataset multi-time series.
             The datetime index must be the last index in the list
-            The columns are not automatically ignored
+            It is created a 'PriodIndex'
+    :datetime_index: as for 'index' but it is created a 'DatetimeIndex'
     :param count: if to add the column 'count' with value 1
     :param dropna: if to drop rows containing NA values
             None/False:
@@ -296,6 +298,7 @@ def read_data(file: str,
     binhot = as_list(binhot, 'binhot')
     ignore = as_list(ignore, 'ignore')
     index = as_list(index, 'index')
+    datetime_index = as_list(datetime_index, 'datetime_index')
 
     # parse the 'datetime' parameter
     datetime_name, datetime_format, datetime_freq = _parse_datetime(datetime)
@@ -397,16 +400,18 @@ def read_data(file: str,
     #       BEFORE to move the columns as index
     #       BEFORE to rename columns
     if dropna:
-        df = nan_drop(df, dropna)
+        df = nan_drop(df, columns=dropna)
 
     # force a sort
     # Note: here it is possible to use columns not yet removed
     if sort is not False:
-        df = dataframe_sort(df, sort)
+        df = dataframe_sort(df, sort=sort)
 
     # compose the index
     if len(index) > 0:
-        df = set_index(df, index)
+        df = set_index(df, index, inplace=True)
+    if len(datetime_index) > 0:
+        df = set_index(df, datetime_index, inplace=True, as_datetime=True)
 
     # add 'Unnamed: ...' columns to the list of columns to remove
     if ignore_unnamed:

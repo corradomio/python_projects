@@ -5,6 +5,10 @@ import skorch
 #
 
 class EarlyStopping(skorch.callbacks.EarlyStopping):
+    """
+    Extends skorch.callbacks.EarlyStopping adding 'warmup': number of epochs
+    to wait until early stopping.
+    """
 
     def __init__(self, warmup=0, patience=5, threshold=1e-4, **kwargs):
         super().__init__(patience=patience, threshold=threshold, **kwargs)

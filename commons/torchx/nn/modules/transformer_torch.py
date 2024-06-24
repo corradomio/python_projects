@@ -10,6 +10,15 @@
 #      are split in separated lines. Note that the original lines are commented
 #   3) some useless Python directive ('__all__')
 #
+__all__ = [
+    'Transformer',
+    'TransformerEncoder',
+    'TransformerDecoder',
+    'TransformerEncoderLayer',
+    'TransformerDecoderLayer'
+]
+
+
 import copy
 from typing import Optional, Any, Union, Callable
 
@@ -25,7 +34,6 @@ from torch.nn import Dropout
 from torch.nn import Linear
 from torch.nn import LayerNorm
 
-__all__ = ['Transformer', 'TransformerEncoder', 'TransformerDecoder', 'TransformerEncoderLayer', 'TransformerDecoderLayer']
 
 def _generate_square_subsequent_mask(
         sz: int,

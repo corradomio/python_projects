@@ -10,7 +10,7 @@ def oversample2d(a: np.ndarray, nsamples=10, method='linear') -> np.ndarray:
     :param nsamples: number of samples to use for each 2 adjacent values (along the axis 0/rows)
     :param method: method to use (unsupported for now). For default: 'linear'
     """
-    assert isinstance(a, np.ndarray) and len(a.shape) == 2, \
+    assert isinstance(a, np.ndarray) and a.ndim == 2, \
         "Parameter 'a' is not a 2D numpy array"
 
     n0, m = a.shape
@@ -67,7 +67,7 @@ class Resampler(Transformer):
 
     def fit(self, *data_list: np.ndarray):
         for i, data in enumerate(data_list):
-            assert isinstance(data, np.ndarray) and len(data.shape) == 2, \
+            assert isinstance(data, np.ndarray) and data.ndim == 2, \
                 f"Element in position '{i}' is not a 2D numpy array"
             i += 1
         return self

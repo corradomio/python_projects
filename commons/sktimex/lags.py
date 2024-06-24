@@ -1,4 +1,3 @@
-from typing import Union, Any
 
 __all__ = [
     'LagSlots',
@@ -9,6 +8,9 @@ __all__ = [
     'lmax'
 ]
 
+
+from typing import Union, Any
+from stdlib.types import RangeType
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -179,10 +181,10 @@ class LagSlots:
     #     """Flatten list of input lags"""
     #     return self._xlags
 
-    @property
-    def xlags_lists(self):
-        """List of input lags organized by multiplier"""
-        return self._xlags_lists
+    # @property
+    # def xlags_lists(self):
+    #     """List of input lags organized by multiplier"""
+    #     return self._xlags_lists
 
     # @property
     # def input_lists(self):
@@ -200,10 +202,10 @@ class LagSlots:
     #     """Flatten list of target lags"""
     #     return self._ylags
 
-    @property
-    def ylags_lists(self):
-        """List of target lags organized by multiplier"""
-        return self._ylags_lists
+    # @property
+    # def ylags_lists(self):
+    #     """List of target lags organized by multiplier"""
+    #     return self._ylags_lists
 
     # @property
     # def target_lists(self):
@@ -563,9 +565,6 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
     res: LagSlots = lr.resolve()
     return res
 # end
-
-
-RangeType = type(range(0))
 
 
 def resolve_ilags(ilags: Union[int, tuple, list]) -> list[int]:

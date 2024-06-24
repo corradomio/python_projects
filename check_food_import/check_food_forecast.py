@@ -74,7 +74,6 @@ def main():
         #     y_only=not features,
         #     flavour='lstm',
         #     periodic='M',
-        #     scale=True,
         #     steps=12,
         #     lr=0.001,
         #     criterion="torch.nn.MSELoss",

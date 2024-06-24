@@ -2,10 +2,10 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-from sktime.forecasting.base import ForecastingHorizon
 
-from ..lags import LagSlots, resolve_lags, resolve_tlags, tlags_start, RangeType
-from ..utils import NoneType, RangeType, to_matrix, lrange
+from sktime.forecasting.base import ForecastingHorizon
+from ..lags import tlags_start
+from ..utils import NoneType, to_matrix
 
 ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
 
@@ -18,19 +18,19 @@ ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
 
 class TimeseriesTransform:
 
-    def _check_X(self, X):
-        X = to_matrix(X)
-        assert isinstance(X, (NoneType, np.ndarray))
-        return X
+    # def _check_X(self, X):
+    #     X = to_matrix(X)
+    #     assert isinstance(X, (NoneType, np.ndarray))
+    #     return X
 
-    def _check_y(self, y):
-        y = to_matrix(y)
-        assert isinstance(y, np.ndarray)
-        return y
+    # def _check_y(self, y):
+    #     y = to_matrix(y)
+    #     assert isinstance(y, np.ndarray)
+    #     return y
 
     def _check_Xy(self, X, y=None, fh=None):
-        X = to_matrix(X)
-        y = to_matrix(y)
+        # X = to_matrix(X)
+        # y = to_matrix(y)
         assert fh is None
         assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, (NoneType, np.ndarray))
@@ -46,6 +46,7 @@ class TimeseriesTransform:
         #
         # Then, the LAST value is the 'prediction_length'.
         #
+        fh_ = fh
         X = to_matrix(X)
         if fh is None or fh <= 0:
             assert X is not None, "If fh is not specified, X must be not None"
@@ -73,56 +74,27 @@ class TimeseriesTransform:
     def transform(self, y: ARRAY_OR_DF = None, X: ARRAY_OR_DF = None, fh=None) -> tuple:
         return X, y
 
-    def fit_transform(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF=None, fh=None):
+    def fit_transform(self, y: ARRAY_OR_DF, X: ARRAY_OR_DF = None, fh=None):
         return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
 
 class ModelTrainTransform(TimeseriesTransform):
 
-    def __init__(self, slots, tlags):
-        if not isinstance(slots, LagSlots):
-            slots = resolve_lags(slots)
-        if isinstance(tlags, (int, RangeType)):
-            tlags = resolve_tlags(tlags)
-
-        assert isinstance(slots, LagSlots)
-        assert isinstance(tlags, (tuple, list, RangeType))
-
-        self.slots: LagSlots = slots
-        self.xlags: list = slots.xlags
-        self.ylags: list = slots.ylags
-        self.tlags: list = list(tlags)
+    def __init__(self, xlags, ylags, tlags):
+        self.xlags: list = xlags
+        self.ylags: list = ylags
+        self.tlags: list = tlags
     # end
-
-    # def fit(self, y: np.ndarray, X: Optional[np.ndarray]=None):
-    #     return self
-    # # end
-
-    # def transform(self, y: np.ndarray, X: Optional[np.ndarray]=None) -> tuple:
-    #     return X, y
-    # # end
-
-    # def fit_transform(self, y: np.ndarray, X: Optional[np.ndarray]=None):
-    #     return self.fit(y=y, X=X).transform(y=y, X=X)
 # end
 
 
 class ModelPredictTransform(TimeseriesTransform):
 
-    def __init__(self, slots, tlags):
-        if not isinstance(slots, LagSlots):
-            slots = resolve_lags(slots)
-        if not isinstance(tlags, (list, tuple)):
-            tlags = resolve_tlags(tlags)
-
-        assert isinstance(slots, LagSlots)
-        assert isinstance(tlags, (list, tuple)), f"Parameter tlags not of type list|tuple: {tlags}"
-
-        self.slots: LagSlots = slots
-        self.xlags: list[int] = slots.xlags
-        self.ylags: list[int] = slots.ylags
-        self.tlags: list[int] = tlags
+    def __init__(self, xlags, ylags, tlags):
+        self.xlags: list = xlags
+        self.ylags: list = ylags
+        self.tlags: list = tlags
         self.tstart: int = tlags_start(tlags)
 
         self.Xh = None  # X history
@@ -165,10 +137,11 @@ class ModelPredictTransform(TimeseriesTransform):
         #   in this case, it is necessary to start with the position '3'
         #   and advance 'i' ONLY of 2 slots.
         #   Really usable slots: [0,1]
-        assert isinstance(i, int), "The argument 'i' must be the location update (an integer)"
+        assert isinstance(i, (int, np.int32)), "The argument 'i' must be the location update (an integer)"
 
-        tlags = [t] if t is not None else self.tlags
-        tstart = 0 if t is not None else self.tstart
+        tlags = self.tlags if t is None else [t]
+        tstart = self.tstart if t is None else 0
+
         st = len(tlags)         # length of tlags
         mt = max(tlags)         # max tlags index
         nfh = len(self.yp)      # length of fh
@@ -199,15 +172,15 @@ class ModelPredictTransform(TimeseriesTransform):
         # that is, different information
         raise NotImplemented()
 
-    def to_pandas(self, yp):
-        if not isinstance(self.y_pandas, (pd.DataFrame, pd.Series)):
-            return yp
-
-        n = len(yp)
-        cutoff = self.y_pandas.index[-1]
-        fh = ForecastingHorizon(lrange(1, n+1), is_relative=True).to_absolute(cutoff)
-        if isinstance(self.y_pandas, pd.DataFrame):
-            return pd.DataFrame(data=yp, columns=self.y_pandas.columns, index=fh.to_pandas())
-        else:
-            return pd.Series(data=yp, name=self.y_pandas.name, index=fh.to_pandas())
+    # def to_pandas(self, yp):
+    #     if not isinstance(self.y_pandas, (pd.DataFrame, pd.Series)):
+    #         return yp
+    #
+    #     n = len(yp)
+    #     cutoff = self.y_pandas.index[-1]
+    #     fh = ForecastingHorizon(lrange(1, n+1), is_relative=True).to_absolute(cutoff)
+    #     if isinstance(self.y_pandas, pd.DataFrame):
+    #         return pd.DataFrame(data=yp, columns=self.y_pandas.columns, index=fh.to_pandas())
+    #     else:
+    #         return pd.Series(data=yp, name=self.y_pandas.name, index=fh.to_pandas())
 # end

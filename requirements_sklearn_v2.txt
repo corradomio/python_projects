@@ -1,0 +1,224 @@
+# ---------------------------------------------------------------------------
+# sklearn environment with support
+#   sktime (time series)
+#   pytorch (NN)
+# ---------------------------------------------------------------------------
+# Utilities
+
+
+# https://pypi.org/project/Deprecated/
+deprecated
+
+# https://path.readthedocs.io/en/latest/
+path
+
+# https://pypi.org/project/multimethod/
+multimethod
+
+# https://pypi.org/project/tabulate/
+tabulate
+
+# https://docs.h5py.org/en/stable/quick.html#quick
+h5py
+
+
+# ---------------------------------------------------------------------------
+# Standard libraries
+
+# https://numpy.org/
+numpy
+
+# https://xarray.dev/
+xarray
+
+# https://scipy.org/
+scipy
+
+# https://pandas.pydata.org/
+pandas
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+# https://networkx.org/
+# networkx
+
+
+
+# ---------------------------------------------------------------------------
+# scikit-learn
+
+# https://scikit-learn.org
+scikit-learn
+
+# https://scikit-image.org/
+scikit-image
+
+# https://github.com/scikit-learn-contrib/sklearn-pandas
+# sklearn-pandas
+
+# https://scikit-network.readthedocs.io/en/latest/
+# scikit-network
+
+# https://github.com/scikit-learn-contrib/category_encoders
+category_encoders
+
+# https://scikit-optimize.github.io/stable/
+# scikit-optimize
+
+# https://xgboost.readthedocs.io/en/stable/
+xgboost
+
+# https://catboost.ai/
+catboost
+
+# https://lightgbm.readthedocs.io/en/stable/
+lightgbm
+
+
+# ---------------------------------------------------------------------------
+# dimensional reduction
+
+# https://github.com/eamid/trimap
+# trimap isa based on annoy (https://github.com/spotify/annoy)
+# can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
+trimap
+
+# https://umap-learn.readthedocs.io/en/latest/
+umap-learn
+
+
+# ---------------------------------------------------------------------------
+# time series
+
+# https://sktime.org/
+sktime
+
+# http://alkaline-ml.com/pmdarima/
+pmdarima
+
+# https://www.statsmodels.org/stable/index.html
+statsmodels
+
+
+# ---------------------------------------------------------------------------
+# Extensions
+
+# https://pyts.readthedocs.io/en/stable
+#pyts
+
+# https://unit8co.github.io/darts/
+#darts
+
+# https://github.com/sktime/skpro
+#skpro
+
+# ---------------------------------------------------------------------------
+# NN but ONLY for scikit learn/time series
+
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch>=2.1
+torchvision
+torchaudio
+torchtext
+
+
+# https://skorch.readthedocs.io/en/stable/
+skorch
+
+
+# ---------------------------------------------------------------------------
+# database access
+# sqlalchemy
+#   mysql
+#   postgresql
+
+# https://www.psycopg.org/
+psycopg2
+#psycopg2-binary
+# v3.0
+#psycopg[binary]
+
+# https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
+mysql-connector-python
+pymysql
+
+# https://www.sqlalchemy.org/
+# https://docs.sqlalchemy.org/en/14/dialects/mysql.html
+# https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
+sqlalchemy
+
+
+
+# ---------------------------------------------------------------------------
+# AFTER torch
+# ---------------------------------------------------------------------------
+
+
+# https://lightning.ai/
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
+lightning
+
+
+# https://nixtlaverse.nixtla.io/neuralforecast/index.html
+# https://pypi.org/project/neuralforecast/0.0.6/
+# https://github.com/Nixtla/neuralforecast/tree/main/
+neuralforecast
+
+# https://pypi.org/project/datasetsforecast/
+# https://github.com/Nixtla/datasetsforecast/tree/main/
+#datasetsforecast
+
+# https://pypi.org/project/hierarchicalforecast/
+# https://github.com/Nixtla/hierarchicalforecast/
+#hierarchicalforecast
+
+
+
+# ---------------------------------------------------------------------------
+# SUSPENDED
+# ---------------------------------------------------------------------------
+
+# https://github.com/solegalli/feature_engine
+# feature_engine
+
+# https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
+# xarray
+# https://sklearn-xarray.readthedocs.io/en/latest/
+# sklearn-xarray
+
+
+# https://pynndescent.readthedocs.io/en/latest/
+# pynndescent
+
+# https://github.com/scikit-learn-contrib/hdbscan
+# (https://www.lfd.uci.edu/~gohlke/pythonlibs/#hdbscan)
+# hdbscan
+
+# (https://github.com/spotify/annoy)
+# annoy
+
+# https://igraph.org/python/
+# https://igraph.readthedocs.io/en/stable/
+# igraph
+
+# https://automl.github.io/auto-sklearn/master/
+# auto-sklearn
+
+# SMT: Surrogate Modeling Toolbox
+# https://smt.readthedocs.io/en/latest/index.html
+# https://pypi.org/project/smt/
+# smt
+
+# https://docs.pytest.org/en/8.0.x/
+# pytest
+
+# https://packaging.python.org/en/latest/
+# packaging
+
+# https://pypi.org/project/PyYAML/
+# PyYAML

@@ -1,4 +1,4 @@
-#
+# ---------------------------------------------------------------------------
 # Extension of 'isinstance' to support (partially) the Python type hints
 # It is possible to use
 #
@@ -13,6 +13,16 @@
 #       https://docs.python.org/3/library/typing.html
 #       https://peps.python.org/pep-0484/
 #
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Parametrized types:
+#   a type can be parametrized, as 'list[int]' if it defines
+#
+#       __class_getitem__(cls, item) -> GenericAlias
+#
+# ref: https://docs.python.org/3/reference/datamodel.html#object.__class_getitem__
+# ---------------------------------------------------------------------------
 
 #
 #   _Final (typing)
@@ -30,11 +40,6 @@
 #               _CallableType(_SpecialGenericAlias, _root=True) (typing)
 #               _TupleType(_SpecialGenericAlias, _root=True) (typing)
 # .
-from typing import _type_check, _remove_dups_flatten
-from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
-from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
-
-__version__ = '1.0.1'
 
 __all__ = [
     'is_instance',
@@ -45,6 +50,12 @@ __all__ = [
     'IS_INSTANCE_OF',   # used for extensions
     'IsInstance'
 ]
+
+__version__ = '1.0.1'
+
+from typing import _type_check, _remove_dups_flatten
+from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
+from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
 
 # ---------------------------------------------------------------------------
 # Typing types supported/unsupported
@@ -723,13 +734,15 @@ def is_instance(obj, a_type, msg=None) -> bool:
     # if hasattr(a_type, '__supertype__'):
     #     return is_instance(obj, a_type.__supertype__)
 
-    if isinstance(a_type, (tuple, list)):
+    # is_instance(obj, (T1, T2, ...))
+    if isinstance(a_type, tuple):
         a_types: tuple[type] = a_type
         for a_type in a_types:
             if is_instance(obj, a_type):
                 return True
         return False
 
+    # is_instance(obj, Union[...])
     t_name = type_name(a_type)
 
     if t_name in IS_INSTANCE_OF:

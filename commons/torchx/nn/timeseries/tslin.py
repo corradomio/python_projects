@@ -1,15 +1,16 @@
-import torch.nn as nn
-from stdlib import kwparams, kwexclude
-from .ts import TimeSeriesModel
-from .tsutils import apply_if
-from ... import nn as nnx
-from ...activation import activation_function
 
 __all__ = [
     "TSLinear",
     "TSRNNLinear",
     "TSCNNLinear"
 ]
+
+import torch.nn as nn
+from stdlib import kwparams, kwexclude
+from .ts import TimeSeriesModel
+from .tsutils import apply_if
+from ... import nn as nnx
+from ...nn_init import activation_function
 
 # ---------------------------------------------------------------------------
 # TSLinearModel
@@ -47,7 +48,7 @@ class TSLinear(TimeSeriesModel):
 
         self.hidden_size = hidden_size
         self.activation = activation
-        self.activation_params = kwparams(kwargs, 'activation')
+        self.activation_kwargs = kwparams(kwargs, 'activation')
 
         if hidden_size is None:
             hidden_size = []
@@ -63,7 +64,7 @@ class TSLinear(TimeSeriesModel):
             for i in range(nlayers):
                 layers.append(nnx.Linear(in_features=layers_size[i], out_features=layers_size[i+1]))
                 if self.activation is not None:
-                    layers.append(activation_function(self.activation, self.activation_params))
+                    layers.append(activation_function(self.activation, self.activation_kwargs))
             layers.append(nnx.Linear(in_features=layers_size[nlayers], out_features=output_shape))
             self.model = nn.Sequential(*layers)
         # end
@@ -108,7 +109,7 @@ class TSRNNLinear(TimeSeriesModel):
         self.hidden_size = hidden_size
         self.flavour = flavour
 
-        activation_params = kwparams(kwargs, 'activation')
+        activation_kwargs = kwparams(kwargs, 'activation')
 
         rnn_params = kwexclude(kwargs, 'activation')
         rnn_params['input_size'] = feature_size
@@ -122,7 +123,7 @@ class TSRNNLinear(TimeSeriesModel):
             self.input_adapter = nnx.Linear(in_features=input_size, out_features=feature_size)
 
         self.rnn = nnx.create_rnn(flavour, **rnn_params)
-        self.relu = activation_function(activation, activation_params)
+        self.relu = activation_function(activation, activation_kwargs)
 
         self.output_adapter = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=(ouput_seqlen, output_size))
     # end
@@ -172,7 +173,7 @@ class TSCNNLinear(TimeSeriesModel):
         self.hidden_size = hidden_size
         self.flavour = flavour
 
-        activation_params = kwparams(kwargs, 'activation')
+        activation_kwargs = kwparams(kwargs, 'activation')
 
         cnn_params = kwexclude(kwargs, 'activation') | {
             'in_channels': feature_size,
@@ -190,7 +191,7 @@ class TSCNNLinear(TimeSeriesModel):
             self.input_adapter = nnx.Linear(in_features=input_size, out_features=feature_size)
 
         self.cnn = nnx.create_cnn(flavour, **cnn_params)
-        self.relu = activation_function(activation, activation_params)
+        self.relu = activation_function(activation, activation_kwargs)
 
         self.output_adapter = nnx.Linear(in_features=(input_seqlen, hidden_size), out_features=output_shape)
     # end

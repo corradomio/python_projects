@@ -98,7 +98,7 @@ def m2vec(m):
     :return tuple: xs, ys, zs
     """
 
-    assert len(m.shape) == 2
+    assert m.ndim == 2
 
     ny, nx = m.shape
     n = nx * ny

@@ -1,20 +1,18 @@
-import logging
-from typing import Optional, Union, Any
-
-import numpy as np
-import pandas as pd
-from sktime.forecasting.base import ForecastingHorizon
-
-from .base import ExtendedBaseForecaster
-from ..lags import resolve_lags, resolve_tlags
-from ..transform.lin import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, import_from, qualified_name
-from ..utils import to_matrix
 
 __all__ = [
     "LinearForecaster",
-    # "LinearForecastRegressor"
 ]
+
+
+import logging
+from typing import Optional, Union, Any, Sized, cast
+
+import numpy as np
+from stdlib import name_of
+from .base import ForecastingHorizon
+from .base import KwArgsForecaster, yx_lags, t_lags
+from ..transform.lin import LinearTrainTransform, LinearPredictTransform
+from ..utils import PD_TYPES, import_from, qualified_name
 
 
 # ---------------------------------------------------------------------------
@@ -44,53 +42,16 @@ __all__ = [
 
 
 # ---------------------------------------------------------------------------
-# LinearForecaster
+# LinearForecasterV2
 # ---------------------------------------------------------------------------
-#
-# We suppose that the dataset is ALREADY normalized.
-# the ONLY information is to know the name of the target column'
-#
 
-class LinearForecaster(ExtendedBaseForecaster):
+class LinearForecaster(KwArgsForecaster):
     _tags = {
-        # to list all valid tags with description, use sktime.registry.all_tags
-        #   all_tags(estimator_types="forecaster", as_dataframe=True)
-        #
-        # behavioural tags: internal type
-        # -------------------------------
-        #
-        # y_inner_mtype, X_inner_mtype control which format X/y appears in
-        # in the inner functions _fit, _predict, etc
-        "y_inner_mtype": "pd.Series",
-        "X_inner_mtype": "pd.DataFrame",
-        # valid values: str and list of str
-        # if str, must be a valid mtype str, in sktime.datatypes.MTYPE_REGISTER
-        #   of scitype Series, Panel (panel data) or Hierarchical (hierarchical series)
-        #   in that case, all inputs are converted to that one type
-        # if list of str, must be a list of valid str specifiers
-        #   in that case, X/y are passed through without conversion if on the list
-        #   if not on the list, converted to the first entry of the same scitype
-        #
-        # scitype:y controls whether internal y can be univariate/multivariate
-        # if multivariate is not valid, applies vectorization over variables
-        "scitype:y": "univariate",
-        # valid values: "univariate", "multivariate", "both"
-        #   "univariate": inner _fit, _predict, etc, receive only univariate series
-        #   "multivariate": inner methods receive only series with 2 or more variables
-        #   "both": inner methods can see series with any number of variables
-        #
-        # capability tags: properties of the estimator
-        # --------------------------------------------
-        #
-        # ignores-exogeneous-X = does estimator ignore the exogeneous X?
+        "y_inner_mtype": "np.ndarray",
+        "X_inner_mtype": "np.ndarray",
+        "scitype:y": "both",
         "ignores-exogeneous-X": False,
-        # valid values: boolean True (ignores X), False (uses X in non-trivial manner)
-        # CAVEAT: if tag is set to True, inner methods always see X=None
-        #
-        # requires-fh-in-fit = is forecasting horizon always required in fit?
         "requires-fh-in-fit": False,
-        # valid values: boolean True (yes), False (no)
-        # if True, raises exception in fit if fh has not been passed
     }
 
     # -----------------------------------------------------------------------
@@ -107,92 +68,84 @@ class LinearForecaster(ExtendedBaseForecaster):
         Sktime compatible forecaster based on Scikit models.
         It offers the same interface to other sktime forecasters, instead than to use
         'make_reduction'.
-        It extends the flexibility of 'make_reduction' because it is possibile to
+        It extends the flexibility of 'make_reduction' because it is possible to
         specify past & future lags not only as simple integers but using specific
         list of integers to use as offset respect the timeslot to predict.
 
-        Note: there is AN INCOMPATIBILITY to resolve:
+        The parameter 'lags' is an unique parameter for 'y' and 'X".
+        If it is specified the lags for X, and the input features are not available,
+        it will be ignored
 
-            in sktime the FIRST timeslot to predict has t=1
-            here      the FIRST timeslot to predict has t=0
+        | TODO: there is AN INCOMPATIBILITY to resolve:
+        |
+        |    in sktime the FIRST timeslot to predict has t=1
+        |    here      the FIRST timeslot to predict has t=0
+        |
+        |    THIS MUST BE RESOLVED!
 
-            THIS MUST BE RESOLVED!
+        There are 2 lags specifications:
 
-        :param lags:
-                int                 same for input and target
-                (ilag, tlag)        input lag, target lag
-                ([ilags], [tlags])  selected input/target lags
-                {
-                    'period_type': <period_type>,
-                    'input': {
-                        <period_type_1>: <count_1>,
-                        <period_type_2>: <count_2>,
-                        ...
-                    },
-                    'target: {
-                        <period_type_1>: <count_1>,
-                        <period_type_2>: <count_2>,
-                        ...
-                    },
-                    'current': True
-                }
+            lags:   lags for the past (xlags, ylags)
+            tlags:  lags for the future (target lags)
+
+        The lags values can be:
+
+            int         : represent the sequence [  1,2,...,n  ] for ylags, xlags lags
+                          and       the sequence [0,1,2,...,n-1] for tlags
+
+            list/tuple  : specific from the FIRST day to predict
+
+        :param lags: lags for target (y) and input features (X)
+
+                    int                 same for target (ylags) and input (xlags)
+                    (ylags,)            only for target (ylags). For input (xlags) will be []
+                    (ylag, xlag)        input lags, target lags
+
+                ylags and xlags can ber represented with an integer, corresponding to the list
+                [1,2,...*lags], or by a specific list of lags.
+                The value None is converted into the empty list []
+
+        :param tlags:  lags for the prdiction target (tlags). Same configuration as before
 
         :param estimator: estimator to use. It can be
                 - a fully qualified class name (str). The parameters to use must be passed with 'kwargs'
                 - a Python class (type). The parameters to use must be passed with 'kwargs'
-                - a class instance. The parameters 'kwargs' are retrieved from the instance
-        :param kwargs: parameters to pass to the estimator constructor, if necessary, or retrieved from the
-                estimator instance
+
+        :param kwargs: parameters to pass to the estimator constructor
+
         :param flatten: if to use a single model to predict the forecast horizon or a model for each
                 timeslot
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         # Unmodified parameters [readonly]
         self.lags = lags
         self.tlags = tlags
-        self.estimator = estimator
+        self.estimator = qualified_name(estimator)
         self.flatten = flatten
-        self.kwargs = kwargs
 
-        # effective parameters
-        self._kwargs = kwargs
-        self._tlags = resolve_tlags(tlags)
-        self._slots = resolve_lags(lags)
+        # Effective parameters
+        _xylags = yx_lags(lags)
+        self._ylags = _xylags[0]            # past y lags
+        self._xlags = _xylags[1]            # past x lags
+        self._tlags = t_lags(tlags)         # future lags (tlags)
 
-        self._estimators = {}       # one model for each 'tlag'
+        self._estimators = {}               # one model for each 'tlag'
+        self._create_estimators(kwargs)
 
-        if isinstance(estimator, str):
-            self.estimator = estimator
-            self._create_estimators(import_from(self.estimator))
-        elif isinstance(estimator, type):
-            self.estimator = qualified_name(estimator)
-            self._create_estimators(estimator)
-        else:
-            self.estimator = qualified_name(type(estimator))
-            self._kwargs = estimator.get_params()
-            self._create_estimators(type(estimator))
-
-        self._X = None
-        self._y = None
-
-        name = self.estimator[self.estimator.rfind('.')+1:]
+        name = name_of(self.estimator)
         self._log = logging.getLogger(f"LinearForecaster.{name}")
-        # self._log.info(f"Created {self}")
     # end
 
-    def _create_estimators(self, estimator=None):
+    def _create_estimators(self, kwargs):
+        estimator = import_from(self.estimator)
+
         if self.flatten:
-            self._estimators[0] = estimator(**self._kwargs)
+            self._estimators[0] = estimator(**kwargs)
         else:
             for t in self._tlags:
-                self._estimators[t] = estimator(**self._kwargs)
+                self._estimators[t] = estimator(**kwargs)
     # end
-
-    def transform(self, y, X):
-        X = to_matrix(X)
-        y = to_matrix(y)
-        return y, X
 
     # -----------------------------------------------------------------------
     # Properties
@@ -202,36 +155,32 @@ class LinearForecaster(ExtendedBaseForecaster):
         params = super().get_params(deep=deep) | {
             'lags': self.lags,
             'tlags': self.tlags,
+            'estimator': self.estimator,
             'flatten': self.flatten,
-            'estimator': self.estimator
-        } | self._kwargs
+        }   # | self._kwargs
         return params
-    # end
 
     # -----------------------------------------------------------------------
     # fit
     # -----------------------------------------------------------------------
 
-    def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: Optional[ForecastingHorizon] = None):
-        self._X = X
-        self._y = y
-
-        yh, Xh = self.transform(y, X)
+    def _fit(self, y, X=None, fh=None):
+        assert isinstance(y, np.ndarray)
 
         if self.flatten:
-            self._fit_flatten(Xh, yh)
+            self._fit_flatten(y, X)
         else:
-            self._fit_tlags(Xh, yh)
+            self._fit_tlags(y, X)
         return self
 
-    def _fit_flatten(self, Xh, yh):
-        tt = LinearTrainTransform(slots=self._slots, tlags=self._tlags)
+    def _fit_flatten(self, yh, Xh):
+        tt = LinearTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=True)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
         self._estimators[0].fit(Xt, yt)
 
-    def _fit_tlags(self, Xh, yh):
+    def _fit_tlags(self, yh, Xh):
         tlags = self._tlags
-        tt = LinearTrainTransform(slots=self._slots, tlags=tlags)
+        tt = LinearTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=tlags, flatten=True)
         Xt, ytt = tt.fit_transform(X=Xh, y=yh)
         st = len(tlags)
 
@@ -239,6 +188,8 @@ class LinearForecaster(ExtendedBaseForecaster):
             t = tlags[i]
             yt = ytt[:, i:i+1]
             self._estimators[t].fit(Xt, yt)
+        pass
+    # end
 
     # -----------------------------------------------------------------------
     # predict
@@ -249,31 +200,21 @@ class LinearForecaster(ExtendedBaseForecaster):
     #
 
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
-        # [BUG]
-        # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-
-        fhp = fh
-        if fhp.is_relative:
-            fh = fhp
-            fhp = fh.to_absolute(self.cutoff)
-        else:
-            fh = fhp.to_relative(self.cutoff)
-
-        nfh = int(fh[-1])
+        nfh = len(cast(Sized, fh))
 
         if self.flatten:
-            y_pred = self._predict_flatten(X, nfh, fhp)
+            y_pred = self._predict_flatten(X, nfh)
         else:
-            y_pred = self._predict_tlags(X, nfh, fhp)
+            y_pred = self._predict_tlags(X, nfh)
 
         return y_pred
     # end
 
-    def _predict_flatten(self, X, nfh, fhp):
-        yh, Xh = self.transform(self._y, self._X)
-        _, Xs  = self.transform(None, X)
+    def _predict_flatten(self, X, nfh):
+        yh, Xh = self._y, self._X
+        _, Xs = None, X
 
-        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
+        pt = LinearPredictTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=True)
         yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
 
         i = 0
@@ -285,16 +226,13 @@ class LinearForecaster(ExtendedBaseForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        # add the index
-        yp = self.inverse_transform(yp)
-        y_series: pd.Series = self._from_numpy(yp, fhp)
-        return y_series
+        return yp
 
-    def _predict_tlags(self, X, nfh, fhp):
-        yh, Xh = self.transform(self._y, self._X)
-        _, Xs = self.transform(None, X)
+    def _predict_tlags(self, X, nfh):
+        yh, Xh = self._y, self._X
+        _, Xs = None, X
 
-        pt = LinearPredictTransform(slots=self._slots, tlags=self._tlags)
+        pt = LinearPredictTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=True)
         yp = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)  # save X,y prediction
         tlags = self._tlags
 
@@ -309,21 +247,12 @@ class LinearForecaster(ExtendedBaseForecaster):
                 y_pred: np.ndarray = model.predict(Xt)
 
                 it = pt.update(i, y_pred, t)
+
+                if it >= nfh: break
             i = it
         # end
 
-        # add the index
-        yp = self.inverse_transform(yp)
-        y_series: pd.Series = self._from_numpy(yp, fhp)
-        return y_series
-
-    def _from_numpy(self, ys, fhp):
-        ys = ys.reshape(-1)
-
-        index = pd.period_range(self.cutoff[0] + 1, periods=len(ys))
-        yp = pd.Series(ys, index=index)
-        yp = yp.loc[fhp.to_pandas()]
-        return yp.astype(float)
+        return yp
 
     # -----------------------------------------------------------------------
     # update
@@ -345,22 +274,19 @@ class LinearForecaster(ExtendedBaseForecaster):
     # Support
     # -----------------------------------------------------------------------
 
-    def get_state(self) -> bytes:
-        import pickle
-        state: bytes = pickle.dumps(self)
-        return state
+    # def get_state(self) -> bytes:
+    #     import pickle
+    #     state: bytes = pickle.dumps(self)
+    #     return state
 
     def __repr__(self, **kwargs):
-        return f"LinearForecaster[{self.estimator}]"
+        return f"LinearForecaster[{name_of(self.estimator)}]"
 
     # -----------------------------------------------------------------------
     # End
     # -----------------------------------------------------------------------
 # end
 
-
-# Compatibility
-LinearForecastRegressor = LinearForecaster
 
 # ---------------------------------------------------------------------------
 # End

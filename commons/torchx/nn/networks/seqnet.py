@@ -1,12 +1,13 @@
-import torch.nn as nn
-
-from stdlib import dict_select
-from torchx.nn.modules.rnn import RNNX_FLAVOURS, RNNX_PARAMS
-from torchx.utils import time_repeat
 
 __all__ = [
     'Seq2SeqNetwork'
 ]
+
+import torch.nn as nn
+
+from stdlib import kwselect
+from torchx.nn.modules.rnn import RNNX_FLAVOURS, RNNX_PARAMS
+from torchx.utils import time_repeat
 
 
 # ---------------------------------------------------------------------------
@@ -15,7 +16,7 @@ __all__ = [
 
 def _create_rnn(flavour, all_params, prefix):
     rnn_class = RNNX_FLAVOURS[flavour]
-    rnn_params = dict_select(all_params, RNNX_PARAMS)
+    rnn_params = kwselect(all_params, RNNX_PARAMS)
     rnn = rnn_class(**rnn_params)
     return rnn
 

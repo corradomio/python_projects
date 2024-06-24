@@ -2,16 +2,16 @@
 # Transformers for Time Series
 #
 
+__all__ = [
+    "TSPlainTransformer",
+]
+
 import torch
 
 from .ts import TimeSeriesModel
 from .tspos import positional_encoding
 from .tsutils import apply_if
 from ... import nn as nnx
-
-__all__ = [
-    "TSPlainTransformer",
-]
 
 
 # ---------------------------------------------------------------------------

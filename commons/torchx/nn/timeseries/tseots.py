@@ -1,6 +1,12 @@
 #
 # Transformers for Time Series
 #
+
+__all__ = [
+    "TSEncoderOnlyTransformer",
+    "TSCNNEncoderTransformer"
+]
+
 import math
 from typing import Optional
 
@@ -11,11 +17,6 @@ from torch import Tensor
 from .ts import TimeSeriesModel
 from .tstran import positional_encoding
 from ... import nn as nnx
-
-__all__ = [
-    "TSEncoderOnlyTransformer",
-    "TSCNNEncoderTransformer"
-]
 
 
 # ---------------------------------------------------------------------------

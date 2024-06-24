@@ -49,6 +49,8 @@ def check_predict(ipom: IPlanObjectModel):
 
     with ipom.connect():
         ts = ipom.time_series().focussed(time_series_id).using_plan(plan_id)
+        freq = ts.freq
+        periods = ts.periods
         area_hierarchy = ts.area_hierarchy
         skill_hierarchy = ts.skill_hierarchy
         data_master = ts.data_master
@@ -59,8 +61,17 @@ def check_predict(ipom: IPlanObjectModel):
 
         # df_train = ts.train().select(end_date=end_date, area=area_id, skill=skill_id, new_format=False)
         df_train = ts.train().select(new_format=False, use_plan=False)
-        df_train = ts.train().select(new_format=False, use_plan=False, end_date=from_date)
-        df_pred = ts.predict().select(area=area_id, skill=skill_id, new_format=False)
+        # df_train = ts.train().select(new_format=False, use_plan=False, end_date=from_date)
+        df_pred = ts.predict().select(area=area_id, skill=skill_id, plan_id=13356658,
+                                      new_format=False)
+
+        df_past_future = ts.past_future().select(
+            area=area_id, skill=skill_id, plan_id=13356658,
+            new_format=False
+        )
+
+        models = ts.models().select(area=953, skill=993)
+
         pass
     pass
 

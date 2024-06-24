@@ -1,0 +1,134 @@
+BaseForecaster(BaseEstimator) (sktime.forecasting.base._base)
+    ExtendedBaseForecaster(BaseForecaster) (sktimex.forecasting.base)
+        ScikitForecaster(ExtendedBaseForecaster) (sktimex.forecasting.scikit)
+        LinearForecaster(ExtendedBaseForecaster) (sktimex.forecasting.linear)
+        TransformForecaster(ExtendedBaseForecaster) (sktimex.forecasting.base)
+            BaseNNForecaster(TransformForecaster) (sktimex.forecasting.nn)
+                LinearNNForecaster(BaseNNForecaster) (sktimex.forecasting.lnn)
+                BaseCNNForecaster(BaseNNForecaster) (sktimex.forecasting.cnn)
+                    CNNLinearForecaster(BaseCNNForecaster) (sktimex.forecasting.cnn)
+                BaseRNNForecaster(BaseNNForecaster) (sktimex.forecasting.rnn)
+                    RNNLinearForecaster(BaseRNNForecaster) (sktimex.forecasting.rnn)
+                SkorchForecaster(BaseNNForecaster) (sktimex.forecasting.skorch)
+        DartsBaseForecaster(ExtendedBaseForecaster) (sktimex.darts.base)
+            ARIMA(DartsBaseForecaster) (sktimex.darts.arima)
+            LinearForecaster(DartsBaseForecaster) (sktimex.darts.linear)
+
+
+
+
+
+Abstract Forecasters
+----------------------
+
+    ExtendedBaseForecaster
+
+        Base class for all custom models
+        
+        It add the method
+        
+            predict_history(fh, X=None, yh=None, Xh=None)
+
+        where it is possible to call 'predict' using the same model
+        but on a different set of past .data 
+
+    TransformForecaster(ExtendedBaseForecaster)
+
+        Base class for forecaster requiring some simple pre/post processing on the data
+
+            TransformForecaster(
+                ...                             inderited parameters
+                method=None                     transform method: 'minmax', 'standard', 'identity', None
+                **method__<kwarg>               methods specific parameters
+            )
+
+
+Base class for NN models
+------------------------
+
+    Base class for all NN models.
+    It is based on 'skorch'.
+    
+    Note: all NN models can be created ONLY on the 'fit', where it is possible to
+    know the data structure:
+    
+        number of features for X
+        number of features for y
+        
+        BaseNNForecaster(
+            lags                            past lags (input features/target)
+            tlags                           lags to predict (target lags)
+            
+            scale                           if to scale the values
+            flavour                         which sub-NN model to use, whe available
+                                            For example RNN: LSTM, GRU, standard RNN
+            
+            criterion                       loss function
+            optimizer                       NN optimizer
+            lr                              learning rate
+            
+            batch_size                      batch size
+            max_epochs                      max epocks
+            callbacks                       callbacks called at each epoch
+            
+            patience                        used to implemen an early-stopping
+            **kwrags                        other parameters
+        )
+        
+    'criterion' and 'optimizers' can be specified by string, using the same names
+    used in PyTorch, in lowercase, excliding the suffix 'loss', or by fully qualified
+    class name, or by Python class
+    
+    For the NN models, it is used the term 'input_shape', 'output_shape', 'hidden_shape'
+    This because the layer to create has 3 dimensions:
+    
+        (batch, lags, feature_size)
+
+    'input_shape' and 'output_shape' are inferred automatically.
+
+
+ScikitForecaster
+----------------
+
+    if used with scikit-learn models ('sklearn', 'catboost', 'lightgbm', 'xgboost')
+            
+            ScikitForecaster(
+                window_length                   past window
+                prediction_length               prediction window
+                estimator                       estimator qualified name | type | instance
+            )
+
+    if used with sktime models ('sktime')
+        
+            ScikitForecaster(
+                estimator                       estimator qualified name | type | instance
+                **kwargs                        model's specific parameters
+            )
+
+
+LinearNNForecaster
+------------------
+
+    Simple NN forecaster based on one or two single dense layers`       .
+    
+            LinearNNForecaster(BaseNNForecaster) {
+                flavour='lin',          
+                activation=None,
+                activation_kwargs=None,
+                hidden_size=None,
+            }
+
+    for now, 'lin' is the only flavour supported.
+    If it is specified 'hidden_shape', it is possible to specify the
+    'activation function' (and extra 'activation_kwargs').
+    
+    TODO: to add 'activation__<param>'
+
+
+
+RNNLinearForecaster
+-------------------
+
+            RNNLinearForecaster(BaseNNForecaster) {
+                flavour='lin',
+            }

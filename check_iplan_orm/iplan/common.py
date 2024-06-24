@@ -3,9 +3,9 @@ from datetime import datetime
 
 import pandas as pd
 from pandas import DataFrame
+from sqlalchemy import Table
 
 import stdlib.loggingx as logging
-from stdlib.dateutilx import relativeperiods
 from stdlib.dict import reverse_dict
 from stdlib.is_instance import is_instance
 
@@ -21,60 +21,60 @@ def safe_int(s):
         return s
 
 
-def start_end_dates(
-    start_date: typing.Optional[datetime],
-    end_date: typing.Optional[datetime],
-    periods: typing.Optional[int],
-    freq: typing.Literal['D', 'W', 'M'],
-    which_date: typing.Optional[bool] = None
-) -> tuple[typing.Optional[datetime], typing.Optional[datetime]]:
-    """
-    Compute the start/end dates based on the passed dates,
-    the number of periods and the period frequency
-
-    It is possible to specify which date to compute:
-
-        - None: both dates
-        - True: end_date
-        - False: start_date
-
-    :param start_date: start date
-    :param end_date: end date
-    :param periods: number of periods
-    :param freq: period length (frequency)
-    :param which_date: which date to compute
-    :return:
-    """
-    assert is_instance(start_date, typing.Optional[datetime])
-    assert is_instance(end_date, typing.Optional[datetime])
-    assert is_instance(periods, typing.Optional[int])
-    assert is_instance(freq, typing.Literal['D', 'W', 'M'])
-
-    # not date specified: none to do
-    if start_date is None and end_date is None:
-        return None, None
-    # both dates already specified: none to do
-    if start_date is not None and end_date is not None:
-        return start_date, end_date
-    # start date specified and requires the start date: none to do
-    if start_date is not None and which_date is False:
-        return start_date, end_date
-    # end date specified and it is required the end date: none to do
-    if end_date is not None and which_date is True:
-        return start_date, end_date
-
-    # periods and freq MUST be specified
-    if periods is None or periods <= 0 or freq is None:
-        raise ValueError("Unable to resolve start_date/end_date: missing periods or frequency")
-
-    if end_date is None:
-        end_date = start_date + relativeperiods(periods=periods, freq=freq)
-    elif start_date is None:
-        start_date = end_date - relativeperiods(periods=periods, freq=freq)
-    else:
-        raise ValueError("Unable to resolve start_date/end_date: missing periods or frequency")
-
-    return start_date, end_date
+# def start_end_dates(
+#     start_date: typing.Optional[datetime],
+#     end_date: typing.Optional[datetime],
+#     periods: typing.Optional[int],
+#     freq: typing.Literal['D', 'W', 'M'],
+#     which_date: typing.Optional[bool] = None
+# ) -> tuple[typing.Optional[datetime], typing.Optional[datetime]]:
+#     """
+#     Compute the start/end dates based on the passed dates,
+#     the number of periods and the period frequency
+#
+#     It is possible to specify which date to compute:
+#
+#         - None: both dates
+#         - True: end_date
+#         - False: start_date
+#
+#     :param start_date: start date
+#     :param end_date: end date
+#     :param periods: number of periods
+#     :param freq: period length (frequency)
+#     :param which_date: which date to compute
+#     :return:
+#     """
+#     assert is_instance(start_date, typing.Optional[datetime])
+#     assert is_instance(end_date, typing.Optional[datetime])
+#     assert is_instance(periods, typing.Optional[int])
+#     assert is_instance(freq, typing.Literal['D', 'W', 'M'])
+#
+#     # not date specified: none to do
+#     if start_date is None and end_date is None:
+#         return None, None
+#     # both dates already specified: none to do
+#     if start_date is not None and end_date is not None:
+#         return start_date, end_date
+#     # start date specified and requires the start date: none to do
+#     if start_date is not None and which_date is False:
+#         return start_date, end_date
+#     # end date specified and it is required the end date: none to do
+#     if end_date is not None and which_date is True:
+#         return start_date, end_date
+#
+#     # periods and freq MUST be specified
+#     if periods is None or periods <= 0 or freq is None:
+#         raise ValueError("Unable to resolve start_date/end_date: missing periods or frequency")
+#
+#     if end_date is None:
+#         end_date = start_date + relativeperiods(periods=periods, freq=freq)
+#     elif start_date is None:
+#         start_date = end_date - relativeperiods(periods=periods, freq=freq)
+#     else:
+#         raise ValueError("Unable to resolve start_date/end_date: missing periods or frequency")
+#
+#     return start_date, end_date
 
 
 # ---------------------------------------------------------------------------
@@ -91,25 +91,32 @@ def concatenate_no_skill_df(df_with_skill: DataFrame, df_no_skill: DataFrame, sk
     return df_with_skill
 
 
-# def fill_missing_measures(df_pivoted: DataFrame, measure_dict: dict[int, str], new_format: bool) -> DataFrame:
-#     measure_ids = measure_dict.keys()
-#     # add missing columns (str(measure_id) OR measure_name) if necessary
-#     for mid in measure_ids:
-#         mname = measure_dict[mid] if new_format else str(mid)
-#         if mname not in df_pivoted.columns:
-#             df_pivoted[mname] = 0.
-#     return df_pivoted
+# ---------------------------------------------------------------------------
+# fill_missing_measures
+# ---------------------------------------------------------------------------
+
+def fill_missing_measures(df_pivoted: DataFrame, measure_dict: dict[int, str], defval=pd.NA) -> DataFrame:
+    new_format = 'area' in df_pivoted.columns
+    measure_ids = measure_dict.keys()
+    # add missing columns (str(measure_id) OR measure_name) if necessary
+    for mid in measure_ids:
+        mname = measure_dict[mid] if new_format else mid
+        if mname not in df_pivoted.columns:
+            df_pivoted[mname] = defval
+    return df_pivoted
 
 
 # ---------------------------------------------------------------------------
 # fill_missing_dates
+# ---------------------------------------------------------------------------
 
 def fill_missing_dates(
     df_data: DataFrame, *,
     area_dict: dict[int, str],
     skill_dict: dict[int, str],
     measure_dict: dict[int, str],
-    date_range) -> DataFrame:
+    date_range: pd.DatetimeIndex
+) -> DataFrame:
     """
     Fill the dataframe with the missing values to reach the end_date
     There are two cases:
@@ -137,38 +144,44 @@ def fill_missing_dates(
         new_format=new_format
     )
 
-    df_merged = merge_dataframes(df_data, df_default)
+    # df_merged = pd.concat([df_data, df_default]).reset_index(drop=True)
+    df_merged = pd.concat([df_data, df_default], ignore_index=True)
+
     return df_merged
 
 
 # ---------------------------------------------------------------------------
-# create_default_dataframe
-# merge_default_dataframe
+# set_nan_values
 # ---------------------------------------------------------------------------
 
-def create_default_dataframe(
+def set_nan_values(
+    df: DataFrame,
+    start_date: datetime,
+    measure_dict: dict[int, str]
+) -> DataFrame:
+
+    new_format = 'area' in df.columns
+    date_col = 'date' if new_format else 'state_date'
+
+    for measure_id in measure_dict:
+        mname = measure_dict[measure_id] if new_format else measure_id
+        df.loc[df[date_col] >= start_date, mname] = pd.NA
+
+    return df
+
+
+# ---------------------------------------------------------------------------
+# create_default_dataframe
+# ---------------------------------------------------------------------------
+
+def _create_default_dataframe(
     date_range,
     area_dict: dict[int, str], skill_dict: dict[int, str], measure_dict: dict[int, str],
     new_format
 ):
-    """
-    Create the default dataframe using the
-    :param start_date:
-    :param periods:
-    :param freq:
-    :param area_dict:
-    :param skill_dict:
-    :param measure_dict:
-    :return:
-    """
-    # assert is_instance(start_date, Union[datetime, pd.Timestamp])
-    # assert is_instance(periods, int)
-    # assert is_instance(freq, Literal['D', 'W', 'M'])
-    # assert is_instance(area_dict, dict[int, str])
-    # assert is_instance(skill_dict, dict[int, str])
-    # assert is_instance(measure_dict, dict[int, str])
-
+    """Create a NOT empty dataframe"""
     periods = len(date_range)
+    assert periods>0
 
     # compose the dataframe with for all areas/skill/daterange/measures
     df_list = []
@@ -186,24 +199,74 @@ def create_default_dataframe(
     df_flatten = pd.concat(df_list, axis=0, ignore_index=True)
     df_pivoted = pivot_df(df_flatten, area_dict, skill_dict, measure_dict, new_format=new_format)
     return df_pivoted
+# end
 
 
-def merge_dataframes(df_data: DataFrame, df_default: DataFrame) -> DataFrame:
-    assert is_instance(df_default, DataFrame)
-    assert is_instance(df_data, DataFrame)
+def _create_empty_default_dataframe(
+    date_range,
+    area_dict: dict[int, str], skill_dict: dict[int, str], measure_dict: dict[int, str],
+    new_format
+):
+    columns = ['area_id_fk', 'skill_id_fk', 'state_date']
+    for measure_id in measure_dict:
+        if new_format:
+            columns.append(measure_dict[measure_id])
+        else:
+            columns.append(measure_id)
 
-    if len(df_data) == 0:
-        return df_default
-    if len(df_default) == 0:
-        return df_data
+    default_df = DataFrame(data=[], columns=columns)
+    return default_df
 
-    df_merged = pd.concat([df_data, df_default]).reset_index(drop=True)
-    return df_merged
+
+def create_default_dataframe(
+    date_range: pd.DatetimeIndex,
+    area_dict: dict[int, str], skill_dict: dict[int, str], measure_dict: dict[int, str],
+    new_format
+):
+    """
+    Create the default dataframe using the
+    :param date_range: DatetimeIndex to use
+    :param area_dict:
+    :param skill_dict:
+    :param measure_dict:
+    :return:
+    """
+    assert is_instance(date_range, pd.DatetimeIndex)
+    # assert is_instance(area_dict, dict[int, str])
+    # assert is_instance(skill_dict, dict[int, str])
+    # assert is_instance(measure_dict, dict[int, str])
+
+    if len(date_range) > 0:
+        default_df = _create_default_dataframe(
+            date_range,
+            area_dict, skill_dict, measure_dict,
+            new_format
+        )
+    else:
+        default_df = _create_empty_default_dataframe(
+            date_range,
+            area_dict, skill_dict, measure_dict,
+            new_format
+        )
+    return default_df
+# end
+
+
+# def merge_dataframes(df_data: DataFrame, df_default: DataFrame) -> DataFrame:
+#     assert is_instance(df_default, DataFrame)
+#     assert is_instance(df_data, DataFrame)
+#
+#     if len(df_data) == 0:
+#         return df_default
+#     if len(df_default) == 0:
+#         return df_data
+#
+#     df_merged = pd.concat([df_data, df_default]).reset_index(drop=True)
+#     return df_merged
 
 
 # ---------------------------------------------------------------------------
 # pivot_df
-# compose_predict_df
 # ---------------------------------------------------------------------------
 
 # DON'T' TOUCH the order!
@@ -421,11 +484,11 @@ def normalize_df(df: DataFrame,
 
 
 # ---------------------------------------------------------------------------
-# where_start_end_date
+# [SQL] where_start_end_date
 # ---------------------------------------------------------------------------
 
 def where_start_end_date(
-    table, query, *,
+    table: Table, query, *,
     start_date: typing.Optional[datetime], end_date: typing.Optional[datetime],
     dtcol: str = 'state_date',
     start_included: bool = True,

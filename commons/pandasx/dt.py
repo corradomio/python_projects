@@ -1,13 +1,26 @@
+from typing import Literal
+
 import pandas as pd
 from datetime import datetime, date
 from stdlib.dateutilx import relativeperiods
 
 
+# ---------------------------------------------------------------------------
+# to_datetime
+# ---------------------------------------------------------------------------
+
 def to_datetime(dt) -> datetime:
+    """
+    Try to convert into a datetime an object represented
+    in several formats
+
+    :param dt:  object to convert
+    :return: datetime
+    """
     if dt is None:
         return None
     if isinstance(dt, str):
-        dt = pd.to_datetime(dt)
+        return pd.to_datetime(dt).to_pydatetime()
     if isinstance(dt, pd.Timestamp):
         return dt.to_pydatetime()
     if isinstance(dt, date):
@@ -20,39 +33,183 @@ def to_datetime(dt) -> datetime:
         raise ValueError(f"Unsupported datetime {dt}")
 
 
-def date_range(start=None, end=None, periods=None, freq=None, name=None, inclusive='both') -> pd.DatetimeIndex:
-    assert start is not None and freq is not None
-    assert end is not None or periods is not None
-    assert inclusive in ['left', 'right', 'both', 'neither']
+# ---------------------------------------------------------------------------
+# to_period
+# ---------------------------------------------------------------------------
 
-    start = to_datetime(start)
-    end = to_datetime(end)
+def to_period(dt: datetime, freq=None) -> pd.Period:
+    return pd.Period(dt, freq=freq)
+
+
+# ---------------------------------------------------------------------------
+# date_range
+# ---------------------------------------------------------------------------
+
+INCLUSIVE_TYPE = Literal['left', 'right', 'both', 'neither']
+
+
+def _sdp(start_date: datetime, periods: int, delta) -> list[datetime]:
 
     dr = []
-    curr_date = start
-    if periods is not None:
-        delta = relativeperiods(periods=periods, freq=freq)
+    cdt = start_date
+    for p in range(periods):
+        dr.append(cdt)
+        cdt += delta
 
-        if inclusive in ['left', 'right', ]:
-            periods += 1
-        elif inclusive == 'neither':
-            periods += 2
-        for _ in range(periods):
-            dr.append(curr_date)
-            curr_date += delta
-    else:
+    return dr
+
+
+def _edp(end_date: datetime, periods: int, delta) -> list[datetime]:
+
+    dr = []
+    cdt = end_date
+    for p in range(periods):
+        dr.append(cdt)
+        cdt -= delta
+
+    dr = dr[::-1]
+    return dr
+
+
+def _sedl(start_date, end_date, delta) -> list[datetime]:
+    # start_date, end_date, left
+
+    dr = []
+    cdt = start_date
+    ldt = start_date
+    while cdt <= end_date:
+        dr.append(cdt)
+        ldt = cdt
+        cdt += delta
+    if ldt != end_date:
+        dr.append(cdt)
+
+    return dr
+
+
+def _sedr(start_date, end_date, delta) -> list[datetime]:
+    # start_date, end_date, right
+
+    dr = []
+    cdt = end_date
+    ldt = end_date
+    while cdt >= start_date:
+        dr.append(cdt)
+        ldt = cdt
+        cdt -= delta
+    if ldt != start_date:
+        dr.append(cdt)
+
+    dr = dr[::-1]
+    return dr
+
+
+def date_range(start=None, end=None, periods=None,
+               freq=None, delta=None,
+               name=None,
+               inclusive: INCLUSIVE_TYPE = 'both', align='left') -> pd.DatetimeIndex:
+    """
+    This function has a behavior very similar than 'pd.date_range', with the following difference:
+    it is possible to specify timestamp with a specified freq)ency, starting at each datetime.
+    For example, it is possible to generate weekly timestamps starting from Wednesday, not from
+    Sunday or Monday.
+
+    It is also possible to generate sequences of timestamps starting from 'start_date' or 'end_date'
+    Possibilities:
+
+        start_date  periods     freq            inclusive       (forward)
+        end_date    periods     freq            inclusive       (backward)
+        start_date  end_date    freq    align   inclusive       (left:forward, right:backward)
+
+
+    :param start:
+    :param end:
+    :param periods:
+    :param freq:
+    :param delta:
+    :param name:
+    :param inclusive:
+    :param align:
+    :return:
+    """
+    assert isinstance(freq, (type(None), str))
+    assert delta is not None or freq is not None
+
+    start_date = to_datetime(start)
+    end_date = to_datetime(end)
+
+    if delta is None:
         delta = relativeperiods(periods=1, freq=freq)
 
-        while curr_date <= end:
-            dr.append(curr_date)
-            curr_date += delta
-        if curr_date != end:
-            dr.append(curr_date)
-    # end
+    if periods is not None:
+        if inclusive in ['neither', 'right']:
+            periods += 1
+        if inclusive in ['neither', 'left']:
+            periods += 1
+    elif start_date is not None and end_date is not None:
+        if inclusive in ['neither', 'right']:
+            # start_date += delta
+            pass
+        if inclusive in ['neither', 'left']:
+            # end_date -= delta
+            pass
+    else:
+        raise ValueError(f"Unsupported start/end/periods combination {start, end, periods}")
 
-    if inclusive in ['right', 'neither'] and len(dr) > 0:
+    if start_date is not None and end_date is not None:
+        if align == 'left':
+            dr = _sedl(start_date, end_date, delta)
+        elif align == 'right':
+            dr = _sedr(start_date, end_date, delta)
+        else:
+            raise ValueError(f"Unsupported alignment {align}")
+    elif start_date is not None and periods is not None:
+        dr = _sdp(start_date, periods, delta)
+    elif end_date is not None and periods is not None:
+        dr = _edp(end_date, periods, delta)
+    else:
+        raise ValueError(f"Unsupported start/end/periods combination {start, end, periods}")
+
+    if inclusive in ['neither', 'right']:
         dr = dr[1:]
-    if inclusive in ['left', 'neither'] and len(dr) > 0:
+    if inclusive in ['neither', 'left']:
         dr = dr[:-1]
 
-    return pd.DatetimeIndex(data=dr)
+    return pd.DatetimeIndex(data=dr, name=name)
+
+
+    # assert start is not None and freq is not None
+    # assert end is not None or periods is not None
+    # assert inclusive in ['left', 'right', 'both', 'neither']
+    #
+    # start = to_datetime(start)
+    # end = to_datetime(end)
+    #
+    # dr = []
+    # curr_date = start
+    # if periods is not None:
+    #     delta = relativeperiods(periods=1, freq=freq)
+    #
+    #     if inclusive in ['left', 'right', ]:
+    #         periods += 1
+    #     elif inclusive == 'neither':
+    #         periods += 2
+    #     for _ in range(periods):
+    #         dr.append(curr_date)
+    #         curr_date += delta
+    # else:
+    #     delta = relativeperiods(periods=1, freq=freq)
+    #
+    #     while curr_date <= end:
+    #         dr.append(curr_date)
+    #         curr_date += delta
+    #     if curr_date != end:
+    #         dr.append(curr_date)
+    # # end
+    #
+    # if inclusive in ['right', 'neither'] and len(dr) > 0:
+    #     dr = dr[1:]
+    # if inclusive in ['left', 'neither'] and len(dr) > 0:
+    #     dr = dr[:-1]
+    #
+    # return pd.DatetimeIndex(data=dr, name=name)

@@ -1,12 +1,15 @@
 from math import *
-from typing import List, Union, Iterable
-from stdlib import sq
+from typing import Union, Iterable
 
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
 INF: float = float('inf')
+
+
+# Square
+def sq(x: float) -> float: return x * x
 
 
 # ---------------------------------------------------------------------------
@@ -135,10 +138,6 @@ def inv(x: float, eps: float = EPS) -> float:
     :return: 1/x or 0
     """
     return 0. if isz(x, eps=eps) else 1. / x
-
-
-# Square
-def sq(x: float) -> float: return x * x
 
 
 # ---------------------------------------------------------------------------

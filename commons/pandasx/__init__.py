@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 
 from .base import *
+from .preprocessing import *
 from .binhot import binhot_encode
 from .cat import unique_values
 from .freq import infer_freq, FREQUENCIES
@@ -9,9 +10,9 @@ from .io import read_data, write_data, save, load
 from .missing import nan_replace
 from .onehot import onehot_encode
 from .periodic import periodic_encode, set_datetime_index, last_week_in_month
-from .preprocessing import *
 from .resample import resample
-from .dt import *
+from .dt import to_datetime, date_range, to_period
+from .sql import read_sql, read_sql_query
 
 
 # ---------------------------------------------------------------------------

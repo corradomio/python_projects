@@ -23,6 +23,7 @@ class Conv1d(nn.Conv1d):
         channels_last: If ``True``, the channels are located as in RNN
 
             (batch, seq, channels)
+
     """
     def __init__(self,
                  in_channels: int,

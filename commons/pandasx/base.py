@@ -2,15 +2,6 @@
 # Pandas reader
 # Some simple data set loaders: from csv and .arff data files
 #
-import random
-import warnings
-import numpy as np
-import pandas as pd
-import datetime
-from typing import Union, Optional, Collection
-from pandas import CategoricalDtype
-from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
-from datetime import datetime, date
 
 __all__ = [
     # "find_binary",
@@ -62,6 +53,16 @@ __all__ = [
 ]
 
 
+import random
+import warnings
+import numpy as np
+import pandas as pd
+import datetime as dt
+from typing import Union, Optional, Collection
+from pandas import CategoricalDtype
+from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
+
+
 # ---------------------------------------------------------------------------
 # Data types
 # ---------------------------------------------------------------------------
@@ -98,7 +99,7 @@ def validate_columns(df: pd.DataFrame, columns: Union[None, str, list[str]]):
 # dataframe_sort
 # ---------------------------------------------------------------------------
 
-def dataframe_sort(df: pd.DataFrame, sort: Union[bool, str, list[str]] = True, ascending=True) \
+def dataframe_sort(df: pd.DataFrame, *, sort: Union[bool, str, list[str]] = True, ascending=True) \
         -> pd.DataFrame:
     if sort in [None, False, [], ()]:
         return df
@@ -134,11 +135,15 @@ def _groups_list_by_index(df):
 # end
 
 
-def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]] = None, sort=True) -> list[tuple]:
+def groups_list(df: pd.DataFrame, *,
+                groups: Union[None, str, list[str]] = None, sort=True) -> list[tuple]:
     """
-    Compose the list of tuples that represent the groups
+    Extract from the df the list of groups.
+    The groups can be specified as columns in the df or the df itself has a MultiIndex. In this case
+    it is used all levels except the last one, containing the datetime
 
     :param df: DataFrame to split
+    :param sort: if to sort the list
     :param groups: list of columns to use during the split. The columns must be categorical or string
 
     :return list[tuple[str]: the list of tuples
@@ -160,7 +165,8 @@ def groups_list(df: pd.DataFrame, groups: Union[None, str, list[str]] = None, so
 # end
 
 
-def groups_count(df: pd.DataFrame, groups: Union[None, str, list[str]] = None) -> int:
+def groups_count(df: pd.DataFrame, *,
+                 groups: Union[None, str, list[str]] = None) -> int:
     glist = groups_list(df, groups=groups, sort=False)
     return len(glist)
 # end
@@ -238,7 +244,8 @@ def _groups_split_on_index(df, drop, keep):
 # end
 
 
-def groups_split(df: pd.DataFrame, *, groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
+def groups_split(df: pd.DataFrame, *,
+                 groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
         -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list or the MultiIndex.
@@ -350,9 +357,9 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame], *,
 # ---------------------------------------------------------------------------
 
 
-def _group_select_by_columns(df, groups, values, drop):
-    groups = as_list(groups)
-    values = as_list(values)
+def _group_select_by_columns(df: pd.DataFrame, groups: list[str], values: list[str], drop: bool):
+    # groups = as_list(groups)
+    # values = as_list(values)
 
     assert len(groups) == len(values), "groups and values don't have the same number of elements"
 
@@ -371,13 +378,13 @@ def _group_select_by_columns(df, groups, values, drop):
 # end
 
 
-def _groups_select_by_index(df, values, drop):
+def _groups_select_by_index(df: pd.DataFrame, values: tuple, drop: bool):
     # if 'drop=True', the index levels change!
     # default behavior of 'df.loc[...]'
-    values = as_tuple(values)
 
     if None not in values and drop:
-        return df.loc[values]
+        selected = df.loc[values]
+        return selected
 
     selected = df
     # drop is False or some levels are skipped
@@ -412,7 +419,10 @@ def groups_select(df: pd.DataFrame,
     """
     assert isinstance(df, pd.DataFrame)
 
-    if groups is None:
+    groups = as_list(groups)
+    values = as_tuple(values)
+
+    if len(groups) == 0:
         return _groups_select_by_index(df, values, drop)
     else:
         return _group_select_by_columns(df, groups, values, drop)
@@ -424,8 +434,7 @@ def groups_select(df: pd.DataFrame,
 # merge_column
 # ---------------------------------------------------------------------------
 
-def split_column(df: pd.DataFrame,
-                 column: str,
+def split_column(df: pd.DataFrame, column: str, *,
                  columns: Optional[list[str]] = None,
                  sep: str = '~',
                  drop=False,
@@ -485,8 +494,7 @@ def split_column(df: pd.DataFrame,
 
 
 def merge_column(df: pd.DataFrame,
-                  columns: list[str],
-                  column: str,
+                  columns: list[str], column: str, *,
                   sep: str = '~',
                   drop=False,
                   inplace=False) -> pd.DataFrame:
@@ -528,7 +536,7 @@ def merge_column(df: pd.DataFrame,
 # columns_merge
 # ---------------------------------------------------------------------------
 
-def columns_split(df: pd.DataFrame,
+def columns_split(df: pd.DataFrame, *,
                   columns: Union[None, str, list[str]] = None,
                   ignore: Union[None, str, list[str]] = None,
                   shared: Union[None, str, list[str]] = None) \
@@ -552,7 +560,7 @@ def columns_split(df: pd.DataFrame,
 # end
 
 
-def columns_merge(parts: list[pd.DataFrame], sort: Union[None, bool, list[str]] = None) -> pd.DataFrame:
+def columns_merge(parts: list[pd.DataFrame], *, sort: Union[None, bool, list[str]] = None) -> pd.DataFrame:
     assert is_instance(parts, Collection[pd.DataFrame]) and len(parts) > 0
 
     dfm = parts[0].copy()
@@ -704,10 +712,11 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
 # end
 
 
-def set_index(df: pd.DataFrame,
-              columns: Union[None, str, list[str]],
+def set_index(df: pd.DataFrame, columns: Union[None, str, list[str]], *,
               inplace=False,
-              drop=False) -> pd.DataFrame:
+              drop=False,
+              as_datetime: bool = False,
+    ) -> pd.DataFrame:
     """
     Create a multiindex based on the columns list
 
@@ -721,6 +730,8 @@ def set_index(df: pd.DataFrame,
         df.set_index(columns, inplace=inplace, drop=drop)
     else:
         df = df.set_index(columns, inplace=inplace, drop=drop)
+    if as_datetime and isinstance(df.index, pd.PeriodIndex):
+        df.set_index(df.index.to_timestamp())
     return df
 # end
 
@@ -728,7 +739,7 @@ def set_index(df: pd.DataFrame,
 set_multiindex = set_index
 
 
-def index_split(df: pd.DataFrame, levels: int = -1, drop=True) -> dict[tuple, pd.DataFrame]:
+def index_split(df: pd.DataFrame, *, levels: int = -1, drop=True) -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the first 'levels' values of the multiindex
 
@@ -858,7 +869,7 @@ def nan_split(*data_list,
 # end
 
 
-def nan_drop(df: PANDAS_TYPE, columns: Union[None, bool, str, list[str]] = None, inplace=False) -> PANDAS_TYPE:
+def nan_drop(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = None, inplace=False) -> PANDAS_TYPE:
     """
     Drop the rows having NA in the specifided list of columns
     :param df: dataframe to analyze
@@ -964,8 +975,8 @@ def cutoff_split(*data_list, cutoff,
 # train_test_split
 # ---------------------------------------------------------------------------
 
-def _train_test_split_single(data, train_size, test_size) \
-    -> Union[tuple[pd.DataFrame, pd.DataFrame], tuple[NoneType, NoneType]]:
+def _train_test_split_single(data, train_size, test_size, datetime) \
+        -> Union[tuple[pd.DataFrame, pd.DataFrame], tuple[NoneType, NoneType]]:
 
     def _tsize(n) -> int:
         tsize = train_size
@@ -983,20 +994,33 @@ def _train_test_split_single(data, train_size, test_size) \
     if data is None:
         return None, None
 
-    t = _tsize(len(data))
-    trn = data[:t]
-    tst = data[t:]
-    return trn, tst
+    if datetime is not None:
+        if isinstance(data.index, pd.PeriodIndex):
+            end_date = pd.Period(datetime, freq=data.index.freq)
+        elif isinstance(data.index, pd.DatetimeIndex):
+            end_date = datetime
+        else:
+            raise ValueError(f"Unsupported index type {type(data.index)}")
+        t = len(data[data.index < end_date])
+    else:
+        t = _tsize(len(data))
+
+    train = data[:t]
+    test_ = data[t:]
+    return train, test_
 # end
 
 
-def _train_test_split_multiindex(data, train_size, test_size) -> tuple[pd.DataFrame, pd.DataFrame]:
-    d_data = index_split(data, -1)
+def _train_test_split_multiindex(data, train_size, test_size, datetime) -> tuple[pd.DataFrame, pd.DataFrame]:
+    d_data = index_split(data, levels=-1)
     d_trn = {}
     d_tst = {}
     for lv in d_data:
         dlv = d_data[lv]
-        trnlv, tstlv = _train_test_split_single(dlv, train_size, test_size)
+        trnlv, tstlv = _train_test_split_single(dlv,
+                                                train_size=train_size,
+                                                test_size=test_size,
+                                                datetime=datetime)
         d_trn[lv] = trnlv
         d_tst[lv] = tstlv
     # end
@@ -1014,9 +1038,12 @@ def _sort_by(data, sortby):
 # end
 
 
-def train_test_split(*data_list, train_size=0, test_size=0,
-                     groups: Union[None, str, list[str]] = None,
-                     sortby: Union[None, str, list[str]] = None) -> list[PANDAS_TYPE]:
+def train_test_split(
+    *data_list,
+    train_size=0, test_size=0,
+    datetime: Optional[dt.datetime] = None,
+    groups: Union[None, str, list[str]] = None,
+    sortby: Union[None, str, list[str]] = None) -> list[PANDAS_TYPE]:
     """
     Split the df in train/test
     If df has a MultiIndex, it is split each sub-dataframe based on the first [n-1]
@@ -1024,13 +1051,18 @@ def train_test_split(*data_list, train_size=0, test_size=0,
     
     It is possible to specify 'train_size' or 'test_size', not both!
     The value of 'train_size'/'test_size' can be a number in range [0,1] or greater than 1
+
+    It is possible to specify a timestamp. In this case, the the train start ad the speciefied
+    timestamp
     
-    :param data_list: 
-    :param float train_size: train size
-    :param float test_size: test size 
+    :param data_list: list of dataframes to split
+    :param train_size: train size in ratio [0,1] or in number of samples.
+    :param test_size: test size in ratio [0,1] or in number of samples.
+    :param datetime: datetime to use for the split. If specified, the test start at this
+        timestamp
     :return: 
     """
-    assert train_size > 0 or test_size > 0, "train_size or test_size must be > 0"
+    assert train_size > 0 or test_size > 0 or isinstance(datetime, dt.datetime), "train_size or test_size must be > 0"
 
     groups = as_list(groups, "groups")
     sortby = as_list(sortby, "sortby")
@@ -1047,24 +1079,33 @@ def train_test_split(*data_list, train_size=0, test_size=0,
         # assert data is not None
 
         if len(groups) > 0:
-            dfdict = groups_split(data, groups=groups)
+            df_dict = groups_split(data, groups=groups)
             d_trn = {}
             d_tst = {}
-            for key in dfdict:
-                df = dfdict[key]
-                df = _sort_by(df, sortby=sortby)
-                trn, tst = _train_test_split_single(df, train_size=train_size, test_size=test_size)
-                d_trn[key] = trn
-                d_tst[key] = tst
+
+            for g in df_dict:
+                dfg = df_dict[g]
+
+                dfg = _sort_by(dfg, sortby=sortby)
+                trn, tst = _train_test_split_single(dfg,
+                                                    train_size=train_size,
+                                                    test_size=test_size,
+                                                    datetime=datetime)
+                d_trn[g] = trn
+                d_tst[g] = tst
             # end
             trn = groups_merge(d_trn, groups=groups)
             tst = groups_merge(d_tst, groups=groups)
-        # elif isinstance(data, np.ndarray):
-        #     trn, tst = _train_test_split_single(data, train_size=train_size, test_size=test_size)
         elif isinstance(data, pd.DataFrame) and isinstance(data.index, pd.MultiIndex):
-            trn, tst = _train_test_split_multiindex(data, train_size=train_size, test_size=test_size)
+            trn, tst = _train_test_split_multiindex(data,
+                                                    train_size=train_size,
+                                                    test_size=test_size,
+                                                    datetime=datetime)
         else:
-            trn, tst = _train_test_split_single(data, train_size=train_size, test_size=test_size)
+            trn, tst = _train_test_split_single(data,
+                                                train_size=train_size,
+                                                test_size=test_size,
+                                                datetime=datetime)
         tt_list.append(trn)
         tt_list.append(tst)
     # end
@@ -1173,7 +1214,7 @@ def series_unique_values(df: pd.DataFrame, col: Union[str, int]) -> np.ndarray:
 # end
 
 
-def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple:
+def series_range(df: pd.DataFrame, col: Union[str, int], *, dx: float = 0) -> tuple:
     """
     Retrieve the values range in the column
 
@@ -1195,7 +1236,7 @@ def series_range(df: pd.DataFrame, col: Union[str, int], dx: float = 0) -> tuple
 # ---------------------------------------------------------------------------
 
 def dataframe_correlation(df: Union[DATAFRAME_OR_DICT],
-                          columns: Union[str, list[str]],
+                          columns: Union[str, list[str]], *,
                           target: Optional[str] = None,
                           groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
     if isinstance(columns, str):
@@ -1247,7 +1288,7 @@ def filter_outliers(df: pd.DataFrame, col: str, outlier_std: float) -> pd.DataFr
 
 
 def clip_outliers(df: Union[DATAFRAME_OR_DICT],
-                  columns: Union[str, list[str]],
+                  columns: Union[str, list[str]], *,
                   outlier_std: float = 3,
                   groups: Union[None, str, list[str]] = None) -> pd.DataFrame:
     if isinstance(columns, str):
@@ -1286,7 +1327,7 @@ def clip_outliers(df: Union[DATAFRAME_OR_DICT],
 # index_labels
 # ---------------------------------------------------------------------------
 
-def index_labels(data: Union[pd.DataFrame, pd.Series], n_labels: int = -1) -> list[str]:
+def index_labels(data: Union[pd.DataFrame, pd.Series], *, n_labels: int = -1) -> list[str]:
     """
     Retrieve the first 'n_labels' labels from 'data.index' and replace the rest with
     the empty string
@@ -1388,7 +1429,7 @@ def columns_rename(df: pd.DataFrame, rename: Union[NoneType, list, dict], ignore
     df_columns = df.columns
     rename = _normalize_rename(df_columns, rename)
 
-    df.rename(rename, axis=1, inplace=True)
+    df.rename(columns=rename, inplace=True)
     return df
 # end
 

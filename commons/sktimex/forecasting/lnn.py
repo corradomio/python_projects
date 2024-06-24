@@ -1,96 +1,158 @@
-import logging
-from .nn import *
-from ..utils import FH_TYPES, PD_TYPES
-from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
-from skorchx.callbacks import PrintLog
 
 __all__ = [
     "LinearNNForecaster",
 ]
+
+from typing import Sized, cast, Union, Optional
+import logging
+from sktime.forecasting.base import ForecastingHorizon
+
+from skorchx import NeuralNetRegressor
+from skorchx.callbacks import PrintLog
+from ..utils import kwval, kwmerge, kwexclude
+from .nn import *
+from ..transform.nn import NNTrainTransform, NNPredictTransform
+from ..utils import FH_TYPES, PD_TYPES
 
 
 # ---------------------------------------------------------------------------
 # LinearNNForecaster
 # ---------------------------------------------------------------------------
 
-class LinearNNForecaster(BaseNNForecaster):
+NNX_LIN_DEFAULTS = dict(
+    activation=None,
+    hidden_size=1
+)
 
-    def __init__(self, *,
-                 lags: Union[int, list, tuple, dict],
-                 tlags: Union[int, list, tuple],
-                 scale=False,
 
-                 flavour='lin',
-                 activation=None,
-                 activation_params=None,
+class LinearNNForecaster(_BaseNNForecaster):
+    """
+    This is a simple linear model based on a tensor having:
 
-                 # -- linear
-                 # This is the GLOBAL size of the hidden layer
-                 # For example:
-                 #      - input: (30,1)     30 days, 1 feature
-                 #      - output: (7,2)     7 days, 2 targets
-                 #
-                 # the hidden size can be NOT 8, BUT it is necessary to specify
-                 # also the sequence length
-                 hidden_size=None,
+        (*, |lags|,|input_features|+|target|)   as input and
+        (*, |tlags|, |target|)                  as output
 
-                 # -- opt/loss
+    Because input features and targets are together, it is not possible
+    to have ylags <> tlags
 
-                 criterion=None,
-                 optimizer=None,
-                 lr=0.01,
+    Model parameters:
 
-                 batch_size=16,
-                 max_epochs=300,
-                 callbacks=None,
-                 patience=0,
-                 **kwargs):
+        :param lags: input/target lags
+        :param tlags: target prediction lags
+
+        :param flavour: type of Linear ('lin')
+        :param model.activation: activation function
+        :param model.activation_kwargs: parameter for the activation function
+
+        :param model.hidden_size: size of the hidden layer. If not specified,
+            the model is composed by a single linear layer, otherwise by 2
+
+        :param engine.optimizer: class of the optimizer to use (default: Adam)
+        :param engine.optimizer_kwargs:
+        :param engine.criterion: class of the loss to use (default: MSLoss)
+        :param engine.criterion_kwargs:
+        :param engine.batch_size: batch size (default 16)
+        :param engine.max_epochs: EPOCHS (default 300)
+
+        :param scaler.method: how to scale the values
+
+    """
+
+    def __init__(
+        self, *,
+
+        lags: Union[int, list, tuple, dict],
+        tlags: Union[int, list],
+
+        flavour="lin",
+        model: Optional[dict] = None,
+        engine: Optional[dict] = None,
+        scaler: Optional[dict] = None,
+
+        # -- time series
+        # lags: Union[int, list, tuple, dict],
+        # tlags: Union[int, list, tuple],
+
+        # -- model
+        # flavour='lin',
+        # activation=None,
+        # activation_kwargs=None,
+
+        # -- model/LIN
+        # This is the GLOBAL size of the hidden layer
+        # For example:
+        #      - input: (30,1)     30 days, 1 feature
+        #      - output: (7,2)     7 days, 2 targets
+        #
+        # the hidden size can be NOT 8, BUT it is necessary to specify
+        # also the sequence length
+        # hidden_size=None,
+
+        # -- skorch
+        # criterion='mse',
+        # optimizer=None,
+        # lr=0.01,
+        # batch_size=16,
+        # max_epochs=300,
+        # callbacks=None,
+        # patience=0,
+
+        # -- extra params
+
+        # **kwargs
+    ):
         super().__init__(
-            lags=lags,
-            tlags=tlags,
-            scale=scale,
             flavour=flavour,
 
-            criterion=criterion,
-            optimizer=optimizer,
-            lr=lr,
-            batch_size=batch_size,
-            max_epochs=max_epochs,
-            callbacks=callbacks,
+            lags=lags,
+            tlags=tlags,
 
-            # activation=activation,
-            # activation_params=activation_params,
+            model=model,
+            engine=engine,
+            scaler=scaler,
 
-            patience=patience,
-            **kwargs
+            # lags=lags,
+            # tlags=tlags,
+
+            # flavour=flavour,
+
+            # criterion=criterion,
+            # optimizer=optimizer,
+            # lr=lr,
+            # batch_size=batch_size,
+            # max_epochs=max_epochs,
+            # callbacks=callbacks,
+            # patience=patience,
+
+            # **kwargs
         )
 
-        self._lnn_args = {
-            'hidden_size': hidden_size,
-            'activation': activation,
-            'activation_params': activation_params
-        }
+        model = kwmerge(NNX_LIN_DEFAULTS, model)
+        isinstance(kwval(model, "hidden_size"), Optional[int])
 
-        # self.activation = activation
-        # self.activation_params = activation_params
-        self.hidden_size = hidden_size
+        # Torch dense layer configuration parameters
+        # self._lnn_args = {
+        #     'hidden_size': hidden_size,
+        # }
 
-        self._log = logging.getLogger(f"LinearNNForecaster.{flavour}")
+        self._model_params = model
+
+        self._log = logging.getLogger(f"LinearNNForecaster.{self.flavour}")
     # end
 
     # -----------------------------------------------------------------------
-    # get_params()
+    # Properties
     # -----------------------------------------------------------------------
 
-    def get_params(self, deep=True):
-        params = super().get_params(deep=deep) | self._lnn_args
-        return params
+    # def get_params(self, deep=True):
+    #     params = super().get_params(deep=deep) | self._lnn_args
+    #     return params
 
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
 
-    def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = (1,)):
+    def _fit(self, y, X=None, fh=None):
 
         input_shape, output_shape = self._compute_input_output_shapes()
 
@@ -98,7 +160,7 @@ class LinearNNForecaster(BaseNNForecaster):
 
         yh, Xh = self.transform(y, X)
 
-        tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=False)
+        tt = NNTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=False)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(y=yt, X=Xt)
@@ -106,15 +168,15 @@ class LinearNNForecaster(BaseNNForecaster):
     # end
 
     def _create_skorch_model(self, input_shape, output_shape):
-        lin_constructor = NNX_LIN_FLAVOURS[self._flavour]
+        lin_constructor = NNX_LIN_FLAVOURS[self.flavour]
 
         #
         # create the linear model
         #
         lin = lin_constructor(
-            input_shape=input_shape,
-            output_shape=output_shape,
-            **self._lnn_args
+            input_size=input_shape,
+            output_size=output_shape,
+            **self._model_params
         )
 
         # create the skorch model
@@ -123,12 +185,12 @@ class LinearNNForecaster(BaseNNForecaster):
         #   optimizer: optimizer
         #   lr
         #
-        model = skorch.NeuralNetRegressor(
+        model = NeuralNetRegressor(
             module=lin,
             callbacks__print_log=PrintLog(
                 sink=logging.getLogger(str(self)).info,
                 delay=3),
-            **self._skt_args
+            **kwexclude(self._engine_params, ["patience"])
         )
         # model.set_params(callbacks__print_log=PrintLog(
         #     sink=logging.getLogger(str(self)).info,
@@ -147,10 +209,11 @@ class LinearNNForecaster(BaseNNForecaster):
         yh, Xh = self.transform(self._y, self._X)
         _, Xs  = self.transform(None, X)
 
-        fh, fhp = self._make_fh_relative_absolute(fh)
+        # fh, fhp = self._make_fh_relative_absolute(fh)
+        # nfh = int(fh[-1])
+        nfh = len(cast(Sized, fh))
 
-        nfh = int(fh[-1])
-        pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
+        pt = NNPredictTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, flatten=True)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
         i = 0
@@ -162,8 +225,7 @@ class LinearNNForecaster(BaseNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self.inverse_transform(ys)
-        yp = self._from_numpy(ys, fhp)
+        yp = self.inverse_transform(ys)
         return yp
     # end
 
@@ -171,8 +233,8 @@ class LinearNNForecaster(BaseNNForecaster):
     # Support
     # -----------------------------------------------------------------------
 
-    def __repr__(self):
-        return f"LinearNNForecaster[{self._flavour}]"
+    def __repr__(self, n_char_max: int = 700):
+        return f"LinearNNForecaster[{self.flavour}]"
 # end
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,14 @@
 sktime interface
 ----------------
 
+    _is_fitted
+    _y
+    _X
+    _fh
+    _cutoff
+
+    -------------------------------------------------------------------------
+
     cutoff
     fh
     is_fitted
@@ -30,6 +38,74 @@ sktime interface
     predict_history(fh [,X], y_past [,X_past][, update_params])
         update(yhisto[, Xhisto, update_params])
         predict(fh [, X])
+
+
+Come estendere sktime
+---------------------
+
+    una classe sktime deve essere in grado di clonare se stessa in diverse situazioni.
+    Per fare cio' servono 2 cose: i nome della classe, ma questo non e' un problema
+    i parametri, che vengono ricuperati con 
+    
+        
+        _FlagManager (skbase.base._tagmanager)      
+            """Mixin class for flag and configuration settings management."""
+            
+            BaseObject(_FlagManager) (skbase.base._base)
+                """Base class for parametric objects with sktime style tag interface.
+                Extends scikit-learn's BaseEstimator to include sktime style interface for tags.
+                """
+                
+                BaseObject(_BaseObject) (sktime.base._base)
+                    """Base class for parametric objects with tags in sktime.
+                    Extends skbase BaseObject with additional features.
+                    """
+                    
+                    BaseEstimator(BaseObject) (sktime.base._base)
+                        """Base class for defining estimators in sktime.
+                        Extends sktime's BaseObject to include basic functionality for fittable estimators.
+                        """
+                        
+                        BaseForecaster(BaseEstimator) (sktime.forecasting.base._base)
+                            """Base forecaster template class.
+                            The base forecaster specifies the methods and method signatures that all forecasters
+                            have to implement.
+                            Specific implementations of these methods is deferred to concrete forecasters.
+                            """
+
+sktime.datatypes.MTYPE_REGISTER
+-------------------------------
+
+    ('pd.Series',           'Series', 'pd.Series representation of a univariate series')
+    ('pd.DataFrame',        'Series', 'pd.DataFrame representation of a uni- or multivariate series')
+    ('np.ndarray',          'Series', '2D numpy.ndarray with rows=samples, cols=variables, index=integers')
+    ('xr.DataArray',        'Series', 'xr.DataArray representation of a uni- or multivariate series')
+    ('dask_series',         'Series', 'xdas representation of a uni- or multivariate series')
+    ('nested_univ',         'Panel', 'pd.DataFrame with one column per variable, pd.Series in cells')
+    ('numpy3D', 'Panel',    '3D np.array of format (n_instances, n_columns, n_timepoints)')
+    ('pd-multiindex',       'Panel', 'pd.DataFrame with multi-index (instances, timepoints)')
+    ('pd-wide', 'Panel',    'pd.DataFrame in wide format, cols = (instance*timepoints)')
+    ('pd-long', 'Panel',    'pd.DataFrame in long format, cols = (index, time_index, column)')
+    ('df-list', 'Panel',    'list of pd.DataFrame')
+    ('dask_panel',          'Panel', 'dask frame with one instance and one time index, as per dask_to_pd convention')
+    ('pd_multiindex_hier',  'Hierarchical', 'pd.DataFrame with MultiIndex')
+    ('dask_hierarchical',   'Hierarchical', 'dask frame with multiple hierarchical indices, as per dask_to_pd convention')
+    ('alignment',           'Alignment', 'pd.DataFrame in alignment format, values are iloc index references')
+    ('alignment_loc',       'Alignment', 'pd.DataFrame in alignment format, values are loc index references')
+    
+    ('pd_DataFrame_Table',  'Table', 'pd.DataFrame representation of a data table')
+    ('numpy1D',             'Table', '1D np.narray representation of a univariate data table')
+    ('numpy2D',             'Table', '2D np.narray representation of a multivariate data table')
+    ('pd_Series_Table',     'Table', 'pd.Series representation of a univariate data table')
+    ('list_of_dict',        'Table', 'list of dictionaries with primitive entries')
+    ('polars_eager_table',  'Table', 'polars.DataFrame representation of a data table')
+    ('polars_lazy_table',   'Table', 'polars.LazyFrame representation of a data table')
+    ('pred_interval',       'Proba', 'predictive intervals')
+    ('pred_quantiles',      'Proba', 'quantile predictions')
+    ('pred_var',            'Proba', 'variance predictions')
+    
+    ('numpyflat', 'Panel', 'WARNING: only for internal use, not a fully supported Panel mtype. 2D np.array of format (n_instances, n_columns*n_timepoints)')
+
 
 
 

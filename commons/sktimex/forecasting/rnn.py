@@ -1,121 +1,195 @@
-import logging
-
-from skorchx.callbacks import PrintLog
-from .nn import *
-from ..transform.rnn import RNNTrainTransform, RNNPredictTransform
-from ..utils import FH_TYPES, PD_TYPES, mul_
 
 __all__ = [
     "RNNLinearForecaster",
-    # "MultiLagsRNNForecaster",
 ]
+
+
+import logging
+import skorchx
+
+from typing import Sized, cast, Union, Optional
+from sktime.forecasting.base import ForecastingHorizon
+
+from skorchx.callbacks import PrintLog
+from .nn import *
+from ..transform.nn import NNTrainTransform, NNPredictTransform
+from ..utils import FH_TYPES, PD_TYPES, mul_
+from ..utils import kwmerge, kwval, kwexclude
 
 
 # ---------------------------------------------------------------------------
 # BaseRNNForecaster
 # ---------------------------------------------------------------------------
 
-class BaseRNNForecaster(BaseNNForecaster):
+NNX_RNN_DEFAULTS = dict(
+    activation=None,
+
+    hidden_size=1,
+    num_layers=1,
+    bidirectional=False,
+    dropout=0.,
+)
+
+
+class _BaseRNNForecaster(_BaseNNForecaster):
+    """
+    This is a simple linear model based on a tensor having:
+
+        (*, |lags|,|input_features|+|target|)   as input and
+        (*, |tlags|, |target|)                  as output
+
+    Because input features and targets are together, it is not possible
+    to have ylags <> tlags
+
+    Model parameters:
+
+        flavour
+        activation
+        activation_kwargs | activation__<param>
+
+        hidden_size=1,
+        num_layers=1,
+        bidirectional=False,
+        dropout=0.,
+
+    """
 
     # -----------------------------------------------------------------------
     # Constructor
     # -----------------------------------------------------------------------
 
-    def __init__(self, *,
-                 lags: Union[int, list, tuple, dict],
-                 tlags: Union[int, list],
-                 scale=True,
+    def __init__(
+        self, *,
 
-                 flavour='lstm',
-                 activation=None,
-                 activation_params=None,
+        lags: Union[int, list, tuple, dict],
+        tlags: Union[int, list],
 
-                 # -- RNN
+        flavour="rnn",
+        model: Optional[dict] = None,
+        engine: Optional[dict] = None,
+        scaler: Optional[dict] = None,
 
-                 hidden_size=1,
-                 num_layers=1,
-                 bidirectional=False,
-                 dropout=0.,
+        # -- time series
+        # lags: Union[int, list, tuple, dict],
+        # tlags: Union[int, list],
 
-                 # -- opt/loss
+        # -- model
+        # flavour='lstm',
+        # activation=None,
+        # activation_kwargs=None,
 
-                 criterion=None,
-                 optimizer=None,
-                 lr=0.01,
+        # -- model/RNN
 
-                 batch_size=16,
-                 max_epochs=300,
-                 callbacks=None,
-                 patience=0,
-                 **kwargs):
+        # hidden_size=1,
+        # num_layers=1,
+        # bidirectional=False,
+        # dropout=0.,
+
+        # -- skorch
+        # criterion=None,
+        # optimizer=None,
+        # lr=0.01,
+        # batch_size=16,
+        # max_epochs=300,
+        # callbacks=None,
+        # patience=0,
+
+        # -- extra params
+
+        # **kwargs
+    ):
         """
 
         :param lags: input/target lags
+        :param tlags: target prediction lags
+
         :param flavour: type of RNN ('lstm', 'gru', 'rnn')
-        :param optimizer: class of the optimizer to use (default: Adam)
-        :param criterion: class of the loss to use (default: MSLoss)
-        :param batch_size: batch size (default 16)
-        :param max_epochs: EPOCHS (default 300)
-        :param hidden_size: number of RNN hidden layers
-        :param num_layers: number of RNN layers
-        :param bidirectional: if to use a bidirectional
-        :param dropout: if to apply a dropout
-        :param kwargs: other parameters
+        :param model.activation: activation function
+        :param model.activation_kwargs: parameter for the activation function
+
+        :param model.hidden_size: number of RNN hidden layers
+        :param model.num_layers: number of RNN layers
+        :param model.bidirectional: if to use a bidirectional
+        :param model.dropout: if to apply a dropout
+
+        :param engine.optimizer: class of the optimizer to use (default: Adam)
+        :param engine.criterion: class of the loss to use (default: MSLoss)
+        :param engine.batch_size: batch size (default 16)
+        :param engine.max_epochs: EPOCHS (default 300)
+
+        :param scaler.method: how to scale the values
+
         """
         super().__init__(
-            lags=lags,
-            tlags=tlags,
-            scale=scale,
             flavour=flavour,
 
-            criterion=criterion,
-            optimizer=optimizer,
-            lr=lr,
-            batch_size=batch_size,
-            max_epochs=max_epochs,
-            callbacks=callbacks,
+            lags=lags,
+            tlags=tlags,
 
+            model=model,
+            engine=engine,
+            scaler=scaler,
+
+            # lags=lags,
+            # tlags=tlags,
+
+            # flavour=flavour,
             # activation=activation,
-            # activation_params=activation_params,
+            # activation_kwargs=activation_kwargs,
 
-            patience=patience,
-            **kwargs
+            # criterion=criterion,
+            # optimizer=optimizer,
+            # lr=lr,
+            # batch_size=batch_size,
+            # max_epochs=max_epochs,
+            # callbacks=callbacks,
+            # patience=patience,
+
+            # **kwargs
         )
+
+        model = kwmerge(NNX_RNN_DEFAULTS, model)
+        assert isinstance(kwval(model, "hidden_size"), int)
+        assert isinstance(kwval(model, "num_layers"), int)
+        assert isinstance(kwval(model, "bidirectional"), bool)
+        assert isinstance(kwval(model, "dropout"), (int, float))
 
         #
         # torchx.nn.LSTM configuration parameters
         #
-        self._rnn_args = {
-            'hidden_size': hidden_size,
-            'num_layers': num_layers,
-            'bidirectional': bidirectional,
-            'dropout': dropout,
+        # self._rnn_args = {
+        #     'hidden_size': hidden_size,
+        #     'num_layers': num_layers,
+        #     'bidirectional': bidirectional,
+        #     'dropout': dropout,
+        # }
 
-            'activation': activation,
-            'activation_params': activation_params
-        }
+        self._model_params = model
 
-        self._log = logging.getLogger(f"RNNForecaster.{flavour}")
+        self._log = logging.getLogger(f"RNNForecaster.{self.flavour}")
     # end
+
+    # -----------------------------------------------------------------------
+    # Properties
+    # -----------------------------------------------------------------------
+
+    # def get_params(self, deep=True):
+    #     params = super().get_params(deep=deep) | self._rnn_args
+    #     return params
 
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
 
-    def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
+    def _fit(self, y, X=None, fh=None):
         pass
 
     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
         pass
 
     # -----------------------------------------------------------------------
-    # support
+    # Support
     # -----------------------------------------------------------------------
-
-    def get_params(self, deep=True):
-        params = super().get_params(deep=deep) | self._rnn_args
-        return params
-    # end
 
     def _compute_input_output_sizes(self):
         # (sx, mx+my), (st, my)
@@ -147,31 +221,47 @@ class BaseRNNForecaster(BaseNNForecaster):
 # depends on the configuration AND X, y dimensions/ranks
 #
 
-class RNNLinearForecaster(BaseRNNForecaster):
+class RNNLinearForecaster(_BaseRNNForecaster):
+    """
+    Simple RNN layer
+    """
 
     # -----------------------------------------------------------------------
     # Constructor
     # -----------------------------------------------------------------------
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(
+        self, *,
+
+        lags: Union[int, list, tuple, dict],
+        tlags: Union[int, list],
+
+        flavour="rnn",
+        model: Optional[dict] = None,
+        engine: Optional[dict] = None,
+        scaler: Optional[dict] = None,
+    ):
+        super().__init__(
+            lags=lags,
+            tlags=tlags,
+            flavour=flavour,
+            model=model,
+            engine=engine,
+            scaler=scaler
+        )
 
     # -----------------------------------------------------------------------
     # fit
     # -----------------------------------------------------------------------
 
-    def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = (1,)):
-
-        # input_size, output_size = self._compute_input_output_sizes()
-        # self._model = self._create_skorch_model(input_size, output_size)
+    def _fit(self, y, X=None, fh=None):
 
         input_shape, output_shape = super()._compute_input_output_shapes()
         self._model = self._create_skorch_model(input_shape, output_shape)
 
         yh, Xh = self.transform(y, X)
 
-        # tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags, flatten=True)
-        tt = RNNTrainTransform(slots=self._slots, tlags=self._tlags)
+        tt = NNTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags)
         Xt, yt = tt.fit_transform(X=Xh, y=yh)
 
         self._model.fit(Xt, yt)
@@ -193,11 +283,11 @@ class RNNLinearForecaster(BaseRNNForecaster):
         # input_shape  = input_size | (seqlen, input_size)
         # output_shape = seqlen*output_size | (seqlen, output_size)
 
-        rnn_constructor = NNX_RNN_FLAVOURS[self._flavour]
+        rnn_constructor = NNX_RNN_FLAVOURS[self.flavour]
         rnn = rnn_constructor(
-            input_size=input_shape,
-            output_size=output_shape,
-            **self._rnn_args
+            input_shape=input_shape,
+            output_shape=output_shape,
+            **self._model_params
         )
 
         # create the skorch model
@@ -206,12 +296,12 @@ class RNNLinearForecaster(BaseRNNForecaster):
         #   optimizer: optimizer
         #   lr
         #
-        model = skorch.NeuralNetRegressor(
+        model = skorchx.NeuralNetRegressor(
             module=rnn,
             callbacks__print_log=PrintLog(
                 sink=logging.getLogger(str(self)).info,
                 delay=3),
-            **self._skt_args
+            **kwexclude(self._engine_params, ["patience"])
         )
         # model.set_params(callbacks__print_log=PrintLog(
         #     sink=logging.getLogger(str(self)).info,
@@ -230,11 +320,11 @@ class RNNLinearForecaster(BaseRNNForecaster):
         yh, Xh = self.transform(self._y, self._X)
         _, Xs = self.transform(None, X)
 
-        fh, fhp = self._make_fh_relative_absolute(fh)
+        # fh, fhp = self._make_fh_relative_absolute(fh)
+        # nfh = int(fh[-1])
+        nfh = len(cast(Sized, fh))
 
-        nfh = int(fh[-1])
-        # pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags, flatten=True)
-        pt = RNNPredictTransform(slots=self._slots, tlags=self._tlags)
+        pt = NNPredictTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags)
         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
 
         i = 0
@@ -246,8 +336,7 @@ class RNNLinearForecaster(BaseRNNForecaster):
             i = pt.update(i, y_pred)
         # end
 
-        ys = self.inverse_transform(ys)
-        yp = self._from_numpy(ys, fhp)
+        yp = self.inverse_transform(ys)
         return yp
     # end
 
@@ -256,158 +345,6 @@ class RNNLinearForecaster(BaseRNNForecaster):
     # -----------------------------------------------------------------------
 
     def __repr__(self):
-        return f"RNNLinearForecaster[{self._flavour}]"
+        return f"RNNLinearForecaster[{self.flavour}]"
 # end
-
-
-# ---------------------------------------------------------------------------
-# MultiLagsRNNForecaster
-# ---------------------------------------------------------------------------
-
-# class MultiLagsRNNForecaster(BaseRNNForecaster):
-#
-#     def __init__(self, **kwargs):
-#         super().__init__(**kwargs)
-#
-#     # -----------------------------------------------------------------------
-#     # fit
-#     # -----------------------------------------------------------------------
-#
-#     def _fit(self, y: PD_TYPES, X: PD_TYPES = None, fh: FH_TYPES = None):
-#         # self._save_history(X, y)
-#
-#         yh, Xh = self.transform(y, X)
-#
-#         input_size, output_size = self._compute_input_output_sizes()
-#
-#         self._model = self._create_skorch_model(input_size, output_size)
-#
-#         tt = RNNSlotsTrainTransform(slots=self._slots, tlags=self._tlags)
-#         Xt, yt = tt.fit_transform(X=Xh, y=yh)
-#
-#         self._model.fit(Xt, yt)
-#         return self
-#     # end
-#
-#     # -----------------------------------------------------------------------
-#     # predict
-#     # -----------------------------------------------------------------------
-#
-#     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
-#         # [BUG]
-#         # if X is present and |fh| != |X|, forecaster.predict(fh, X) select the WRONG rows.
-#
-#         yh, Xh = self.transform(self._y, self._X)
-#         _, Xs = self.transform(None, X)
-#
-#         fh, fhp = self._make_fh_relative_absolute(fh)
-#
-#         nfh = int(fh[-1])
-#         pt = RNNSlotsPredictTransform(slots=self._slots, tlags=self._tlags)
-#         ys = pt.fit(y=yh, X=Xh).transform(fh=nfh, X=Xs)
-#
-#         i = 0
-#         while i < nfh:
-#             Xt = pt.step(i)
-#
-#             y_pred = self._model.predict(Xt)
-#
-#             i = pt.update(i, y_pred)
-#         # end
-#
-#         ys = self.inverse_transform(ys)
-#         yp = self._from_numpy(ys, fhp)
-#         return yp
-#     # end
-#
-#     # -----------------------------------------------------------------------
-#     # Support
-#     # -----------------------------------------------------------------------
-#
-#     def _compute_input_output_sizes(self):
-#         # (sx, mx+my), (st, my)
-#         input_shape, ouput_shape = super()._compute_input_output_shapes()
-#
-#         st, my = ouput_shape
-#         mx = input_shape[1] - my
-#
-#         return (mx, my), my*st
-#
-#     def _create_skorch_model(self, input_size, output_size):
-#         mx, my = input_size
-#
-#         # create the torch model
-#         #   input_size      this depends on xlags, |X[0]| and |y[0]|
-#         #   hidden_size     2*input_size
-#         #   output_size=1
-#         #   num_layers=1
-#         #   bias=True
-#         #   batch_first=True
-#         #   dropout=0
-#         #   bidirectional=False
-#         #   proj_size =0
-#         rnn_constructor = NNX_RNN_FLAVOURS[self._flavour]
-#
-#         #
-#         # input models
-#         #
-#         input_models = []
-#         inner_size = 0
-#
-#         xlags_lists = self._slots.xlags_lists
-#         for xlags in xlags_lists:
-#             rnn = rnn_constructor(
-#                 steps=len(xlags),
-#                 input_size=mx,
-#                 output_size=-1,         # disable nn.Linear layer
-#                 **self._rnn_args
-#             )
-#             inner_size += rnn.output_size
-#
-#             input_models.append(rnn)
-#
-#         ylags_lists = self._slots.ylags_lists
-#         for ylags in ylags_lists:
-#             rnn = rnn_constructor(
-#                 steps=len(ylags),
-#                 input_size=my,
-#                 output_size=-1,         # disable nn.Linear layer
-#                 **self._rnn_args
-#             )
-#             inner_size += rnn.output_size
-#
-#             input_models.append(rnn)
-#
-#         #
-#         # output model
-#         #
-#         output_model = nn.Linear(in_features=inner_size, out_features=output_size)
-#
-#         #
-#         # compose the list of input models with the output model
-#         #
-#         inner_model = nnx.MultiInputs(input_models, output_model)
-#
-#         # create the skorch model
-#         #   module: torch module
-#         #   criterion:  loss function
-#         #   optimizer: optimizer
-#         #   lr
-#         #
-#         model = skorch.NeuralNetRegressor(
-#             module=inner_model,
-#             warm_start=True,
-#             **self._skt_args
-#         )
-#         model.set_params(callbacks__print_log=PrintLog(
-#             sink=logging.getLogger(str(self)).info,
-#             delay=3))
-#
-#         return model
-#     # end
-#
-#     def __repr__(self):
-#         return f"MultiLagsRNNForecaster[{self._flavour}]"
-# # end
-
 
