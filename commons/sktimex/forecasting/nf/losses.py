@@ -15,6 +15,7 @@ NF_LOSSES = {
     "huberloss": nflp.HuberLoss,
     "huberqloss": nflp.HuberQLoss,
     "hubermqloss": nflp.HuberMQLoss,
+    "distributionloss": nflp.DistributionLoss
 }
 
 

@@ -1,20 +1,19 @@
 #
-# Extensions to 'json' standard package to use 'load' and 'dump' directly
-# with a file path
+# Extensions to 'json' standard package:
+#
+#   1) to use 'load' and 'dump' directly with a file path
+#   2) returning an 'stdlib.dict', a dictionary with a lot
+#      of improvements useful for configurations
 #
 import json
-from json import dumps, loads
+from .dict import dict
 
 OPEN_ARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
 
-#
-# compatibility constants to permit a 'perfect' correspondence between JSON syntax and
-# Python syntax
-#
-true = True
-false = False
-null = None
 
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
 
 def _open_dump_args(kwargs):
     oargs = {}
@@ -29,15 +28,23 @@ def _open_dump_args(kwargs):
 
 def load(file: str, **kwargs) -> dict:
     with open(file, mode="r", **kwargs) as fp:
-        return json.load(fp)
+        return dict(json.load(fp))
 
 
-def dump(obj, file: str, **kwargs):
+def loads(s, **kwargs) -> dict:
+    return dict(json.loads(s, **kwargs))
+
+
+def dump(obj, file: str, **kwargs) -> dict:
     if 'indent' not in kwargs:
         kwargs['indent'] = 4
     oargs, dargs = _open_dump_args(kwargs)
     with open(file, mode="w", **oargs) as fp:
-        return json.dump(obj, fp, **dargs)
+        return dict(json.dump(obj, fp, **dargs))
 
 
 save = dump
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

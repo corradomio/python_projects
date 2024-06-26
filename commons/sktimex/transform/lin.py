@@ -17,11 +17,9 @@ from ..lags import lmax,tlags_start
 #   y[-1],X[-1],X[0]  -> y[0]
 #
 
-@deprecated(reason="You should use LagsTrainTransform")
 class LinearTrainTransform(TimeseriesTransform):
 
     def __init__(self, xlags=None, ylags=None, tlags=(0,), flatten=True):
-        # super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
         self.xlags: list = xlags
         self.ylags: list = ylags
         self.tlags: list = tlags
@@ -36,7 +34,6 @@ class LinearTrainTransform(TimeseriesTransform):
         sx = len(xlags)
         sy = len(ylags)
         st = len(tlags)
-        # s = len(self.slots)
         s = max(lmax(xlags), lmax(ylags))
         t = lmax(tlags) + 1
         r = t + s
@@ -70,11 +67,9 @@ class LinearTrainTransform(TimeseriesTransform):
 # end
 
 
-@deprecated(reason="You should use LagsPredictTransform")
 class LinearPredictTransform(TimeseriesTransform):
 
     def __init__(self, xlags=None, ylags=None, tlags=(0,), flatten=True):
-        # super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
         self.xlags: list = xlags
         self.ylags: list = ylags
         self.tlags: list = tlags
@@ -94,7 +89,7 @@ class LinearPredictTransform(TimeseriesTransform):
     # end
 
     def transform(self, fh: int = 0, X: ARRAY_OR_DF = None, y=None):
-        # fh, X = super().transform(fh, X, y)
+        X, y = self._check_Xy(X, y)
 
         Xh = self.Xh
         yh = self.yh
@@ -152,7 +147,7 @@ class LinearPredictTransform(TimeseriesTransform):
         return Xt
 
     def update(self, i, y_pred, t=None):
-        # return super().update(i, y_pred, t)
+        #
         # Note:
         #   the parameter 't' is used to override tlags
         #   'tlags' is at minimum [0]
@@ -167,9 +162,9 @@ class LinearPredictTransform(TimeseriesTransform):
         tlags = self.tlags if t is None else [t]
         tstart = self.tstart if t is None else 0
 
-        st = len(tlags)  # length of tlags
-        mt = max(tlags)  # max tlags index
-        nfh = len(self.yp)  # length of fh
+        st = len(tlags)         # length of tlags
+        mt = max(tlags)         # max tlags index
+        nfh = len(self.yp)      # length of fh
 
         for j in range(tstart, st):
             k = i + tlags[j]

@@ -10,23 +10,23 @@ from neuralforecast import NeuralForecast
 # ---------------------------------------------------------------------------
 # unique_id, ds, y
 
-def to_nfdf(y, X) -> pd.DataFrame:
-    assert isinstance(y, (pd.Series, pd.DataFrame))
+def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
+    assert isinstance(y, pd.Series)
     assert isinstance(X, (type(None), pd.DataFrame))
 
-    if isinstance(y, pd.Series):
-        freq = y.index.freq
-        ds = y.index.to_series(name="ds")   # .reset_index(drop=True)
-        if isinstance(ds.dtype, pd.PeriodDtype):
-            ds = ds.map(lambda t: t.to_timestamp(freq=freq))
+    freq = y.index.freq
+    if freq is None:
+        freq = pd.infer_freq(y.index)
+    ds = y.index.to_series(name="ds")
+    if isinstance(ds.dtype, pd.PeriodDtype):
+        ds = ds.map(lambda t: t.to_timestamp(freq=freq))
 
-        ydf = pd.DataFrame({
-            "ds": ds,
-            "y": y.values,
-            "unique_id": 1
-        }).reset_index(drop=True)
-    else:
-        raise ValueError("y DataFrame not implemented yet")
+    ydf = pd.DataFrame({
+        "ds": ds,
+        "y": y.values,
+        "unique_id": 1
+    }).reset_index(drop=True)
+
     if X is not None:
         ydf = pd.concat([ydf, X], axis=1, ignore_index=True)
 
@@ -44,7 +44,6 @@ def from_nfdf(predictions: list[pd.DataFrame], y_template: pd.Series, nfh) -> pd
     if len(df) > nfh:
         df = df.iloc[:nfh]
     return df
-
 
 
 def extends_nfdf(df: pd.DataFrame, y_pred: pd.DataFrame, X: Optional[pd.DataFrame], at: int, name):

@@ -164,6 +164,19 @@ sqlalchemy
 lightning
 
 
+# ---------------------------------------------------------------------------
+# neuralforecast
+# ---------------------------------------------------------------------------
+
+
+# https://fastcore.fast.ai/
+fastcore
+
+
+# https://github.com/fastai/nbdev
+nbdev
+
+
 # https://nixtlaverse.nixtla.io/neuralforecast/index.html
 # https://pypi.org/project/neuralforecast/0.0.6/
 # https://github.com/Nixtla/neuralforecast/tree/main/

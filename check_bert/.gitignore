@@ -1,8 +1,0 @@
-model_save
-cola_public
-atis
-aclImdb
-results
-*.onnx
-*.zip
-*.gz

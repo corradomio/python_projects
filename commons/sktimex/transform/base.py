@@ -18,16 +18,6 @@ ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
 
 class TimeseriesTransform:
 
-    # def _check_X(self, X):
-    #     X = to_matrix(X)
-    #     assert isinstance(X, (NoneType, np.ndarray))
-    #     return X
-
-    # def _check_y(self, y):
-    #     y = to_matrix(y)
-    #     assert isinstance(y, np.ndarray)
-    #     return y
-
     def _check_Xy(self, X, y=None, fh=None):
         # X = to_matrix(X)
         # y = to_matrix(y)

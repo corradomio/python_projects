@@ -7,7 +7,7 @@ from path import Path as path
 # Class names
 # ---------------------------------------------------------------------------
 
-def module_path() -> str:
+def module_path() -> path:
     """
     Pyhon module of the current class
     """

@@ -30,6 +30,7 @@ __all__ = [
     "xy_split",
     "nan_split",
     "nan_drop",
+    "nan_set",
     "train_test_split",
     "cutoff_split",
 
@@ -58,7 +59,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import datetime as dt
-from typing import Union, Optional, Collection
+from typing import Union, Optional, Collection, Any
 from pandas import CategoricalDtype
 from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
 
@@ -356,6 +357,14 @@ def groups_merge(dfdict: dict[tuple[str], pd.DataFrame], *,
 # groups_select
 # ---------------------------------------------------------------------------
 
+def _split_dict(d: dict) -> tuple[list, list]:
+    keys = []
+    vals = []
+    for k in d:
+        keys.append(k)
+        vals.append(d[k])
+    return keys, vals
+
 
 def _group_select_by_columns(df: pd.DataFrame, groups: list[str], values: list[str], drop: bool):
     # groups = as_list(groups)
@@ -402,7 +411,7 @@ def _groups_select_by_index(df: pd.DataFrame, values: tuple, drop: bool):
 
 
 def groups_select(df: pd.DataFrame,
-                  values: Union[None, str, list[str], tuple[str]], *,
+                  values: Union[None, str, list[str], tuple[str], dict[str, Any]], *,
                   groups: Union[None, str, list[str], tuple[str]] = None,
                   drop=True) -> pd.DataFrame:
     """
@@ -418,6 +427,9 @@ def groups_select(df: pd.DataFrame,
     :return: the selected dataframe
     """
     assert isinstance(df, pd.DataFrame)
+
+    if isinstance(values, dict):
+        groups, values = _split_dict(values)
 
     groups = as_list(groups)
     values = as_tuple(values)
@@ -832,8 +844,8 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
 
 
 def nan_split(*data_list,
-              ignore: Union[None, str, list[str]] = None,
               columns: Union[None, str, list[str]] = None,
+              ignore: Union[None, str, list[str]] = None,
               empty=True) -> list[PANDAS_TYPE]:
     """
     Remove the columns of the dataframe containing nans
@@ -902,6 +914,25 @@ def nan_drop(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = No
             df = df[valid_rows]
     return df
 # end
+
+
+def nan_set(df: PANDAS_TYPE, columns: Union[str, list[str]], *, on: str, ge: Any, inplace=False) -> PANDAS_TYPE:
+    """
+    Set a list of columns and a list of records to NaN
+
+    :param df: dataframe to preocess
+    :param columns: column or columns to use to udpate
+    :param on: columns where to do the selection
+    :param ge: value used in condition 'df[<on>] >= <ge>'
+    :param inplace: if to modify the df in place
+    :return: the dataframe updated
+    """
+    columns = as_list(columns)
+    if not inplace:
+        df = df.copy()
+
+    df.loc[df[on] >= ge, columns] = pd.NA
+    return df
 
 
 # ---------------------------------------------------------------------------

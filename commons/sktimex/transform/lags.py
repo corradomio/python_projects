@@ -91,7 +91,7 @@ class LagsTrainTransform(ModelTrainTransform):
 
          True:      (n, len(ylags)*ny + len(xlags)*nx)
          'xonly':   (n, len(xlags)*nx + len(tlags)*nx)
-         'all':     (n, llen(ylags)*ny + en(xlags)*nx + len(tlags)*nx)
+         'all':     (n, len(ylags)*ny + len(xlags)*nx + len(tlags)*nx)
 
     If 'flatten' is false, the concatenation is possible only if 'xlags == ylags' or 'xlags == []' (the empty list).
     Because 'tlags' will be different than 'ylags' (and 'xlags'), the concatenation modes 'xonly' and 'all'
@@ -119,9 +119,9 @@ class LagsTrainTransform(ModelTrainTransform):
         :param tlags: last used for predicted data. It must be specified
         :param transpose: if to transpose the 3D tensors
         :param flatten: if to flatten the 3D tensors into 2D
-        :param concat: if to concat y and X used for input, into a single tensor
-        :param encoder: if to create the output tensor for the encoder. In this case its value is the time offset (>= 0)
-        :param decoder: if to create the input tensor for the decoder. In this case its value is thetime offset (<=0)
+        :param concat:  if to concat y and X used for input, into a single tensor
+        :param encoder: if to create the output tensor for the encoder. In this case its value is the time offset (>=0)
+        :param decoder: if to create the input  tensor for the decoder. In this case its value is the time offset (<=0)
         """
 
         assert is_instance(xlags, (NoneType, int, list[int], RangeType)), f"Invalid 'xlags' value: {xlags}"
@@ -257,19 +257,19 @@ class LagsTrainTransform(ModelTrainTransform):
                 raise ValueError(f"Incompatible 'concat' mode when 'flatten' is False: {self.concat}")
 
         if self.transpose:
-            X_past = _transpose(X_past)
-            y_past = _transpose(y_past)
-            X_future = _transpose(X_future)
-            y_future = _transpose(y_future)
+            X_past    = _transpose(X_past)
+            y_past    = _transpose(y_past)
+            X_future  = _transpose(X_future)
+            y_future  = _transpose(y_future)
             y_encoder = _transpose(y_encoder)
             X_decoder = _transpose(X_decoder)
             y_decoder = _transpose(y_decoder)
 
         if self.flatten:
-            X_past = _flatten(X_past, n)
-            y_past = _flatten(y_past, n)
-            X_future = _flatten(X_future, n)
-            y_future = _flatten(y_future, n)
+            X_past    = _flatten(X_past, n)
+            y_past    = _flatten(y_past, n)
+            X_future  = _flatten(X_future, n)
+            y_future  = _flatten(y_future, n)
             y_encoder = _flatten(y_encoder, n)
             X_decoder = _flatten(X_decoder, n)
             y_decoder = _flatten(y_decoder, n)

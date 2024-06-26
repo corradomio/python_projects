@@ -1,2 +1,0 @@
-the Ercot data has 4 time series where each is electricity grid
-load data from different regions (East, West, North, Coast)
