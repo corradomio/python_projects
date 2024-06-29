@@ -5,15 +5,15 @@ __all__ = [
     'TransformForecaster'
 ]
 
-from typing import Optional, Union
+from typing import Union
 
 import numpy as np
 import pandas as pd
+
 import numpyx.scalers as nxscal
 from sktime.forecasting.base import BaseForecaster as Sktime_BaseForecaster
-
 from ...utils import NoneType, to_matrix
-from ...utils import is_instance, kwexclude, kwparams, kwval, as_dict
+from ...utils import is_instance, kwexclude, kwval, as_dict
 
 
 #

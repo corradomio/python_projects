@@ -1,5 +1,6 @@
 from typing import Literal
 
+import numpy as np
 import pandas as pd
 from datetime import datetime, date
 from stdlib.dateutilx import relativeperiods
@@ -8,6 +9,10 @@ from stdlib.dateutilx import relativeperiods
 # ---------------------------------------------------------------------------
 # to_datetime
 # ---------------------------------------------------------------------------
+
+NP_FIRST_JAN_1970 = np.datetime64('1970-01-01T00:00:00')
+NP_ONE_SECOND = np.timedelta64(1, 's')
+
 
 def to_datetime(dt) -> datetime:
     """
@@ -29,6 +34,10 @@ def to_datetime(dt) -> datetime:
         return dt
     if isinstance(dt, pd.Period):
         return dt.to_timestamp().to_pydatetime()
+    if isinstance(dt, np.datetime64):
+        ts = ((dt - NP_FIRST_JAN_1970) / NP_ONE_SECOND)
+        dt = datetime.utcfromtimestamp(ts)
+        return dt
     else:
         raise ValueError(f"Unsupported datetime {dt}")
 

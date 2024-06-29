@@ -188,7 +188,7 @@ def read_data(file: str,
               dropna=False,         # if to drop the rows containing NaN values
               na_values=None,       # strings to consider NaN values
               **kwargs              # parameters to pass to 'pandas.read_*(...)' routine
-              ) -> Union[pd.DataFrame, tuple[pd.DataFrame, pd.DataFrame]]:
+              ) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.

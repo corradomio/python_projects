@@ -1,9 +1,9 @@
-import neuralforecast.models.mlp as nfm
+import neuralforecast.models.nhits as nfm
 
 from .base import BaseNFForecaster
 
 
-class MLP(BaseNFForecaster):
+class NHITS(BaseNFForecaster):
 
     def __init__(
         self,
@@ -11,10 +11,17 @@ class MLP(BaseNFForecaster):
         h=1,
         input_size=10,
         # -- data
-        scaler_type='robust',
+        scaler_type='identity',
         # -- model
-        num_layers=2,
-        hidden_size=1024,
+        stack_types: list = ["identity", "identity", "identity"],
+        n_blocks: list = [1, 1, 1],
+        mlp_units: list = 3 * [[512, 512]],
+        n_pool_kernel_size: list = [2, 2, 1],
+        n_freq_downsample: list = [4, 2, 1],
+        pooling_mode: str = "MaxPool1d",
+        interpolation_mode: str = "linear",
+        dropout_prob_theta=0.0,
+        activation="relu",
         # -- engine
         loss="mae",
         loss_kwargs=None,
@@ -25,7 +32,7 @@ class MLP(BaseNFForecaster):
         # lr_scheduler=None,
         # lr_scheduler_kwargs=None,
         learning_rate=1e-3,
-        num_lr_decays=-1,
+        num_lr_decays=3,
         # -- trainer
         batch_size=32,
         drop_last_loader=False,
@@ -50,7 +57,7 @@ class MLP(BaseNFForecaster):
         data_kwargs=None,
         # --
     ):
-        super().__init__(nfm.MLP, locals())
+        super().__init__(nfm.NHITS, locals())
         return
 
 # end

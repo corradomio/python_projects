@@ -21,15 +21,15 @@ def _lift_cumulant(df: pd.DataFrame, select: list) -> tuple:
 
     n = len(select)
 
-    total = df['count'].count()
+    total = df['count'].ground_truth()
 
     # group count
-    gcount = df[select + ['count']].groupby(select).count() / total
+    gcount = df[select + ['count']].groupby(select).ground_truth() / total
 
     # single count
     scount = dict()
     for c in select:
-        scount[c] = df[[c] + ['count']].groupby([c]).count() / total
+        scount[c] = df[[c] + ['count']].groupby([c]).ground_truth() / total
 
     index = gcount.index
     cvalues = []
@@ -86,8 +86,8 @@ def lift(df: pd.DataFrame, select: list) -> pd.DataFrame:
 def prob(df: pd.DataFrame, select: list) -> pd.Series:
     if 'count' not in df:
         df['count'] = 1.
-    total = df['count'].count()
-    gcount = df[select + ['count']].groupby(select).count() / total
+    total = df['count'].ground_truth()
+    gcount = df[select + ['count']].groupby(select).ground_truth() / total
 
     return gcount
 # end

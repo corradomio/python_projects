@@ -1,10 +1,40 @@
-from typing import Optional, Any
-
-import pandas as pd
 import neuralforecast as nf
 
-from .utils import to_nfdf, from_nfdf, extends_nfdf, name_of
+from .losses import select_loss
+from .utils import to_nfdf, from_nfdf, extends_nfdf, name_of, to_futr_nfdf
 from ...forecasting.base import BaseForecaster
+
+# Scalers
+#   "identity": identity_statistics,
+#   "standard": std_statistics,
+#   "revin": std_statistics,
+#   "robust": robust_statistics,
+#   "minmax": minmax_statistics,
+#   "minmax1": minmax1_statistics,
+#   "invariant": invariant_statistics,
+
+
+ACTIVATION_FUNCTIONS = {
+    'relu': 'ReLU',
+    'selu': 'SELU',
+    'leakyrelu': 'LeakyReLU',
+    'prelu': 'PReLU',
+    'gelu': 'gelu',
+
+    'tanh': 'Tanh',
+    'softplus':'Softplus',
+    'sigmoid': 'Sigmoid',
+
+    'ReLU': 'ReLU',
+    'SELU': 'SELU',
+    'LeakyReLU': 'LeakyReLU',
+    'PReLU': 'PReLU',
+
+    'Tanh': 'Tanh',
+    'Softplus': 'Softplus',
+    'Sigmoid': 'Sigmoid',
+
+}
 
 
 # ---------------------------------------------------------------------------
@@ -46,42 +76,72 @@ class BaseNFForecaster(BaseForecaster):
         "fit_is_empty": False,  # is fit empty and can be skipped?
     }
 
-    def __init__(self):
+    def __init__(self, nf_class, locals):
         super().__init__()
+
+        self.h = 1
+        self.trainer_kwargs = {}
+        self.data_kwargs = {}
+        self.val_size = None
 
         self._model = None
         self._freq = None
-        self.data_kwargs = {}
-        self.prediction_length = 1
-
-        self.val_size = None
-
-        self.id_col: str = "unique_id"
-        self.time_col: str = "ds"
-        self.target_col: str = "y"
-        self.stat_exog_list = []
-        self.hist_exog_list = []
-        self.futr_exog_list = []
-
+        self._init_kwargs = {}
+        self._nf_class = nf_class
         self._nfdf = None
+
+        self._analyze_locals(locals)
     # end
+
+    def _analyze_locals(self, locals):
+        for k in locals:
+            if k in ['self', '__class__']:
+                continue
+            elif k in ['encoder_activation', 'activation']:
+                self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+            elif k == 'val_size':
+                self.val_size = locals[k]
+                continue
+            elif k == 'loss':
+                loss_fun = locals[k]
+                loss_kwargs = locals['loss_kwargs']
+                loss = select_loss(loss_fun)(**(loss_kwargs or {}))
+                self._init_kwargs[k] = loss
+            elif k == 'valid_loss':
+                loss_fun = locals[k]
+                loss_kwargs = locals['valid_loss_kwargs']
+                loss = select_loss(loss_fun)(**(loss_kwargs or {}))
+                self._init_kwargs[k] = loss
+            elif k in ['loss_kwargs', 'valid_loss_kwargs']:
+                pass
+            elif k == 'trainer_kwargs':
+                self.trainer_kwargs = locals[k] or {}
+                continue
+            elif k == 'data_kwargs':
+                self.data_kwargs = locals[k] or {}
+                continue
+            else:
+                self._init_kwargs[k] = locals[k]
+            setattr(self, k, locals[k])
+        # end
+    # end
+
 
     @property
     def model(self):
         return self._model
 
-    def _compose_df(self, y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
-        self.time_col = y.index.name
-        self.target_col = y.name
+    def _compile_model(self, y, X=None):
+        self._freq = y.index.freqstr
 
-        ynf = pd.DataFrame(data=y)
-        ynf.reset_index(inplace=True)
+        self._model = self._nf_class(
+            stat_exog_list=None,
+            hist_exog_list=list(X.columns) if X is not None else None,
+            futr_exog_list=None,
+            **(self._init_kwargs | self.trainer_kwargs)
+        )
 
-        if X is not None:
-            self.hist_exog_list = list(X.columns)
-
-    def _compile_model(self, y, X=None) -> Any:
-        ...
+        return self._model
 
     def _fit(self, y, X=None, fh=None):
 
@@ -101,28 +161,61 @@ class BaseNFForecaster(BaseForecaster):
         return self
 
     def _predict(self, fh, X=None):
+        assert len(fh) % self.h == 0, \
+            "ForecastingHorizon length must be a multiple than predition_length"
 
-        nfh = len(fh)
-        nf_dfp = to_nfdf(self._y, self._X)
+        if len(fh) == self.h:
+            return self._predict_same(fh, X)
+        # elif len(fh) < self.h:
+        #     return self._predict_short(fh, X)
+        else:
+            return self._predict_long(fh, X)
 
-        plen = 0
+    # def _predict_short(self, fh, X):
+    #     fhr = fh.to_relative(self._cutoff)
+    #     start = fhr[0]
+    #     fhs = ForecastingHorizon(lrange(start, start+self.h))
+    #
+    #     y_pred = self._predict_same(fhs, X)
+    #     return y_pred.iloc[:len(fh)]
+
+    def _predict_same(self, fh, X):
+        fha = fh.to_absolute(self._cutoff)
+
+        futr_df = to_futr_nfdf(fha, self._X)
+
+        y_pred = self._nf.predict(
+            futr_df=futr_df,
+            **(self.data_kwargs or {})
+        )
+
+        model_name = name_of(self._model)
+        return from_nfdf([y_pred], fha, self._y, model_name)
+
+    def _predict_long(self, fh, X):
+        plen = self.h
+        fha = fh.to_absolute(self.cutoff)
+        nfh = len(fha)
+        past_df = to_nfdf(self._y, self._X)
+        futr_df_fh = to_futr_nfdf(fha, X)
+        model_name = name_of(self._model)
+
         predictions = []
-        while plen < nfh:
+        at = 0
+        while (at+plen) <= nfh:
+            futr_df = futr_df_fh.iloc[at:at+plen]
+
             y_pred = self._nf.predict(
-                df=None,
-                static_df=None,
-                futr_df=nf_dfp,
+                df=past_df,
+                futr_df=futr_df,
                 **(self.data_kwargs or {})
             )
 
-            # dataframe contains columns: 'unique_id', 'y'
-            # it must have the same length that the prediction_window
-            assert self.prediction_length == y_pred.shape[0]
-
             predictions.append(y_pred)
-            nf_dfp = extends_nfdf(nf_dfp, y_pred, X, plen, name_of(self._nf))
+            past_df = extends_nfdf(past_df, y_pred, X, at, model_name)
 
-            plen += self.prediction_length
+            at += plen
         # end
-
-        return from_nfdf(predictions, self._y, nfh)
+        return from_nfdf(predictions, fha, self._y, model_name)
+    # end
+# end

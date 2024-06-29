@@ -1,4 +1,4 @@
-# WARNING: DOESN'T remove 'DataFrame'
+# WARN: DOESN'T remove 'DataFrame'
 from pandas import DataFrame, DatetimeIndex, TimedeltaIndex, PeriodIndex, MultiIndex
 from pandas._typing import *
 

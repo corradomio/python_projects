@@ -81,16 +81,20 @@ class dict(BuiltinDict):
 
     #
     # dict.attr
-    #
+    # Note: it is NOT possible to redefine xxxattr() into xxxitem()
+    # because this BREAKS the interface of 'base.dict' with 'strange'
+    # side effects.
+    # this can be done in 'specialized' classed with a 'specialized'
+    # usage
 
-    def __getattr__(self, item):
-        return self.__getitem__(item)
+    # def __getattr__(self, item):
+    #     return self.__getitem__(item)
 
-    def __setattr__(self, key, value):
-        return self.__setitem__(key, value)
+    # def __setattr__(self, key, value):
+    #     return self.__setitem__(key, value)
 
-    def __delattr__(self, item):
-        return self.__delitem__(item)
+    # def __delattr__(self, item):
+    #     return self.__delitem__(item)
 
     def __class_getitem__(cls, item):
         res = super().__class_getitem__(item)
@@ -240,6 +244,22 @@ class dict(BuiltinDict):
         """
         return [(key, self.__getitem__(key)) for key in self.keys()]
 # end
+
+
+class configuration(dict):
+
+    def __init__(self, seq=None, **kwargs):
+        super().__init__(seq, **kwargs)
+
+    def __getattr__(self, item):
+        return self.__getitem__(item)
+
+    def __setattr__(self, key, value):
+        return self.__setitem__(key, value)
+
+    def __delattr__(self, item):
+        return self.__delitem__(item)
+
 
 
 def reverse_dict(d: Union[BuiltinDict, dict]) -> dict:

@@ -9,6 +9,3 @@ from .bag import bag
 from .dict import dict
 from .is_instance import is_instance, IS_INSTANCE_OF, IsInstance
 from .languagex import method_of
-
-# from .fsystem import is_filesystem
-# from .exceptions import *

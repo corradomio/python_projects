@@ -1,8 +1,15 @@
 import logging.config
 
 import pandasx as pdx
+from stdlib.tprint import tprint
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.utils.plotting import plot_series, show
+
+from neuralforecast import NeuralForecast
+from neuralforecast.models import NBEATS
+from neuralforecast.models import RNN
+from neuralforecast.utils import AirPassengersDF
+
 
 TARGET = "Passengers"
 
@@ -31,17 +38,17 @@ def main():
 
     train, test = pdx.train_test_split(df, datetime=start_date)
 
-    from neuralforecast import NeuralForecast
-    from neuralforecast.models import NBEATS
-    from neuralforecast.utils import AirPassengersDF
-
+    tprint("nf")
     nf = NeuralForecast(
-        models=[NBEATS(input_size=24, h=12, max_steps=100)],
+        models=[RNN(input_size=24, h=12, max_steps=100)],
         freq='M'
     )
 
+    tprint("nf.fit")
     nf.fit(df=AirPassengersDF)
+    tprint("nf.predict")
     nf.predict()
+    tprint("end", force=True)
 
     pass
 

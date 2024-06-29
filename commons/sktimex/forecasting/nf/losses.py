@@ -1,4 +1,5 @@
 import neuralforecast.losses.pytorch as nflp
+
 from stdlib import import_from
 
 NF_LOSSES = {

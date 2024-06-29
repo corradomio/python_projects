@@ -132,6 +132,16 @@ class Logger:
         if self.isEnabledFor(INFO):
             self.info(fmt.format(*args), **kwargs)
 
+    def infot(self, fmt, *args, **kwargs):
+        if not self.isEnabledFor(INFO):
+            return
+
+        now = time.time()
+        delta = now - self.timestamp
+        if (delta) > self.TIMEDELAY:
+            self.timestamp = now
+            self.info(fmt.format(*args), **kwargs)
+
     def warnf(self, fmt, *args, **kwargs):
         self.warn(fmt.format(*args), **kwargs)
 
@@ -141,7 +151,7 @@ class Logger:
     def errorf(self, fmt, *args, **kwargs):
         self.error(fmt.format(*args), **kwargs)
 
-    def debugt(self, msg, *args, **kwargs):
+    def debugt(self, fmt, *args, **kwargs):
         if not self.isEnabledFor(DEBUG):
             return
 
@@ -149,7 +159,7 @@ class Logger:
         delta = now - self.timestamp
         if (delta) > self.TIMEDELAY:
             self.timestamp = now
-            self.debug(msg.format(*args), **kwargs)
+            self.debug(fmt.format(*args), **kwargs)
 
     def tprint(self, fmt, *args, force=False, **kwargs):
         # if not self.is_debug_enabled():

@@ -13,6 +13,7 @@ from .periodic import periodic_encode, set_datetime_index, last_week_in_month
 from .resample import resample
 from .dt import to_datetime, date_range, to_period
 from .sql import read_sql, read_sql_query
+from .to_json import to_json
 
 
 # ---------------------------------------------------------------------------

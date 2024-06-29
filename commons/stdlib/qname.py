@@ -7,12 +7,13 @@ from path import Path as path
 # Class names
 # ---------------------------------------------------------------------------
 
-def module_path() -> path:
+def module_path(name=None) -> path:
     """
     Pyhon module of the current class
     """
+    name = __name__ if name is None else name
     import sys
-    this_path = path(sys.modules[__name__].__file__)
+    this_path = path(sys.modules[name].__file__)
     return this_path.parent
 
 

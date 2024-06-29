@@ -6,7 +6,7 @@ TIMEDELAY = 3  # seconds
 TIMESTAMP = 0  # last timestamp
 
 
-def tprint(*args, force=False, **nargs):
+def tprint(*args, force=True, **nargs):
     """
     As "print" but it prints the message ONLY each TIMEDELAY seconds
 

@@ -25,7 +25,7 @@ from ... import nn as nnx
 #   3) output for the decoder   [y] forecasting window
 #
 
-# WARNING / Trick:
+# WARN / Trick:
 #   it is necessary to understand IF the model is called during the
 #   train step OR the prediction step.
 #   The flag 'self.training' is not enough BECAUSE it can be False ALSO

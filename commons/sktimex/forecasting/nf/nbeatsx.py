@@ -1,9 +1,9 @@
-import neuralforecast.models.mlp as nfm
+import neuralforecast.models.nbeatsx as nfm
 
 from .base import BaseNFForecaster
 
 
-class MLP(BaseNFForecaster):
+class NBEATSx(BaseNFForecaster):
 
     def __init__(
         self,
@@ -11,10 +11,16 @@ class MLP(BaseNFForecaster):
         h=1,
         input_size=10,
         # -- data
-        scaler_type='robust',
+        scaler_type='identity',
         # -- model
-        num_layers=2,
-        hidden_size=1024,
+        n_harmonics: int = 2,
+        n_polynomials: int = 2,
+        stack_types: list = ['identity', 'trend', 'seasonality'],
+        n_blocks: list = [1, 1, 1],
+        mlp_units: list = 3 * [[512, 512]],
+        dropout_prob_theta: float = 0.,
+        activation: str = 'ReLU',
+        shared_weights: bool = False,
         # -- engine
         loss="mae",
         loss_kwargs=None,
@@ -25,7 +31,7 @@ class MLP(BaseNFForecaster):
         # lr_scheduler=None,
         # lr_scheduler_kwargs=None,
         learning_rate=1e-3,
-        num_lr_decays=-1,
+        num_lr_decays=3,
         # -- trainer
         batch_size=32,
         drop_last_loader=False,
@@ -50,7 +56,7 @@ class MLP(BaseNFForecaster):
         data_kwargs=None,
         # --
     ):
-        super().__init__(nfm.MLP, locals())
+        super().__init__(nfm.NBEATSx, locals())
         return
 
 # end
