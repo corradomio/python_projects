@@ -2,10 +2,19 @@ import logging.config
 
 import pandasx as pdx
 from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.naive import NaiveForecaster
-from sktimex.forecasting.linear import LinearForecaster as SktimexLinearForecaster
-from sktimex.forecasting.darts.linear import DartsLinearForecaster
-from sktimex.forecasting.darts.arima import DartsARIMAForecaster
+from sktimex.forecasting.darts.block_rnn_model import BlockRNNModel
+from sktimex.forecasting.darts.dlinear import DLinearModel
+from sktimex.forecasting.darts.linear_regression_model import LinearRegressionModel
+from sktimex.forecasting.darts.nbeats import NBEATSModel
+from sktimex.forecasting.darts.nhits import NHiTSModel
+from sktimex.forecasting.darts.nlinear import NLinearModel
+from sktimex.forecasting.darts.rnn_model import RNNModel
+from sktimex.forecasting.darts.tcn_model import TCNModel
+from sktimex.forecasting.darts.tft_model import TFTModel
+from sktimex.forecasting.darts.tide_model import TiDEModel
+from sktimex.forecasting.darts.transformer_model import TransformerModel
+from sktimex.forecasting.darts.tsmixer_model import TSMixerModel
+
 from sktimex.utils.plotting import plot_series, show
 
 TARGET = "Passengers"
@@ -35,22 +44,50 @@ def main():
 
     train, test = pdx.train_test_split(df, datetime=start_date)
 
-    # eval(train, test, NaiveForecaster(sp=36))
-    # eval(train, test, SktimexLinearForecaster(
-    #     lags=36,
-    #     tlags=1,
-    #     flatten=False
+    # eval(train, test, BlockRNNModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
     # ))
-    eval(train, test, DartsLinearForecaster(
-        lags=36,
-        output_chunk_length=1
+    # eval(train, test, DLinearModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
+    # ))
+    # eval(train, test, LinearRegressionModel(
+    #     lags=36,
+    #     output_chunk_length=12
+    # ))
+    # eval(train, test, NBEATSModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
+    # ))
+    # eval(train, test, NHiTSModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
+    # ))
+    # eval(train, test, NLinearModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
+    # ))
+    # eval(train, test, RNNModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12,
+    #     training_length=36
+    # ))
+    # eval(train, test, TCNModel(
+    #     input_chunk_length=36,
+    #     output_chunk_length=12
+    # ))
+    eval(train, test, TiDEModel(
+        input_chunk_length=36,
+        output_chunk_length=12
     ))
-    eval(train, test, DartsLinearForecaster(
-        lags=36,
-        output_chunk_length=1
+    eval(train, test, TransformerModel(
+        input_chunk_length=36,
+        output_chunk_length=12
     ))
-    eval(train, test, DartsARIMAForecaster(
-
+    eval(train, test, TSMixerModel(
+        input_chunk_length=36,
+        output_chunk_length=12
     ))
 
     pass

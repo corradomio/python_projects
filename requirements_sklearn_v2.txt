@@ -23,13 +23,14 @@ h5py
 
 
 # ---------------------------------------------------------------------------
-# Standard libraries
+# standard libraries
+# ---------------------------------------------------------------------------
 
 # https://numpy.org/
 numpy
 
 # https://xarray.dev/
-xarray
+# xarray
 
 # https://scipy.org/
 scipy
@@ -50,6 +51,7 @@ seaborn
 
 # ---------------------------------------------------------------------------
 # scikit-learn
+# ---------------------------------------------------------------------------
 
 # https://scikit-learn.org
 scikit-learn
@@ -81,6 +83,7 @@ lightgbm
 
 # ---------------------------------------------------------------------------
 # dimensional reduction
+# ---------------------------------------------------------------------------
 
 # https://github.com/eamid/trimap
 # trimap isa based on annoy (https://github.com/spotify/annoy)
@@ -93,6 +96,7 @@ umap-learn
 
 # ---------------------------------------------------------------------------
 # time series
+# ---------------------------------------------------------------------------
 
 # https://sktime.org/
 sktime
@@ -105,19 +109,12 @@ statsmodels
 
 
 # ---------------------------------------------------------------------------
-# Extensions
-
-# https://pyts.readthedocs.io/en/stable
-#pyts
-
-# https://unit8co.github.io/darts/
-#darts
-
-# https://github.com/sktime/skpro
-#skpro
+# extensions
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # NN but ONLY for scikit learn/time series
+# ---------------------------------------------------------------------------
 
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch>=2.1
@@ -130,11 +127,18 @@ torchtext
 skorch
 
 
+# https://lightning.ai/
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
+lightning
+
+
 # ---------------------------------------------------------------------------
 # database access
 # sqlalchemy
 #   mysql
 #   postgresql
+# ---------------------------------------------------------------------------
 
 # https://www.psycopg.org/
 psycopg2
@@ -156,18 +160,8 @@ sqlalchemy
 # ---------------------------------------------------------------------------
 # AFTER torch
 # ---------------------------------------------------------------------------
-
-
-# https://lightning.ai/
-# https://lightning.ai/docs/pytorch/stable/
-# https://github.com/Lightning-AI/pytorch-lightning
-lightning
-
-
-# ---------------------------------------------------------------------------
 # neuralforecast
 # ---------------------------------------------------------------------------
-
 
 # https://fastcore.fast.ai/
 fastcore
@@ -191,9 +185,27 @@ neuralforecast
 #hierarchicalforecast
 
 
+# ---------------------------------------------------------------------------
+# darts
+# ---------------------------------------------------------------------------
+
+# https://unit8co.github.io/darts/
+darts
+
 
 # ---------------------------------------------------------------------------
-# SUSPENDED
+# other
+# ---------------------------------------------------------------------------
+
+# https://pyts.readthedocs.io/en/stable
+#pyts
+
+# https://github.com/sktime/skpro
+#skpro
+
+
+# ---------------------------------------------------------------------------
+# suspended
 # ---------------------------------------------------------------------------
 
 # https://github.com/solegalli/feature_engine
@@ -235,3 +247,9 @@ neuralforecast
 
 # https://pypi.org/project/PyYAML/
 # PyYAML
+
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

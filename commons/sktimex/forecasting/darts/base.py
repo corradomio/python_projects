@@ -1,14 +1,80 @@
 from datetime import datetime
-from typing import Union, Any, Optional
+from typing import Optional, Union, Any
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+# from ...forecasting.base import BaseForecaster
+from darts import TimeSeries
 from darts.models.forecasting.forecasting_model import GlobalForecastingModel
 
-from stdlib import qualified_name, import_from, is_instance
-from sktime.forecasting.base import BaseForecaster, ForecastingHorizon
-from ...forecasting.base import BaseForecaster, KwArgsForecaster
-from darts.timeseries import TimeSeries
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from stdlib import import_from
+
+
+# ---------------------------------------------------------------------------
+# Activation functions
+# ---------------------------------------------------------------------------
+
+ACTIVATION_FUNCTIONS = {
+    None: None,
+
+    'relu': 'ReLU',
+    'rrelu': 'RReLU',
+    'prelu': 'PReLU',
+    'softplus': 'Softplus',
+    'tanh': 'Tanh',
+    'selu': 'SELU',
+    'leakyrelu': 'LeakyReLU',
+    'sigmoid': 'Sigmoid',
+
+    'ReLU': 'ReLU',
+    'RReLU': 'RReLU',
+    'PReLU': 'PReLU',
+    'Softplus': 'Softplus',
+    'Tanh': 'Tanh',
+    'SELU': 'SELU',
+    'LeakyReLU': 'LeakyReLU',
+    'Sigmoid': 'Sigmoid',
+}
+
+
+# ---------------------------------------------------------------------------
+# Loss functions
+# ---------------------------------------------------------------------------
+
+NF_LOSSES = {
+    None: None,
+
+    # "mae": nflp.MAE,
+    # "mse": nflp.MSE,
+    # "rmse": nflp.RMSE,
+    # "mape": nflp.MAPE,
+    # "smape": nflp.SMAPE,
+    # "mase": nflp.MASE,
+    # "relmse": nflp.relMSE,
+    # "quatileloss": nflp.QuantileLoss,
+    # "mqloss": nflp.MQLoss,
+    # "huberloss": nflp.HuberLoss,
+    # "huberqloss": nflp.HuberQLoss,
+    # "hubermqloss": nflp.HuberMQLoss,
+    # "distributionloss": nflp.DistributionLoss
+}
+
+
+def loss_from(loss, kwars):
+    def select_loss(loss):
+        if loss in NF_LOSSES:
+            return NF_LOSSES[loss]
+        elif isinstance(loss, type):
+            return loss
+        elif isinstance(loss, str):
+            return import_from(loss)
+        else:
+            raise ValueError(f"Loss type {loss} not supported")
+    # end
+    loss_class = select_loss(loss)
+    return loss_class(**kwars)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -19,17 +85,22 @@ def to_timeseries(x: Union[None, pd.Series, pd.DataFrame, np.ndarray],
                   freq: Optional[str] = None) \
         -> Optional[TimeSeries]:
 
-    assert is_instance(x, Union[None, pd.Series, pd.DataFrame, np.ndarray])
-    assert is_instance(freq, Optional[str])
+    assert isinstance(x, (type(None), pd.Series, pd.DataFrame, np.ndarray))
+    assert isinstance(freq, (type(None), str))
 
     def reindex(x: pd.DataFrame | pd.Series) -> pd.DataFrame | pd.Series:
-        index = x.index
-        if isinstance(index, pd.PeriodIndex):
-            index = index.to_timestamp()
+        # index = x.index
+        # if isinstance(index, pd.PeriodIndex):
+        #     index = index.to_timestamp()
+        #     if isinstance(x, pd.Series):
+        #         x = pd.Series(data=x.values, index=index, name=x.name, dtype=x.dtype)
+        #     else:
+        #         x = x.set_index(index)
+        if isinstance(x.index, pd.PeriodIndex):
             if isinstance(x, pd.Series):
-                x = pd.Series(data=x.values, index=index, name=x.name, dtype=x.dtype)
+                x = x.set_axis(x.index.to_timestamp())
             else:
-                x = x.set_index(index)
+                x.set_index(x.index.to_timestamp())
         return x
 
     ts: Optional[TimeSeries] = None
@@ -47,15 +118,26 @@ def to_timeseries(x: Union[None, pd.Series, pd.DataFrame, np.ndarray],
     return ts
 
 
-def from_timeseries(X: TimeSeries, to_type) -> Any:
-    if to_type == pd.Series:
-        return X.pd_series()
-    elif to_type == pd.DataFrame:
-        return X.pd_dataframe()
-    elif to_type == np.ndarray:
-        return X.values()
+def from_timeseries(X: TimeSeries, y_template, cutoff) -> Any:
+    def reindex(x, index_type):
+        if isinstance(x, pd.Series):
+            if isinstance(x.index, pd.DatetimeIndex) and index_type == pd.PeriodIndex:
+                x = x.set_axis(x.index.to_period())
+        else:
+            if isinstance(x.index, pd.DatetimeIndex) and index_type == pd.PeriodIndex:
+                x = x.set_index(x.index.to_period())
+        return x
+    # end
+    if isinstance(y_template, pd.Series):
+        data = reindex(X.pd_series(), type(y_template.index))
+    elif isinstance(y_template, pd.DataFrame):
+        data = reindex(X.pd_dataframe(), type(y_template.index))
+    elif isinstance(y_template, np.ndarray):
+        data = X.values()
     else:
-        raise ValueError(f"Unsupported type {to_type}")
+        raise ValueError(f"Unsupported type {type(y_template)}")
+
+    return data
 
 
 def fh_relative(fh: ForecastingHorizon, cutoff: datetime):
@@ -68,7 +150,7 @@ def fh_relative(fh: ForecastingHorizon, cutoff: datetime):
 # DartsBaseForecaster
 # ---------------------------------------------------------------------------
 
-class BaseDartsForecaster(KwArgsForecaster):
+class BaseDartsForecaster(BaseForecaster):
 
     # Each derived class must have a specifalized set of tags
 
@@ -115,18 +197,44 @@ class BaseDartsForecaster(KwArgsForecaster):
 
     # -----------------------------------------------------------------------
 
-    def __init__(self, darts_model, kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, darts_class, locals):
+        super().__init__()
 
-        self.darts_model = qualified_name(darts_model)
+        self._darts_class = darts_class
+        self._model = None
+        self._init_kwargs = {}
+        self._kwargs = {}
 
-        # for k in kwargs:
-        #     setattr(self, k, kwargs[k])
+        self._analyze_locals(locals)
+    # end
 
-        # Note: the models can be NOT created here because
-        # some of them depend on the data!
-        self._darts_class = import_from(self.darts_model)
+    def _analyze_locals(self, locals):
+        for k in locals:
+            if k in ['self', '__class__']:
+                continue
+            elif k in ['window_length', 'input_length']:
+                self._init_kwargs['input_chunk_length'] = locals[k]
+            elif k in ['prediction_length', 'output_length']:
+                self._init_kwargs['output_chunk_length'] = locals[k]
+            elif k == 'activation':
+                self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+            elif k == 'kwargs':
+                self._kwargs |= locals[k]
+                continue
+            else:
+                self._init_kwargs[k] = locals[k]
+            setattr(self, k, locals[k])
         return
+    #end
+
+    def _compile_model(self, y, X=None):
+
+        self._model: GlobalForecastingModel = self._darts_class(
+            **(self._init_kwargs | self._kwargs)
+        )
+
+        return self._model
+    # end
 
     # -----------------------------------------------------------------------
     # Properties
@@ -139,18 +247,15 @@ class BaseDartsForecaster(KwArgsForecaster):
 
         past_covariates = to_timeseries(X)
 
-        kwargs = self._compose_kwargs(y, X, fh)
-        self._model: GlobalForecastingModel = self._darts_class(**kwargs)
+        # create the model
+        model = self._compile_model(y, X)
 
         if past_covariates is None:
-            self._model.fit(yts)
+            model.fit(yts)
         else:
-            self._model.fit(yts, past_covariates=past_covariates)
+            model.fit(yts, past_covariates=past_covariates)
 
         return self
-
-    def _compose_kwargs(self, y, X, fh):
-        return self.kwargs
 
     def _predict(self, fh: ForecastingHorizon, X=None):
 
@@ -172,7 +277,7 @@ class BaseDartsForecaster(KwArgsForecaster):
                 past_covariates=past_covariates,
             )
 
-        y_pred = from_timeseries(ts_pred, self._y_type)
+        y_pred = from_timeseries(ts_pred, self._y, self._cutoff)
         return y_pred
 
     # -----------------------------------------------------------------------

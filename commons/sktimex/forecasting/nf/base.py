@@ -1,10 +1,18 @@
+from typing import Optional
+
 import neuralforecast as nf
+import neuralforecast.losses.pytorch as nflp
+import pandas as pd
 
-from .losses import select_loss
-from .utils import to_nfdf, from_nfdf, extends_nfdf, name_of, to_futr_nfdf
-from ...forecasting.base import BaseForecaster
+from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+# from ...forecasting.base import BaseForecaster
+from stdlib import import_from
 
+
+# ---------------------------------------------------------------------------
 # Scalers
+# ---------------------------------------------------------------------------
+
 #   "identity": identity_statistics,
 #   "standard": std_statistics,
 #   "revin": std_statistics,
@@ -14,41 +22,150 @@ from ...forecasting.base import BaseForecaster
 #   "invariant": invariant_statistics,
 
 
+# ---------------------------------------------------------------------------
+# Activation functions
+# ---------------------------------------------------------------------------
+
 ACTIVATION_FUNCTIONS = {
+    None: None,
+
     'relu': 'ReLU',
     'selu': 'SELU',
     'leakyrelu': 'LeakyReLU',
     'prelu': 'PReLU',
     'gelu': 'gelu',
-
     'tanh': 'Tanh',
-    'softplus':'Softplus',
+    'softplus': 'Softplus',
     'sigmoid': 'Sigmoid',
 
     'ReLU': 'ReLU',
     'SELU': 'SELU',
     'LeakyReLU': 'LeakyReLU',
     'PReLU': 'PReLU',
-
     'Tanh': 'Tanh',
     'Softplus': 'Softplus',
     'Sigmoid': 'Sigmoid',
-
 }
 
 
 # ---------------------------------------------------------------------------
-# Single
+# Loss functions
 # ---------------------------------------------------------------------------
 
-class NeuralForecastSingle(nf.NeuralForecast):
+NF_LOSSES = {
+    None: nflp.MSE,
+    "mae": nflp.MAE,
+    "mse": nflp.MSE,
+    "rmse": nflp.RMSE,
+    "mape": nflp.MAPE,
+    "smape": nflp.SMAPE,
+    "mase": nflp.MASE,
+    "relmse": nflp.relMSE,
+    "quatileloss": nflp.QuantileLoss,
+    "mqloss": nflp.MQLoss,
+    "huberloss": nflp.HuberLoss,
+    "huberqloss": nflp.HuberQLoss,
+    "hubermqloss": nflp.HuberMQLoss,
+    "distributionloss": nflp.DistributionLoss
+}
 
-    def __init__(self, model, freq):
-        super().__init__(
-            models=[model],
-            freq=freq,
-            # local_scaler_type=model.scaler_type
-        )
+
+def loss_from(loss, kwars):
+    def select_loss(loss):
+        if loss in NF_LOSSES:
+            return NF_LOSSES[loss]
+        elif isinstance(loss, type):
+            return loss
+        elif isinstance(loss, str):
+            return import_from(loss)
+        else:
+            raise ValueError(f"Loss type {loss} not supported")
+    # end
+    loss_class = select_loss(loss)
+    return loss_class(**kwars)
+# end
+
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+# unique_id, ds, y
+
+def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
+    assert isinstance(y, pd.Series)
+    assert isinstance(X, (type(None), pd.DataFrame))
+
+    freq = y.index.freq
+    if freq is None:
+        freq = pd.infer_freq(y.index)
+
+    # if isinstance(ds.dtype, pd.PeriodDtype):
+    #     ds = ds.map(lambda t: t.to_timestamp(freq=freq))
+
+    ydf = pd.DataFrame({
+        "ds": y.index.to_series(),
+        "y": y.values,
+        "unique_id": 1
+    })
+
+    if isinstance(ydf['ds'].dtype, pd.PeriodDtype):
+        ydf['ds'] = ydf['ds'].map(lambda t: t.to_timestamp(freq=freq))
+
+    if X is not None:
+        ydf = pd.concat([ydf, X], axis=1, ignore_index=True)
+
+    ydf.reset_index(drop=True)
+    return ydf
+
+
+def from_nfdf(predictions: list[pd.DataFrame], fha: ForecastingHorizon, y_template: pd.Series, model_name) -> pd.DataFrame:
+    y_name = y_template.name
+    y_pred = pd.concat(predictions)
+    y_pred.rename(columns={model_name: y_name}, inplace=True)
+    y_pred.drop(columns=['ds'], inplace=True)
+    y_pred.set_index(fha.to_pandas(), inplace=True)
+
+    # 'unique_id' is as index OR column!
+    if 'unique_id' in y_pred.columns:
+        y_pred.drop(columns=['unique_id'], inplace=True)
+
+    return y_pred
+
+
+def to_futr_nfdf(fh: ForecastingHorizon, X: Optional[pd.DataFrame]):
+    freq = fh.freq
+    if freq is None:
+        freq = pd.infer_freq(fh)
+
+    if X is not None:
+        df = pd.DataFrame({"ds": X.index.to_series(), "unique_id": 1})
+        df = pd.concat([df, X], axis=1)
+    else:
+        df = pd.DataFrame({"ds": fh.to_pandas(), "unique_id": 1})
+
+    if isinstance(df['ds'].dtype, pd.PeriodDtype):
+        df['ds'] = df['ds'].map(lambda t: t.to_timestamp(freq=freq))
+
+    return df
+
+
+def extends_nfdf(df: pd.DataFrame, y_pred: pd.DataFrame, X: Optional[pd.DataFrame], at: int, name: str):
+    n_pred = len(y_pred)
+
+    y_pred.rename(columns={name: "y"}, inplace=True)
+    y_pred.reset_index(drop=False, inplace=True)
+
+    # 1) if X is available, expand y_pred with X
+    if X is not None:
+        X_pred = X.iloc[at: at+n_pred]
+        y_pred = pd.concat([y_pred, X_pred], axis=1, ignore_index=True)
+    # 2) concat df with y_pred
+    df = pd.concat([df, y_pred], axis=0, ignore_index=True)
+    return df
+
+
+def name_of(model):
+    return model.__class__.__name__ if model.alias is None else model.alias
 
 
 # ---------------------------------------------------------------------------
@@ -84,10 +201,10 @@ class BaseNFForecaster(BaseForecaster):
         self.data_kwargs = {}
         self.val_size = None
 
+        self._nf_class = nf_class
         self._model = None
         self._freq = None
         self._init_kwargs = {}
-        self._nf_class = nf_class
         self._nfdf = None
 
         self._analyze_locals(locals)
@@ -97,6 +214,10 @@ class BaseNFForecaster(BaseForecaster):
         for k in locals:
             if k in ['self', '__class__']:
                 continue
+            elif k in ['window_length', 'input_length']:
+                self._init_kwargs['input_length'] = locals[k]
+            elif k in ['prediction_length', 'output_length']:
+                self._init_kwargs['h'] = locals[k]
             elif k in ['encoder_activation', 'activation']:
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
             elif k == 'val_size':
@@ -105,12 +226,12 @@ class BaseNFForecaster(BaseForecaster):
             elif k == 'loss':
                 loss_fun = locals[k]
                 loss_kwargs = locals['loss_kwargs']
-                loss = select_loss(loss_fun)(**(loss_kwargs or {}))
+                loss = loss_from(loss_fun, (loss_kwargs or {}))
                 self._init_kwargs[k] = loss
             elif k == 'valid_loss':
                 loss_fun = locals[k]
                 loss_kwargs = locals['valid_loss_kwargs']
-                loss = select_loss(loss_fun)(**(loss_kwargs or {}))
+                loss = loss_from(loss_fun, (loss_kwargs or {}))
                 self._init_kwargs[k] = loss
             elif k in ['loss_kwargs', 'valid_loss_kwargs']:
                 pass
@@ -123,9 +244,8 @@ class BaseNFForecaster(BaseForecaster):
             else:
                 self._init_kwargs[k] = locals[k]
             setattr(self, k, locals[k])
-        # end
+        return
     # end
-
 
     @property
     def model(self):
@@ -142,6 +262,7 @@ class BaseNFForecaster(BaseForecaster):
         )
 
         return self._model
+    # end
 
     def _fit(self, y, X=None, fh=None):
 
@@ -149,8 +270,8 @@ class BaseNFForecaster(BaseForecaster):
         model = self._compile_model(y, X)
 
         # create the NF wrapper
-        self._nf = NeuralForecastSingle(
-            model=model,
+        self._nf = nf.NeuralForecast(
+            models=[model],
             freq=self._freq
         )
 
