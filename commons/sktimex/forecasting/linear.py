@@ -8,11 +8,10 @@ import logging
 from typing import Optional, Union, Any, Sized, cast
 
 import numpy as np
-from stdlib import name_of
 from .base import ForecastingHorizon
 from .base import KwArgsForecaster, yx_lags, t_lags
 from ..transform.lin import LinearTrainTransform, LinearPredictTransform
-from ..utils import PD_TYPES, import_from, qualified_name
+from ..utils import PD_TYPES, import_from, qualified_name, name_of
 
 
 # ---------------------------------------------------------------------------

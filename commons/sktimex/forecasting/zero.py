@@ -1,6 +1,6 @@
 
 __all__ = [
-    "ConstantForecaster",
+    "ZeroForecaster",
 ]
 
 
@@ -14,7 +14,7 @@ from ..utils import PD_TYPES
 # ConstantForecaster
 # ---------------------------------------------------------------------------
 
-class ConstantForecaster(BaseForecaster):
+class ZeroForecaster(BaseForecaster):
     _tags = {
         "y_inner_mtype": "np.ndarray",
         "X_inner_mtype": "np.ndarray",
@@ -42,5 +42,8 @@ class ConstantForecaster(BaseForecaster):
         return y_pred
 
     def __repr__(self, **kwargs):
-        return f"ConstantForecaster(value={self.const_value})"
+        if self.const_value == 0:
+            return f"ZeroForecaster"
+        else:
+            return f"ZeroForecaster[value={self.const_value}]"
 

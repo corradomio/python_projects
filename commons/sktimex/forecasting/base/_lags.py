@@ -12,7 +12,7 @@ __all__ = [
     't_lags'
 ]
 
-from stdlib import RangeType, NoneType
+from ...utils import RangeType, NoneType
 
 
 def _tolags(lags, start):

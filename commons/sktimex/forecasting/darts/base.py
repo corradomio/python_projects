@@ -7,8 +7,9 @@ import pandas as pd
 from darts import TimeSeries
 from darts.models.forecasting.forecasting_model import GlobalForecastingModel
 
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-from stdlib import import_from
+# from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from ..base import ForecastingHorizon, BaseForecaster
+from ...utils import import_from
 
 
 # ---------------------------------------------------------------------------
@@ -89,18 +90,12 @@ def to_timeseries(x: Union[None, pd.Series, pd.DataFrame, np.ndarray],
     assert isinstance(freq, (type(None), str))
 
     def reindex(x: pd.DataFrame | pd.Series) -> pd.DataFrame | pd.Series:
-        # index = x.index
-        # if isinstance(index, pd.PeriodIndex):
-        #     index = index.to_timestamp()
-        #     if isinstance(x, pd.Series):
-        #         x = pd.Series(data=x.values, index=index, name=x.name, dtype=x.dtype)
-        #     else:
-        #         x = x.set_index(index)
+        # create a copy!
         if isinstance(x.index, pd.PeriodIndex):
             if isinstance(x, pd.Series):
                 x = x.set_axis(x.index.to_timestamp())
             else:
-                x.set_index(x.index.to_timestamp())
+                x = x.set_index(x.index.to_timestamp())
         return x
 
     ts: Optional[TimeSeries] = None
@@ -118,22 +113,30 @@ def to_timeseries(x: Union[None, pd.Series, pd.DataFrame, np.ndarray],
     return ts
 
 
-def from_timeseries(X: TimeSeries, y_template, cutoff) -> Any:
-    def reindex(x, index_type):
-        if isinstance(x, pd.Series):
-            if isinstance(x.index, pd.DatetimeIndex) and index_type == pd.PeriodIndex:
-                x = x.set_axis(x.index.to_period())
+def from_timeseries(ts: TimeSeries, y_template, X, cutoff) -> Any:
+    def reindex(y):
+        if X is not None:
+            y_index = X.index
+        elif type(y_template.index) == pd.DatetimeIndex:
+            y_index = pd.date_range(cutoff, periods=len(y))
+        elif type(y_template.index) == pd.PeriodIndex:
+            y_index = pd.period_range(cutoff, periods=len(y))
         else:
-            if isinstance(x.index, pd.DatetimeIndex) and index_type == pd.PeriodIndex:
-                x = x.set_index(x.index.to_period())
-        return x
+            raise ValueError(f"Unsupported index type {type(y_template.index)}")
+
+        if isinstance(y, pd.Series):
+            y = y.set_axis(y_index)
+        else:
+            y = y.set_index(y_index)
+        return y
     # end
+
     if isinstance(y_template, pd.Series):
-        data = reindex(X.pd_series(), type(y_template.index))
+        data = reindex(ts.pd_series())
     elif isinstance(y_template, pd.DataFrame):
-        data = reindex(X.pd_dataframe(), type(y_template.index))
+        data = reindex(ts.pd_dataframe())
     elif isinstance(y_template, np.ndarray):
-        data = X.values()
+        data = ts.values()
     else:
         raise ValueError(f"Unsupported type {type(y_template)}")
 
@@ -205,6 +208,9 @@ class BaseDartsForecaster(BaseForecaster):
         self._init_kwargs = {}
         self._kwargs = {}
 
+        self.lags = None
+        self.lags_past_covariates = None
+
         self._analyze_locals(locals)
     # end
 
@@ -246,6 +252,12 @@ class BaseDartsForecaster(BaseForecaster):
         yts = to_timeseries(y)
 
         past_covariates = to_timeseries(X)
+        if past_covariates is not None and self.lags_past_covariates is None:
+            # self.lags_past_covariates = self.lags
+            self._kwargs['lags_past_covariates'] = self.lags
+        elif past_covariates is None and self.lags_past_covariates is not None:
+            # self.lags_past_covariates = None
+            self._kwargs['lags_past_covariates'] = None
 
         # create the model
         model = self._compile_model(y, X)
@@ -260,13 +272,15 @@ class BaseDartsForecaster(BaseForecaster):
     def _predict(self, fh: ForecastingHorizon, X=None):
 
         if self._X is not None and X is not None:
-            X = pd.concat([self._X, X], axis='rows')
+            X_all = pd.concat([self._X, X], axis='rows')
         elif X is not None:
-            pass
+            X_all = None
         elif self._X is not None:
-            X = self._X
+            X_all = self._X
+        else:
+            X_all = None
 
-        past_covariates = to_timeseries(X)
+        past_covariates = to_timeseries(X_all)
         nfh = len(fh)
 
         if past_covariates is None:
@@ -277,7 +291,7 @@ class BaseDartsForecaster(BaseForecaster):
                 past_covariates=past_covariates,
             )
 
-        y_pred = from_timeseries(ts_pred, self._y, self._cutoff)
+        y_pred = from_timeseries(ts_pred, self._y, X, self._cutoff)
         return y_pred
 
     # -----------------------------------------------------------------------

@@ -5,4 +5,5 @@ from .draw import draw
 from .io import read_vecsv
 from .transform import coarsening_graph, closure_coarsening_graph
 from .connectivity import is_weakly_connected
+from .dsep import d_separation_pairs, d_separation, power_adjacency_matrix
 

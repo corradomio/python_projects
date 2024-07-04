@@ -325,7 +325,7 @@ class TransformForecaster(BaseForecaster):
         # super().__init__(**kwargs)
         super().__init__()
 
-        assert is_instance(scaler, Union[None, str, dict])
+        assert isinstance(scaler, Union[NoneType, str, dict])
 
         # Unmodified parameters [readonly]
         self.scaler = scaler

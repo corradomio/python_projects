@@ -10,7 +10,7 @@ __all__ = [
 
 
 from typing import Union, Any
-from stdlib.types import RangeType
+from .utils import RangeType
 
 # ---------------------------------------------------------------------------
 # Constants

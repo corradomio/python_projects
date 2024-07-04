@@ -23,13 +23,14 @@ h5py
 
 
 # ---------------------------------------------------------------------------
-# Standard libraries
+# standard libraries
+# ---------------------------------------------------------------------------
 
 # https://numpy.org/
 numpy
 
 # https://xarray.dev/
-xarray
+# xarray
 
 # https://scipy.org/
 scipy
@@ -50,6 +51,7 @@ seaborn
 
 # ---------------------------------------------------------------------------
 # scikit-learn
+# ---------------------------------------------------------------------------
 
 # https://scikit-learn.org
 scikit-learn
@@ -81,11 +83,13 @@ lightgbm
 
 # ---------------------------------------------------------------------------
 # dimensional reduction
+# ---------------------------------------------------------------------------
 
 # https://github.com/eamid/trimap
 # trimap isa based on annoy (https://github.com/spotify/annoy)
 # can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
-trimap
+#                        https://www.cgohlke.com/
+#trimap
 
 # https://umap-learn.readthedocs.io/en/latest/
 umap-learn
@@ -93,6 +97,7 @@ umap-learn
 
 # ---------------------------------------------------------------------------
 # time series
+# ---------------------------------------------------------------------------
 
 # https://sktime.org/
 sktime
@@ -105,21 +110,14 @@ statsmodels
 
 
 # ---------------------------------------------------------------------------
-# Extensions
-
-# https://pyts.readthedocs.io/en/stable
-#pyts
-
-# https://unit8co.github.io/darts/
-#darts
-
-# https://github.com/sktime/skpro
-#skpro
+# extensions
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # NN but ONLY for scikit learn/time series
+# ---------------------------------------------------------------------------
 
---extra-index-url https://download.pytorch.org/whl/cu121
+# --extra-index-url https://download.pytorch.org/whl/cu121
 torch>=2.1
 torchvision
 torchaudio
@@ -130,11 +128,18 @@ torchtext
 skorch
 
 
+# https://lightning.ai/
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
+lightning
+
+
 # ---------------------------------------------------------------------------
 # database access
 # sqlalchemy
 #   mysql
 #   postgresql
+# ---------------------------------------------------------------------------
 
 # https://www.psycopg.org/
 psycopg2
@@ -156,18 +161,21 @@ sqlalchemy
 # ---------------------------------------------------------------------------
 # AFTER torch
 # ---------------------------------------------------------------------------
+# neuralforecast
+# ---------------------------------------------------------------------------
+
+# https://fastcore.fast.ai/
+fastcore
 
 
-# https://lightning.ai/
-# https://lightning.ai/docs/pytorch/stable/
-# https://github.com/Lightning-AI/pytorch-lightning
-#lightning
+# https://github.com/fastai/nbdev
+nbdev
 
 
 # https://nixtlaverse.nixtla.io/neuralforecast/index.html
 # https://pypi.org/project/neuralforecast/0.0.6/
 # https://github.com/Nixtla/neuralforecast/tree/main/
-#neuralforecast
+neuralforecast
 
 # https://pypi.org/project/datasetsforecast/
 # https://github.com/Nixtla/datasetsforecast/tree/main/
@@ -178,9 +186,27 @@ sqlalchemy
 #hierarchicalforecast
 
 
+# ---------------------------------------------------------------------------
+# darts
+# ---------------------------------------------------------------------------
+
+# https://unit8co.github.io/darts/
+darts
+
 
 # ---------------------------------------------------------------------------
-# SUSPENDED
+# other
+# ---------------------------------------------------------------------------
+
+# https://pyts.readthedocs.io/en/stable
+#pyts
+
+# https://github.com/sktime/skpro
+#skpro
+
+
+# ---------------------------------------------------------------------------
+# suspended
 # ---------------------------------------------------------------------------
 
 # https://github.com/solegalli/feature_engine
@@ -222,3 +248,9 @@ sqlalchemy
 
 # https://pypi.org/project/PyYAML/
 # PyYAML
+
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

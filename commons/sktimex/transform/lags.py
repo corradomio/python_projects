@@ -1,8 +1,7 @@
 import numpy as np
 
-from stdlib import NoneType, RangeType
 from .base import ARRAY_OR_DF, ModelTrainTransform, ModelPredictTransform
-from ..utils import is_instance
+from ..utils import is_instance, NoneType, RangeType
 from ..lags import lmax
 
 

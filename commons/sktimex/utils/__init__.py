@@ -12,11 +12,21 @@ from .plotting import *
 # ---------------------------------------------------------------------------
 # DON'T REMOVE!!!!
 # They are used in other modules to avoid the direct dependency with 'stdlib'
-from stdlib import NoneType, RangeType
-from stdlib import kwselect, kwparams, kwexclude, kwval, kwmerge
+from stdlib import kwexclude, kwval, kwmerge
 from stdlib import lrange, import_from, qualified_name, as_dict, as_list
-from stdlib import mul_, is_instance
+from stdlib import mul_, is_instance, name_of, ns_of
 # DON'T REMOVE!!!!
+
+
+# ---------------------------------------------------------------------------
+# Types
+# ---------------------------------------------------------------------------
+
+NoneType = type(None)
+RangeType = type(range(0))
+CollectionType = (list, tuple)
+FunctionType = type(lambda x: x)
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------

@@ -8,13 +8,12 @@ from typing import Sized, cast, Union, Optional
 
 import numpy as np
 import pandas as pd
-
 from sktime.forecasting.base import ForecastingHorizon
-from stdlib import is_instance, lrange, name_of
-from .base import KwArgsForecaster, BaseForecaster
+
+from .base import BaseForecaster
 from ..forecasting.compose import make_reduction
-from ..utils import FH_TYPES, PD_TYPES
-from ..utils import import_from, qualified_name, as_dict
+from ..utils import PD_TYPES
+from ..utils import import_from, qualified_name, lrange, name_of
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +66,7 @@ class ReducerForecaster(BaseForecaster):
 
         super().__init__()
 
-        assert is_instance(estimator, Union[str, type])
+        assert isinstance(estimator, Union[str, type])
 
         # Unmodified parameters [readonly]
         self.estimator = qualified_name(estimator)

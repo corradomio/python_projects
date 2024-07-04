@@ -3,8 +3,8 @@ from typing import Generator
 
 import numpy as np
 
-# import networkx as nx
-import netx as nx
+import networkx as nx
+# import netx as nxx
 from stdlib.iset import ilexsubset, imembers
 
 
@@ -23,7 +23,7 @@ def random_dag(n: int, m: int, connected=True):
     :returns: the generated Directed Acyclic Graph
     """
     assert m <= (n*(n-1))/2, "Too edges specified"
-    assert connected and m >= (n-1), "Not enough edges for a connected graph"
+    # assert connected and m >= (n-1), "Not enough edges for a connected graph"
 
     G = nx.DiGraph()
     G.add_nodes_from(list(range(n)))
@@ -41,7 +41,7 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
     :param seed: if specified, used to initialize the random number generator
     :returns: the original Directed Acyclic Graph with extra edges
     """
-    n = len(G.nodes_)
+    n = G.order()
 
     completed = m <= len(G.edges)
     while not completed:
@@ -104,14 +104,14 @@ def dag_enum(n: int) -> Generator:
     for S in ilexsubset(n=N, k=(n - 1, N)):
         A = iset_to_amdag(S, n)
 
-        G = from_numpy_array(A, create_using=nx.DiGraph())
+        G = nx.from_numpy_array(A, create_using=nx.DiGraph())
         if not nx.is_weakly_connected(G):
             continue
         yield G
 
 
 def from_numpy_array(A: np.ndarray, create_using=None):
-    G = create_using if create_using else nx.Graph()
+    G = create_using if create_using is not None else nx.Graph()
     n = A.shape[0]
 
     G.add_nodes_from(range(n))

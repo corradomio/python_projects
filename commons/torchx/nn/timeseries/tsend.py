@@ -3,7 +3,6 @@ from .seq2seq import TSSeq2Seq
 from .seq2seqattn import TSSeq2SeqAttn
 from .tstran import TSPlainTransformer
 from .tseots import TSEncoderOnlyTransformer
-from .tsnouf import TSNoufTransformer
 from .tide import TiDE
 
 
@@ -30,8 +29,6 @@ def create_model(name: str, input_shape, output_shape, **kwargs):
         return TSPlainTransformer(input_shape, output_shape, **kwargs)
     if name == 'attn3':
         return TSEncoderOnlyTransformer(input_shape, output_shape, **kwargs)
-    if name == 'attn4':
-        return TSNoufTransformer(input_shape, output_shape, **kwargs)
 
     if name == "tide":
         return TiDE(input_shape, output_shape, **kwargs)

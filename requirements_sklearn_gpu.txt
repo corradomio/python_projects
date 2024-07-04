@@ -88,7 +88,8 @@ lightgbm
 # https://github.com/eamid/trimap
 # trimap isa based on annoy (https://github.com/spotify/annoy)
 # can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
-trimap
+#                        https://www.cgohlke.com/
+#trimap
 
 # https://umap-learn.readthedocs.io/en/latest/
 umap-learn

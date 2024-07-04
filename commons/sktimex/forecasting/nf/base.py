@@ -4,9 +4,9 @@ import neuralforecast as nf
 import neuralforecast.losses.pytorch as nflp
 import pandas as pd
 
-from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
-# from ...forecasting.base import BaseForecaster
-from stdlib import import_from
+# from sktime.forecasting.base import ForecastingHorizon, BaseForecaster
+from ..base import ForecastingHorizon, BaseForecaster
+from ...utils import import_from
 
 
 # ---------------------------------------------------------------------------

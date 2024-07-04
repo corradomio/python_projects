@@ -1,5 +1,9 @@
+# Deprecated
+#
+# All functions can be replaced from 'stdlib.dict' or from
+# builtin 'dict'
+#
 from typing import Union, Optional
-
 from deprecated import deprecated
 
 from .convert import as_list, CollectionType

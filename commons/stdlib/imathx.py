@@ -1,3 +1,6 @@
+#
+# Integer mathematics
+#
 from typing import Union, Iterable
 from math import factorial
 
@@ -43,6 +46,18 @@ def isign(x: int, zero: bool = False) -> int:
     if x < 0: return -1
     if x > 0: return +1
     return 1 if zero else 0
+
+
+# ---------------------------------------------------------------------------
+
+def iseven(n: int) -> bool:
+    """e' pari"""
+    return n % 2 == 0  # e' pari
+
+
+def isodd(n: int) -> bool:
+    """e' dispari"""
+    return n % 2 == 1  # e' dispari
 
 
 # ---------------------------------------------------------------------------
