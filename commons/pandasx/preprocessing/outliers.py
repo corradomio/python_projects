@@ -24,7 +24,7 @@ class OutlierTransformer(GroupsBaseEncoder):
     If is is specified 'sp', the outliers ar computed on a season based.
     """
 
-    def __init__(self, columns, *,
+    def __init__(self, columns=None, *,
                  outlier_std=3, sp=None, strategy='clip',
                  groups=None, copy=True):
         super().__init__(columns, groups, copy)

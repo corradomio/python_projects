@@ -1,15 +1,18 @@
+#
+# Deprecated: it is not necessary to support this 'complex' configurations
+# It is enough to support list of integers ONLY
+#
 
 __all__ = [
     'LagSlots',
     'LagsResolver',
     'resolve_lags',
-    'resolve_tlags',
     'flatten_max',
     'lmax'
 ]
 
-
 from typing import Union, Any
+
 from .utils import RangeType
 
 # ---------------------------------------------------------------------------
@@ -564,7 +567,6 @@ def resolve_lags(lags: Union[int, tuple, list, dict]) -> LagSlots:
     lr = LagsResolver(lags)
     res: LagSlots = lr.resolve()
     return res
-# end
 
 
 def resolve_ilags(ilags: Union[int, tuple, list]) -> list[int]:

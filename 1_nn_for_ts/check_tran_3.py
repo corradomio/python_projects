@@ -4,12 +4,12 @@ import warnings
 
 import matplotlib.pyplot as plt
 import skorch
+import torch
 
 import pandasx as pdx
-import sktimex
-import torch
-import torchx
 import skorchx
+import sktimex
+import sktimex.forecasting
 from sktimex.utils.plotting import plot_series
 from torchx.nn.timeseries import *
 

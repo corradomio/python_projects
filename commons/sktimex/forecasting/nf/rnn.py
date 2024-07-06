@@ -4,6 +4,11 @@ from .base import BaseNFForecaster
 
 
 class RNN(BaseNFForecaster):
+
+    _tags = {
+        "fast-activation": True
+    }
+
     def __init__(
         self,
         # -- ts
@@ -15,7 +20,7 @@ class RNN(BaseNFForecaster):
         inference_input_size: int = -1,
         encoder_n_layers: int = 2,
         encoder_hidden_size: int = 200,
-        encoder_activation: str = 'tanh',
+        encoder_activation: str = 'relu',
         encoder_bias: bool = True,
         encoder_dropout: float = 0.0,
         context_size: int = 10,

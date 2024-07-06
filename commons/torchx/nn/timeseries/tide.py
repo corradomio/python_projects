@@ -63,8 +63,9 @@ class _ResidualBlock(nn.Module):
 
 class TiDE(TimeSeriesModel):
 
-    def __init__(self, input_shape, output_shape,
-                 feature_size=None,
+    def __init__(self,
+                 input_shape,
+                 output_shape,
                  hidden_size=None,
                  decoder_output_size=None,
                  temporal_hidden_size=None,
@@ -86,8 +87,8 @@ class TiDE(TimeSeriesModel):
         :param use_layer_norm: if to use the layer norm in the residual blocks
         :param use_future_features: if to use X_future (the future input features) in input
         """
-        super().__init__(input_shape, output_shape,
-                         feature_size=feature_size,
+        super().__init__(input_shape=input_shape,
+                         output_shape=output_shape,
                          hidden_dim=hidden_size,
                          decoder_output_size=decoder_output_size,
                          temporal_hidden_size=temporal_hidden_size,
@@ -99,22 +100,16 @@ class TiDE(TimeSeriesModel):
 
         input_len, input_size = input_shape
         output_len, target_size = output_shape
-
-        if feature_size is None:
-            feature_size = input_size
-
-        features_size = (feature_size - target_size)
-
-        assert input_size == (target_size + features_size), "Invalid input_size: it must be |y|+|X|"
+        feature_size = (input_size - target_size)
 
         if decoder_output_size is None:
-            decoder_output_size = (features_size + target_size)//2
+            decoder_output_size = (feature_size + target_size)//2
 
-        encoder_input_size = input_len * features_size + input_len * target_size + (
-            output_len * features_size if use_future_features else 0
+        encoder_input_size = input_len * feature_size + input_len * target_size + (
+            output_len * feature_size if use_future_features else 0
         )
 
-        temporal_input_shape = (output_len, decoder_output_size + features_size) \
+        temporal_input_shape = (output_len, decoder_output_size + feature_size) \
             if use_future_features else (output_len, decoder_output_size)
 
         decoder_output_dim = (output_len, decoder_output_size)
@@ -255,21 +250,10 @@ class TSTiDE(TiDE):
                  use_future_features=True,
                  dropout=0.1
                  ):
-        super().__init__(input_shape,
-                         output_shape,
-                         feature_size,
-                         hidden_size,
-                         decoder_output_size,
-                         temporal_hidden_size,
-                         num_encoder_layers,
-                         num_decoder_layers,
-                         use_layer_norm,
-                         use_future_features,
-                         dropout)
+        super().__init__(**locals())
 
-    def forward(self, x:Tensor) -> Tensor:
+    def forward(self, x: Tensor) -> Tensor:
         return super().forward(x)
-
 # end
 
 # ---------------------------------------------------------------------------

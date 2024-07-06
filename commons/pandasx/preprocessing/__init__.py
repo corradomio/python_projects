@@ -4,7 +4,7 @@ from .outliers import OutlierTransformer, QuantileTransformer
 from .pipeline import Pipeline
 from .detrend import DetrendTransformer
 from .scalers import StandardScaler, LinearMinMaxScaler
-from .minmax import MinMaxScaler
+from .minmax import MinMaxScaler, ConfigurableMinMaxScaler
 from .onehot import OneHotEncoder
 from .binhot import BinHotEncoder
 from .periodic import PeriodicEncoder

@@ -8,6 +8,8 @@ import torch
 
 import pandasx as pdx
 import skorchx
+import sktimex.forecasting
+import sktimex.transform
 import sktimex
 from sktimex.utils.plotting import plot_series
 from torchx.nn.timeseries import *
@@ -86,11 +88,8 @@ def analyze(g, df):
 
     # prepare the data
 
-    tt = sktimex.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, yprev=True)
+    tt = sktimex.transform.RNNTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, yprev=True)
     Xt, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
-
-    pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
-    y_pred_s = pt.fit(y=y_train_s, X=X_train_s).transform(fh=fh, X=X_test_s)
 
     #
     # Model
@@ -132,6 +131,11 @@ def analyze(g, df):
 
     # ([35,36,19], [35,2,1]), [35,2,1]
     model.fit(Xt, yt)
+
+    # -- predict
+
+    pt = sktimex.RNNPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags)
+    y_pred_s = pt.fit(y=y_train_s, X=X_train_s).transform(fh=fh, X=X_test_s)
 
     i = 0
     while i < fh:

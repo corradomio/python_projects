@@ -180,22 +180,24 @@ def groups_apply(df: pd.DataFrame, fun, *,
     Apply fun to all groups in the dataframe
 
     :param df: DataFrame to split
-    :param groups: list of columns to use during the split. The columns must be categorical or string
     :param fun: function 'f(df: DataFrame, g: tuple) -> DataFrame' called
+    :param groups: list of columns to use during the split. The columns must be categorical or string
     :return:
     """
 
-    dfdict = groups_split(df, groups=groups)
+    df_dict = groups_split(df, groups=groups)
     dfres = {}
-    for g in dfdict:
-        dfg = dfdict[g]
+
+    g_sorted = sorted(list(df_dict.keys()))
+    for g in g_sorted:
+        dfg = df_dict[g]
         res = fun(dfg, g)
         # skip no results
         if res is not None:
             dfres[g] = res
 
     # end
-    df = groups_merge(dfdict, groups=groups, sortby=sortby)
+    df = groups_merge(df_dict, groups=groups, sortby=sortby)
     return df
 # end
 
@@ -246,7 +248,9 @@ def _groups_split_on_index(df, drop, keep):
 
 
 def groups_split(df: pd.DataFrame, *,
-                 groups: Union[None, str, list[str]] = None, drop=True, keep=-1) \
+                 groups: Union[None, str, list[str]] = None,
+                 drop=True,
+                 keep=0) \
         -> dict[tuple, pd.DataFrame]:
     """
     Split the dataframe based on the content of 'group' columns list or the MultiIndex.

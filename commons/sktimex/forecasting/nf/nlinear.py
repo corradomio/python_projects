@@ -5,6 +5,10 @@ from .base import BaseNFForecaster
 
 class NLinear(BaseNFForecaster):
 
+    _tags = {
+        "ignores-exogeneous-X": True
+    }
+
     def __init__(
         self,
         # -- ts

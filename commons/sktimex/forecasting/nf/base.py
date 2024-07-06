@@ -112,7 +112,7 @@ def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
         ydf['ds'] = ydf['ds'].map(lambda t: t.to_timestamp(freq=freq))
 
     if X is not None:
-        ydf = pd.concat([ydf, X], axis=1, ignore_index=True)
+        ydf = pd.concat([ydf, X], axis=1, ignore_index=False)
 
     ydf.reset_index(drop=True)
     return ydf
@@ -208,9 +208,14 @@ class BaseNFForecaster(BaseForecaster):
         self._nfdf = None
 
         self._analyze_locals(locals)
+        self._ignores_exogeneous_X = self.get_tag("ignores-exogeneous-X", False)
+        pass
     # end
 
     def _analyze_locals(self, locals):
+
+        fast_activation = self.get_tag('fast-activation', False, False)
+
         for k in locals:
             if k in ['self', '__class__']:
                 continue
@@ -218,8 +223,11 @@ class BaseNFForecaster(BaseForecaster):
                 self._init_kwargs['input_length'] = locals[k]
             elif k in ['prediction_length', 'output_length']:
                 self._init_kwargs['h'] = locals[k]
-            elif k in ['encoder_activation', 'activation']:
+            elif k in ['activation']:
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+            elif k in ['encoder_activation']:
+                if not fast_activation:
+                    self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
             elif k == 'val_size':
                 self.val_size = locals[k]
                 continue
@@ -254,9 +262,11 @@ class BaseNFForecaster(BaseForecaster):
     def _compile_model(self, y, X=None):
         self._freq = y.index.freqstr
 
+        hist_exog_list = None if X is None or self._ignores_exogeneous_X else list(X.columns)
+
         self._model = self._nf_class(
             stat_exog_list=None,
-            hist_exog_list=list(X.columns) if X is not None else None,
+            hist_exog_list=hist_exog_list,
             futr_exog_list=None,
             **(self._init_kwargs | self.trainer_kwargs)
         )
@@ -276,9 +286,12 @@ class BaseNFForecaster(BaseForecaster):
         )
 
         # combine (y,X) in NF format
-        nf_df = to_nfdf(y, X)
-        self._nf.fit(df=nf_df, val_size=self.val_size)
+        if X is None or self._ignores_exogeneous_X:
+            nf_df = to_nfdf(y, None)
+        else:
+            nf_df = to_nfdf(y, X)
 
+        self._nf.fit(df=nf_df, val_size=self.val_size)
         return self
 
     def _predict(self, fh, X=None):
@@ -287,18 +300,8 @@ class BaseNFForecaster(BaseForecaster):
 
         if len(fh) == self.h:
             return self._predict_same(fh, X)
-        # elif len(fh) < self.h:
-        #     return self._predict_short(fh, X)
         else:
             return self._predict_long(fh, X)
-
-    # def _predict_short(self, fh, X):
-    #     fhr = fh.to_relative(self._cutoff)
-    #     start = fhr[0]
-    #     fhs = ForecastingHorizon(lrange(start, start+self.h))
-    #
-    #     y_pred = self._predict_same(fhs, X)
-    #     return y_pred.iloc[:len(fh)]
 
     def _predict_same(self, fh, X):
         fha = fh.to_absolute(self._cutoff)

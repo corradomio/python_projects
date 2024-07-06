@@ -8,8 +8,8 @@ import logging
 from typing import Optional, Union, Any, Sized, cast
 
 import numpy as np
-from .base import ForecastingHorizon
-from .base import KwArgsForecaster, yx_lags, t_lags
+from .base import ForecastingHorizon, KwArgsForecaster
+from ..transform import yx_lags, t_lags
 from ..transform.lin import LinearTrainTransform, LinearPredictTransform
 from ..utils import PD_TYPES, import_from, qualified_name, name_of
 

@@ -235,11 +235,11 @@ class BaseDartsForecaster(BaseForecaster):
 
     def _compile_model(self, y, X=None):
 
-        self._model: GlobalForecastingModel = self._darts_class(
+        model: GlobalForecastingModel = self._darts_class(
             **(self._init_kwargs | self._kwargs)
         )
 
-        return self._model
+        return model
     # end
 
     # -----------------------------------------------------------------------
@@ -260,12 +260,12 @@ class BaseDartsForecaster(BaseForecaster):
             self._kwargs['lags_past_covariates'] = None
 
         # create the model
-        model = self._compile_model(y, X)
+        self._model = self._compile_model(y, X)
 
         if past_covariates is None:
-            model.fit(yts)
+            self._model.fit(yts)
         else:
-            model.fit(yts, past_covariates=past_covariates)
+            self._model.fit(yts, past_covariates=past_covariates)
 
         return self
 

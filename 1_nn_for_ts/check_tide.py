@@ -9,6 +9,7 @@ import torch
 import pandasx as pdx
 import skorchx
 import sktimex
+import sktimex.transform
 from sktimex.utils.plotting import plot_series
 from torchx.nn.timeseries import *
 
@@ -83,13 +84,15 @@ def analyze(g, df):
     # plt.show()
 
     # compute the input/output shapes based on [X|y] train and [x|y|t] lags
-    input_shape, output_shape = sktimex.forecasting.compute_input_output_shapes(X_train, y_train, xlags, ylags, tlags)
+    input_shape, output_shape = sktimex.transform.compute_input_output_shapes(X_train, y_train, xlags, ylags, tlags)
 
     # prepare the data
 
-    # compose Xy_past [*,xylags, |X|+|y|], y_past, X_future, y_future
+    # compose Xy_past [*, xylags, |X|+|y|], y_past, X_future, y_future
     tt = sktimex.LagsTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags, concat=True)
-    Xt, _, Xf, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
+    all = tt.fit_transform(y=y_train_s, X=X_train_s)
+    # Xt, _, Xf, yt = tt.fit_transform(y=y_train_s, X=X_train_s)
+    pass
 
     # compose y_pred
     pt = sktimex.LagsPredictTransform(xlags=xlags, ylags=ylags, tlags=tlags, concat=True)
@@ -132,11 +135,12 @@ def analyze(g, df):
         # callbacks__print_log=PrintLog
     )
 
+
     # tide1
-    # model.fit((Xt, Xf), yt)
+    model.fit((Xt, Xf), yt)
 
     # tide2
-    model.fit(Xt, yt)
+    # model.fit(Xt, yt)
 
     i = 0
     while i < fh:

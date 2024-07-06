@@ -27,7 +27,6 @@ NN_INIT_METHODS = {
     "sparse": nn.init.sparse_,
 }
 
-
 # ---------------------------------------------------------------------------
 # Activation function
 # ---------------------------------------------------------------------------
@@ -73,17 +72,9 @@ NNX_ACTIVATION_FUNCTIONS = {
 }
 
 
-# def register_activation(name, activation):
-#     assert name not in NNX_ACTIVATION, f"Activation name '{name}' already registered"
-#     assert issubclass(activation, nn.Module), f"Activation function {activation} is not a subclass of nn.Module"
-#     NNX_ACTIVATION[name] = activation
-
-
 def select_activation(activation) -> type:
 
-    if activation is None or isinstance(activation, bool):
-        activation = NNX_ACTIVATION_FUNCTIONS[activation]()
-    elif isinstance(activation, type):
+    if isinstance(activation, type):
         pass
     elif activation in NNX_ACTIVATION_FUNCTIONS:
         activation = NNX_ACTIVATION_FUNCTIONS[activation]

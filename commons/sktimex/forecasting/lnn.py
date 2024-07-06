@@ -1,19 +1,19 @@
 
 __all__ = [
-    "LinearNNForecaster",
+    "LNNLinearForecaster",
 ]
 
-from typing import Sized, cast, Union, Optional
 import logging
+from typing import Sized, cast, Union, Optional
+
 from sktime.forecasting.base import ForecastingHorizon
 
 from skorchx import NeuralNetRegressor
 from skorchx.callbacks import PrintLog
-from ..utils import kwval, kwmerge, kwexclude
 from .nn import *
 from ..transform.nn import NNTrainTransform, NNPredictTransform
-from ..utils import FH_TYPES, PD_TYPES
-
+from ..utils import PD_TYPES
+from ..utils import kwval, kwmerge, kwexclude
 
 # ---------------------------------------------------------------------------
 # LinearNNForecaster
@@ -25,17 +25,27 @@ NNX_LIN_DEFAULTS = dict(
 )
 
 
-class LinearNNForecaster(_BaseNNForecaster):
-    """
-    This is a simple linear model based on a tensor having:
+class LNNLinearForecaster(_BaseNNForecaster):
 
-        (*, |lags|,|input_features|+|target|)   as input and
-        (*, |tlags|, |target|)                  as output
+    def __init__(
+        self, *,
 
-    Because input features and targets are together, it is not possible
-    to have ylags <> tlags
+        lags: Union[int, list, tuple, dict],
+        tlags: Union[int, list],
 
-    Model parameters:
+        flavour="lin",
+        model: Optional[dict] = None,
+        engine: Optional[dict] = None,
+        scaler: Optional[dict] = None,
+    ):
+        """
+        Simple linear model based on a tensor having:
+
+            (*, |lags|,|input_features|+|target|)   as input and
+            (*, |tlags|, |target|)                  as output
+
+        Because input features and targets are keeped together, it is not possible
+        to have ylags <> tlags
 
         :param lags: input/target lags
         :param tlags: target prediction lags
@@ -55,52 +65,7 @@ class LinearNNForecaster(_BaseNNForecaster):
         :param engine.max_epochs: EPOCHS (default 300)
 
         :param scaler.method: how to scale the values
-
-    """
-
-    def __init__(
-        self, *,
-
-        lags: Union[int, list, tuple, dict],
-        tlags: Union[int, list],
-
-        flavour="lin",
-        model: Optional[dict] = None,
-        engine: Optional[dict] = None,
-        scaler: Optional[dict] = None,
-
-        # -- time series
-        # lags: Union[int, list, tuple, dict],
-        # tlags: Union[int, list, tuple],
-
-        # -- model
-        # flavour='lin',
-        # activation=None,
-        # activation_kwargs=None,
-
-        # -- model/LIN
-        # This is the GLOBAL size of the hidden layer
-        # For example:
-        #      - input: (30,1)     30 days, 1 feature
-        #      - output: (7,2)     7 days, 2 targets
-        #
-        # the hidden size can be NOT 8, BUT it is necessary to specify
-        # also the sequence length
-        # hidden_size=None,
-
-        # -- skorch
-        # criterion='mse',
-        # optimizer=None,
-        # lr=0.01,
-        # batch_size=16,
-        # max_epochs=300,
-        # callbacks=None,
-        # patience=0,
-
-        # -- extra params
-
-        # **kwargs
-    ):
+        """
         super().__init__(
             flavour=flavour,
 
@@ -110,43 +75,15 @@ class LinearNNForecaster(_BaseNNForecaster):
             model=model,
             engine=engine,
             scaler=scaler,
-
-            # lags=lags,
-            # tlags=tlags,
-
-            # flavour=flavour,
-
-            # criterion=criterion,
-            # optimizer=optimizer,
-            # lr=lr,
-            # batch_size=batch_size,
-            # max_epochs=max_epochs,
-            # callbacks=callbacks,
-            # patience=patience,
-
-            # **kwargs
         )
 
         model = kwmerge(NNX_LIN_DEFAULTS, model)
         isinstance(kwval(model, "hidden_size"), Optional[int])
 
-        # Torch dense layer configuration parameters
-        # self._lnn_args = {
-        #     'hidden_size': hidden_size,
-        # }
-
         self._model_params = model
 
         self._log = logging.getLogger(f"LinearNNForecaster.{self.flavour}")
     # end
-
-    # -----------------------------------------------------------------------
-    # Properties
-    # -----------------------------------------------------------------------
-
-    # def get_params(self, deep=True):
-    #     params = super().get_params(deep=deep) | self._lnn_args
-    #     return params
 
     # -----------------------------------------------------------------------
     # Operations
@@ -236,6 +173,7 @@ class LinearNNForecaster(_BaseNNForecaster):
     def __repr__(self, n_char_max: int = 700):
         return f"LinearNNForecaster[{self.flavour}]"
 # end
+
 
 # ---------------------------------------------------------------------------
 # End

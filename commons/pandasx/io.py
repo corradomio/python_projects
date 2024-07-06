@@ -1,6 +1,6 @@
 import logging
+
 import pandas as pd
-from typing import Union
 
 from .base import set_index, nan_drop, as_list, \
     find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore, \

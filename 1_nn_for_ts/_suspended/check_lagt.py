@@ -2,9 +2,9 @@ from sktimex.transform import LagsTrainTransform, LagsPredictTransform
 import numpy as np
 from numpyx import ij_matrix, size_split
 
-xlags = [1,2]
-ylags = [1,2]
-tlags = [0,1]
+xlags = [1, 2]
+ylags = [1, 2]
+tlags = [0, 1]
 
 
 def check_flags(X, y):

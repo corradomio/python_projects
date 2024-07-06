@@ -1,8 +1,8 @@
 import numpy as np
 
-from .base import ARRAY_OR_DF, ModelTrainTransform, ModelPredictTransform
+from ._base import ARRAY_OR_DF, ModelTrainTransform, ModelPredictTransform
 from ..utils import is_instance, NoneType, RangeType
-from ..lags import lmax
+from ._lags import lmax
 
 
 def _transpose(t):
@@ -108,7 +108,7 @@ class LagsTrainTransform(ModelTrainTransform):
     """
 
     def __init__(self,
-                 xlags=None, ylags=None, tlags=(0,),
+                 xlags, ylags, tlags,
                  transpose=False, flatten=False, concat=True,
                  encoder=None, decoder=None):
         """
@@ -318,7 +318,7 @@ class LagsTrainTransform(ModelTrainTransform):
 
 class LagsPredictTransform(ModelPredictTransform):
 
-    def __init__(self, xlags=None, ylags=None, tlags=(0,),
+    def __init__(self, xlags, ylags, tlags,
                  transpose=False, flatten=False, concat=True,
                  encoder=None, decoder=None):
 
@@ -512,3 +512,6 @@ class LagsPredictTransform(ModelPredictTransform):
         return super().update(i, y_pred, t)
 # end
 
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

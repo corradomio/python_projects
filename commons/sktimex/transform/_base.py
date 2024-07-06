@@ -2,9 +2,9 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-
 from sktime.forecasting.base import ForecastingHorizon
-from ..lags import tlags_start
+
+from ._lags import tlags_start
 from ..utils import NoneType, to_matrix
 
 ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
@@ -19,8 +19,8 @@ ARRAY_OR_DF = Union[NoneType, np.ndarray, pd.DataFrame]
 class TimeseriesTransform:
 
     def _check_Xy(self, X, y=None, fh=None):
-        # X = to_matrix(X)
-        # y = to_matrix(y)
+        X = to_matrix(X)
+        y = to_matrix(y)
         assert fh is None
         assert isinstance(X, (NoneType, np.ndarray))
         assert isinstance(y, (NoneType, np.ndarray))
@@ -108,7 +108,10 @@ class ModelPredictTransform(TimeseriesTransform):
     # end
 
     def transform(self, fh: int, X: ARRAY_OR_DF = None, y=None):
-        # This method must e used with 'fh' and 'X_test'/'X_predict'
+        assert isinstance(fh, int)
+        assert isinstance(X, ARRAY_OR_DF)
+
+        # This method is used with 'fh' and 'X_test'/'X_predict'
         X, fh = self._check_Xfh(X, fh, y)
 
         self.Xp = X
@@ -174,3 +177,8 @@ class ModelPredictTransform(TimeseriesTransform):
     #     else:
     #         return pd.Series(data=yp, name=self.y_pandas.name, index=fh.to_pandas())
 # end
+
+
+# ---------------------------------------------------------------------------
+#   End
+# ---------------------------------------------------------------------------

@@ -1,7 +1,28 @@
+# Generalization of RNN__Transform & CNN_Transform
+#
+# The classes NNTrainTransform and NNPredictTransform are replacements of
+#
+#   RNNTrainTransform, RNNPredictTransform
+#   CNNTrainTransform, CNNPredictTransform
+#
+# The classes RNN__Transform and CNN__Transform differ only for this reason:
+#
+#                        1  2                3
+#   RNN__Tranform   ->  (n, sequence_length, data_size)
+#   CNN__Tranform   ->  (n, channel_size,    channel_length)
+#
+# that is, there is only a 'swap' between the columns 2 and 3.
+# Now, it is possible to 'normalize' the CNN transformers applying a 'swap'
+# on the CNN channels:
+#
+#   CNN'_Transform  ->  (n, channel_length, channel_size)
+#
+# in sch way to have the same 'layout' of a RNN.
+#
 import numpy as np
 
-from .base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
-from ..lags import lmax
+from ._base import ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
+from ._lags import lmax
 
 
 # ---------------------------------------------------------------------------
@@ -19,12 +40,13 @@ class NNTrainTransform(ModelTrainTransform):
     def __init__(self, xlags=None, ylags=None, tlags=(0,), yprev=False, ytrain=False, flatten=False):
         """
 
-        :param slots:   combine xlags and ylags
-        :param xlags:   alternative to slots (with ylags)
-        :param ylags:   alternative to slots (with xlags)
+        :param xlags:
+        :param ylags:
         :param tlags:
         :param ytrain:  if to return y used in train (yx)
         :param yprev:   if to return y[t-1]
+        :param flatten: if to return 2D arrays (n, lags_len*data_size)
+                or 3D arrays (n, lags_len, data_size)
         """
         super().__init__(xlags=xlags, ylags=ylags, tlags=tlags)
 
@@ -46,6 +68,15 @@ class NNTrainTransform(ModelTrainTransform):
             (Xt, yp),     yt    if yprev  = True
             (Xt, yx, yp), yt    if ytrain = True and yprev = True
 
+        where
+
+            Xt is the matrix used in input, composed using y, X on the 'ylags'
+            yt is the y to predict
+            yx is the y part of Xt. In theory it is possible to extract from Xt
+                but this means to know how Xt is composed, but this is not
+                responsibility of the model
+            yp is yt but a step before (y previous)
+
         :param y: target
         :param X: input features
         :param fh: forecasting horizon
@@ -60,7 +91,6 @@ class NNTrainTransform(ModelTrainTransform):
         sx = len(xlags)
         sy = len(ylags)
         st = len(tlags)
-        # s = len(self.slots)
         s = max(lmax(xlags), lmax(ylags))
         t = lmax(tlags) + 1
         r = s + t
@@ -71,6 +101,7 @@ class NNTrainTransform(ModelTrainTransform):
 
         n = y.shape[0] - r
 
+        # 3D tensor (n, |ylags|, |y|+|X|)
         Xt = np.zeros((n, sy, mt), dtype=y.dtype)
 
         for i in range(n):
@@ -210,6 +241,14 @@ class NNPredictTransform(ModelPredictTransform):
     def update(self, i, y_pred, t=None):
         return super().update(i, y_pred, t)
 # end
+
+
+# ---------------------------------------------------------------------------
+# Compatibility (deprecated)
+# ---------------------------------------------------------------------------
+
+RNNTrainTransform = NNTrainTransform
+RNNPredictTransform = NNPredictTransform
 
 # ---------------------------------------------------------------------------
 # End

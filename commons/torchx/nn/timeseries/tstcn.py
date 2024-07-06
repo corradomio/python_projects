@@ -1,12 +1,12 @@
-import torch.nn as nn
-from ... import nn as nnx
-from torch import Tensor
 from typing import Optional
+
+import torch.nn as nn
 from numpy.typing import ArrayLike
-from ..modules.tcn import TCN
+from torch import Tensor
 
 from .ts import TimeSeriesModel
 from .tsutils import apply_if
+from ..modules.tcn import TCN
 
 
 class TSTCN(TimeSeriesModel):

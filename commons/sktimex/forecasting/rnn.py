@@ -13,7 +13,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from skorchx.callbacks import PrintLog
 from .nn import *
 from ..transform.nn import NNTrainTransform, NNPredictTransform
-from ..utils import FH_TYPES, PD_TYPES, mul_
+from ..utils import PD_TYPES, mul_
 from ..utils import kwmerge, kwval, kwexclude
 
 
@@ -31,28 +31,192 @@ NNX_RNN_DEFAULTS = dict(
 )
 
 
-class _BaseRNNForecaster(_BaseNNForecaster):
-    """
-    This is a simple linear model based on a tensor having:
+# class _BaseRNNForecaster(_BaseNNForecaster):
+#     """
+#     This is a simple linear model based on a tensor having:
+#
+#         (*, |lags|,|input_features|+|target|)   as input and
+#         (*, |tlags|, |target|)                  as output
+#
+#     Because input features and targets are together, it is not possible
+#     to have ylags <> tlags
+#
+#     Model parameters:
+#
+#         flavour
+#         activation
+#         activation_kwargs | activation__<param>
+#
+#         hidden_size=1,
+#         num_layers=1,
+#         bidirectional=False,
+#         dropout=0.,
+#
+#     """
+#
+#     # -----------------------------------------------------------------------
+#     # Constructor
+#     # -----------------------------------------------------------------------
+#
+#     def __init__(
+#         self, *,
+#
+#         lags: Union[int, list, tuple, dict],
+#         tlags: Union[int, list],
+#
+#         flavour="rnn",
+#         model: Optional[dict] = None,
+#         engine: Optional[dict] = None,
+#         scaler: Optional[dict] = None,
+#
+#         # -- time series
+#         # lags: Union[int, list, tuple, dict],
+#         # tlags: Union[int, list],
+#
+#         # -- model
+#         # flavour='lstm',
+#         # activation=None,
+#         # activation_kwargs=None,
+#
+#         # -- model/RNN
+#
+#         # hidden_size=1,
+#         # num_layers=1,
+#         # bidirectional=False,
+#         # dropout=0.,
+#
+#         # -- skorch
+#         # criterion=None,
+#         # optimizer=None,
+#         # lr=0.01,
+#         # batch_size=16,
+#         # max_epochs=300,
+#         # callbacks=None,
+#         # patience=0,
+#
+#         # -- extra params
+#
+#         # **kwargs
+#     ):
+#         """
+#
+#         :param lags: input/target lags
+#         :param tlags: target prediction lags
+#
+#         :param flavour: type of RNN ('lstm', 'gru', 'rnn')
+#         :param model.activation: activation function
+#         :param model.activation_kwargs: parameter for the activation function
+#
+#         :param model.hidden_size: number of RNN hidden layers
+#         :param model.num_layers: number of RNN layers
+#         :param model.bidirectional: if to use a bidirectional
+#         :param model.dropout: if to apply a dropout
+#
+#         :param engine.optimizer: class of the optimizer to use (default: Adam)
+#         :param engine.criterion: class of the loss to use (default: MSLoss)
+#         :param engine.batch_size: batch size (default 16)
+#         :param engine.max_epochs: EPOCHS (default 300)
+#
+#         :param scaler.method: how to scale the values
+#
+#         """
+#         super().__init__(
+#             flavour=flavour,
+#
+#             lags=lags,
+#             tlags=tlags,
+#
+#             model=model,
+#             engine=engine,
+#             scaler=scaler,
+#
+#             # lags=lags,
+#             # tlags=tlags,
+#
+#             # flavour=flavour,
+#             # activation=activation,
+#             # activation_kwargs=activation_kwargs,
+#
+#             # criterion=criterion,
+#             # optimizer=optimizer,
+#             # lr=lr,
+#             # batch_size=batch_size,
+#             # max_epochs=max_epochs,
+#             # callbacks=callbacks,
+#             # patience=patience,
+#
+#             # **kwargs
+#         )
+#
+#         model = kwmerge(NNX_RNN_DEFAULTS, model)
+#         assert isinstance(kwval(model, "hidden_size"), int)
+#         assert isinstance(kwval(model, "num_layers"), int)
+#         assert isinstance(kwval(model, "bidirectional"), bool)
+#         assert isinstance(kwval(model, "dropout"), (int, float))
+#
+#         #
+#         # torchx.nn.LSTM configuration parameters
+#         #
+#         # self._rnn_args = {
+#         #     'hidden_size': hidden_size,
+#         #     'num_layers': num_layers,
+#         #     'bidirectional': bidirectional,
+#         #     'dropout': dropout,
+#         # }
+#
+#         self._model_params = model
+#
+#         self._log = logging.getLogger(f"RNNForecaster.{self.flavour}")
+#     # end
+#
+#     # -----------------------------------------------------------------------
+#     # Properties
+#     # -----------------------------------------------------------------------
+#
+#     # def get_params(self, deep=True):
+#     #     params = super().get_params(deep=deep) | self._rnn_args
+#     #     return params
+#
+#     # -----------------------------------------------------------------------
+#     # Operations
+#     # -----------------------------------------------------------------------
+#
+#     def _fit(self, y, X=None, fh=None):
+#         pass
+#
+#     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
+#         pass
+#
+#     # -----------------------------------------------------------------------
+#     # Support
+#     # -----------------------------------------------------------------------
+#
+#     # -----------------------------------------------------------------------
+#     # end
+#     # -----------------------------------------------------------------------
+# # end
 
-        (*, |lags|,|input_features|+|target|)   as input and
-        (*, |tlags|, |target|)                  as output
 
-    Because input features and targets are together, it is not possible
-    to have ylags <> tlags
+# ---------------------------------------------------------------------------
+# RNNLinearForecaster
+# ---------------------------------------------------------------------------
+#
+# nnx.LSTM
+#   input_size      this depends on lagx, |X[0]| and |y[0]|
+#   hidden_size     2*input_size
+#   output_size=1
+#   num_layers=1
+#   bias=True
+#   batch_first=True
+#   dropout=0
+#   bidirectional=False
+#   proj_size =0
+#
+# Note: the neural netword can be created ONLY during 'fit', because the NN structure
+# depends on the configuration AND X, y dimensions/ranks
+#
 
-    Model parameters:
-
-        flavour
-        activation
-        activation_kwargs | activation__<param>
-
-        hidden_size=1,
-        num_layers=1,
-        bidirectional=False,
-        dropout=0.,
-
-    """
+class RNNLinearForecaster(_BaseNNForecaster):
 
     # -----------------------------------------------------------------------
     # Constructor
@@ -68,37 +232,16 @@ class _BaseRNNForecaster(_BaseNNForecaster):
         model: Optional[dict] = None,
         engine: Optional[dict] = None,
         scaler: Optional[dict] = None,
-
-        # -- time series
-        # lags: Union[int, list, tuple, dict],
-        # tlags: Union[int, list],
-
-        # -- model
-        # flavour='lstm',
-        # activation=None,
-        # activation_kwargs=None,
-
-        # -- model/RNN
-
-        # hidden_size=1,
-        # num_layers=1,
-        # bidirectional=False,
-        # dropout=0.,
-
-        # -- skorch
-        # criterion=None,
-        # optimizer=None,
-        # lr=0.01,
-        # batch_size=16,
-        # max_epochs=300,
-        # callbacks=None,
-        # patience=0,
-
-        # -- extra params
-
-        # **kwargs
     ):
         """
+        Simple CNN layer followed by a linear layer.
+        The tensors have structure
+
+            (*, |lags|,|input_features|+|target|)   as input and
+            (*, |tlags|, |target|)                  as output
+
+        Because input features and targets are together, it is not possible
+        to have ylags <> tlags
 
         :param lags: input/target lags
         :param tlags: target prediction lags
@@ -129,23 +272,6 @@ class _BaseRNNForecaster(_BaseNNForecaster):
             model=model,
             engine=engine,
             scaler=scaler,
-
-            # lags=lags,
-            # tlags=tlags,
-
-            # flavour=flavour,
-            # activation=activation,
-            # activation_kwargs=activation_kwargs,
-
-            # criterion=criterion,
-            # optimizer=optimizer,
-            # lr=lr,
-            # batch_size=batch_size,
-            # max_epochs=max_epochs,
-            # callbacks=callbacks,
-            # patience=patience,
-
-            # **kwargs
         )
 
         model = kwmerge(NNX_RNN_DEFAULTS, model)
@@ -154,101 +280,10 @@ class _BaseRNNForecaster(_BaseNNForecaster):
         assert isinstance(kwval(model, "bidirectional"), bool)
         assert isinstance(kwval(model, "dropout"), (int, float))
 
-        #
-        # torchx.nn.LSTM configuration parameters
-        #
-        # self._rnn_args = {
-        #     'hidden_size': hidden_size,
-        #     'num_layers': num_layers,
-        #     'bidirectional': bidirectional,
-        #     'dropout': dropout,
-        # }
-
         self._model_params = model
 
         self._log = logging.getLogger(f"RNNForecaster.{self.flavour}")
     # end
-
-    # -----------------------------------------------------------------------
-    # Properties
-    # -----------------------------------------------------------------------
-
-    # def get_params(self, deep=True):
-    #     params = super().get_params(deep=deep) | self._rnn_args
-    #     return params
-
-    # -----------------------------------------------------------------------
-    # Operations
-    # -----------------------------------------------------------------------
-
-    def _fit(self, y, X=None, fh=None):
-        pass
-
-    def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
-        pass
-
-    # -----------------------------------------------------------------------
-    # Support
-    # -----------------------------------------------------------------------
-
-    def _compute_input_output_sizes(self):
-        # (sx, mx+my), (st, my)
-        input_shape, ouput_shape = super()._compute_input_output_shapes()
-        return input_shape[1], mul_(ouput_shape)
-
-    # -----------------------------------------------------------------------
-    # end
-    # -----------------------------------------------------------------------
-# end
-
-
-# ---------------------------------------------------------------------------
-# RNNLinearForecaster
-# ---------------------------------------------------------------------------
-#
-# nnx.LSTM
-#   input_size      this depends on lagx, |X[0]| and |y[0]|
-#   hidden_size     2*input_size
-#   output_size=1
-#   num_layers=1
-#   bias=True
-#   batch_first=True
-#   dropout=0
-#   bidirectional=False
-#   proj_size =0
-#
-# Note: the neural netword can be created ONLY during 'fit', because the NN structure
-# depends on the configuration AND X, y dimensions/ranks
-#
-
-class RNNLinearForecaster(_BaseRNNForecaster):
-    """
-    Simple RNN layer
-    """
-
-    # -----------------------------------------------------------------------
-    # Constructor
-    # -----------------------------------------------------------------------
-
-    def __init__(
-        self, *,
-
-        lags: Union[int, list, tuple, dict],
-        tlags: Union[int, list],
-
-        flavour="rnn",
-        model: Optional[dict] = None,
-        engine: Optional[dict] = None,
-        scaler: Optional[dict] = None,
-    ):
-        super().__init__(
-            lags=lags,
-            tlags=tlags,
-            flavour=flavour,
-            model=model,
-            engine=engine,
-            scaler=scaler
-        )
 
     # -----------------------------------------------------------------------
     # fit
@@ -347,4 +382,9 @@ class RNNLinearForecaster(_BaseRNNForecaster):
     def __repr__(self):
         return f"RNNLinearForecaster[{self.flavour}]"
 # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
 

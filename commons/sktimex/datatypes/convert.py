@@ -12,6 +12,12 @@ def convert_to(
     return_to_mtype: bool = False,
     y_cutoff=None
 ):
+    """
+    This function resolve a problem with the original one that, when it convert
+    something in a series/dataframe, doesn't assign the correct index.
+    Here, the correct index in extracted from X, if available, or, it is created
+    using cutoff AND fh in relative way
+    """
     y_out = sktdtc.convert_to(
         y_pred,
         to_type=to_type,
@@ -30,3 +36,4 @@ def convert_to(
         y_out.set_index(index, inplace=True)
 
     return y_out
+# end

@@ -1,8 +1,7 @@
 import numpy as np
 
-from deprecated import deprecated
-from .base import TimeseriesTransform, ModelTrainTransform, ModelPredictTransform, ARRAY_OR_DF
-from ..lags import lmax,tlags_start
+from ._base import TimeseriesTransform, ARRAY_OR_DF
+from ._lags import lmax, tlags_start
 
 
 # ---------------------------------------------------------------------------
@@ -179,3 +178,7 @@ class LinearPredictTransform(TimeseriesTransform):
 
         return i + mt + 1
 # end
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

@@ -18,7 +18,7 @@ def detrend(df):
 def minmax(df):
     # for method in ['poly1', 'linear', 'piecewise', 'stepwise', 'global', 1.25]:
     for method in ['linear']:
-        t = pdx.MinMaxScaler(method=method)
+        t = pdx.ConfigurableMinMaxScaler(method=method)
         y_det = t.fit_transform(df)
 
         plot_series(y_det[TARGET], labels=[TARGET], title=method)

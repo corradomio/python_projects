@@ -5,6 +5,10 @@ from .base import BaseNFForecaster
 
 class FEDformer(BaseNFForecaster):
 
+    _tags = {
+        "ignores-exogeneous-X": True
+    }
+
     def __init__(
         self,
         # -- ts

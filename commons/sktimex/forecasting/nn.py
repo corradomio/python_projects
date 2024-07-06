@@ -8,14 +8,13 @@ __all__ = [
 
 from typing import Union, Optional, Any
 
-import numpy as np
 import skorch
 import torch
 
 from torchx import nnlin as nnx, select_optimizer, select_criterion
 from .base import TransformForecaster
-from .base import yx_lags, t_lags
-from ..utils import kwval, as_dict, qualified_name
+from ..transform import yx_lags, t_lags, compute_input_output_shapes
+from ..utils import kwval, qualified_name
 
 # ---------------------------------------------------------------------------
 # NN flavours
@@ -45,19 +44,23 @@ NNX_LIN_FLAVOURS = {
 # compute_input_output_shapes
 # ---------------------------------------------------------------------------
 
-def compute_input_output_shapes(X: np.ndarray, y: np.ndarray,
-                                xlags: list[int], ylags: list[int], tlags: list[int]) \
-        -> tuple[tuple[int, int], tuple[int, int]]:
-
-    sx = len(xlags) if X is not None else []
-    sy = len(ylags)
-    st = len(tlags)
-
-    mx = X.shape[1] if X is not None and sx > 0 else 0
-    my = y.shape[1]
-
-    return (sy, mx + my), (st, my)
-# end
+# def compute_input_output_shapes(
+#     X: np.ndarray,
+#     y: np.ndarray,
+#     xlags: Union[list[int], RangeType],
+#     ylags: Union[list[int], RangeType],
+#     tlags: Union[list[int], RangeType]
+# ) -> tuple[tuple[int, int], tuple[int, int]]:
+#
+#     sx = len(xlags) if X is not None else []
+#     sy = len(ylags)
+#     st = len(tlags)
+#
+#     mx = X.shape[1] if X is not None and sx > 0 else 0
+#     my = y.shape[1]
+#
+#     return (sy, mx + my), (st, my)
+# # end
 
 
 # ---------------------------------------------------------------------------
@@ -163,11 +166,11 @@ class _BaseNNForecaster(TransformForecaster):
         # activation_kwargs=None,
         model: Optional[dict],
 
-        # -- skorch
-        engine: Optional[dict],
-
         # -- transform
         scaler: Union[None, str, dict],
+
+        # -- skorch
+        engine: Optional[dict],
 
         # criterion=None,
         # optimizer=None,
