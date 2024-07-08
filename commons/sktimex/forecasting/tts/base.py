@@ -83,9 +83,7 @@ class BaseTTSForecaster(BaseForecaster):
 
     def _analyze_locals(self, locals):
         for k in locals:
-            if k == 'self':
-                continue
-            elif k == '__class__':
+            if k in ['self', '__class__']:
                 continue
             elif k == 'lags':
                 self._lags = locals[k]

@@ -21,7 +21,7 @@ from ..utils import kwval, kwmerge, kwexclude
 
 NNX_LIN_DEFAULTS = dict(
     activation=None,
-    hidden_size=1
+    hidden_size=None
 )
 
 
@@ -34,7 +34,10 @@ class LNNLinearForecaster(_BaseNNForecaster):
         tlags: Union[int, list],
 
         flavour="lin",
-        model: Optional[dict] = None,
+
+        activation=None,
+        hidden_size=None,
+
         engine: Optional[dict] = None,
         scaler: Optional[dict] = None,
     ):
@@ -67,20 +70,11 @@ class LNNLinearForecaster(_BaseNNForecaster):
         :param scaler.method: how to scale the values
         """
         super().__init__(
-            flavour=flavour,
-
-            lags=lags,
-            tlags=tlags,
-
-            model=model,
-            engine=engine,
-            scaler=scaler,
+            locals()
         )
 
-        model = kwmerge(NNX_LIN_DEFAULTS, model)
+        model = self._model_kwargs
         isinstance(kwval(model, "hidden_size"), Optional[int])
-
-        self._model_params = model
 
         self._log = logging.getLogger(f"LinearNNForecaster.{self.flavour}")
     # end
@@ -113,7 +107,7 @@ class LNNLinearForecaster(_BaseNNForecaster):
         lin = lin_constructor(
             input_size=input_shape,
             output_size=output_shape,
-            **self._model_params
+            **self._model_kwargs
         )
 
         # create the skorch model
@@ -127,7 +121,7 @@ class LNNLinearForecaster(_BaseNNForecaster):
             callbacks__print_log=PrintLog(
                 sink=logging.getLogger(str(self)).info,
                 delay=3),
-            **kwexclude(self._engine_params, ["patience"])
+            **kwexclude(self._engine_kwargs, ["patience"])
         )
         # model.set_params(callbacks__print_log=PrintLog(
         #     sink=logging.getLogger(str(self)).info,

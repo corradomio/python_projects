@@ -211,6 +211,8 @@ class BaseDartsForecaster(BaseForecaster):
         self.lags = None
         self.lags_past_covariates = None
 
+        self._ignores_exogeneous_X = self.get_tag("ignores-exogeneous-X", False)
+        self._future_exogeneous_X = self.get_tag("future-exogeneous-X", False, False)
         self._analyze_locals(locals)
     # end
 
@@ -218,10 +220,10 @@ class BaseDartsForecaster(BaseForecaster):
         for k in locals:
             if k in ['self', '__class__']:
                 continue
-            elif k in ['window_length', 'input_length']:
-                self._init_kwargs['input_chunk_length'] = locals[k]
-            elif k in ['prediction_length', 'output_length']:
-                self._init_kwargs['output_chunk_length'] = locals[k]
+            # elif k in ['input_chunk_length']:
+            #     self._init_kwargs['input_chunk_length'] = locals[k]
+            # elif k in ['output_chunk_length']:
+            #     self._init_kwargs['output_chunk_length'] = locals[k]
             elif k == 'activation':
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
             elif k == 'kwargs':
@@ -251,21 +253,20 @@ class BaseDartsForecaster(BaseForecaster):
         self._y_type = type(y)
         yts = to_timeseries(y)
 
-        past_covariates = to_timeseries(X)
-        if past_covariates is not None and self.lags_past_covariates is None:
-            # self.lags_past_covariates = self.lags
-            self._kwargs['lags_past_covariates'] = self.lags
-        elif past_covariates is None and self.lags_past_covariates is not None:
-            # self.lags_past_covariates = None
-            self._kwargs['lags_past_covariates'] = None
+        if X is not None and not self._ignores_exogeneous_X:
+            covariates = to_timeseries(X)
+        else:
+            covariates = None
 
         # create the model
         self._model = self._compile_model(y, X)
 
-        if past_covariates is None:
+        if covariates is None:
             self._model.fit(yts)
+        elif not self._future_exogeneous_X:
+            self._model.fit(yts, past_covariates=covariates)
         else:
-            self._model.fit(yts, past_covariates=past_covariates)
+            self._model.fit(yts, future_covariates=covariates)
 
         return self
 
@@ -273,22 +274,29 @@ class BaseDartsForecaster(BaseForecaster):
 
         if self._X is not None and X is not None:
             X_all = pd.concat([self._X, X], axis='rows')
-        elif X is not None:
-            X_all = None
         elif self._X is not None:
             X_all = self._X
         else:
             X_all = None
 
-        past_covariates = to_timeseries(X_all)
+        if X_all is not None and not self._ignores_exogeneous_X:
+            covariates = to_timeseries(X_all)
+        else:
+            covariates = None
+
         nfh = len(fh)
 
-        if past_covariates is None:
+        if covariates is None:
             ts_pred: TimeSeries = self._model.predict(nfh)
+        elif not self._future_exogeneous_X:
+            ts_pred: TimeSeries = self._model.predict(
+                nfh,
+                past_covariates=covariates,
+            )
         else:
             ts_pred: TimeSeries = self._model.predict(
                 nfh,
-                past_covariates=past_covariates,
+                future_covariates=covariates,
             )
 
         y_pred = from_timeseries(ts_pred, self._y, X, self._cutoff)

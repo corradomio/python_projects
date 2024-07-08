@@ -154,11 +154,16 @@ def extends_nfdf(df: pd.DataFrame, y_pred: pd.DataFrame, X: Optional[pd.DataFram
 
     y_pred.rename(columns={name: "y"}, inplace=True)
     y_pred.reset_index(drop=False, inplace=True)
+    # y_pred['unique_id'] = unique_id
 
     # 1) if X is available, expand y_pred with X
     if X is not None:
         X_pred = X.iloc[at: at+n_pred]
-        y_pred = pd.concat([y_pred, X_pred], axis=1, ignore_index=True)
+        # X_pred.reset_index(drop=False, inplace=True)
+        y_pred.set_index(X_pred.index, inplace=True)
+        y_pred = pd.concat([y_pred, X_pred], axis=1)
+    else:
+        pass
     # 2) concat df with y_pred
     df = pd.concat([df, y_pred], axis=0, ignore_index=True)
     return df
@@ -219,9 +224,9 @@ class BaseNFForecaster(BaseForecaster):
         for k in locals:
             if k in ['self', '__class__']:
                 continue
-            elif k in ['window_length', 'input_length']:
-                self._init_kwargs['input_length'] = locals[k]
-            elif k in ['prediction_length', 'output_length']:
+            elif k in ['input_size', 'input_length', 'window_length']:
+                self._init_kwargs['input_size'] = locals[k]
+            elif k in ['h', 'output_length', 'prediction_length']:
                 self._init_kwargs['h'] = locals[k]
             elif k in ['activation']:
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]

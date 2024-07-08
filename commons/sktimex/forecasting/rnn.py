@@ -31,172 +31,6 @@ NNX_RNN_DEFAULTS = dict(
 )
 
 
-# class _BaseRNNForecaster(_BaseNNForecaster):
-#     """
-#     This is a simple linear model based on a tensor having:
-#
-#         (*, |lags|,|input_features|+|target|)   as input and
-#         (*, |tlags|, |target|)                  as output
-#
-#     Because input features and targets are together, it is not possible
-#     to have ylags <> tlags
-#
-#     Model parameters:
-#
-#         flavour
-#         activation
-#         activation_kwargs | activation__<param>
-#
-#         hidden_size=1,
-#         num_layers=1,
-#         bidirectional=False,
-#         dropout=0.,
-#
-#     """
-#
-#     # -----------------------------------------------------------------------
-#     # Constructor
-#     # -----------------------------------------------------------------------
-#
-#     def __init__(
-#         self, *,
-#
-#         lags: Union[int, list, tuple, dict],
-#         tlags: Union[int, list],
-#
-#         flavour="rnn",
-#         model: Optional[dict] = None,
-#         engine: Optional[dict] = None,
-#         scaler: Optional[dict] = None,
-#
-#         # -- time series
-#         # lags: Union[int, list, tuple, dict],
-#         # tlags: Union[int, list],
-#
-#         # -- model
-#         # flavour='lstm',
-#         # activation=None,
-#         # activation_kwargs=None,
-#
-#         # -- model/RNN
-#
-#         # hidden_size=1,
-#         # num_layers=1,
-#         # bidirectional=False,
-#         # dropout=0.,
-#
-#         # -- skorch
-#         # criterion=None,
-#         # optimizer=None,
-#         # lr=0.01,
-#         # batch_size=16,
-#         # max_epochs=300,
-#         # callbacks=None,
-#         # patience=0,
-#
-#         # -- extra params
-#
-#         # **kwargs
-#     ):
-#         """
-#
-#         :param lags: input/target lags
-#         :param tlags: target prediction lags
-#
-#         :param flavour: type of RNN ('lstm', 'gru', 'rnn')
-#         :param model.activation: activation function
-#         :param model.activation_kwargs: parameter for the activation function
-#
-#         :param model.hidden_size: number of RNN hidden layers
-#         :param model.num_layers: number of RNN layers
-#         :param model.bidirectional: if to use a bidirectional
-#         :param model.dropout: if to apply a dropout
-#
-#         :param engine.optimizer: class of the optimizer to use (default: Adam)
-#         :param engine.criterion: class of the loss to use (default: MSLoss)
-#         :param engine.batch_size: batch size (default 16)
-#         :param engine.max_epochs: EPOCHS (default 300)
-#
-#         :param scaler.method: how to scale the values
-#
-#         """
-#         super().__init__(
-#             flavour=flavour,
-#
-#             lags=lags,
-#             tlags=tlags,
-#
-#             model=model,
-#             engine=engine,
-#             scaler=scaler,
-#
-#             # lags=lags,
-#             # tlags=tlags,
-#
-#             # flavour=flavour,
-#             # activation=activation,
-#             # activation_kwargs=activation_kwargs,
-#
-#             # criterion=criterion,
-#             # optimizer=optimizer,
-#             # lr=lr,
-#             # batch_size=batch_size,
-#             # max_epochs=max_epochs,
-#             # callbacks=callbacks,
-#             # patience=patience,
-#
-#             # **kwargs
-#         )
-#
-#         model = kwmerge(NNX_RNN_DEFAULTS, model)
-#         assert isinstance(kwval(model, "hidden_size"), int)
-#         assert isinstance(kwval(model, "num_layers"), int)
-#         assert isinstance(kwval(model, "bidirectional"), bool)
-#         assert isinstance(kwval(model, "dropout"), (int, float))
-#
-#         #
-#         # torchx.nn.LSTM configuration parameters
-#         #
-#         # self._rnn_args = {
-#         #     'hidden_size': hidden_size,
-#         #     'num_layers': num_layers,
-#         #     'bidirectional': bidirectional,
-#         #     'dropout': dropout,
-#         # }
-#
-#         self._model_params = model
-#
-#         self._log = logging.getLogger(f"RNNForecaster.{self.flavour}")
-#     # end
-#
-#     # -----------------------------------------------------------------------
-#     # Properties
-#     # -----------------------------------------------------------------------
-#
-#     # def get_params(self, deep=True):
-#     #     params = super().get_params(deep=deep) | self._rnn_args
-#     #     return params
-#
-#     # -----------------------------------------------------------------------
-#     # Operations
-#     # -----------------------------------------------------------------------
-#
-#     def _fit(self, y, X=None, fh=None):
-#         pass
-#
-#     def _predict(self, fh: ForecastingHorizon, X: PD_TYPES = None):
-#         pass
-#
-#     # -----------------------------------------------------------------------
-#     # Support
-#     # -----------------------------------------------------------------------
-#
-#     # -----------------------------------------------------------------------
-#     # end
-#     # -----------------------------------------------------------------------
-# # end
-
-
 # ---------------------------------------------------------------------------
 # RNNLinearForecaster
 # ---------------------------------------------------------------------------
@@ -229,7 +63,13 @@ class RNNLinearForecaster(_BaseNNForecaster):
         tlags: Union[int, list],
 
         flavour="rnn",
-        model: Optional[dict] = None,
+
+        activation=None,
+        hidden_size=1,
+        num_layers=1,
+        bidirectional=False,
+        dropout=0.,
+
         engine: Optional[dict] = None,
         scaler: Optional[dict] = None,
     ):
@@ -264,23 +104,14 @@ class RNNLinearForecaster(_BaseNNForecaster):
 
         """
         super().__init__(
-            flavour=flavour,
-
-            lags=lags,
-            tlags=tlags,
-
-            model=model,
-            engine=engine,
-            scaler=scaler,
+            locals(),
         )
 
-        model = kwmerge(NNX_RNN_DEFAULTS, model)
+        model = self._model_kwargs
         assert isinstance(kwval(model, "hidden_size"), int)
         assert isinstance(kwval(model, "num_layers"), int)
         assert isinstance(kwval(model, "bidirectional"), bool)
         assert isinstance(kwval(model, "dropout"), (int, float))
-
-        self._model_params = model
 
         self._log = logging.getLogger(f"RNNForecaster.{self.flavour}")
     # end
@@ -322,7 +153,7 @@ class RNNLinearForecaster(_BaseNNForecaster):
         rnn = rnn_constructor(
             input_shape=input_shape,
             output_shape=output_shape,
-            **self._model_params
+            **self._model_kwargs
         )
 
         # create the skorch model
@@ -336,11 +167,8 @@ class RNNLinearForecaster(_BaseNNForecaster):
             callbacks__print_log=PrintLog(
                 sink=logging.getLogger(str(self)).info,
                 delay=3),
-            **kwexclude(self._engine_params, ["patience"])
+            **kwexclude(self._engine_kwargs, ["patience"])
         )
-        # model.set_params(callbacks__print_log=PrintLog(
-        #     sink=logging.getLogger(str(self)).info,
-        #     delay=3))
 
         return model
     # end
