@@ -29,8 +29,7 @@ FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
               'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
 
 
-def _to_datetime(df, dtname, format, freq):
-    dt_series = df[dtname]
+def _to_datetime(dt_series, format, freq):
 
     def remove_tz(x):
         if hasattr(x, 'tz_localize'):
@@ -47,23 +46,31 @@ def _to_datetime(df, dtname, format, freq):
     # then to remove the TZ reference.
     # Implemented the first one
 
-    if format is not None:
+    if format is not None and freq is not None:
         dt_series = pd.to_datetime(dt_series, format=format)
+
+    elif format is not None:
+        dt_series = pd.to_datetime(dt_series, format=format)
+        # dt_series = dt_series.map(lambda x: pd.to_datetime(x, format=format))
+        # dt_series = dt_series.transform(lambda x: pd.to_datetime(x, format=format))
+        # dt_series = dt_series.apply(lambda x: pd.to_datetime(x, format=format))
+
         if '%z' in format or '%Z' in format:
             # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
             dt_series = dt_series.apply(remove_tz)
+
     # np.dtypes.DateTime64DType == "datetime64[ns]"
     # np.dtypes.ObjectDType
     # available in numpy v1.26.4
     #       NOT in numpy v1.24.3
-    try:
-        if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
-            dt_series = dt_series.astype("datetime64[ns]")
-    except:
-        pass
+    # try:
+    #     if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
+    #         dt_series = dt_series.astype("datetime64[ns]")
+    # except:
+    #     pass
 
-    if freq is not None:
-        dt_series = dt_series.dt.to_period(freq)
+    # if freq is not None:
+    #     dt_series = dt_series.dt.to_period(freq)
     return dt_series
 
 
@@ -93,18 +100,9 @@ def datetime_encode(df: pd.DataFrame,
     else:
         datetime, format, freq = datetime
 
-    df[datetime] = _to_datetime(df, datetime, format, freq)
+    dt_series = df[datetime]
+    df[datetime] = _to_datetime(dt_series, format, freq)
 
-    # if format is not None:
-    #     dt_series = pd.to_datetime(df[datetime], format=format)
-    #     dt_series = dt_series.apply(lambda x: x.date())
-    #     df[datetime] = dt_series
-    # if freq in FREQ_VALID and df[datetime].dtype in [pd.Timestamp]:
-    #     # df[datetime] = df[datetime].apply(lambda x: x.date())
-    #     df[datetime] = df[datetime].apply(lambda x: x.to_pydatetime())
-    #     # df[datetime] = df[datetime].dt.date
-    # if freq is not None:
-    #     df[datetime] = df[datetime].dt.to_period(freq)
     return df
 # end
 

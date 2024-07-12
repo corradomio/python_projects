@@ -172,7 +172,7 @@ def read_data(file: str,
               binhot=None,          # categorical columns to convert using binary hot encoding.
 
               index=None,           # columns to use as index
-              datetime_index=None,  # columns to use as datetime_index
+              datetime_index=None,  # columns to use as datetime_index (alternative to 'index')
               ignore=None,          # columns to ignore
               ignore_unnamed=False, # if to ignore 'Unnamed *' columns
 

@@ -1,9 +1,25 @@
-from typing import Literal
+from typing import Literal, Union
 
 import numpy as np
 import pandas as pd
 from datetime import datetime, date
 from stdlib.dateutilx import relativeperiods
+
+
+# ---------------------------------------------------------------------------
+# to_date_type
+# ---------------------------------------------------------------------------
+
+def to_date_type(dt: Union[date, datetime], date_type):
+    dt_type = type(dt)
+    if dt_type == date_type:
+        return dt
+    if date_type == pd.Timestamp:
+        if dt_type == date:
+            return pd.Timestamp(year=dt.year, month=dt.month, day=dt.day)
+        if dt_type == datetime:
+            return pd.Timestamp(year=dt.year, month=dt.month, day=dt.day, hour=dt.hour, minute=dt.minute, second=dt.second)
+    return dt
 
 
 # ---------------------------------------------------------------------------
