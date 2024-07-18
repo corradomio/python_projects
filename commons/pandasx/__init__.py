@@ -10,12 +10,13 @@ from .io import read_data, write_data, save, load
 from .missing import nan_replace
 from .onehot import onehot_encode
 from .periodic import periodic_encode, set_datetime_index, last_week_in_month
-from .resample import resample
+# from .resample import resample
 from .dt import to_datetime, date_range, to_period, to_date_type
 from .sql import read_sql, read_sql_query
 from .to_json import to_json
 from .spike import is_spike
 from .hsched import is_heteroschedastic
+from .upd import update
 
 
 # ---------------------------------------------------------------------------

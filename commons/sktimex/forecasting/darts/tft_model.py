@@ -6,7 +6,7 @@ from .base import BaseDartsForecaster
 class TFTModel(BaseDartsForecaster):
 
     _tags = {
-        "future-exogeneous-X": True
+        'future-exogeneous-X': True
     }
 
     def __init__(

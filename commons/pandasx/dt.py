@@ -201,40 +201,4 @@ def date_range(start=None, end=None, periods=None,
         dr = dr[:-1]
 
     return pd.DatetimeIndex(data=dr, name=name)
-
-
-    # assert start is not None and freq is not None
-    # assert end is not None or periods is not None
-    # assert inclusive in ['left', 'right', 'both', 'neither']
-    #
-    # start = to_datetime(start)
-    # end = to_datetime(end)
-    #
-    # dr = []
-    # curr_date = start
-    # if periods is not None:
-    #     delta = relativeperiods(periods=1, freq=freq)
-    #
-    #     if inclusive in ['left', 'right', ]:
-    #         periods += 1
-    #     elif inclusive == 'neither':
-    #         periods += 2
-    #     for _ in range(periods):
-    #         dr.append(curr_date)
-    #         curr_date += delta
-    # else:
-    #     delta = relativeperiods(periods=1, freq=freq)
-    #
-    #     while curr_date <= end:
-    #         dr.append(curr_date)
-    #         curr_date += delta
-    #     if curr_date != end:
-    #         dr.append(curr_date)
-    # # end
-    #
-    # if inclusive in ['right', 'neither'] and len(dr) > 0:
-    #     dr = dr[1:]
-    # if inclusive in ['left', 'neither'] and len(dr) > 0:
-    #     dr = dr[:-1]
-    #
-    # return pd.DatetimeIndex(data=dr, name=name)
+# end

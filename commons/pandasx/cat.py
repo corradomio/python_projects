@@ -4,7 +4,10 @@ import pandas as pd
 from pandas import CategoricalDtype
 
 
-def find_categorical_columns(df: pd.DataFrame):
+def find_categorical_columns(df: pd.DataFrame) -> list[str]:
+    """
+    Select the categorical solumns
+    """
     columns = []
     for col in df.columns:
         dtype = df[col].dtype
@@ -18,6 +21,9 @@ def find_categorical_columns(df: pd.DataFrame):
 
 
 def unique_values(df: pd.DataFrame, columns: Union[None, str, list[str]] = None) -> dict[str, list[str]]:
+    """
+    For each categorical column return the list of unique values
+    """
     uvalues = {}
     if columns is None:
         columns = find_categorical_columns(df)

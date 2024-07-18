@@ -212,7 +212,7 @@ class BaseDartsForecaster(BaseForecaster):
         self.lags_past_covariates = None
 
         self._ignores_exogeneous_X = self.get_tag("ignores-exogeneous-X", False)
-        self._future_exogeneous_X = self.get_tag("future-exogeneous-X", False, False)
+        self._future_exogeneous_X = self.get_tag('future-exogeneous-X', False, False)
         self._analyze_locals(locals)
     # end
 
