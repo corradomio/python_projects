@@ -9,6 +9,9 @@
 # https://pypi.org/project/Deprecated/
 deprecated
 
+# https://python-future.org/
+future
+
 # https://path.readthedocs.io/en/latest/
 path
 
