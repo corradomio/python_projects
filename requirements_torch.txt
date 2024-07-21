@@ -1,35 +1,63 @@
-
+#
+# Utilities
+#
 path
 multimethod
 tabulate
 
+tqdm
+
+#
+# IO
+#
+pyarrow
+# fastparquet
+
+
+#
+# Standard libraries
+#
 numpy
 scipy
 pandas
 
+#
+# Plotting
+#
 matplotlib
 seaborn
 
+#
+# Image handling
+#
 pillow
-tqdm
-
 opencv-python
 
-
+#
+# schikit-learn
+#
 scikit-learn
 category_encoders
 xgboost
 catboost
 # imbalanced-learn
 
-
+#
+# sktime
+#
 sktime
 pmdarima
 statsmodels
 
+#
+# IPython/Jupiter
+#
 ipython
 jupyter
 
+#
+# Pytorch
+#
 # better to use Python=3.11
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch>=2.1
@@ -38,26 +66,20 @@ torchaudio
 torchtext
 
 
-# https://github.com/intel/
-# intel-extension-for-transformers
+# pytorch-forecasting
+# pytorch-geometric
+# pytorch-geometric-temporal
+# torch_geometric
+
+
 
 # lightning
 skorch
 
-# https://facebookresearch.github.io/xformers/
-# xformers
-# https://pypi.org/project/omegaconf/
-# omegaconf
 
-# pytorch-forecasting
-# pytorch-geometric
-# pytorch-geometric-temporal
-# gpytorch
-# torch_geometric
-
-pyarrow
-# fastparquet
-
+#
+# Huggingface
+#
 huggingface_hub
 diffusers
 transformers
@@ -78,6 +100,25 @@ bitsandbytes-windows
 peft
 wandb
 
+# https://github.com/intel/
+# intel-extension-for-transformers
+
+# BPE tokenizer
+tiktoken
+
+# ---------------------------------------------------------------------------
+# Suspended
+# ---------------------------------------------------------------------------
+
+#
+# Other utilities
+#
+# https://facebookresearch.github.io/xformers/
+# xformers
+# https://pypi.org/project/omegaconf/
+# omegaconf
+
+
 
 # https://github.com/Dao-AILab/flash-attention
 # Not available in Windows
@@ -90,7 +131,6 @@ wandb
 # https://www.fast.ai/
 # fastai
 
-# 
 # gym
 
 # https://github.com/arogozhnikov/einops
@@ -103,7 +143,7 @@ wandb
 
 
 # https://arrayfire.org/arrayfire-python/#
-#arrayfire
+# arrayfire
 
 # openstreetmap
 # osmnx
@@ -116,9 +156,6 @@ umap-learn
 # https://github.com/eamid/trimap
 trimap
 
-
-# https://pypi.org/project/mlx/ (Apple Silicon)
-# mlx
 
 # https://github.com/lyogavin/Anima/tree/main/air_llm
 # airllm
