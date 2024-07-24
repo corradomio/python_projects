@@ -175,6 +175,11 @@ fastcore
 nbdev
 
 
+# ---------------------------------------------------------------------------
+# TS based on NN
+# ---------------------------------------------------------------------------
+
+
 # https://nixtlaverse.nixtla.io/neuralforecast/index.html
 # https://pypi.org/project/neuralforecast/0.0.6/
 # https://github.com/Nixtla/neuralforecast/tree/main/
@@ -188,10 +193,6 @@ neuralforecast
 # https://github.com/Nixtla/hierarchicalforecast/
 #hierarchicalforecast
 
-
-# ---------------------------------------------------------------------------
-# darts
-# ---------------------------------------------------------------------------
 
 # https://unit8co.github.io/darts/
 darts

@@ -160,35 +160,35 @@ def _read_database(url: str, dtype, **kwargs):
 # na_values, dropna,
 #
 
-def read_data(file: str,
-              *,
-              dtype=None,           # list of columns types
-              boolean=None,         # boolean columns
-              integer=None,         # integer columns
-              numeric=None,         # numerical/float columns
+def read_data(
+    file: str, *,
+    dtype=None,  # list of columns types
+    boolean=None,  # boolean columns
+    integer=None,  # integer columns
+    numeric=None,  # numerical/float columns
 
-              categorical=None,     # pandas categorical columns
-              onehot=None,          # categorical columns to convert using onehot encoding.
-              binhot=None,          # categorical columns to convert using binary hot encoding.
+    categorical=None,  # pandas categorical columns
+    onehot=None,  # categorical columns to convert using onehot encoding.
+    binhot=None,  # categorical columns to convert using binary hot encoding.
 
-              index=None,           # columns to use as index
-              datetime_index=None,  # columns to use as datetime_index (alternative to 'index')
-              ignore=None,          # columns to ignore
-              ignore_unnamed=False, # if to ignore 'Unnamed *' columns
+    index=None,  # columns to use as index
+    datetime_index=None,  # columns to use as datetime_index (alternative to 'index')
+    ignore=None,  # columns to ignore
+    ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
 
-              datetime=None,        # datetime column to convert in a PeriodTime
+    datetime=None,  # datetime column to convert in a PeriodTime
 
-              periodic=None,        # [EXPERIMENTAL] to add datetime periodic representation
-              count=False,          # [EXPERIMENTAL] if to add the column 'count' with value 1
-              reindex=False,        # [EXPERIMENTAL] if to reindex the dataset
-              sort=False,           # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+    periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
+    count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
+    reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
+    sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
 
-              rename=None,          # [EXPERIMENTAL] rename some columns
+    rename=None,  # [EXPERIMENTAL] rename some columns
 
-              dropna=False,         # if to drop the rows containing NaN values
-              na_values=None,       # strings to consider NaN values
-              **kwargs              # parameters to pass to 'pandas.read_*(...)' routine
-              ) -> pd.DataFrame:
+    dropna=False,  # if to drop the rows containing NaN values
+    na_values=None,  # strings to consider NaN values
+    **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
+) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
     It uses the correct 'read' function based on the file extensions.
@@ -330,9 +330,9 @@ def read_data(file: str,
         df = pd.read_excel(file, dtype=dt, **kwargs)
     elif file.endswith(".hdf"):
         df = pd.read_hdf(file, dtype=dt, **kwargs)
-    elif file.endswith(".arff"):    # extension
+    elif file.endswith(".arff"):  # extension
         df = read_arff(file, dtype=dt, **kwargs)
-    elif "://" in file:             # extension
+    elif "://" in file:  # extension
         df = _read_database(file, dtype=dt, **kwargs)
     else:
         raise ValueError(f"Unsupported file format: {file}")

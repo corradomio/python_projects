@@ -69,8 +69,8 @@ def _to_datetime(dt_series, format, freq):
     # except:
     #     pass
 
-    # if freq is not None:
-    #     dt_series = dt_series.dt.to_period(freq)
+    if freq is not None:
+        dt_series = dt_series.dt.to_period(freq)
     return dt_series
 
 
