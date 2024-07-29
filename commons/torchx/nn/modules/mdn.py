@@ -10,6 +10,7 @@ import torch.distributions as D
 import torch.nn as nn
 import torch.nn.functional as F
 
+from .module import Module
 from . import lin as nnx
 from stdlib import mul_
 
@@ -152,7 +153,11 @@ def sample_from_output(params, output_size, n_mixtures, temp=1.0, sigma_temp=1.0
 #     return mdn_loss_func
 
 
-class MixtureDensityNetwork(nn.Module):
+# ---------------------------------------------------------------------------
+# Modules
+# ---------------------------------------------------------------------------
+
+class MixtureDensityNetwork(Module):
 
     def __init__(self, in_features, out_features, n_mixtures,):
         super().__init__()
@@ -175,9 +180,10 @@ class MixtureDensityNetwork(nn.Module):
         #   pi      [n_mixtures]
 
         return torch.cat([mus, sigmas, pi_logits], dim=1)
+# end
 
 
-class MixtureDensityNetworkLoss(nn.Module):
+class MixtureDensityNetworkLoss(Module):
 
     def __init__(self, out_features, n_mixtures):
         super().__init__()
@@ -214,6 +220,7 @@ class MixtureDensityNetworkLoss(nn.Module):
                 total_loss += loss
 
         return total_loss.mean()
+# end
 
 
 class MixtureDensityNetworkPredictor:
@@ -241,6 +248,7 @@ class MixtureDensityNetworkPredictor:
             y_samples = np.apply_along_axis(sample_from_output, 1, pred_fscaled, output_size, n_mixtures, temp=1.0)
             pred_dist += y_samples
         return pred_dist.mean(axis=0)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -259,7 +267,7 @@ class NoiseType(Enum):
     FIXED = auto()
 
 
-class TonyduanMixtureDensityNetwork(nn.Module):
+class TonyduanMixtureDensityNetwork(Module):
     """
     Mixture density network.
 
@@ -363,9 +371,10 @@ class TonyduanMixtureDensityNetwork(nn.Module):
         rand_normal = torch.randn_like(mu) * sigma + mu
         samples = torch.take_along_dim(rand_normal, indices=rand_pi.unsqueeze(-1), dim=1).squeeze(dim=1)
         return samples
+# end
 
 
-class TonyduanMixtureDensityNetworkLoss(nn.Module):
+class TonyduanMixtureDensityNetworkLoss(Module):
 
     def __init__(self, eps=1e-6):
         super().__init__()
@@ -380,3 +389,9 @@ class TonyduanMixtureDensityNetworkLoss(nn.Module):
         )
         loglik = torch.logsumexp(log_pi + normal_loglik, dim=-1)
         return -loglik.mean()
+# end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

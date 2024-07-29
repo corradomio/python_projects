@@ -61,10 +61,10 @@ class Graph:
                  **gprops):
         """
 
-        :param direct: if the graph id oriented
-        :param acyclic: if the graph id oriented and acyclic
-        :param loops: if the loops are supported
-        :param multi: if there are multiple edges between 2 nodes
+        :param direct: if the graph id oriented/directed
+        :param acyclic: if the graph id oriented/directed and acyclic
+        :param loops: if the loops are permitted
+        :param multi: if multiple edges are permitted between 2 nodes
         :param gprops: graph properties
         """
         self._direct = direct or acyclic

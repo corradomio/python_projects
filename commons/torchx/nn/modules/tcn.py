@@ -19,10 +19,14 @@ import numpy as np
 import warnings
 
 from typing import Tuple
-from typing import Union
 from typing import Optional
 from numpy.typing import ArrayLike
+from .module import Module
 
+
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
 
 activation_fn = dict(
     relu=nn.ReLU,
@@ -84,6 +88,10 @@ def get_kernel_init_fn(
 
     return kernel_init_fn[name], kernel_init_kw
 
+
+# ---------------------------------------------------------------------------
+# TemporalConv1d
+# ---------------------------------------------------------------------------
 
 class TemporalConv1d(nn.Conv1d):
     def __init__(
@@ -256,7 +264,7 @@ class TemporalBlock(nn.Module):
         return self.activation_final(out + res), out
 
 
-class TCN(nn.Module):
+class TCN(Module):
     def __init__(
         self,
         num_inputs: int,
@@ -439,3 +447,8 @@ class TCN(nn.Module):
         if self.input_shape == 'NLC':
             x = x.transpose(1, 2)
         return x
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

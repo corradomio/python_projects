@@ -1,14 +1,15 @@
 import torch
-import torch.nn as nn
 import torch.nn.functional as F
 from torch import pow, sin, cos
+
+from .module import Module
 
 
 # ---------------------------------------------------------------------------
 # Snake activation function
 # ---------------------------------------------------------------------------
 
-class Snake(nn.Module):
+class Snake(Module):
     """
     Compute the Snake activation function. There are multiple definitions:
 
@@ -42,7 +43,7 @@ class Snake(nn.Module):
 ONE = torch.tensor(1, requires_grad=False)
 
 
-class NNELU(nn.Module):
+class NNELU(Module):
     """
     Compute the Non Negative Exponential Linear Unit:
 
@@ -51,4 +52,9 @@ class NNELU(nn.Module):
 
     def forward(self, x):
         return torch.add(F.elu(x), ONE)
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
 

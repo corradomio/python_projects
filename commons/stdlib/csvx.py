@@ -272,8 +272,9 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
         for row in rdr:
             line += 1
             n = len(row)
-            if nr == 0: nr = n
+            # if nr == 0: nr = n
             try:
+                nr = min(n, len(dtype))
                 cvt = cvtrow(row)
                 callback(cvt)
             except Exception as e:
@@ -369,77 +370,6 @@ def guess_value_type(s: str) -> str:
     
     return 'str'
 # end
-
-
-# def csv_column_types(fname, comment='#', separator=',', nrows=1, max_values = 32) -> list[tuple]:
-#     """
-#     Guess the column types based on the first 'nrows' rows
-#
-#     :param fname: file name
-#     :param comment: char used for comment lines
-#     :param separator: char used for column separators
-#     :param nrows: n of rows to check for type
-#     :return:
-#     """
-#     def name_of(s: str) -> str:
-#         if s.startswith('"') or s.startswith("'"):
-#             s = s[1:]
-#         if s.endswith('"') or s.endswith("'"):
-#             s = s[:-1]
-#         return s
-#
-#     def to_enum(s: set) -> str:
-#         return f"enum[{','.join(sorted(s))}]"
-#
-#     def to_union(d: dict) -> str:
-#         return f"Union[{','.join(sorted(d.keys()))}]"
-#
-#     header = None
-#     ctype: list[bag[type]] = []
-#     cvalue: list[set[str]] = []
-#     with open(fname, mode="r") as f:
-#         for line in f:
-#             line = line.strip()
-#             if len(line) == 0:
-#                 # skiprows += 1
-#                 continue
-#             if line.startswith(comment):
-#                 # skiprows += 1
-#                 continue
-#
-#             parts = line.split(separator)
-#             if header is None:
-#                 n = len(parts)
-#                 header = [name_of(h) for h in parts]
-#                 ctype = [bag() for i in range(n)]
-#                 cvalue = [set() for i in range(n)]
-#                 continue
-#
-#             assert n == len(parts)
-#             for i in range(n):
-#                 v = parts[i]
-#                 t = guess_value_type(parts[i])
-#                 ctype[i].add(t)
-#                 cvalue[i].add(v)
-#             # end
-#     # end
-#
-#     coltypes = []
-#     for i in range(n):
-#         h = header[i]
-#         t = ctype[i]
-#         v = cvalue[i]
-#         if len(t) == 1 and t.at(0) == 'str' and len(v) <= max_values:
-#             coltypes.append((h, to_enum(v)))
-#         elif len(t) == 1:
-#             coltypes.append((h, t.at(0)))
-#         elif len(v) <= max_values:
-#             coltypes.append((h, to_enum(v)))
-#         else:
-#             coltypes.append((h, to_union(t)))
-#     # end
-#     return coltypes
-# # end
 
 
 def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
@@ -584,11 +514,7 @@ def convert_to_arff(name, fname, arff=None, dtype=None, skiprows=0, na=None, yco
 # end
 
 
-def guess_csv_column_types(fname,
-                           comment='#',
-                           nunique=16,
-                           nrows=0,
-                           **kwargs) -> list[dict]:
+def guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -> list[dict]:
     """
     Guess the columns types.
 

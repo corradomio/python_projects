@@ -2,10 +2,10 @@
 # https://lilianweng.github.io/posts/2018-06-24-attention/
 #
 import torch
-import torch.nn as nn
 from torch.nn import Parameter
 from torch.nn.init import xavier_uniform_, xavier_normal_
 
+from .module import Module
 from ..functional.attn import *
 from ...utils import expand_dims, remove_dims
 
@@ -15,7 +15,7 @@ from ...utils import expand_dims, remove_dims
 # ---------------------------------------------------------------------------
 # This implementation 'replicates' the input
 
-class Attention(nn.Module):
+class Attention(Module):
 
     def __init__(self, qdim=0, kdim=0, vdim=0, num_heads=1):
         assert qdim >= 0, "Invalid 'qdim' parameter's value"

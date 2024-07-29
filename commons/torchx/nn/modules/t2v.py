@@ -2,9 +2,14 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from torch.nn.init import uniform_
+from .module import Module
 
 
-class Time2Vec(nn.Module):
+# ---------------------------------------------------------------------------
+# Time2Vec
+# ---------------------------------------------------------------------------
+
+class Time2Vec(Module):
 
     def __init__(self, input_size, output_size, sequence_len=None):
         """
@@ -53,3 +58,8 @@ class Time2Vec(nn.Module):
         sin_trans = torch.sin(kdot(x, self.W) + self.P)
         return torch.cat([sin_trans, original], dim=-1)
 # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

@@ -7,6 +7,9 @@ tabulate
 
 tqdm
 
+# html parser
+beautifulsoup4
+
 #
 # IO
 #

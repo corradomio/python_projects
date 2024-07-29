@@ -7,7 +7,8 @@ from torch import Tensor
 from torch.nn.modules import transformer as ttx
 
 # extended Conv1d layer
-from ..modules import cnn as cnnx
+from .module import Module
+from . import cnn as cnnx
 
 
 #

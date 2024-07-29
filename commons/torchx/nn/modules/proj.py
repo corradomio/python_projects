@@ -1,7 +1,7 @@
-import torch.nn as nn
 from torch import Tensor
 
 from .lin import Linear
+from .module import Module
 from ...utils import is_shape
 
 
@@ -9,7 +9,7 @@ from ...utils import is_shape
 # Projection
 # ---------------------------------------------------------------------------
 
-class Projection(nn.Module):
+class Projection(Module):
     """
     Transformation of tensor '[batch, input_length, input_size' to '[batch, output_length, output_size]'
     There are two transformations:

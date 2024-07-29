@@ -131,13 +131,3 @@ def closure_coarsening_graph(g: nx.DiGraph, create_using=None, direct=True, **kw
 
     return coarsed
 # end
-
-
-def print_graph_stats(g:nx.Graph):
-    n = len(g.order())
-    m = len(g.size())
-    if g.is_directed():
-        print(f"G={{V: {n}, E: {m}}}")
-    else:
-        print(f"G={{V: {n}, E: {m}}}, directed")
-# end

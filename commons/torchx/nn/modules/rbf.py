@@ -18,8 +18,12 @@ import torch
 import torch.nn as nn
 
 from typing import Callable
+from .module import Module
 
 
+# ---------------------------------------------------------------------------
+# Functions
+# ---------------------------------------------------------------------------
 
 # Norm functions
 def l_norm(x, p=2):
@@ -51,7 +55,7 @@ def rbf_inverse_multiquadric(x):
 # RBFLayer
 # ---------------------------------------------------------------------------
 
-class RBFLayer(nn.Module):
+class RBFLayer(Module):
     """
     Defines a Radial Basis Function Layer
 

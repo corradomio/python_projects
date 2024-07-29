@@ -1,8 +1,29 @@
 import stdlib.logging as logging
 import zmq
+import zmqx
 import time
 
+
 def main():
+    log = logging.getLogger("main")
+    log.info("Start client")
+
+    cli = zmqx.ZMQClient(zmq.REQ, "tcp://localhost:5555", mtype=zmqx.MessageType.JSON)
+
+    for request in range(10):
+        print(f"Sending request {request} ...")
+
+        message = cli.send_receive({
+            "req": "Hello"}
+        )
+
+        print(f"Received reply {request} [ {message} ]")
+
+    log.info("End")
+    pass
+
+
+def main1():
     log = logging.getLogger("main")
     log.info("Start client")
 

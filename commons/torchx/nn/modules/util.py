@@ -1,6 +1,80 @@
 import torch
 import torch.nn as nn
 from torch import Tensor
+from .module import Module
+
+
+# ---------------------------------------------------------------------------
+# Probe
+# ---------------------------------------------------------------------------
+#
+
+def print_shape(what, x, i=0):
+    if isinstance(x, (list, tuple)):
+        if i == 0:
+            print("  "*i, what, "...")
+        else:
+            print("  " * i, "...")
+        for t in x:
+            print_shape(what, t, i+1)
+        return
+    if i == 0:
+        print("  "*i, what, tuple(x.shape))
+    else:
+        print("  " * i, tuple(x.shape))
+
+
+class Probe(Module):
+    """
+    Used to insert breakpoints during the training/prediction and to print the
+    tensor shapes (ONLY the first time)
+    """
+
+    def __init__(self, name="probe"):
+        super().__init__()
+        self.name = name
+        self._log = True
+        self._repr = f"[{name}]\t"
+
+    def forward(self, input):
+        if self._log:
+            print_shape(self._repr, input)
+            self._log = False
+        return input
+
+    def __repr__(self):
+        return self._repr
+# end
+
+
+# ---------------------------------------------------------------------------
+# Select
+# ---------------------------------------------------------------------------
+#
+
+class Select(Module):
+    """
+    If  'input' is a tuple/list o an hierarchical structure, it permits to
+    select an element based on a sequence of indices:
+
+        select=(3,2,4,1)
+
+    is converted into
+
+        input[3][2][4][1]
+    """
+
+    def __init__(self, select=()):
+        super().__init__()
+        assert isinstance(select, (int, list, tuple))
+        self.select = [select] if isinstance(select, int) else list(select)
+
+    def forward(self, input):
+        output = input
+        for s in self.select:
+            output = output[s]
+        return output
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -8,7 +82,7 @@ from torch import Tensor
 # ---------------------------------------------------------------------------
 # It is equivalent to nn.Unflatten(...) but more simple
 
-class ReshapeVector(nn.Module):
+class ReshapeVector(Module):
     def __init__(self, shape=None, n_dims=0):
         """
         Reshape the input tensor T as
@@ -46,7 +120,7 @@ class ReshapeVector(nn.Module):
 # end
 
 
-class Reshape(nn.Module):
+class Reshape(Module):
 
     def __init__(self, shape):
         super().__init__()
@@ -66,7 +140,7 @@ class Reshape(nn.Module):
 # As TF RepeatedVector
 #
 
-class RepeatVector(nn.Module):
+class RepeatVector(Module):
     """
     Repeat a vector v in R^n, r times, generating a vector in R^(r,n)
     """
@@ -94,7 +168,7 @@ class RepeatVector(nn.Module):
 #   Distributed:    (batch, seq, units)   ->  (batch, seq,     1)
 #
 
-class TimeDistributed(nn.Module):
+class TimeDistributed(Module):
 
     def __init__(self, *models):
         super().__init__()
@@ -184,7 +258,7 @@ class TimeRepeat(nn.Module):
 #   Distributed:    (batch, seq, units)   ->  (batch, 1,     seq)
 #
 
-class ChannelDistributed(nn.Module):
+class ChannelDistributed(Module):
 
     def __init__(self, *models):
         super().__init__()
@@ -214,7 +288,7 @@ class ChannelDistributed(nn.Module):
 # Clip
 # ---------------------------------------------------------------------------
 
-class Clip(nn.Module):
+class Clip(Module):
 
     def __init__(self, clip=(0, 1)):
         super().__init__()
@@ -230,5 +304,3 @@ class Clip(nn.Module):
 # ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------
-
-
