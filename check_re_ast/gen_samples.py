@@ -1,0 +1,59 @@
+from re_grammar import parser
+
+
+def re_parse(re):
+    print(f"-- {re} --")
+    ast = parser.parse(re)
+    print(ast)
+    return ast
+
+
+def main():
+    # re_parse('-')
+    # ast = re_parse('([0-1][0-9]|30|31)')
+    # for i in range(100):
+    #     print(ast.random())
+
+    ast = re_parse("[0-9]{4}-(0[0-9]|1[012])-([0-1][0-9]|3[01])/[a-z]{3,5}/[0-9]+")
+    for i in range(100):
+        print(ast.random())
+
+    # re_parse("[a-z]")
+    # re_parse("[0-9]")
+
+    # re_parse('a')
+    # re_parse('ab')
+    # re_parse('abc')
+    # re_parse('a|b')
+    # re_parse('a?')
+    # re_parse('a*')
+    # re_parse('a+')
+    # re_parse('(a)')
+
+    # re_parse('a{2}')
+    # re_parse('a{,2}')
+    # re_parse('a{2,}')
+    # re_parse('a{2,3}')
+
+    # re_parse('a{0,1}')
+    # re_parse('a{0,}')
+    # re_parse('a{1,}')
+    # re_parse('a{1,1}')
+    # re_parse('a{2,2}')
+    # re_parse('a{0,2}')
+    # re_parse('a{2,}')
+    # re_parse('a{2,3}')
+
+    # re_parse('a(b|c)?')
+    # re_parse('[a-z]')
+
+    # ast = parser.parse('a(b|c)?')
+    # ast = parser.parse('ab')
+    # ast = parser.parse('a|b')
+    # ast = parser.parse('a?')
+    # ast = parser.parse('(a)')
+    return
+
+
+if __name__ == "__main__":
+    main()

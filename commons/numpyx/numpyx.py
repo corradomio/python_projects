@@ -29,21 +29,6 @@ def ashuffle(*arr_list):
 
 
 # ---------------------------------------------------------------------------
-# Matrix operations
-# ---------------------------------------------------------------------------
-
-# def is_pos_def(m: ndarray) -> bool:
-#     """Check if the matrix is positive definite"""
-#     ev = eigvals(m)
-#     return all(ev > 0)
-
-
-# def is_symmetric(a: ndarray, tol=1e-8) -> bool:
-#     """Check if the matrix is symmetric"""
-#     return all(abs(a - a.T) < tol)
-
-
-# ---------------------------------------------------------------------------
 # Shape handling
 # ---------------------------------------------------------------------------
 

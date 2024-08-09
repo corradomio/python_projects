@@ -1,14 +1,15 @@
-import networkx as nx
 import numpy as np
+import networkx as nx
 
 
-def is_symmetric(M):
+def is_symmetric(M: np.ndarray):
     n = len(M)
     for i in range(n-1):
         for j in range(i+1, n):
             if M[i, j] != M[j, i]:
                 return False
     return True
+# end
 
 
 def draw(G, pos=None, ax=None, labels=True, **kwds):
@@ -23,3 +24,4 @@ def draw(G, pos=None, ax=None, labels=True, **kwds):
     nx.draw(G, pos=pos, ax=ax, **kwds)
     if labels:
         nx.draw_networkx_labels(G, pos=pos)
+# end

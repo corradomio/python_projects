@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Union, Iterator, Any
+from typing import Union, Iterator, Any, Optional
 
 __version__ = "1.1.0"
 
@@ -25,6 +25,8 @@ __version__ = "1.1.0"
 #   G=netx.Graph(...)
 #   G.add_node(n ,{..})
 #   G.add_nodes_from([n1, (n2, {..}), ...])             no
+#   G.remove_node(n)
+#   G.remove_nodes_from([n1, ...])
 #   G.add_edge(u,v ,{..})
 #   G.add_edges_from([[u1, v1], [u2, v2, {..}], ...])   no
 #   G.clear()                                           no
@@ -37,7 +39,8 @@ __version__ = "1.1.0"
 #   G.nodes
 #   G.edges
 #   .
-from .edges import IEdges, DEdges, UEdges, DagEdges
+from .types import NODE_TYPE, EDGE_TYPE
+from .edges import IEdges, DEdges, UEdges, DAGEdges
 
 
 # Networkx
@@ -74,7 +77,7 @@ class Graph:
         self._nodes: dict[int, dict] = {}
 
         if acyclic:
-            self._edges: IEdges = DagEdges(multi)
+            self._edges: IEdges = DAGEdges(multi)
         elif direct:
             self._edges: IEdges = DEdges(loops, multi)
         else:
@@ -123,7 +126,7 @@ class Graph:
     # property G.nodes is NOT compatible with 'networkx'
 
     @property
-    def nodes_(self) -> dict[int, dict]:
+    def nodes_(self) -> dict[NODE_TYPE, dict]:
         return self._nodes
 
     # -----------------------------------------------------------------------
@@ -137,15 +140,15 @@ class Graph:
     # For undirected graphs, succ and pred are the same
 
     @property
-    def adj(self) -> dict[int, list[int]]:
+    def adj(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
         return self._edges.adj
 
     @property
-    def succ(self) -> dict[int, list[int]]:
+    def succ(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
         return self._edges.succ
 
     @property
-    def pred(self) -> dict[int, list[int]]:
+    def pred(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
         return self._edges.pred
 
     # -----------------------------------------------------------------------
@@ -170,16 +173,16 @@ class Graph:
     def number_of_nodes(self) -> int:
         return len(self._nodes)
 
-    def nodes(self) -> Iterator[int]:
+    def nodes(self) -> Iterator[NODE_TYPE]:
         return iter(self._nodes.keys())
 
-    def has_node(self, n) -> bool:
+    def has_node(self, n: NODE_TYPE) -> bool:
         return n in self._nodes
 
-    def add_node(self, n: int, **nprops):
+    def add_node(self, n: NODE_TYPE, **nprops):
         return self.add_node_(n, nprops)
 
-    def add_node_(self, n: int, nprops: dict):
+    def add_node_(self, n: NODE_TYPE, nprops: dict):
         if n not in self._nodes:
             self._nodes[n] = nprops
             self.adj[n] = []
@@ -188,7 +191,7 @@ class Graph:
         self.cache.clear()
         return self
 
-    def add_nodes_from(self, nlist: list[int], **nprops):
+    def add_nodes_from(self, nlist: list[NODE_TYPE], **nprops):
         for n in nlist:
             if isinstance(n, tuple):
                 v, vprops = n
@@ -197,7 +200,7 @@ class Graph:
                 self.add_node_(n, nprops)
         return self
 
-    def neighbors(self, n: int, inbound=None) -> list[int]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> list[NODE_TYPE]:
         """
         :param n:
         :param inbound:
@@ -208,9 +211,31 @@ class Graph:
         """
         return sorted(self._edges.neighbors(n, inbound))
 
+    def node_edges(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> dict[EDGE_TYPE, dict]:
+        nnodes = self.neighbors(n, inbound=inbound)
+        nedges: dict[EDGE_TYPE, dict] = {}
+        if inbound:
+            for u in nnodes:
+                nedges[(u, n)] = self.edges[(u, n)]
+        else:
+            for v in nnodes:
+                nedges[(n, v)] = self.edges[(n, v)]
+        return nedges
+    # end
+
     # compatibility
     def __contains__(self, n: int) -> bool:
         return n in self._nodes
+
+    def remove_node(self, n: NODE_TYPE):
+        if n not in self._nodes:
+            return
+        del self._nodes[n]
+        self._edges.remove_node(n)
+
+    def remove_nodes_from(self, nlist: list[NODE_TYPE]):
+        for n in nlist:
+            self.remove_node(n)
 
     # -----------------------------------------------------------------------
     # Operations/edges
@@ -223,14 +248,14 @@ class Graph:
     def number_of_edges(self) -> int:
         return len(self._edges)
 
-    def has_edge(self, u: int, v: int) -> bool:
+    def has_edge(self, u: NODE_TYPE, v: NODE_TYPE) -> bool:
         return (u, v) in self._edges
 
-    def add_edge(self, u: int, v: int, **eprops):
+    def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, **eprops):
         return self.add_edge_(u, v, eprops)
 
     # edge props as dict
-    def add_edge_(self, u: int, v: int, eprops: dict):
+    def add_edge_(self, u: NODE_TYPE, v: NODE_TYPE, eprops: dict):
         self.add_node(u)
         self.add_node(v)
         self._edges.add_edge(u, v, eprops)
@@ -239,7 +264,7 @@ class Graph:
 
     # compatibility
     def add_edges_from(self,
-                       elist: list[Union[tuple[int, int], tuple[int, int, dict]]],
+                       elist: list[Union[tuple[NODE_TYPE, NODE_TYPE], tuple[NODE_TYPE, NODE_TYPE, dict]]],
                        **eprops):
         for e in elist:
             if len(e) == 2:
@@ -250,21 +275,32 @@ class Graph:
                 self.add_edge_(u, v, eprops | uvprops)
         return self
 
+    def remove_edge(self, u: NODE_TYPE, v: NODE_TYPE):
+        self._edges.remove_edge(u, v)
+
+    def remove_edges_from(self, elist: list[EDGE_TYPE]):
+        for e in elist:
+            self.remove_edge(*e)
+
+    def remove_singletons(self):
+        singletons = [n for n in self if self.degree(n) == 0]
+        self.remove_nodes_from(singletons)
+
     # -----------------------------------------------------------------------
     # Node degree
     # Note: with multi=False, multiple edges are not counted
     #
 
-    def degree(self, n: int, multi=False) -> int:
+    def degree(self, n: NODE_TYPE, multi=False) -> int:
         if self._direct:
             return self.in_degree(n, multi=multi) + self.out_degree(n, multi=multi)
         else:
             return self.out_degree(n, multi=multi)
 
-    def out_degree(self, u: int, multi=False) -> int:
+    def out_degree(self, u: NODE_TYPE, multi=False) -> int:
         return self._edges.out_degree(u, multi=multi)
 
-    def in_degree(self, v: int, multi=False) -> int:
+    def in_degree(self, v: NODE_TYPE, multi=False) -> int:
         return self._edges.in_degree(v, multi=multi)
 
     # -----------------------------------------------------------------------
@@ -321,6 +357,7 @@ class Graph:
         nv = len(self._nodes)
         ne = len(self._edges)
         return f"{self.name}=(|V|={nv}, |E|={ne})"
+
 # end
 
 

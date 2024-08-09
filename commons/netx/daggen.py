@@ -6,6 +6,7 @@ import numpy as np
 import networkx as nx
 # import netx as nxx
 from stdlib.iset import ilexsubset, imembers
+from .util import is_symmetric
 
 
 # ---------------------------------------------------------------------------
@@ -96,9 +97,15 @@ def iset_to_amdag(S: int, n: int) -> np.ndarray:
         r, c = i2rc(i)
         A[r, c] = 1
     return A
+# end
 
 
 def dag_enum(n: int) -> Generator:
+    """
+    Generate all connected DAGs with n nodes
+    :param n: n of nodes
+    :return: an iterator on the generated DAGs
+    """
     N = n * (n - 1) // 2
 
     for S in ilexsubset(n=N, k=(n - 1, N)):
@@ -108,10 +115,27 @@ def dag_enum(n: int) -> Generator:
         if not nx.is_weakly_connected(G):
             continue
         yield G
+# end
 
 
 def from_numpy_array(A: np.ndarray, create_using=None):
-    G = create_using if create_using is not None else nx.Graph()
+    """
+    Create a Graph from a numpy adjacency matrix
+
+    :param A: adjacency matrix
+    :param create_using: a already graph to fill
+        otherwise it is created a Graph if the matrix is simmetryc
+        else a DiGraph
+    :return: the graph satisfying the adjacency matrix
+    """
+    symmetric = False if create_using else is_symmetric(A)
+    if create_using:
+        G = create_using
+    elif symmetric:
+        G = nx.Graph()
+    else:
+        G = nx.DiGraph()
+
     n = A.shape[0]
 
     G.add_nodes_from(range(n))
@@ -122,4 +146,4 @@ def from_numpy_array(A: np.ndarray, create_using=None):
                 G.add_edge(u, v)
 
     return G
-
+# end

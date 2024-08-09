@@ -131,3 +131,4 @@ def closure_coarsening_graph(g: nx.DiGraph, create_using=None, direct=True, **kw
 
     return coarsed
 # end
+
