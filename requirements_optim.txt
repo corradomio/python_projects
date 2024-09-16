@@ -1,0 +1,156 @@
+# ---------------------------------------------------------------------------
+# sklearn environment with support
+#   sktime (time series)
+#   pytorch (NN)
+# ---------------------------------------------------------------------------
+# Utilities
+
+
+# https://pypi.org/project/Deprecated/
+deprecated
+
+# https://python-future.org/
+future
+
+# https://path.readthedocs.io/en/latest/
+path
+
+# https://pypi.org/project/multimethod/
+multimethod
+
+# https://pypi.org/project/tabulate/
+tabulate
+
+# https://docs.h5py.org/en/stable/quick.html#quick
+#h5py
+
+
+
+# ---------------------------------------------------------------------------
+# IPython
+# ---------------------------------------------------------------------------
+
+ipython
+
+
+# ---------------------------------------------------------------------------
+# standard libraries
+# ---------------------------------------------------------------------------
+
+# https://numpy.org/
+numpy
+
+# https://xarray.dev/
+# xarray
+
+# https://scipy.org/
+scipy
+
+# https://pandas.pydata.org/
+pandas
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+# https://networkx.org/
+# networkx
+
+# ---------------------------------------------------------------------------
+# Optimization heiristics
+# ---------------------------------------------------------------------------
+
+
+# https://pypi.org/project/pygad/
+# https://pygad.readthedocs.io/en/latest/
+# https://github.com/ahmedfgad/GeneticAlgorithmPython
+pygad
+
+
+# https://pymoo.org/
+# https://pypi.org/project/pymoo/
+# https://github.com/anyoptimization/pymoo
+pymoo
+
+
+# https://esa.github.io/pygmo2/
+# no available in windows
+# pygmo
+
+
+# https://platypus.readthedocs.io/en/latest/
+platypus
+
+
+# https://pymoo.org/
+# https://github.com/anyoptimization/pymoo
+parmoo
+
+
+# https://github.com/DEAP/deap
+# https://pypi.org/project/deap/
+# https://deap.readthedocs.io/en/master/
+#deap
+
+
+# 
+# https://pypi.org/project/scoop/
+# https://scoop.readthedocs.io/en/0.7/
+#scoop
+
+# ---------------------------------------------------------------------------
+# Linear/convex optimization
+# ---------------------------------------------------------------------------
+
+
+# https://github.com/coin-or/pulp
+# 2022
+#pulp
+
+# https://developers.google.com/optimization/introduction/python
+# https://developers.google.com/optimization/
+# 2023
+#ortools
+
+# https://en.wikibooks.org/wiki/GLPK/Python
+# http://ftp.gnu.org/gnu/glpk/
+# 2023
+#glpk
+
+# https://gekko.readthedocs.io/en/latest/   
+# 2023
+#gekko 
+
+# https://www.mosek.com/downloads/
+# 2023
+#mosek
+
+# https://nlopt.readthedocs.io/en/latest/
+# 2022
+#nlopt
+
+# https://pypi.org/project/cplex/
+# 2023
+#cplex
+
+# https://pypi.org/project/docplex/
+# 2023
+#docplex
+
+# https://www.cvxpy.org/
+# 2023
+#cvxpy
+
+# https://pypi.org/project/cvxopt/
+# 2023
+#cvxopt
+
+# https://www.gurobi.com/
+# https://pypi.org/project/gurobipy/
+#gurobipy
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

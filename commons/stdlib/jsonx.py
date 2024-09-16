@@ -14,15 +14,16 @@
 
 from __future__ import annotations
 
+import datetime as dt
 import json
 import os
-import datetime as dt
-import pandas as pd
+from datetime import datetime
+from typing import Optional, Union, cast
+
 import numpy as np
 import numpy.dtypes as npdt
+import pandas as pd
 
-from datetime import datetime
-from typing import Literal, Optional, Union, cast
 from .dict import dict
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
@@ -178,6 +179,13 @@ class JSONxEncoder(json.JSONEncoder):
         q = f'{t.__module__}.{t.__name__}'
         if q in JSONX_ENCODERS:
             return JSONX_ENCODERS[q](o)
+        elif isinstance(o, tuple):
+            return [
+                self.encode(e)
+                for e in o
+            ]
+        elif hasattr(o, 'to_json'):
+            return o.to_json()
         else:
             return super().default(o)
 
@@ -211,10 +219,6 @@ def dump(obj, file: str, **kwargs) -> dict:
 
     with open(file, mode="w", **open_kwargs) as fp:
         return dict(json.dump(obj, fp, cls=JSONxEncoder, **kwargs))
-
-
-# TO DEPRECATE: it is not a good idea to use a different name than 'dump'
-# save = dump
 
 # ---------------------------------------------------------------------------
 # End

@@ -4,7 +4,7 @@
 #
 #       is_instance(obj, Type)
 #
-# as alternative than
+# as alternative as
 #
 #       isinstance(obj, Type)
 #
@@ -56,6 +56,7 @@ __version__ = '1.0.1'
 from typing import _type_check, _remove_dups_flatten
 from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
 from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
+from numbers import Number, Integral, Real
 
 # ---------------------------------------------------------------------------
 # Typing types supported/unsupported
