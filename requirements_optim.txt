@@ -58,15 +58,16 @@ seaborn
 # https://networkx.org/
 # networkx
 
-# ---------------------------------------------------------------------------
-# Optimization heiristics
-# ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Optimization heuristics
+# ---------------------------------------------------------------------------
 
 # https://pypi.org/project/pygad/
 # https://pygad.readthedocs.io/en/latest/
 # https://github.com/ahmedfgad/GeneticAlgorithmPython
-pygad
+#pygad
+# 'pymoo' is BETTER
 
 
 # https://pymoo.org/
@@ -100,10 +101,11 @@ parmoo
 # https://scoop.readthedocs.io/en/0.7/
 #scoop
 
+
+
 # ---------------------------------------------------------------------------
 # Linear/convex optimization
 # ---------------------------------------------------------------------------
-
 
 # https://github.com/coin-or/pulp
 # 2022
@@ -150,6 +152,24 @@ parmoo
 # https://www.gurobi.com/
 # https://pypi.org/project/gurobipy/
 #gurobipy
+
+
+
+# ---------------------------------------------------------------------------
+# Database
+# ---------------------------------------------------------------------------
+psycopg2
+
+# https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
+#mysql-connector-python
+#pymysql
+
+# https://www.sqlalchemy.org/
+# https://docs.sqlalchemy.org/en/14/dialects/mysql.html
+# https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
+#sqlalchemy<2.0
+sqlalchemy
+
 
 # ---------------------------------------------------------------------------
 # end

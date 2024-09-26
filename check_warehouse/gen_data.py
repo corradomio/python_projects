@@ -26,8 +26,10 @@ class Position:
     def __init__(self, id):
         self.id = id
         self.name = f"p{id}"
-        self.lon = -1 + 2*random()
-        self.lat = -1 + 2*random()
+        # self.lon = -1 + 2*random()
+        # self.lat = -1 + 2*random()
+        self.lon = 2*random()
+        self.lat = random()
 
     def to_json(self):
         return {
@@ -236,8 +238,12 @@ def count_moved_parts(selected_warehouses, requests, available) -> dict[str, dic
 # N_LOCATIONS = 1000
 # N_PARTS = 100
 
-N_WAREHOUSES = 10
-N_LOCATIONS = 100
+# N_WAREHOUSES = 10
+# N_LOCATIONS = 100
+# N_PARTS = 3
+
+N_WAREHOUSES = 100
+N_LOCATIONS = 10000
 N_PARTS = 3
 
 
@@ -264,7 +270,7 @@ def main():
     dump({
         "requests": requests,
         "available": available,
-    }, "requests_offers.json")
+    }, "requests_available.json")
 
     pass
 

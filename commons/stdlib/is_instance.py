@@ -4,7 +4,7 @@
 #
 #       is_instance(obj, Type)
 #
-# as alternative as
+# as alternative than
 #
 #       isinstance(obj, Type)
 #

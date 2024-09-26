@@ -1,0 +1,100 @@
+
+class MinimumWarehouses(FunctionalProblem):
+    def __init__(self, D, mindist):
+        #
+        # D: [warehouses x locations]
+        #
+        n, m = D.shape
+
+        F = (D > mindist)
+        L = (D > 0)
+
+        self.D = D
+        self.F = F
+        self.L = L
+        self.one = np.ones(m, dtype=np.float32)
+        self.n_max = n
+
+        super().__init__(
+            objs=[
+                self._min_distance,
+                # self._min_warehouses,
+                # self._max_locations_served
+            ],
+            constr_ieq=[
+
+            ],
+            n_var=n, vtype=bool,
+            xl=False, xu=True)
+
+    def _min_distance(self, x):
+        one = self.one
+        D = self.D
+        # F = self.F
+        # L = self.L
+        # minimize distance
+        o1 = x.dot(D).dot(one)
+        return o1
+
+    # def _min_warehouses(self, x):
+    #     one = self.one
+    #     # D = self.D
+    #     F = self.F
+    #     # L = self.L
+    #     # minimize locations
+    #     o2 = x.dot(F).dot(one)
+    #     return o2
+
+
+def solve_minimum_warehouses(data, mindist):
+    D = data.distances(locations=True)
+    C = data.reachability(locations=True)
+
+    problem = MinimumWarehouses(D, mindist)
+
+    #
+    # THERE ARE algos supporting a SINGLE objective and algos supporting MORE!
+    #   https://pymoo.org/algorithms/list.html
+
+    algorithm = NSGA2(
+        pop_size=200,
+        sampling=BinaryRandomSampling(),
+        crossover=TwoPointCrossover(),
+        mutation=BitflipMutation(),
+        eliminate_duplicates=True)
+
+    res = minimize(problem,
+                   algorithm,
+                   ('n_gen', 60),
+                   seed=1,
+                   verbose=True)
+
+    print("Function value: %s" % res.F)
+    print("Subset:", np.where(res.X)[0])
+    pass
+
+
+def solve_locations_transfer(data):
+    pass
+
+
+def solve_warehouse_transfer(data):
+    pass
+
+
+
+# class TwoPointCrossover2D(TwoPointCrossover):
+#     def _do(self, problem, X: np.ndarray, **kwargs):
+#         # X.shape = (2, 100, n*m)
+#         # n, m = problem.shape_var
+#         # n_parents, n_matings, n_var = X.shape
+#         # T = X.reshape(n_parents, n_matings, n, m)
+#         return super()._do(problem, X, **kwargs)
+
+
+# class BitflipMutation2D(BitflipMutation):
+#     def _do(self, problem, X: np.ndarray, **kwargs):
+#         # n, m = problem.shape_var
+#         # n_samples, n_var = X.shape
+#         # T = X.reshape(n_samples, n, m)
+#         return super()._do(problem, X, **kwargs)
