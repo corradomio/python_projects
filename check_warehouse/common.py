@@ -334,6 +334,20 @@ class Data:
         return D
     # end
 
+    def best_center(self) -> tuple[int, str, float]:
+        center = None
+        dcenter = float('inf')
+        i = 0
+        for w in self.warehouses:
+            d = 0
+            for l in self.locations:
+                d += self.distance(w, l)
+            if d < dcenter:
+                dcenter = d
+                center = (i, w, d)
+            i += 1
+        return center
+
     def reachability(self,
                      src: Union[None, str, list[str]] = None,
                      dst: Union[None, str, list[str]] = None,

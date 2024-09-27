@@ -1,50 +1,56 @@
-# from abc import ABC
-# from random import shuffle
-#
-# import numpy as np
-# from pymoo.core.sampling import Sampling
-#
-#
-# class BinaryRandomSampling2D(Sampling, ABC):
-#
-#     def __init__(self, n_bools=0, axis=None):
-#         super().__init__()
-#         self.axis = axis
-#         self.n_bools = n_bools
-#
-#     def _do(self, problem, n_samples, **kwargs):
-#         n, m = problem.shape_var
-#         nm = n*m
-#
-#         if (self.n_bools == 0 or self.n_bools >= nm) and self.axis is None:
-#             val = np.random.random((n_samples, nm))
-#             return (val < 0.5).astype(bool)
-#
-#         S = np.zeros((n_samples, n, m), dtype=bool)
-#
-#         if self.axis is None:
-#             S = S.reshape((n_samples, -1))
-#             n_bools = self.n_bools if 0 < self.n_bools <= nm else nm
-#             indices = list(range(nm))
-#             for i in range(n_samples):
-#                 shuffle(indices)
-#                 selected = indices[:n_bools]
-#                 S[i, selected] = True
-#             S = S.reshape((n_samples, n, m))
-#         elif self.axis == 0:
-#             n_bools = self.n_bools if 0 < self.n_bools <= n else n
-#             indices = list(range(n))
-#             for i in range(n_samples):
-#                 for k in range(m):
-#                     shuffle(indices)
-#                     selected = indices[:n_bools]
-#                     S[i, selected, k] = True
-#         elif self.axis == 1:
-#             n_bools = self.n_bools if 0 < self.n_bools <= m else m
-#             indices = list(range(m))
-#             for i in range(n_samples):
-#                 for j in range(n):
-#                     shuffle(indices)
-#                     selected = indices[:n_bools]
-#                     S[i, j, selected] = True
-#         return S.reshape((n_samples, -1))
+from typing import Optional
+
+import numpy as np
+from random import shuffle, randrange, choice
+from pymoo.core.sampling import Sampling
+
+
+class BinaryRandomSampling2D(Sampling):
+    """
+    Create a population of matrices where in each matrix's column contains a single True
+    """
+    def __init__(self, D: Optional[np.ndarray]=None, wmax: int=-1):
+        super().__init__()
+        self.D = D
+        self.wmax = wmax
+
+    def _do(self, problem, n_samples, **kwargs):
+        n, m = problem.shape_var
+        wmax = self.wmax
+        wmax = wmax if 0 < wmax <= n else n
+
+        wall = list(range(n))
+
+        T = np.zeros((n_samples, n, m), dtype=bool)
+        for i in range(n_samples):
+            shuffle(wall)
+            nw = randrange(1, wmax)
+            sel = wall[:nw]
+            for k in range(m):
+                j = choice(sel)
+                T[i, j, k] = True
+
+        if self.D is not None:
+            self._show_best_solution(T)
+
+        return T.reshape((n_samples, -1))
+    # end
+
+    def _show_best_solution(self, T):
+        D = self.D
+        n_samples, n, m = T.shape
+
+        bestdi = float('inf')
+        bestTi = None
+
+        for i in range(n_samples):
+            Ti = T[i]
+            di = (D*Ti).sum()
+            print(f"{i:4} {Ti.sum(axis=1)} {di:8.3f}")
+            if di < bestdi:
+                bestdi = di
+                bestTi = Ti
+
+        print(f"best {bestTi.sum(axis=1)} {bestdi:8.3f}")
+    # end
+# end

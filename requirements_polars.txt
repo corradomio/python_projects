@@ -1,0 +1,77 @@
+# ---------------------------------------------------------------------------
+# sklearn environment with support
+#   sktime (time series)
+#   pytorch (NN)
+# ---------------------------------------------------------------------------
+# Utilities
+
+
+# https://pypi.org/project/Deprecated/
+deprecated
+
+# https://python-future.org/
+future
+
+# https://path.readthedocs.io/en/latest/
+path
+
+# https://pypi.org/project/multimethod/
+multimethod
+
+# https://pypi.org/project/tabulate/
+tabulate
+
+# https://docs.h5py.org/en/stable/quick.html#quick
+#h5py
+
+
+
+# ---------------------------------------------------------------------------
+# IPython
+# ---------------------------------------------------------------------------
+
+ipython
+
+
+# ---------------------------------------------------------------------------
+# standard libraries
+# ---------------------------------------------------------------------------
+
+# https://numpy.org/
+numpy
+
+# https://xarray.dev/
+# xarray
+
+# https://scipy.org/
+scipy
+
+# https://pandas.pydata.org/
+pandas
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+# https://networkx.org/
+# networkx
+
+
+# ---------------------------------------------------------------------------
+# Polars/Arrow
+# ---------------------------------------------------------------------------
+
+# https://pola.rs/
+#polars
+# This is for CPU
+polars-lts-cpu
+
+
+# https://arrow.apache.org/docs/python/install.html
+pyarrow
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

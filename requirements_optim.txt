@@ -59,6 +59,11 @@ seaborn
 # networkx
 
 
+# https://pola.rs/
+# ONLY Python 3.8
+#polars
+
+
 # ---------------------------------------------------------------------------
 # Optimization heuristics
 # ---------------------------------------------------------------------------
@@ -147,7 +152,7 @@ parmoo
 
 # https://pypi.org/project/cvxopt/
 # 2023
-#cvxopt
+cvxopt
 
 # https://www.gurobi.com/
 # https://pypi.org/project/gurobipy/
