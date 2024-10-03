@@ -179,6 +179,107 @@ def dump_requests_available(engine):
 # end
 
 
+def dump_spare_distribution(engine):
+    spare_distributions = {}
+
+    with (engine.connect() as conn):
+        tprint("spare_managements ...")
+        sql = """
+        select scenario_name, item_code_item_no, plant_plant_code, num_stock, num_footprint
+        from tb_scenario_plants_dummy
+        """
+        rset = conn.execute(text(sql))
+        for r in rset:
+            scenario_name, item_code_item_no, plant_plant_code, num_stock, num_footprint = r
+            if scenario_name not in spare_distributions:
+                spare_distributions[scenario_name] = {}
+            items_distribution = spare_distributions[scenario_name]
+            if item_code_item_no not in items_distribution:
+                items_distribution[item_code_item_no] = {}
+            items_distribution = items_distribution[item_code_item_no]
+            items_distribution[plant_plant_code] = {
+                "num_stock": int(num_stock),
+                "num_footprint": int(num_footprint)
+            }
+
+    tprint("save")
+    # end
+    data = spare_distributions
+    dump(data, "spare_distribution_uk.json")
+    tprint("done")
+# end
+
+
+# def dump_spare_distribution(engine):
+#     spare_distributions = {}
+#
+#
+#     with (engine.connect() as conn):
+#         tprint("spare_managements ...")
+#         sql = """
+#         select name, item_code_item_no,
+#             center_code,
+#             stock_code,
+#             distance,
+#             center_required, stock_available, stock_moved
+#         from tb_spare_distribution
+#         order by name, item_code_item_no, seq
+#         """
+#         rset = conn.execute(text(sql))
+#         for r in rset:
+#             scenario_name, item_code, \
+#             center_code, \
+#             stock_code, \
+#             distance, \
+#             center_required, stock_available, stock_moved = r
+#
+#             if scenario_name not in spare_distributions:
+#                 spare_distributions[scenario_name] = {}
+#             scenario_distribution = spare_distributions[scenario_name]
+#             if item_code not in scenario_distribution:
+#                 scenario_distribution[item_code] = dict(
+#                     move_list={},
+#                     centers_required={},
+#                     stocks_available={}
+#                 )
+#             item_distribution = scenario_distribution[item_code]
+#
+#             move_dict = item_distribution["move_list"]
+#             if center_code not in move_dict:
+#                 move_dict[center_code] = []
+#             move_list = move_dict[center_code]
+#             centers_required = item_distribution["centers_required"]
+#             stocks_available = item_distribution["stocks_available"]
+#
+#
+#             move_list.append(dict(
+#                 # scenario_name=scenario_name,
+#                 # item_code=item_code,
+#                 # seq=seq,
+#                 center_code=center_code,
+#                 stock_code=stock_code,
+#                 # seq=int(seq),
+#                 distance=distance,
+#                 center_required=int(center_required),
+#                 stock_available=int(stock_available),
+#                 stock_moved=int(stock_moved)
+#             ))
+#
+#             if center_code not in centers_required:
+#                 centers_required[center_code] = int(center_required)
+#             if stock_code not in stocks_available:
+#                 stocks_available[stock_code] = int(stock_available)
+#     # end
+#
+#     tprint("save")
+#     # end
+#     data = spare_distributions
+#     dump(data, "spare_distribution.json")
+#     tprint("done")
+# # end
+
+
+
 def main():
     url_db = URL.create(**dict(
         drivername="postgresql",
@@ -189,8 +290,9 @@ def main():
         database="spare-management"
     ))
     engine = create_engine(url_db)
-    dump_warehouses_locations(engine)
-    dump_requests_available(engine)
+    # dump_warehouses_locations(engine)
+    # dump_requests_available(engine)
+    dump_spare_distribution(engine)
     pass
 
 

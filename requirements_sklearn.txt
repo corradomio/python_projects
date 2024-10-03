@@ -39,9 +39,6 @@ numpy
 scipy
 
 # https://pandas.pydata.org/
-pandas
-
-# https://matplotlib.org/
 matplotlib
 
 # https://seaborn.pydata.org/
@@ -50,6 +47,16 @@ seaborn
 # https://networkx.org/
 # networkx
 
+
+# ---------------------------------------------------------------------------
+# pandas-like libraries
+# ---------------------------------------------------------------------------
+
+# https://pandas.pydata.org/
+pandas
+
+# https://pola.rs
+polars
 
 
 # ---------------------------------------------------------------------------
@@ -120,7 +127,7 @@ statsmodels
 # NN but ONLY for scikit learn/time series
 # ---------------------------------------------------------------------------
 
-# --extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu121
 torch>=2.1
 torchvision
 torchaudio
@@ -193,6 +200,10 @@ neuralforecast
 # https://github.com/Nixtla/hierarchicalforecast/
 #hierarchicalforecast
 
+
+# ---------------------------------------------------------------------------
+# darts
+# ---------------------------------------------------------------------------
 
 # https://unit8co.github.io/darts/
 darts

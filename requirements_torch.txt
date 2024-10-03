@@ -4,16 +4,15 @@
 path
 multimethod
 tabulate
-
 tqdm
 
 # html parser
-beautifulsoup4
+#beautifulsoup4
 
 #
 # IO
 #
-pyarrow
+#pyarrow
 # fastparquet
 
 
@@ -37,13 +36,13 @@ pillow
 opencv-python
 
 #
-# schikit-learn
+# scikit-learn
 #
 scikit-learn
-category_encoders
 xgboost
 catboost
-# imbalanced-learn
+#category_encoders
+#imbalanced-learn
 
 #
 # sktime
@@ -63,21 +62,21 @@ jupyter
 #
 # better to use Python=3.11
 --extra-index-url https://download.pytorch.org/whl/cu121
-torch>=2.1
+#torch>=2.1
+torch
 torchvision
 torchaudio
 torchtext
+
+
+# lightning
+skorch
 
 
 # pytorch-forecasting
 # pytorch-geometric
 # pytorch-geometric-temporal
 # torch_geometric
-
-
-
-# lightning
-skorch
 
 
 #
@@ -92,22 +91,22 @@ accelerate
 safetensors
 datasets
 
-evaluate
-trl         # transformer reinforcement learning
-
-sentence-transformers
-sentencepiece
-
 # fine tuning
 bitsandbytes-windows
 peft
 wandb
 
+#evaluate
+#trl         # transformer reinforcement learning
+
+sentence-transformers
+sentencepiece
+
 # https://github.com/intel/
 # intel-extension-for-transformers
 
 # BPE tokenizer
-tiktoken
+#tiktoken
 
 # ---------------------------------------------------------------------------
 # Suspended

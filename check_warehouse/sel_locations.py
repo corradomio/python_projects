@@ -16,7 +16,7 @@ def main():
     near_locations_sel = data.neighborhoods(selected_warehouses)
     near_locations_all = data.neighborhoods()
 
-    nr = data.required(p).sum()
+    nr = data.requested(p).sum()
     na = data.in_stock(p).sum()
 
     data.distances()

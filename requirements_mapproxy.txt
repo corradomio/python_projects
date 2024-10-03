@@ -1,0 +1,9 @@
+# geos.dll, gdal.dll from GDAL
+
+
+
+mapproxy
+pillow
+pyyaml
+pyproj
+shapely

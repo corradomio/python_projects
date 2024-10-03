@@ -19,7 +19,7 @@ class FunctionalProblem(moopf.FunctionalProblem):
         - _evaluate_constr_ieq
         - _evaluate_constr_eq
 
-    Each function must return an array.
+    Each function must return an numpy array.
     """
     def __init__(self,
                  n_var,
@@ -28,16 +28,28 @@ class FunctionalProblem(moopf.FunctionalProblem):
                  constr_eq=[],      # [h1(x) == 0, ...]
                  func_pf=moopf.func_return_none,
                  func_ps=moopf.func_return_none,
+                 xl=None,
+                 xu=None,
                  **kwargs):
         assert isinstance(n_var, tuple)
+
         self.shape_var = n_var
+        n_var = prod_(n_var)
+
+        if isinstance(xl, np.ndarray):
+            xl = xl.reshape(-1)
+        if isinstance(xu, np.ndarray):
+            xu = xu.reshape(-1)
+
         super().__init__(
-            n_var=prod_(n_var),
+            n_var=n_var,
             objs=objs,
             constr_ieq=constr_ieq,
             constr_eq=constr_eq,
             func_pf=func_pf,
             func_ps=func_ps,
+            xl=xl,
+            xu=xu,
             **kwargs
         )
 
@@ -49,12 +61,12 @@ class FunctionalProblem(moopf.FunctionalProblem):
         out["H"] = self._evaluate_constr_eq(x)
         # return super()._evaluate(x, out, *args, **kwargs)
 
-    def _evaluate_objs(self, x):
+    def _evaluate_objs(self, x) -> np.ndarray:
         return np.array([obj(x) for obj in self.objs])
 
-    def _evaluate_constr_ieq(self, x):
+    def _evaluate_constr_ieq(self, x) -> np.ndarray:
         return np.array([constr(x) for constr in self.constr_ieq])
 
-    def _evaluate_constr_eq(self, x):
+    def _evaluate_constr_eq(self, x) -> np.ndarray:
         return np.array([constr(x) for constr in self.constr_eq])
 # end
