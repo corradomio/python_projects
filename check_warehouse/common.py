@@ -27,3 +27,28 @@ def result_reshape(X: np.ndarray, shape) -> np.ndarray:
     else:
         n = len(X)
         return X.reshape((n,) + shape)
+
+
+def print_array(a: np.ndarray):
+    def _pvec(v):
+        n = len(v)
+        print("{", end="")
+        if n >= 1:
+            print(v[0], end="")
+        for i in range(1, n):
+            print(",", v[i], end="")
+        print("}", end="")
+    def _pmat(M):
+        n,m = M.shape
+        print("{", end="")
+        _pvec(M[0])
+        for i in range(1,m):
+            print(",")
+            _pvec(M[i])
+        print("}")
+    if len(a.shape) == 1:
+        _pvec(a)
+        print()
+    else:
+        _pmat(a)
+# end

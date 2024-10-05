@@ -2,6 +2,7 @@ import sys
 from random import randrange, randint
 from pprint import pprint
 
+import numpy as np
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.crossover import Crossover
 from pymoo.core.mutation import Mutation
@@ -468,6 +469,7 @@ def solve_spare_distribution(data: SDData):
     D = data.distances()
     n, m = D.shape
     print(n*m)
+    print_array(D)
 
     problem = SpareDistributionProblem(A, R, D)
 
@@ -480,10 +482,20 @@ def solve_spare_distribution(data: SDData):
         eliminate_duplicates=True
     )
 
+    termination = get_termination("n_gen", 3000)
+    # termination = termination = get_termination("moo",
+    #     xtol=1e-8,
+    #     cvtol=1e-6,
+    #     ftol=0.0025,
+    #     period=50,
+    #     n_max_gen=1000,
+    #     n_max_evals=200000
+    # )
+
     res: Result = minimize(
         problem=problem,
         algorithm=algorithm,
-        termination=get_termination("n_gen", 1000),
+        termination=termination,
         # seed=1,
         verbose=True
     )
@@ -493,15 +505,124 @@ def solve_spare_distribution(data: SDData):
 
     for i in range(n_sol):
         Xi = X[i]
-        print(Xi)
+        print_array(Xi)
         print(Xi.sum(axis=0)-R)
         print(Xi.sum(axis=1)-A)
         print(res.F[i], (Xi*D).sum(), (np.sign(Xi)*D).sum())
     pass
 
+
+def solve_spare_distribution_deterministic_v1(data: SDData):
+    print("solve_spare_distribution_deterministic")
+    A = data.available()
+    R = data.requested()
+    D = data.distances()
+    n, m = D.shape
+    X = np.zeros_like(D, dtype=int)
+
+    move_list = []
+    for i in range(n):
+        for j in range(m):
+            dij = D[i,j]
+            move_list.append((i, j, dij))
+
+    move_list = sorted(move_list, key=lambda x: x[2])
+
+    Avail = np.copy(A)
+    Rqred = np.copy(R)
+    dist_n = 0
+    dist_1 = 0
+
+    for move in move_list:
+        i, j, dij = move
+        ai = Avail[i]
+        rj = Rqred[j]
+
+        tij = min(ai, rj)
+        X[i,j] += tij
+
+        Avail[i] -= tij
+        Rqred[j] -= tij
+
+        dist_n += tij*dij
+        dist_1 += dij if tij > 0 else 0
+    pass
+    print_array(X)
+    print(X.sum(axis=0)-R)
+    print(X.sum(axis=1)-A)
+    print(dist_n, " ", dist_1)
+    pass
+# end
+
+
+def find_move_list(Required, Neighbors):
+    m = len(Required)
+    n = len(Neighbors[0])
+    X = np.zeros((n, m), dtype = int)
+
+    A = np.zeros(n, dtype=int)
+    R = np.zeros(m, dtype=int)
+    for r in Required:
+        j, rj = r
+        R[j] = rj
+    for a in Neighbors[0]:
+        i, dij, ai = a
+        A[i] = ai
+
+    dist_n = 0
+    dist_1 = 0
+
+    for h in range(m):
+        j = Required[h][0]
+        nj = Neighbors[j]
+        for k in range(n):
+            i, dij, _ = nj[k]
+            ai = A[i]
+            rj = R[j]
+            tij = min(ai, rj)
+            X[i,j] += tij
+            A[i] -= tij
+            R[j] -= tij
+            dist_n += tij*dij
+            dist_1 += dij if tij > 0 else 0
+        # end
+    # end
+    return X, dist_n, dist_1
+
+
+def solve_spare_distribution_deterministic_v2(data: SDData, jlist=None):
+    A = data.available()
+    R = data.requested()
+    D = data.distances()
+    n, m = D.shape
+
+    if jlist is None:
+        Required = sorted([(j, R[j]) for j in range(m)], key=lambda x: x[1], reverse=True)
+        jlist = [r[0] for r in Required]
+
+    Required = [(j, R[j]) for j in jlist]
+    Neighbors = [
+        sorted([(i, D[i,j], A[i]) for i in range(n)], key=lambda x: x[1])
+        for j in range(m)
+    ]
+
+    X, dist_n, dist_1 = find_move_list(Required, Neighbors)
+
+    # print_array(X)
+    # print(X.sum(axis=0)-R)
+    # print(X.sum(axis=1)-A)
+    # print(dist_n, " ", dist_1)
+    return jlist, dist_n, dist_1
+
+
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
+
+def shuffle_(l):
+    shuffle(l)
+    return l
+
 
 def main():
     data = SDData().load(
@@ -528,7 +649,19 @@ def main():
     # crossover = ConstrainedIntegerCrossover2D(Rows, Cols)
     # Ta, Tb = crossover.transform(T1, T2)
 
-    solve_spare_distribution(data)
+    # solve_spare_distribution(data)
+    # solve_spare_distribution_deterministic_v1(data)
+
+    jlist, dist_n_, dist_1_ = solve_spare_distribution_deterministic_v2(data)
+    print(-1,":", dist_n_, " ", dist_1_)
+    for i in range(100000):
+        _, dist_n, dist_1 = solve_spare_distribution_deterministic_v2(data, shuffle_(jlist))
+        if dist_n < dist_n_ or dist_1 < dist_1_:
+            dist_n_ = min(dist_n_, dist_n)
+            dist_1_ = min(dist_1_, dist_1)
+            print(i,":", dist_n_, " ", dist_1_)
+    # end
+    print("min:", dist_n_, dist_1_)
     pass
 
 if __name__ == "__main__":
