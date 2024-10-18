@@ -89,6 +89,7 @@ class SDData:
         quota = installed/installed.sum()
         total = in_stock.sum()
         to_stock = distribute(quota, total)
+        assert in_stock.sum() == to_stock.sum()
 
         # warehouses with available parts
         wlist = np.array(wlist)
@@ -98,6 +99,7 @@ class SDData:
 
         self._available_warehouses = wlist[available_idx]
         self._available_parts = available[available_idx]
+        assert available.sum() == self._available_parts.sum()
 
         # warehouses requesting parts
         requested = np.clip(to_stock - in_stock, 0, total)
@@ -105,6 +107,7 @@ class SDData:
 
         self._requested_warehouses = wlist[requested_idx]
         self._requested_parts = requested[requested_idx]
+        assert requested.sum() == self._requested_parts.sum()
 
         # compute the distances
         n = len(available_idx)
@@ -468,8 +471,9 @@ def solve_spare_distribution(data: SDData):
     R = data.requested()
     D = data.distances()
     n, m = D.shape
-    print(n*m)
-    print_array(D)
+
+    # print_array(D)
+    # print(n*m)
 
     problem = SpareDistributionProblem(A, R, D)
 
@@ -511,6 +515,10 @@ def solve_spare_distribution(data: SDData):
         print(res.F[i], (Xi*D).sum(), (np.sign(Xi)*D).sum())
     pass
 
+
+# ---------------------------------------------------------------------------
+# solve_spare_distribution_deterministic
+# ---------------------------------------------------------------------------
 
 def solve_spare_distribution_deterministic_v1(data: SDData):
     print("solve_spare_distribution_deterministic")

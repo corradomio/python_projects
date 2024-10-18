@@ -100,6 +100,10 @@ class dict(BuiltinDict):
         res = super().__class_getitem__(item)
         return res
 
+    # def __setitem__(self, key, value):
+    #     self.set(key, value)
+    #     return value
+
     #
     #   get/set
     #   select(select/exclude)

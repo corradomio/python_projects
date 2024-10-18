@@ -1,5 +1,7 @@
 from collections import defaultdict
 
+import numpy as np
+from numpy.ma.core import diagonal
 from sqlalchemy import create_engine, URL, Engine, text
 from stdlib.jsonx import dump
 from stdlib.tprint import tprint
@@ -77,8 +79,10 @@ def dump_warehouses_locations(engine: Engine):
         warehouses=warehouses,
         distances=distances
     )
-    dump(data, "warehouses_locations_db.json")
+    dump(data, "warehouses_locations_uk.json")
     tprint("done")
+
+    return data
 # end
 
 
@@ -174,7 +178,7 @@ def dump_requests_available(engine):
         requests=requests,
         available=available
     )
-    dump(data, "requests_available_db.json")
+    dump(data, "requests_available_uk.json")
     tprint("done")
 # end
 
@@ -210,74 +214,41 @@ def dump_spare_distribution(engine):
 # end
 
 
-# def dump_spare_distribution(engine):
-#     spare_distributions = {}
-#
-#
-#     with (engine.connect() as conn):
-#         tprint("spare_managements ...")
-#         sql = """
-#         select name, item_code_item_no,
-#             center_code,
-#             stock_code,
-#             distance,
-#             center_required, stock_available, stock_moved
-#         from tb_spare_distribution
-#         order by name, item_code_item_no, seq
-#         """
-#         rset = conn.execute(text(sql))
-#         for r in rset:
-#             scenario_name, item_code, \
-#             center_code, \
-#             stock_code, \
-#             distance, \
-#             center_required, stock_available, stock_moved = r
-#
-#             if scenario_name not in spare_distributions:
-#                 spare_distributions[scenario_name] = {}
-#             scenario_distribution = spare_distributions[scenario_name]
-#             if item_code not in scenario_distribution:
-#                 scenario_distribution[item_code] = dict(
-#                     move_list={},
-#                     centers_required={},
-#                     stocks_available={}
-#                 )
-#             item_distribution = scenario_distribution[item_code]
-#
-#             move_dict = item_distribution["move_list"]
-#             if center_code not in move_dict:
-#                 move_dict[center_code] = []
-#             move_list = move_dict[center_code]
-#             centers_required = item_distribution["centers_required"]
-#             stocks_available = item_distribution["stocks_available"]
-#
-#
-#             move_list.append(dict(
-#                 # scenario_name=scenario_name,
-#                 # item_code=item_code,
-#                 # seq=seq,
-#                 center_code=center_code,
-#                 stock_code=stock_code,
-#                 # seq=int(seq),
-#                 distance=distance,
-#                 center_required=int(center_required),
-#                 stock_available=int(stock_available),
-#                 stock_moved=int(stock_moved)
-#             ))
-#
-#             if center_code not in centers_required:
-#                 centers_required[center_code] = int(center_required)
-#             if stock_code not in stocks_available:
-#                 stocks_available[stock_code] = int(stock_available)
-#     # end
-#
-#     tprint("save")
-#     # end
-#     data = spare_distributions
-#     dump(data, "spare_distribution.json")
-#     tprint("done")
-# # end
+def dump_warehouses_locations_graph(data):
+    warehouses: list[str] = list(data['warehouses'].keys())
+    locations: list[str] = list(data['locations'].keys())
+    distances: dict[str, dict[str, dict]] = data['distances']
+    n = len(warehouses)
+    m = len(locations)
+    widx = {w:i for w, i in enumerate(warehouses)}
+    lidx = {l:i for l, i in enumerate(locations)}
 
+    D = np.zeros((n, m), dtype=float)
+    A = np.zeros((n, m), dtype=int)
+
+    for i in range(n):
+        wi = warehouses[i]
+        for j in range(m):
+            lj = locations[j]
+            if wi not in distances:
+                continue
+            ilocs = distances[wi]
+            if lj not in ilocs:
+                continue
+
+            dmin = ilocs[lj]["dist_min"]
+            D[i,j] = dmin
+            A[i,j] = 1
+    # end
+
+    np.savetxt("distances.csv", D, fmt="%f", delimiter=',')
+    np.savetxt("adjmat.csv", A, fmt="%d", delimiter=',')
+
+    l0 = list(map(int, A.sum(axis=0)))
+    l1 = list(map(int, A.sum(axis=1)))
+    print(l0)
+    print(l1)
+# end
 
 
 def main():
@@ -290,9 +261,10 @@ def main():
         database="spare-management"
     ))
     engine = create_engine(url_db)
-    # dump_warehouses_locations(engine)
-    # dump_requests_available(engine)
+    data = dump_warehouses_locations(engine)
+    dump_requests_available(engine)
     dump_spare_distribution(engine)
+    dump_warehouses_locations_graph(data)
     pass
 
 
