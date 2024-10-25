@@ -1,0 +1,163 @@
+#
+# Utilities
+#
+path
+multimethod
+tabulate
+tqdm
+
+# html parser
+#beautifulsoup4
+
+#
+# IO
+#
+#pyarrow
+# fastparquet
+
+
+#
+# Standard libraries
+#
+numpy
+scipy
+pandas
+
+#
+# Plotting
+#
+matplotlib
+seaborn
+
+#
+# Image handling
+#
+pillow
+opencv-python
+
+#
+# scikit-learn
+#
+scikit-learn
+xgboost
+catboost
+#category_encoders
+#imbalanced-learn
+
+#
+# sktime
+#
+sktime
+pmdarima
+statsmodels
+
+#
+# IPython/Jupiter
+#
+ipython
+jupyter
+
+#
+# Pytorch
+#
+# better to use Python=3.11
+#--extra-index-url https://download.pytorch.org/whl/cu121
+#torch>=2.1
+torch
+torchvision
+torchaudio
+torchtext
+
+
+# lightning
+skorch
+
+
+# pytorch-forecasting
+# pytorch-geometric
+# pytorch-geometric-temporal
+# torch_geometric
+
+
+#
+# Huggingface
+#
+huggingface_hub
+diffusers
+transformers
+tokenizers
+
+accelerate
+safetensors
+datasets
+
+# fine tuning
+bitsandbytes-windows
+peft
+wandb
+
+#evaluate
+#trl         # transformer reinforcement learning
+
+sentence-transformers
+sentencepiece
+
+# https://github.com/intel/
+# intel-extension-for-transformers
+
+# BPE tokenizer
+#tiktoken
+
+# ---------------------------------------------------------------------------
+# Suspended
+# ---------------------------------------------------------------------------
+
+#
+# Other utilities
+#
+# https://facebookresearch.github.io/xformers/
+# xformers
+# https://pypi.org/project/omegaconf/
+# omegaconf
+
+
+
+# https://github.com/Dao-AILab/flash-attention
+# Not available in Windows
+# flash_attn
+
+
+# opendatasets
+# flwr[simulation]
+
+# https://www.fast.ai/
+# fastai
+
+# gym
+
+# https://github.com/arogozhnikov/einops
+# einops
+
+# pycocotools 
+# onnxruntime 
+# onnx
+# skl2onnx
+
+
+# https://arrayfire.org/arrayfire-python/#
+# arrayfire
+
+# openstreetmap
+# osmnx
+
+# https://omegaconf.readthedocs.io/en/2.3_branch/
+# omegaconf
+
+# https://umap-learn.readthedocs.io/en/latest/index.html
+umap-learn
+# https://github.com/eamid/trimap
+trimap
+
+
+# https://github.com/lyogavin/Anima/tree/main/air_llm
+# airllm

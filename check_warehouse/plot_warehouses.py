@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 from stdlib.jsonx import load
-from stdlib.logging import warning
 
 
 def main():
@@ -24,13 +24,12 @@ def main():
         ware[i, 1] = coords["lat"]
 
     plt.clf()
-    plt.scatter(locs[:,0], locs[:, 1], c='blue', s=0.05)
-    plt.scatter(ware[:,0], ware[:, 1], c='red', s=2)
+    plt.scatter(locs[:,0], locs[:, 1], c='blue', s=0.33, marker='.')
+    plt.scatter(ware[:,0], ware[:, 1], c='red', s=1)
 
     plt.gca().set_aspect(1.5)
     plt.tight_layout()
     plt.savefig('uk.png', dpi=300)
-
 # end
 
 

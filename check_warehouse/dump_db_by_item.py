@@ -12,7 +12,7 @@ from stdlib.tprint import tprint
 # DB_PASSWORD="p0stgres"
 
 
-def dump_warehouses_locations(engine: Engine):
+def dump_warehouses_locations(engine: Engine, item: str):
     warehouses = {}
     locations = {}
     distances = defaultdict(dict)
@@ -24,9 +24,10 @@ def dump_warehouses_locations(engine: Engine):
         sql = """
         select distinct locus_key, longitude, latitude
           from tb_vw_installation_bases_slas
-         where sla_unit is not null 
+         where item_no = :item
+           and count is not NULL
         """
-        rset = conn.execute(text(sql))
+        rset = conn.execute(text(sql), parameters=dict(item=item))
         for r in rset:
             name, lon, lat = r
             name = name.strip()
@@ -61,8 +62,14 @@ def dump_warehouses_locations(engine: Engine):
         sql = """
         select distinct plant_plant_code, location_locus_key, duration_min, distance_km
           from tb_rl_travel_times
+        where location_locus_key in (
+            select distinct locus_key
+            from tb_vw_installation_bases_slas
+            where item_no = :item
+              and count is not NULL
+        )
         """
-        rset = conn.execute(text(sql))
+        rset = conn.execute(text(sql), parameters=dict(item=item))
         for r in rset:
             w, l, dist_min, dist_km = r
             w = w.strip()
@@ -72,71 +79,21 @@ def dump_warehouses_locations(engine: Engine):
                 dist_km=dist_km
             )
 
-    tprint("save")
+    tprint(f"save[w={len(warehouses)}, l={len(locations)}]")
     # end
     data = dict(
         locations=locations,
         warehouses=warehouses,
         distances=distances
     )
-    dump(data, "warehouses_locations_uk.json")
+    dump(data, f"warehouses_locations_{item}.json")
     tprint("done")
 
     return data
 # end
 
 
-# -- public.vw_scenario_plants_dummy source
-#
-# CREATE OR REPLACE VIEW public.vw_scenario_plants_dummy
-# AS SELECT a.scenario_id,
-#     a.scenario_name,
-#     a.ooh_type,
-#     a.plant_plant_code,
-#     a.plant_name,
-#     a.item_code_item_no,
-#     trunc(random() * 9::double precision)::text || 'dummy'::text AS network_names,
-#     a.num_locations,
-#     a.num_footprint,
-#     a.num_faults,
-#     trunc(random() * 9::double precision) AS country_wide_faults,
-#     now()::timestamp without time zone AS first_fault,
-#     trunc(random() * 9::double precision) AS num_stock,
-#     trunc(random() * 9::double precision) AS country_wide_stock,
-#     trunc(random() * 9::double precision)::bigint AS num_movement_requests,
-#     trunc(random() * 9::double precision)::bigint AS country_wide_movement_requests,
-#     trunc(random() * 9::double precision)::integer AS minimum_stock_level,
-#     random() AS faults_per_day_per_footprint,
-#     random() AS country_wide_faults_per_day,
-#     random() AS country_wide_faults_per_day_parameter,
-#     trunc(random() * 9::double precision) AS footprint_per_stock,
-#     ceiling(a.num_footprint::double precision / trunc(random() * 9::double precision + 1::double precision))::numeric AS required_stock,
-#     round(ceiling(a.num_footprint::double precision / trunc(random() * 9::double precision + 1::double precision))::numeric / a.num_footprint * 100::numeric, 0) AS act_stock_as_pct_of_footprint
-#     FROM ( SELECT a_1.scenario_id,
-#             a_1.scenario_name,
-#             a_1.ooh_type,
-#             a_1.item_code_item_no,
-#             a_1.plant_plant_code,
-#             a_1.plant_name,
-#             count(*) AS num_locations,
-#             sum(a_1.num_footprint) AS num_footprint,
-#             COALESCE(sum(a_1.num_faults), 0::double precision) AS num_faults
-#             FROM ( SELECT b.scenario_id,
-#                     a_2.scenario_name,
-#                     a_2.ooh_type,
-#                     b.item_code_item_no,
-#                     b.location_locus_key,
-#                     b.plant_name,
-#                     b.plant_plant_code,
-#                     c.count AS num_footprint,
-#                     trunc(random() * 9::double precision) AS num_faults
-#                    FROM scenarios a_2,
-#                     scenario_allocations b,
-#                     tb_vw_installation_bases_slas c
-#                   WHERE a_2.id = b.scenario_id AND b.item_code_item_no::text = c.item_no::text AND b.location_locus_key = c.locus_key) a_1
-#           GROUP BY a_1.scenario_id, a_1.scenario_name, a_1.ooh_type, a_1.item_code_item_no, a_1.plant_name, a_1.plant_plant_code) a;
-
-def dump_requests_available(engine):
+def dump_requests_available(engine: Engine, item: str):
     requests: dict[str, dict[str, int]] = defaultdict(dict)
     available: dict[str, dict[str, int]] = defaultdict(dict)
     with engine.connect() as conn:
@@ -147,9 +104,10 @@ def dump_requests_available(engine):
         sql = """
         select locus_key, item_no, count
           from tb_vw_installation_bases_slas
-         where count is not null  
+         where item_no = :item
+           and count is not NULL
         """
-        rset = conn.execute(text(sql))
+        rset = conn.execute(text(sql), parameters=dict(item=item))
         for r in rset:
             l, p, count = r
             l = l.strip()
@@ -164,8 +122,9 @@ def dump_requests_available(engine):
         sql = """
         select plant_plant_code, item_code_item_no, quantity
           from stock 
+        where item_code_item_no = :item
         """
-        rset = conn.execute(text(sql))
+        rset = conn.execute(text(sql), parameters=dict(item=item))
         for r in rset:
             w, p, count = r
             w = w.strip()
@@ -173,17 +132,17 @@ def dump_requests_available(engine):
             available[w][p] = count
     # end
 
-    tprint("save")
+    tprint(f"save[r={len(requests)}, a={len(available)}]")
     data = dict(
         requests=requests,
         available=available
     )
-    dump(data, "requests_available_uk.json")
+    dump(data, f"requests_available_{item}.json")
     tprint("done")
 # end
 
 
-def dump_spare_distribution(engine):
+def dump_spare_distribution(engine: Engine, item: str):
     spare_distributions = {}
 
     with (engine.connect() as conn):
@@ -191,8 +150,9 @@ def dump_spare_distribution(engine):
         sql = """
         select scenario_name, item_code_item_no, plant_plant_code, num_stock, num_footprint
         from tb_scenario_plants_dummy
+        where item_code_item_no = :item
         """
-        rset = conn.execute(text(sql))
+        rset = conn.execute(text(sql), parameters=dict(item=item))
         for r in rset:
             scenario_name, item_code_item_no, plant_plant_code, num_stock, num_footprint = r
             if scenario_name not in spare_distributions:
@@ -206,18 +166,22 @@ def dump_spare_distribution(engine):
                 "num_footprint": int(num_footprint)
             }
 
-    tprint("save")
+    tprint(f"save[s={len(spare_distributions)}]")
     # end
     data = spare_distributions
-    dump(data, "spare_distribution_uk.json")
+    dump(data, f"spare_distribution_{item}.json")
     tprint("done")
 # end
 
 
-def dump_warehouses_locations_graph(data):
+def dump_warehouses_locations_graph(data, item):
     warehouses: list[str] = list(data['warehouses'].keys())
     locations: list[str] = list(data['locations'].keys())
     distances: dict[str, dict[str, dict]] = data['distances']
+
+    print(f"warehouses: {len(warehouses)}")
+    print(f"locations: {len(locations)}")
+
     n = len(warehouses)
     m = len(locations)
     widx = {w:i for w, i in enumerate(warehouses)}
@@ -244,14 +208,27 @@ def dump_warehouses_locations_graph(data):
     np.savetxt("distances.csv", D, fmt="%f", delimiter=',')
     np.savetxt("adjmat.csv", A, fmt="%d", delimiter=',')
 
-    l0 = list(map(int, A.sum(axis=0)))
-    l1 = list(map(int, A.sum(axis=1)))
-    print(l0)
-    print(l1)
+    warehouses_serving_location = list(map(int, A.sum(axis=0)))
+    locations_served_by_warehouse = list(map(int, A.sum(axis=1)))
+    print(warehouses_serving_location)
+    print(locations_served_by_warehouse)
+
+    data = {
+        "warehouses": warehouses,
+        "locations": locations,
+        "distances_matrix": D.tolist(),
+        "adjacency_matrix": A.tolist(),
+        "warehouses_serving_location": warehouses_serving_location,
+        "locations_served_by_warehouse": locations_served_by_warehouse
+    }
+    tprint(f"save[]")
+    dump(data, f"warehouses_locations_graph_{item}.json")
+    tprint("done")
 # end
 
 
 def main():
+    item = "000003"
     url_db = URL.create(**dict(
         drivername="postgresql",
         username="postgres",
@@ -261,10 +238,11 @@ def main():
         database="spare-management"
     ))
     engine = create_engine(url_db)
-    data = dump_warehouses_locations(engine)
-    dump_requests_available(engine)
-    dump_spare_distribution(engine)
-    dump_warehouses_locations_graph(data)
+
+    data = dump_warehouses_locations(engine, item)
+    dump_requests_available(engine, item)
+    dump_spare_distribution(engine, item)
+    dump_warehouses_locations_graph(data, item)
     pass
 
 

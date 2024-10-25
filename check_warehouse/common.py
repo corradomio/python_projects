@@ -1,13 +1,17 @@
+# Begin[Dont Remove]
 from random import random, shuffle
 from typing import cast, Self, Optional, Union
 from stdlib import is_instance
 from stdlib.dict import dict
 from stdlib.jsonx import load
-import numpy as np
 import matplotlib.pyplot as plt
+# End[Dont Remove]
+import numpy as np
 from math import sin, cos, atan2, sqrt, radians, asin
 
+
 def sq(x): return x*x
+
 
 def distance(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
