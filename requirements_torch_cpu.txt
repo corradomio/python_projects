@@ -23,17 +23,20 @@ numpy
 scipy
 pandas
 
+
 #
 # Plotting
 #
 matplotlib
 seaborn
 
+
 #
 # Image handling
 #
 pillow
 opencv-python
+
 
 #
 # scikit-learn
@@ -44,6 +47,7 @@ catboost
 #category_encoders
 #imbalanced-learn
 
+
 #
 # sktime
 #
@@ -51,27 +55,37 @@ sktime
 pmdarima
 statsmodels
 
+
 #
 # IPython/Jupiter
 #
 ipython
 jupyter
 
-#
+
+# ---------------------------------------------------------------------------
 # Pytorch
-#
+# ---------------------------------------------------------------------------
 # better to use Python=3.11
-#--extra-index-url https://download.pytorch.org/whl/cu121
-#torch>=2.1
+# --extra-index-url https://download.pytorch.org/whl/cu121
 torch
 torchvision
 torchaudio
 torchtext
 
 
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
 # lightning
+
+# https://skorch.readthedocs.io/en/stable/
+# https://github.com/skorch-dev/skorch
 skorch
 
+
+# ---------------------------------------------------------------------------
+# Pytorch extensions
+# ---------------------------------------------------------------------------
 
 # pytorch-forecasting
 # pytorch-geometric
@@ -79,9 +93,10 @@ skorch
 # torch_geometric
 
 
-#
+# ---------------------------------------------------------------------------
 # Huggingface
-#
+# ---------------------------------------------------------------------------
+
 huggingface_hub
 diffusers
 transformers
@@ -92,12 +107,21 @@ safetensors
 datasets
 
 # fine tuning
-bitsandbytes-windows
+# bitsandbytes-windows (not necessary)
+bitsandbytes
 peft
 wandb
 
 #evaluate
 #trl         # transformer reinforcement learning
+
+# https://github.com/lyogavin/airllm
+airllm
+
+
+# ---------------------------------------------------------------------------
+# Huggingface: sentences
+# ---------------------------------------------------------------------------
 
 sentence-transformers
 sentencepiece
@@ -105,8 +129,41 @@ sentencepiece
 # https://github.com/intel/
 # intel-extension-for-transformers
 
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+# https://github.com/arogozhnikov/einops
+einops
+
+
+# ---------------------------------------------------------------------------
+# Tokenizers
+# ---------------------------------------------------------------------------
+
 # BPE tokenizer
 #tiktoken
+
+# Sacremoses tokenizer
+sacremoses
+
+
+# ---------------------------------------------------------------------------
+# Dimensional Reduction
+# ---------------------------------------------------------------------------
+
+# https://github.com/spotify/annoy
+annoy
+
+# https://github.com/eamid/trimap
+# trimap isa based on annoy (https://github.com/spotify/annoy)
+# can be downloaded from https://www.cgohlke.com/
+trimap
+
+# https://umap-learn.readthedocs.io/en/latest/
+umap-learn
+
 
 # ---------------------------------------------------------------------------
 # Suspended
@@ -133,10 +190,6 @@ sentencepiece
 # https://www.fast.ai/
 # fastai
 
-# gym
-
-# https://github.com/arogozhnikov/einops
-# einops
 
 # pycocotools 
 # onnxruntime 
@@ -147,17 +200,5 @@ sentencepiece
 # https://arrayfire.org/arrayfire-python/#
 # arrayfire
 
-# openstreetmap
-# osmnx
-
 # https://omegaconf.readthedocs.io/en/2.3_branch/
 # omegaconf
-
-# https://umap-learn.readthedocs.io/en/latest/index.html
-umap-learn
-# https://github.com/eamid/trimap
-trimap
-
-
-# https://github.com/lyogavin/Anima/tree/main/air_llm
-# airllm

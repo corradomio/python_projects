@@ -51,9 +51,9 @@ catboost
 #
 # sktime
 #
-sktime
-pmdarima
-statsmodels
+#sktime
+#pmdarima
+#statsmodels
 
 
 #
@@ -106,14 +106,16 @@ accelerate
 safetensors
 datasets
 
+
 # fine tuning
 # bitsandbytes-windows (not necessary)
 bitsandbytes
-peft
 wandb
+peft
 
-#evaluate
-#trl         # transformer reinforcement learning
+
+evaluate
+# trl         # transformer reinforcement learning
 
 # https://github.com/lyogavin/airllm
 airllm
@@ -137,13 +139,15 @@ sentencepiece
 # https://github.com/arogozhnikov/einops
 einops
 
+# https://github.com/LowinLi/transformers-stream-generator
+transformers_stream_generator
 
 # ---------------------------------------------------------------------------
 # Tokenizers
 # ---------------------------------------------------------------------------
 
 # BPE tokenizer
-#tiktoken
+tiktoken
 
 # Sacremoses tokenizer
 sacremoses

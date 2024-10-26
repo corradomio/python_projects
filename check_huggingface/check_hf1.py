@@ -1,7 +1,7 @@
 from pprint import pprint
 from transformers import pipeline
 
-classifier = pipeline('sentiment-analysis')
+classifier = pipeline('sentiment-analysis', device="cuda")
 
 print(classifier('We are very happy to show you the 🤗 Transformers library.'))
 

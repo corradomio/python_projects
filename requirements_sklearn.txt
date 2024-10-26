@@ -95,11 +95,13 @@ lightgbm
 # dimensional reduction
 # ---------------------------------------------------------------------------
 
+# https://github.com/spotify/annoy
+annoy
+
 # https://github.com/eamid/trimap
 # trimap isa based on annoy (https://github.com/spotify/annoy)
-# can be downloaded from https://www.lfd.uci.edu/~gohlke/pythonlibs/#annoy
-#                        https://www.cgohlke.com/
-#trimap
+# can be downloaded from https://www.cgohlke.com/
+trimap
 
 # https://umap-learn.readthedocs.io/en/latest/
 umap-learn
@@ -128,10 +130,11 @@ statsmodels
 # ---------------------------------------------------------------------------
 
 --extra-index-url https://download.pytorch.org/whl/cu121
-torch>=2.1
+torch
 torchvision
 torchaudio
 torchtext
+torchmetrics
 
 
 # https://skorch.readthedocs.io/en/stable/
