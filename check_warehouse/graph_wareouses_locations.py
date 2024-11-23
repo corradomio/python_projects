@@ -11,8 +11,8 @@ def main():
     n = len(warehouses)
     m = len(locations)
 
-    widx = {w:wi for w, wi in enumerate(warehouses)}
-    lidx = {l:lj for l, lj in enumerate(locations)}
+    # widx = {w:wi for w, wi in enumerate(warehouses)}
+    # lidx = {l:lj for l, lj in enumerate(locations)}
 
     A = np.zeros((n+m, n+m), dtype=np.int8)
     D = np.zeros((n+m, n+m), dtype=np.float32)

@@ -5,7 +5,7 @@ from transformers import AutoModelForCausalLM, BitsAndBytesConfig, AutoTokenizer
 # model_id="bigscience/bloomz-1b7"
 # model_id="bigscience/bloomz-3b"
 # model_id="bigscience/bloomz-7b1"
-model_id="bigscience/bloomz"
+model_id="bigscience/bloomz"        # out of memory
 
 
 qconfig = BitsAndBytesConfig(load_in_4bit=True)

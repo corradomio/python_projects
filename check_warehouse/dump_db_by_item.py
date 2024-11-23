@@ -20,7 +20,7 @@ def dump_warehouses_locations(engine: Engine, item: str):
         #
         # locations
         #
-        tprint("locations ...")
+        tprint("  locations ...")
         sql = """
         select distinct locus_key, longitude, latitude
           from tb_vw_installation_bases_slas
@@ -40,7 +40,7 @@ def dump_warehouses_locations(engine: Engine, item: str):
         #
         # warehouses
         #
-        tprint("warehouses ...")
+        tprint("  warehouses ...")
         sql = """
         select distinct plant_code, postcode_longitude, postcode_latitude
           from tb_vw_dimensionable_plants
@@ -58,7 +58,7 @@ def dump_warehouses_locations(engine: Engine, item: str):
         #
         # distances
         #
-        tprint("distances ...")
+        tprint("  distances ...")
         sql = """
         select distinct plant_plant_code, location_locus_key, duration_min, distance_km
           from tb_rl_travel_times
@@ -79,15 +79,15 @@ def dump_warehouses_locations(engine: Engine, item: str):
                 dist_km=dist_km
             )
 
-    tprint(f"save[w={len(warehouses)}, l={len(locations)}]")
+    tprint(f"  save[w={len(warehouses)}, l={len(locations)}]")
     # end
     data = dict(
         locations=locations,
         warehouses=warehouses,
         distances=distances
     )
-    dump(data, f"warehouses_locations_{item}.json")
-    tprint("done")
+    dump(data, f"data/warehouses_locations_{item}.json")
+    # tprint("done")
 
     return data
 # end
@@ -100,7 +100,7 @@ def dump_requests_available(engine: Engine, item: str):
         #
         # Requests
         #
-        tprint("requests")
+        tprint("  requests")
         sql = """
         select locus_key, item_no, count
           from tb_vw_installation_bases_slas
@@ -118,7 +118,7 @@ def dump_requests_available(engine: Engine, item: str):
         #
         # Available
         #
-        tprint("available")
+        tprint("  available")
         sql = """
         select plant_plant_code, item_code_item_no, quantity
           from stock 
@@ -132,13 +132,13 @@ def dump_requests_available(engine: Engine, item: str):
             available[w][p] = count
     # end
 
-    tprint(f"save[r={len(requests)}, a={len(available)}]")
+    tprint(f"  save[r={len(requests)}, a={len(available)}]")
     data = dict(
         requests=requests,
         available=available
     )
-    dump(data, f"requests_available_{item}.json")
-    tprint("done")
+    dump(data, f"data/requests_available_{item}.json")
+    # tprint("done")
 # end
 
 
@@ -146,7 +146,7 @@ def dump_spare_distribution(engine: Engine, item: str):
     spare_distributions = {}
 
     with (engine.connect() as conn):
-        tprint("spare_managements ...")
+        tprint("  spare_managements ...")
         sql = """
         select scenario_name, item_code_item_no, plant_plant_code, num_stock, num_footprint
         from tb_scenario_plants_dummy
@@ -166,21 +166,22 @@ def dump_spare_distribution(engine: Engine, item: str):
                 "num_footprint": int(num_footprint)
             }
 
-    tprint(f"save[s={len(spare_distributions)}]")
+    tprint(f"  save[s={len(spare_distributions)}]")
     # end
     data = spare_distributions
-    dump(data, f"spare_distribution_{item}.json")
-    tprint("done")
+    dump(data, f"data/spare_distribution_{item}.json")
+    # tprint("done")
 # end
 
 
-def dump_warehouses_locations_graph(data, item):
+def dump_warehouses_locations_graph(data, item: str):
+    tprint("  warehouses/locations")
     warehouses: list[str] = list(data['warehouses'].keys())
     locations: list[str] = list(data['locations'].keys())
     distances: dict[str, dict[str, dict]] = data['distances']
 
-    print(f"warehouses: {len(warehouses)}")
-    print(f"locations: {len(locations)}")
+    tprint(f"    warehouses: {len(warehouses)}")
+    tprint(f"    locations: {len(locations)}")
 
     n = len(warehouses)
     m = len(locations)
@@ -210,8 +211,9 @@ def dump_warehouses_locations_graph(data, item):
 
     warehouses_serving_location = list(map(int, A.sum(axis=0)))
     locations_served_by_warehouse = list(map(int, A.sum(axis=1)))
-    print(warehouses_serving_location)
-    print(locations_served_by_warehouse)
+
+    # tprint(warehouses_serving_location)
+    # tprint(locations_served_by_warehouse)
 
     data = {
         "warehouses": warehouses,
@@ -221,14 +223,34 @@ def dump_warehouses_locations_graph(data, item):
         "warehouses_serving_location": warehouses_serving_location,
         "locations_served_by_warehouse": locations_served_by_warehouse
     }
-    tprint(f"save[]")
-    dump(data, f"warehouses_locations_graph_{item}.json")
-    tprint("done")
+    tprint(f"  save[]")
+    dump(data, f"data/warehouses_locations_graph_{item}.json")
+    # tprint("done")
 # end
 
 
+def dump_by_item(engine: Engine, item: str):
+    tprint(f"retrieve {item}")
+    data = dump_warehouses_locations(engine, item)
+    dump_requests_available(engine, item)
+    dump_spare_distribution(engine, item)
+    dump_warehouses_locations_graph(data, item)
+
+
 def main():
-    item = "000003"
+    items = [
+        "000003",
+        "700001",
+        "700002",
+        "700003",
+        "700004",
+        "700005",
+        "700006",
+        "700007",
+        "700008",
+        "700009",
+        "700010",
+    ]
     url_db = URL.create(**dict(
         drivername="postgresql",
         username="postgres",
@@ -239,10 +261,10 @@ def main():
     ))
     engine = create_engine(url_db)
 
-    data = dump_warehouses_locations(engine, item)
-    dump_requests_available(engine, item)
-    dump_spare_distribution(engine, item)
-    dump_warehouses_locations_graph(data, item)
+    for item in items:
+        dump_by_item(engine, item)
+
+    tprint("done")
     pass
 
 

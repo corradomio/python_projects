@@ -2,14 +2,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from stdlib.jsonx import load
+from stdlib.tprint import tprint
 
 
 def main():
-    data = load("warehouses_locations_uk.json")
+    data = load("data/warehouses_locations_uk.json")
     warehouses = data["warehouses"]
     locations = data["locations"]
     n = len(warehouses)
     m = len(locations)
+
+    tprint(f"warehouses: {n}")
+    tprint(f" locations: {m}")
 
     locs = np.zeros((m, 2), dtype=float)
     for j, lj in enumerate(locations):
@@ -29,7 +33,7 @@ def main():
 
     plt.gca().set_aspect(1.5)
     plt.tight_layout()
-    plt.savefig('uk.png', dpi=300)
+    plt.savefig('uk.png', dpi=600)
 # end
 
 

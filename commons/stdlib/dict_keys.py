@@ -1,11 +1,12 @@
 #
 # A dictionary accepting ONLY a predefined list of keywords
+#
 from typing import Union
 
 from .is_instance import is_instance
 
 
-class dictk(dict):
+class dict_keys(dict):
     def __init__(self, seq=None, *, keys: Union[list[str], set[str]]):
         assert is_instance(keys, Union[list[str], set[str]])
         self._keys = set(keys)

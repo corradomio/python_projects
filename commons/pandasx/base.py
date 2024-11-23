@@ -927,7 +927,7 @@ def nan_set(df: PANDAS_TYPE, columns: Union[str, list[str]], *, on: str, ge: Any
     :param df: dataframe to preocess
     :param columns: column or columns to use to udpate
     :param on: columns where to do the selection
-    :param ge: value used in condition 'df[<on>] >= <ge>'
+    :param ge: (great or equal) value used in condition 'df[<on>] >= <ge>'
     :param inplace: if to modify the df in place
     :return: the dataframe updated
     """

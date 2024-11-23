@@ -79,7 +79,10 @@ def dump_warehouses_locations(engine: Engine):
         warehouses=warehouses,
         distances=distances
     )
-    dump(data, "warehouses_locations_uk.json")
+    dump(dict(warehouses=warehouses), "data/warehouses_uk.json")
+    dump(dict(locations=locations), "data/locations_uk.json")
+
+    dump(data, "data/warehouses_locations_uk.json")
     tprint("done")
 
     return data
@@ -178,7 +181,7 @@ def dump_requests_available(engine):
         requests=requests,
         available=available
     )
-    dump(data, "requests_available_uk.json")
+    dump(data, "data/requests_available_uk.json")
     tprint("done")
 # end
 
@@ -209,7 +212,7 @@ def dump_spare_distribution(engine):
     tprint("save")
     # end
     data = spare_distributions
-    dump(data, "spare_distribution_uk.json")
+    dump(data, "data/spare_distribution_uk.json")
     tprint("done")
 # end
 
@@ -218,10 +221,12 @@ def dump_warehouses_locations_graph(data):
     warehouses: list[str] = list(data['warehouses'].keys())
     locations: list[str] = list(data['locations'].keys())
     distances: dict[str, dict[str, dict]] = data['distances']
+
     n = len(warehouses)
     m = len(locations)
-    widx = {w:i for w, i in enumerate(warehouses)}
-    lidx = {l:i for l, i in enumerate(locations)}
+
+    # widx = {w:i for w, i in enumerate(warehouses)}
+    # lidx = {l:i for l, i in enumerate(locations)}
 
     D = np.zeros((n, m), dtype=float)
     A = np.zeros((n, m), dtype=int)
@@ -241,8 +246,8 @@ def dump_warehouses_locations_graph(data):
             A[i,j] = 1
     # end
 
-    np.savetxt("distances.csv", D, fmt="%f", delimiter=',')
-    np.savetxt("adjmat.csv", A, fmt="%d", delimiter=',')
+    np.savetxt("data/wl_distances_uk.csv", D, fmt="%f", delimiter=',')
+    np.savetxt("data/wl_adjacency_matrix_uk.csv", A, fmt="%d", delimiter=',')
 
     l0 = list(map(int, A.sum(axis=0)))
     l1 = list(map(int, A.sum(axis=1)))

@@ -87,3 +87,13 @@ def now(freq: Optional[str] = None, tz=None) -> datetime:
     elif freq in ['A', 'Y', 'BA', 'AS']:
         now_ = now_.replace(microsecond=0, second=0, minute=0, hour=0, day=1, month=1)
     return now_
+
+
+def clip_date(dt: datetime, freq: str) -> datetime:
+    if freq == 'D':
+        dt = dt.replace(microsecond=0, second=0, minute=0, hour=0)
+    elif freq == 'M':
+        dt = dt.replace(microsecond=0, second=0, minute=0, hour=0, day=1)
+    elif freq == 'Y':
+        dt = dt.replace(microsecond=0, second=0, minute=0, hour=0, day=1, month=1)
+    return dt

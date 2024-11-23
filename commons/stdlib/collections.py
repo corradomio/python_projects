@@ -73,3 +73,28 @@ def prod_(x):
 
 # compatibility
 mul_ = prod_
+
+
+# ---------------------------------------------------------------------------
+# dict get
+# ---------------------------------------------------------------------------
+# sum_  as Python 'sum([...])'
+# mul_  as Python 'sum([...]) but for multiplication
+#
+def dict_get(d:dict, keys: list, defval):
+    pkeys = keys[:-1]
+    curr: dict = d
+    for k in pkeys:
+        if k not in curr:
+            return defval
+        if not isinstance(curr, dict):
+            return defval
+        curr = curr[k]
+    k = keys[-1]
+    if k not in curr:
+        return defval
+    if not isinstance(curr, dict):
+        return defval
+    else:
+        return curr[k]
+# end

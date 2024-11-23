@@ -1,17 +1,17 @@
-from stdlib.dictk import dictk
+from stdlib.dict_keys import dict_keys
 
 
 # last 18
 
 
 def main():
-    ts = dictk(keys=['window_length', 'prediction_length'])
+    ts = dict_keys(keys=['window_length', 'prediction_length'])
 
-    data = dictk(keys=['scaler_type'])
+    data = dict_keys(keys=['scaler_type'])
 
-    mlp_model = dictk(keys=['h', 'n_layers', 'hidden_size'])
+    mlp_model = dict_keys(keys=['h', 'n_layers', 'hidden_size'])
 
-    dilatedrnn_model = dictk(
+    dilatedrnn_model = dict_keys(
         keys=['h', 'input_size', 'inference_input_size',
               'cell_type', 'dilation',
               'encoder_hidden_size', 'encoder_activation',
@@ -20,7 +20,7 @@ def main():
               'futr_exog_list', 'hist_exog_list', 'stat_exog_list'
               ])
 
-    tcn_model = dictk(
+    tcn_model = dict_keys(
         keys=['h', 'input_size', 'inference_input_size',
               'kernel_size', 'dilation',
               'encoder_hidden_size', 'encoder_activation',
@@ -29,7 +29,7 @@ def main():
               'futr_exog_list', 'hist_exog_list', 'stat_exog_list'
               ])
 
-    rnn_model = dictk(
+    rnn_model = dict_keys(
         keys=['h', 'input_size', 'inference_input_size',
               'encoder_n_layers', 'encoder_hidden_size', 'encoder_activation', 'encoder_bias',
               'encoder_dropout',
@@ -38,7 +38,7 @@ def main():
               'futr_exog_list', 'hist_exog_list', 'stat_exog_list'
               ])
 
-    gru_model = dictk(
+    gru_model = dict_keys(
         keys=['h', 'input_size', 'inference_input_size',
               'encoder_n_layers', 'encoder_hidden_size', 'encoder_activation', 'encoder_bias',
               'encoder_dropout',
@@ -47,7 +47,7 @@ def main():
               'futr_exog_list', 'hist_exog_list', 'stat_exog_list'
               ])
 
-    lstm_model = dictk(
+    lstm_model = dict_keys(
         keys=['h', 'input_size', 'inference_input_size',
               'encoder_n_layers', 'encoder_hidden_size', 'encoder_bias', 'encoder_dropout',
               'context_size',
@@ -55,13 +55,13 @@ def main():
               'futr_exog_list', 'hist_exog_list', 'stat_exog_list'
               ])
 
-    engine = dictk(
+    engine = dict_keys(
         keys=['loss', 'loss_kwargs',
               'valid_loss', 'valid_loss_kwargs',
               'optimizer', 'optimizer_kwargs',
               'lr_scheduler', 'lr_scheduler_kwargs'])
 
-    trainer = dictk(
+    trainer = dict_keys(
         keys=['max_steps', 'learning_rate', 'num_lr_decays',
               'early_stop_patience_steps', 'val_check_steps',
               'batch_size', 'valid_batch_size', 'windows_batch_size', 'inference_windows_batch_size',
@@ -71,7 +71,7 @@ def main():
               'random_seed',
               'num_workers_loader', 'drop_last_loader'])
 
-    other = dictk(
+    other = dict_keys(
         keys=['alias']
     )
     other['alias'] = "ciccio"

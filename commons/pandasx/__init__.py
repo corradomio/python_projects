@@ -17,6 +17,7 @@ from .to_json import to_json
 from .spike import is_spike
 from .hsched import is_heteroschedastic
 from .upd import update
+from .concat import concat
 
 
 # ---------------------------------------------------------------------------

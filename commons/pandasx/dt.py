@@ -62,7 +62,9 @@ def to_datetime(dt) -> datetime:
 # to_period
 # ---------------------------------------------------------------------------
 
-def to_period(dt: datetime, freq=None) -> pd.Period:
+def to_period(dt: Union[str, datetime], freq=None) -> pd.Period:
+    if isinstance(dt, str):
+        dt = to_datetime(dt)
     return pd.Period(dt, freq=freq)
 
 

@@ -24,7 +24,7 @@ import numpy as np
 import numpy.dtypes as npdt
 import pandas as pd
 
-from .dict import dict
+# from .dict import dict
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
 PANDAS_KWARGS = ['orient', 'date_format', 'double_precision', 'force_ascii', 'date_unit', 'index']
@@ -207,7 +207,7 @@ def loads(s, **kwargs) -> dict:
     return dict(json.loads(s, **kwargs))
 
 
-def dump(obj, file: str, **kwargs) -> dict:
+def dump(obj, file: str, **kwargs):
     if 'indent' not in kwargs:
         kwargs['indent'] = 4
 
@@ -218,7 +218,8 @@ def dump(obj, file: str, **kwargs) -> dict:
             del kwargs[k]
 
     with open(file, mode="w", **open_kwargs) as fp:
-        return dict(json.dump(obj, fp, cls=JSONxEncoder, **kwargs))
+        json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
+# end
 
 # ---------------------------------------------------------------------------
 # End

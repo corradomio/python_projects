@@ -83,6 +83,7 @@ def dict_exclude(d1: dict, keys: Union[None, str, list[str]]) -> dict:
     return d
 
 
+@deprecated(reason="Not a good idea")
 def dict_rename(d: dict, k1: Union[str, list[str], dict[str, str]], k2: Optional[str]=None) -> dict:
     """
     Rename the key 'k1' in the dictionary as 'k2
