@@ -13,7 +13,7 @@ from stdlib import tobool
 # We suppose that:
 #
 #   1) comment line, starting with '#' or other character
-#   2) header line with the comun names
+#   2) header line with the column names
 #       the column names can start/end with " or '
 #       the column names DON'T contain , (comma)
 #   3) column types:
@@ -22,10 +22,21 @@ from stdlib import tobool
 #       int:   int(x)   -> valid
 #       float: float(x) -> valid
 #       enum:  str but with a limited number of values (less than 32)
+#       null:  'null', 'None', ''
 #       str:   each other case
 
 
-def load_arff(fname, na=None):
+# ---------------------------------------------------------------------------
+# Compatibility with 'json'
+# ---------------------------------------------------------------------------
+# load_arff
+# load_csv
+# scan_csv
+# save_csv
+# save_arff
+
+
+def _load_arff(fname, na=None):
     """
     Load an ARFF file
 
@@ -74,14 +85,15 @@ def load_arff(fname, na=None):
         return dtype, skiprows
 
     dtype, skiprows = arff_to_csv(fname)
-    data, cat = load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
+    data, cat = _load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
     return data, cat, dtype
 # end
 
 
 def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
     """
-    Load a CSV file and convert the elements as specified in the dtype list
+    Scan a CSV file, convert each row specified in the dtype list, and call
+    the callback.
     The available conversions are:
 
         None    skip the column
@@ -200,10 +212,37 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
     def _totime(s, fmt):
         return time.strptime(s, fmt)
 
+    def _toauto(x):
+        try:
+            return int(x)
+        except:
+            pass
+        try:
+            return float(x)
+        except:
+            pass
+        try:
+            if x in ['f','F','false', 'False', 'FALSE', 'off', 'OFF', 'no','NO']:
+                return False
+            if x in ['t','T','true','True','TRUE','on','ON','yes','YES']:
+                return True
+        except:
+            pass
+        try:
+            if x in ['none','None','null','Null','NULL']:
+                return None
+        except:
+            pass
+        return x
+    # end
+
     def _dtype():
         for i in range(len(dtype)):
+            # str -> automatic
+            if dtype[i] == "auto":
+                dtype[i] = _toauto
             # str -> str
-            if dtype[i] in [str, "str"]:
+            elif dtype[i] in [str, "str"]:
                 dtype[i] = lambda s: s
             # str -> enum
             elif dtype[i] in ["enum", enumerate]:
@@ -254,14 +293,14 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
             return open(fname, mode=mode)
     # end
 
-    nr = 0
     if dtype is None:
         cvtrow = lambda r: r
     else:
         dtype = _dtype()
-        cvtrow = lambda r: [dtype[i](row[i]) for i in range(nr) if dtype[i] is not None]
+        cvtrow = lambda r: [dtype[i](r[i]) for i in range(nr) if dtype[i] is not None]
     # end
 
+    nr = 0
     line = 0
     with openfile(fname, mode="r") as csv_file:
         rdr = csv.reader(csv_file)
@@ -272,7 +311,10 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
         for row in rdr:
             line += 1
             n = len(row)
-            # if nr == 0: nr = n
+            if nr == 0 and dtype is None:
+                dtype = ["auto"]*n
+                cvtrow = lambda r: [_toauto(r[i]) for i in range(n)]
+
             try:
                 nr = min(n, len(dtype))
                 cvt = cvtrow(row)
@@ -291,7 +333,7 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
 # end
 
 
-def load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
+def _load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
     """
     Load a CSV file and convert the values based on the specified 'dtype' values
     :param fname: file to load
@@ -317,7 +359,7 @@ def load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
 # end
 
 
-def load_csv_column_names(fname, skiprows=0):
+def _load_csv_column_names(fname, skiprows=0, **kwargs):
     with open(fname, mode="r") as csv_file:
         rdr = csv.reader(csv_file)
         header = next(rdr)
@@ -336,7 +378,7 @@ def load_csv_column_names(fname, skiprows=0):
 # end
 
 
-def guess_value_type(s: str) -> str:
+def _guess_value_type(s: str) -> str:
     # if s is None -> None
     if s is None:
         return 'None'
@@ -371,8 +413,10 @@ def guess_value_type(s: str) -> str:
     return 'str'
 # end
 
+# ---------------------------------------------------------------------------
 
-def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
+
+def _save_csv(fname: str, data: list, header: list=None, fmt: list=None):
     n = len(data[0])
 
     def _fmt(s:str):
@@ -436,7 +480,7 @@ def save_csv(fname: str, data: list, header: list=None, fmt: list=None):
 # end
 
 
-def save_arff(fname:str, data:list, relation:str=None, attributes:list=None, categories:dict=None, dtype:list=None):
+def _save_arff(fname:str, data:list, relation:str=None, attributes:list=None, categories:dict=None, dtype:list=None):
     n = len(dtype)
 
     if relation is None:
@@ -500,21 +544,21 @@ def save_arff(fname:str, data:list, relation:str=None, attributes:list=None, cat
 # end
 
 
-def convert_to_arff(name, fname, arff=None, dtype=None, skiprows=0, na=None, ycol=None):
+def _convert_to_arff(fname, arff=None, dtype=None, skiprows=0, na=None):
     fpath = Path(fname)
     name = fpath.stem
 
     if arff is None:
         arff = "/".join([str(fpath.parent), name + ".arff"])
 
-    header = load_csv_column_names(fname, skiprows=skiprows)
-    data, categories = load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
+    header = _load_csv_column_names(fname, skiprows=skiprows)
+    data, categories = _load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
 
-    save_arff(arff, data, attributes=header, categories=categories, relation=name, dtype=dtype)
+    _save_arff(arff, data, attributes=header, categories=categories, relation=name, dtype=dtype)
 # end
 
 
-def guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -> list[dict]:
+def _guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -> list[dict]:
     """
     Guess the columns types.
 
@@ -558,7 +602,7 @@ def guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) ->
             # guess the value types
             for i in range(n):
                 v = parts[i]
-                t = guess_value_type(parts[i])
+                t = _guess_value_type(parts[i])
                 ctype[i].add(t)
                 cvalue[i].add(v)
             # end
@@ -591,15 +635,72 @@ def guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) ->
 # end
 
 
+# ---------------------------------------------------------------------------
 # Compatibility with 'json'
+# ---------------------------------------------------------------------------
 
 def load(fname: str, **kwargs):
     if fname.endswith('.arff'):
-        return load_arff(fname, **kwargs)
+        return _load_arff(fname, **kwargs)
+    elif fname.expandtabs('.csv'):
+        return _load_csv(fname, **kwargs)
     else:
-        return load_csv(fname, **kwargs)
+        raise ValueError(f"Unsupported file {fname}")
 
 
-def dump(obj, fname: str, header: list[str], fmt: Optional[str] = None):
-    save_csv(fname, data=obj, header=header, fmt=fmt)
+def _nameof(fname: str) -> str:
+    fname = fname.replace('\\', '/')
+    p = fname.rfind('/')
+    if p != -1: fname = fname[p+1:]
+    p = fname.find('.')
+    if p != -1: fname = fname[:p]
+    return fname
+
+
+def dump(obj, fname: str, header: list[str], fmt: Optional[str] = None,  categories=None):
+    if fname.endswith('.csv'):
+        _save_csv(fname, data=obj, header=header, fmt=fmt)
+    elif fname.endswith('.arff'):
+        _save_arff(fname, data=obj, attributes=header, categories=categories, relation=_nameof(fname))
+    else:
+        raise ValueError(f"Unsupported file {fname}")
+
+
+
+# ---------------------------------------------------------------------------
+# csv_to_json
+# ---------------------------------------------------------------------------
+
+def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> dict:
+    if tojson is None:
+        p = fname.rfind('.')
+        tojson = (fname[:p] + ".json") if p != -1 else (fname + ".json")
+    # end
+
+    header = _load_csv_column_names(fname, skiprows=skiprows, **kwargs)
+
+    jdata = {
+        "columns": header,
+        "index": [],
+        "data":[]
+    }
+
+    def _append(rec):
+        jdata["data"].append(rec)
+
+    scan_csv(fname, _append, skiprows=skiprows, **kwargs)
+
+    n = len(jdata["data"])
+    jdata["index"] = list(range(n))
+
+    with open(tojson, mode='w') as fp:
+        import json
+        json.dump(jdata, fp)
+    return jdata
+# end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
 

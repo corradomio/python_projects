@@ -1,18 +1,24 @@
 import logging
+from typing import Optional
 
 import pandas as pd
+from sqlalchemy import create_engine, text, URL
 
-from .base import set_index, nan_drop, as_list, \
-    find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore, \
-    type_encode, count_encode, \
+from .base import (
+    set_index, nan_drop, as_list,
+    find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore,
+    type_encode, count_encode,
     NoneType
+)
+from stdlib import dict_select, dict_exclude
 from .binhot import binhot_encode
 from .datetimes import datetime_encode, datetime_reindex
 from .freq import infer_freq
 from .io_arff import read_arff
 from .onehot import onehot_encode
 from .periodic import periodic_encode
-
+from .json import from_json, to_json
+from .sql import read_sql, write_sql
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -78,45 +84,113 @@ def _parse_datetime(datetime) -> tuple:
 # ---------------------------------------------------------------------------
 # read_database
 # ---------------------------------------------------------------------------
+#   protocol://host:port/database
+#       table=<table_name>
+#       sql='SELECT ...'
+#       params={...}
 # protocol://host:port/database?table=...
-# protocol://host:port/database?sql=...
+# protocol://host:port/database?sql=...&p1=...&...
 # protocol://host:port/database/table
 
-def _to_url_select(url: str):
-    p = url.find('?')
-    if p == -1:
-        # .../table
-        p = url.rfind('/')
-        table = url[p + 1:]
-        url = url[0:p]
-        return url, f'select * from {table}'
-
-    # ...?table=...
-    # ...?sql=select ...
-    what = url[p + 1:].strip()
-    url = url[0:p]
-    if what.startswith('table='):
-        what = what[6:]
-    elif what.startswith('sql='):
-        what = what[4:]
-    else:
-        raise ValueError(f'Invalid url {url}')
-    p = what.find(' ')
-    # what: table
-    # what: 'select ....'
-    if p == -1:
-        return url, f'select * from {what}'
-    else:
-        return url, what
+# def _safe_val(x: str):
+#     if isinstance(x, list):
+#         return tuple(map(_safe_val, x))
+#
+#     try:
+#         return float(x)
+#     except:
+#         pass
+#     try:
+#         return int(x)
+#     except:
+#         pass
+#     if x.startswith("'") or x.startswith('"'):
+#         return x[1:-1]
+#     else:
+#         return x
+# # end
 
 
-def _read_database(url: str, dtype, **kwargs):
-    url, sql = _to_url_select(url)
-    from sqlalchemy import create_engine
-    engine = create_engine(url)
-    with engine.connect() as con:
-        df = pd.read_sql(sql=sql, con=con, params=kwargs)
-    return df
+# def _parse_url(url: str) -> dict:
+#     parts = dict(params={})
+#     p = url.find('?')
+#     if p != -1:
+#         url = url[:p]
+#         qargs = url[p+1:]
+#     else:
+#         qargs = ""
+#
+#     p = url.find("://")
+#     parts["drivername"] = url[:p]
+#     url = url[p+3:]
+#     p = url.find(":")
+#     parts["host"] = url[:p]
+#     url = url[p+1:]
+#     p = url.find("/")
+#     parts["port"] = int(url[:p])
+#     url = url[p+1:]
+#     p = url.find("/")
+#     if p == -1:
+#         parts["database"] = url
+#     else:
+#         parts["database"] = url[:p]
+#         parts["table"] = url[p+1:]
+#     # end
+#     if qargs.startswith("table="):
+#         parts["table"] = qargs[6:]
+#     if qargs.startswith("sql="):
+#         for kv in qargs.split("&"):
+#             k, v = kv.split("=")
+#
+#             # convert lists in tuples!
+#             # this is necessary for 'SELECT ... FROM ... WHERE col IN :param ...'
+#             if k == "sql":
+#                 parts["sql"] = v
+#             else:
+#                 parts["params"][k]= v
+#     # end
+#     return parts
+
+
+# def _parse_params(config: dict) -> dict:
+#     params = config["params"]
+#     for k in params.keys():
+#         params[k] = _safe_val(params[k])
+#     return params
+
+
+# def _to_url_select(config):
+#     url_config = dict_select(config, ['drivername','user', 'username', 'password', 'host', 'port', 'database'])
+#     if 'user' in url_config:
+#         url_config['username'] = url_config['user']
+#         del url_config['user']
+#     url: URL = URL.create(**url_config)
+#
+#     if "table" in config:
+#         table = config["table"]
+#         sql = f'select * from {table}'
+#     else:
+#         sql = config["sql"]
+#
+#     return url, sql
+
+
+def _read_database(dburl: str, dtype, **kwargs):
+    return read_sql(dburl, **kwargs)
+
+    # config = _parse_url(dburl) | kwargs
+    #
+    # dburl, sql = _to_url_select(config)
+    # params = _parse_params(config)
+    #
+    # # convert lists in tuples!
+    # # this is necessary for 'SELECT ... FROM ... WHERE col IN :param ...'
+    # engine = create_engine(dburl)
+    # with engine.connect() as con:
+    #     query = text(sql)
+    #     df = read_sql(sql=query, con=con, params=params)
+    # return df
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -162,32 +236,31 @@ def _read_database(url: str, dtype, **kwargs):
 
 def read_data(
     file: str, *,
-    dtype=None,  # list of columns types
-    boolean=None,  # boolean columns
-    integer=None,  # integer columns
-    numeric=None,  # numerical/float columns
+    dtype=None,             # list of columns types
+    boolean=None,           # boolean columns
+    integer=None,           # integer columns
+    numeric=None,           # numerical/float columns
+    categorical=None,       # pandas categorical columns
 
-    categorical=None,  # pandas categorical columns
-    onehot=None,  # categorical columns to convert using onehot encoding.
-    binhot=None,  # categorical columns to convert using binary hot encoding.
+    onehot=None,            # categorical columns to convert using onehot encoding.
+    binhot=None,            # categorical columns to convert using binary hot encoding.
 
-    index=None,  # columns to use as index
-    datetime_index=None,  # columns to use as datetime_index (alternative to 'index')
-    ignore=None,  # columns to ignore
-    ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
+    index=None,             # columns to use as index
+    datetime_index=None,    # columns to use as datetime_index (alternative to 'index')
+    ignore=None,            # columns to ignore
+    ignore_unnamed=False,   # if to ignore 'Unnamed *' columns
 
-    datetime=None,  # datetime column to convert in a PeriodTime
+    datetime=None,          # datetime column to convert in a PeriodTime
 
-    periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
-    count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
-    reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
-    sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+    periodic=None,          # [EXPERIMENTAL] to add datetime periodic representation
+    count=False,            # [EXPERIMENTAL] if to add the column 'count' with value 1
+    reindex=False,          # [EXPERIMENTAL] if to reindex the dataset
+    sort=False,             # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+    rename=None,            # [EXPERIMENTAL] rename some columns
 
-    rename=None,  # [EXPERIMENTAL] rename some columns
-
-    dropna=False,  # if to drop the rows containing NaN values
-    na_values=None,  # strings to consider NaN values
-    **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
+    dropna=False,           # if to drop the rows containing NaN values
+    na_values=None,         # strings to consider NA values
+    **kwargs                # parameters to pass to 'pandas.read_*(...)' routine
 ) -> pd.DataFrame:
     """
     Read the dataset from a file and convert it in a Pandas DataFrame.
@@ -210,7 +283,7 @@ def read_data(
         skiprows        list-like, int or callable, optional
         skipfooter      int, default 0
         nrows           int, optional
-        na_vales        scalar, str, list-like, or dict, optional
+        na_values       scalar, str, list-like, or dict, optional
         keep_default_na bool, default True
         na_filter       bool, default True
         skip_blank_lines    bool, default True
@@ -249,8 +322,9 @@ def read_data(
             Used to specify the index for a dataset multi-time series.
             The datetime index must be the last index in the list
             It is created a 'PriodIndex'
-    :datetime_index: as for 'index' but it is created a 'DatetimeIndex'
+    :param datetime_index: as for 'index' but it is created a 'DatetimeIndex'
     :param count: if to add the column 'count' with value 1
+    :param na_values: list of strings used as "NA" values
     :param dropna: if to drop rows containing NA values
             None/False:
                 no row is removed
@@ -258,7 +332,6 @@ def read_data(
                 rows containing NA values are removed
             ['col1', '...]:
                 remove rows containing NA in the selected columns
-
     :param periodic: if to add  one or multiple 'periodic' information (EXPERIMENTAL)
 
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
@@ -280,6 +353,98 @@ def read_data(
 
     # check parameter types
     assert isinstance(file, str), "'file' must be a str"
+
+    # if 'dtype' is defined, compose the dictionary {col:dtype}
+    if dtype is not None:
+        h = _read_header(file)
+        dt = _pandas_dtype(h, dtype)
+    else:
+        dt = None
+
+    # move 'na_values' in kwargs
+    if na_values is not None:
+        kwargs['na_values'] = na_values
+
+    # load the file based on extension
+    # print(f"Loading {file} ...")
+    log.info(f"Loading {file} ...")
+
+    if file.endswith(".csv"):
+        df = pd.read_csv(file, dtype=dt, **kwargs)
+    elif file.endswith(".json"):
+        # df = pd.read_json(file, dtype=dt, **kwargs)
+        df = from_json(file, dtype=dt, **kwargs)
+    elif file.endswith(".html"):
+        df = pd.read_html(file, **kwargs)
+    elif file.endswith(".xls"):
+        df = pd.read_excel(file, dtype=dt, **kwargs)
+    elif file.endswith(".xlsx"):
+        df = pd.read_excel(file, dtype=dt, **kwargs)
+    elif file.endswith(".hdf"):
+        df = pd.read_hdf(file, dtype=dt, **kwargs)
+    elif file.endswith(".arff"):  # extension
+        df = read_arff(file, dtype=dt, **kwargs)
+    elif "://" in file:  # extension
+        df = _read_database(file, dtype=dt, **kwargs)
+    else:
+        raise ValueError(f"Unsupported file format: {file}")
+
+    return cleanup_data(
+        df,
+        dtype=dtype,
+        boolean=boolean,
+        integer=integer,
+        numeric=numeric,
+        categorical=categorical,
+        onehot=onehot,
+        binhot=binhot,
+        index=index,
+        datetime_index=datetime_index,
+        ignore=ignore,
+        ignore_unnamed=ignore_unnamed,
+        datetime=datetime,
+        periodic=periodic,
+        count=count,
+        reindex=reindex,
+        sort=sort,
+        rename=rename,
+        dropna=dropna,
+        # na_values=na_values,
+        **kwargs
+    )
+# end
+
+
+def cleanup_data(
+        df: pd.DataFrame,
+        dtype=None,         # list of columns types
+        boolean=None,       # boolean columns
+        integer=None,       # integer columns
+        numeric=None,       # numerical/float columns
+
+        categorical=None,   # pandas categorical columns
+        onehot=None,        # categorical columns to convert using onehot encoding.
+        binhot=None,        # categorical columns to convert using binary hot encoding.
+
+        index=None,             # columns to use as index
+        datetime_index=None,    # columns to use as datetime_index (alternative to 'index')
+        ignore=None,            # columns to ignore
+        ignore_unnamed=False,   # if to ignore 'Unnamed *' columns
+
+        datetime=None,      # datetime column to convert in a PeriodTime
+
+        periodic=None,      # [EXPERIMENTAL] to add datetime periodic representation
+        count=False,        # [EXPERIMENTAL] if to add the column 'count' with value 1
+        reindex=False,      # [EXPERIMENTAL] if to reindex the dataset
+        sort=False,         # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+        rename=None,        # [EXPERIMENTAL] rename some columns
+
+        dropna=False,       # if to drop the rows containing NaN values
+        na_values=None,     # strings to consider NaN values
+        **kwargs            # parameters to pass to 'pandas.read_*(...)' routine
+) -> pd.DataFrame:
+    log = logging.getLogger("pandasx")
+
     assert isinstance(datetime, (NoneType, str, list, tuple)), \
         "'datetime' must be (None, str, (str, str), (str, str, str))"
     assert isinstance(periodic, (NoneType, bool, str, list, tuple)), \
@@ -300,42 +465,11 @@ def read_data(
     index = as_list(index, 'index')
     datetime_index = as_list(datetime_index, 'datetime_index')
 
+    # convert NaN in null
+    df = df.replace({float("nan"): None})
+
     # parse the 'datetime' parameter
     datetime_name, datetime_format, datetime_freq = _parse_datetime(datetime)
-
-    # move 'na_values' in kwargs
-    if na_values is not None:
-        kwargs['na_values'] = na_values
-
-    # if 'dtype' is defined, compose the dictionary {col:dtype}
-    if dtype is not None:
-        h = _read_header(file)
-        dt = _pandas_dtype(h, dtype)
-    else:
-        dt = None
-
-    # load the file based on extension
-    # print(f"Loading {file} ...")
-    log.info(f"Loading {file} ...")
-
-    if file.endswith(".csv"):
-        df = pd.read_csv(file, dtype=dt, **kwargs)
-    elif file.endswith(".json"):
-        df = pd.read_json(file, dtype=dt, **kwargs)
-    elif file.endswith(".html"):
-        df = pd.read_html(file, **kwargs)
-    elif file.endswith(".xls"):
-        df = pd.read_excel(file, dtype=dt, **kwargs)
-    elif file.endswith(".xlsx"):
-        df = pd.read_excel(file, dtype=dt, **kwargs)
-    elif file.endswith(".hdf"):
-        df = pd.read_hdf(file, dtype=dt, **kwargs)
-    elif file.endswith(".arff"):  # extension
-        df = read_arff(file, dtype=dt, **kwargs)
-    elif "://" in file:  # extension
-        df = _read_database(file, dtype=dt, **kwargs)
-    else:
-        raise ValueError(f"Unsupported file format: {file}")
 
     # select categorical/boolean columns
     if dtype is not None:
@@ -393,10 +527,19 @@ def read_data(
     if len(binhot) > 0:
         df = binhot_encode(df, binhot)
 
+    # add 'Unnamed: ...' columns to the list of columns to remove
+    if ignore_unnamed:
+        ignore += find_unnamed_columns(df)
+
+    # remove the 'ignore' columns
+    if len(ignore) > 0:
+        df = columns_ignore(df, ignore)
+
     # remove the rows containing NaN
     # [extension] if dropna is 'list[str]'
     # note: it is better to check for NaN
-    #       BEFORE ignored columns
+    #       AFTER ignored columns, because some columns could be ignored because
+    #             they have a lot of nan values!
     #       BEFORE to move the columns as index
     #       BEFORE to rename columns
     if dropna:
@@ -413,14 +556,6 @@ def read_data(
     if len(datetime_index) > 0:
         df = set_index(df, datetime_index, inplace=True, as_datetime=True)
 
-    # add 'Unnamed: ...' columns to the list of columns to remove
-    if ignore_unnamed:
-        ignore += find_unnamed_columns(df)
-
-    # remove the 'ignore' columns
-    if len(ignore) > 0:
-        df = columns_ignore(df, ignore)
-
     # rename the columns
     if rename is not None:
         df = columns_rename(df, rename)
@@ -435,47 +570,113 @@ def read_data(
 # end
 
 
-def write_data(df: pd.DataFrame, file: str, **kwargs):
-    if file.endswith("csv"):
+# DataFrame.to_<type>()
+#   to_orc(path=None, *, engine='pyarrow', index=None, engine_kwargs=None)
+#   to_parquet(path=None, *, engine='auto', compression='snappy', index=None, partition_cols=None, storage_options=None, **kwargs)
+#  =to_pickle(path, *, compression='infer', protocol=5, storage_options=None)
+#  =to_csv(path_or_buf=None, *, sep=',', na_rep='', float_format=None, columns=None, header=True, index=True, index_label=None, mode='w', encoding=None, compression='infer', quoting=None, quotechar='"', lineterminator=None, chunksize=None, date_format=None, doublequote=True, escapechar=None, decimal='.', errors='strict', storage_options=None)
+#  =to_hdf(path_or_buf, *, key, mode='a', complevel=None, complib=None, append=False, format=None, index=True, min_itemsize=None, nan_rep=None, dropna=None, data_columns=None, errors='strict', encoding='UTF-8')
+#   to_sql(name, con, *, schema=None, if_exists='fail', index=True, index_label=None, chunksize=None, dtype=None, method=None)
+#   to_dict(orient='dict', *, into=<class 'dict'>, index=True)
+#  =to_excel(excel_writer, *, sheet_name='Sheet1', na_rep='', float_format=None, columns=None, header=True, index=True, index_label=None, startrow=0, startcol=0, engine=None, merge_cells=True, inf_rep='inf', freeze_panes=None, storage_options=None, engine_kwargs=None)
+#  =to_json(path_or_buf=None, *, orient=None, date_format=None, double_precision=10, force_ascii=True, date_unit='ms', default_handler=None, lines=False, compression='infer', index=None, indent=None, storage_options=None, mode='w')
+#  =to_xml(path_or_buffer=None, *, index=True, root_name='data', row_name='row', na_rep=None, attr_cols=None, elem_cols=None, namespaces=None, prefix=None, encoding='utf-8', xml_declaration=True, pretty_print=True, parser='lxml', stylesheet=None, compression='infer', storage_options=None)
+#   to_html(buf=None, *, columns=None, col_space=None, header=True, index=True, na_rep='NaN', formatters=None, float_format=None, sparsify=None, index_names=True, justify=None, max_rows=None, max_cols=None, show_dimensions=False, decimal='.', bold_rows=True, classes=None, escape=True, notebook=False, border=None, table_id=None, render_links=False, encoding=None)
+#   to_feather(path, **kwargs)
+#   to_latex(buf=None, *, columns=None, header=True, index=True, na_rep='NaN', formatters=None, float_format=None, sparsify=None, index_names=True, bold_rows=False, column_format=None, longtable=None, escape=None, encoding=None, decimal='.', multicolumn=None, multicolumn_format=None, multirow=None, caption=None, label=None, position=None)
+#   to_stata(path, *, convert_dates=None, write_index=True, byteorder=None, time_stamp=None, data_label=None, variable_labels=None, version=114, convert_strl=None, compression='infer', storage_options=None, value_labels=None)
+#   to_gbq(destination_table, *, project_id=None, chunksize=None, reauth=False, if_exists='fail', auth_local_webserver=True, table_schema=None, location=None, progress_bar=True, credentials=None)
+#   to_records(index=True, column_dtypes=None, index_dtypes=None)
+#   to_string(buf=None, *, columns=None, col_space=None, header=True, index=True, na_rep='NaN', formatters=None, float_format=None, sparsify=None, index_names=True, justify=None, max_rows=None, max_cols=None, show_dimensions=False, decimal='.', line_width=None, min_rows=None, max_colwidth=None, encoding=None)
+#   to_clipboard(*, excel=True, sep=None, **kwargs)
+#   to_markdown(buf=None, *, mode='wt', index=True, storage_options=None, **kwargs).
+#
+
+FORMAT_PARAMS = ["na_values", "datetime"]
+
+
+def write_data(df: pd.DataFrame, file: Optional[str], **kwargs):
+    ret = None
+
+    # handle FORMAT_PARAMS
+    df = _format_columns(df, kwargs)
+
+    # exclude ["na_values", "datetime"]
+    kwargs = dict_exclude(kwargs, FORMAT_PARAMS)
+
+    if file is None:
+        ret = df.to_dict(**kwargs)
+    elif file.endswith("csv"):
         if "index" not in kwargs:
             kwargs['index'] = False
-        df.to_csv(file, **kwargs)
+        ret = df.to_csv(file, **kwargs)
     elif file.endswith(".json"):
-        df.to_json(file, **kwargs)
+        # df.to_json(file, **kwargs)
+        ret = to_json(df, file, **kwargs)
     elif file.endswith(".xml"):
-        df.to_xml(file, **kwargs)
+        ret = df.to_xml(file, **kwargs)
+    elif file.endswith(".pickle"):
+        df.to_pickle(file, **kwargs)
+    elif file.endswith(".hdf5"):
+        df.to_hdf(file, **kwargs)
+    elif file.endswith(".xlsx"):
+        df.to_excel(file, **kwargs)
+    elif file.startswith("inline:") or file.startswith("memory:"):
+        ret = write_dict(df, **kwargs)
+    elif file.find("://") != -1:
+        write_sql(df, file, **kwargs)
     else:
         raise ValueError(f"Unsupported file format {file}")
+    return ret
+# end
 
+
+def _format_columns(df: pd.DataFrame, kwargs) -> pd.DataFrame:
+    if "datetime" in kwargs:
+        from .json import _convert_datetime
+        datetime = kwargs["datetime"]
+        df = _convert_datetime(df, datetime)
+    if "na_values" in kwargs:
+        na_value =  kwargs["na_values"]
+        if isinstance(na_value, list):
+            na_value = na_value[0]
+        if na_value is not None:
+            df.fillna(na_value)
+    return df
+# end
+
+
+
+def write_dict(df: pd.DataFrame, orient: Optional[str] = None, **kwargs) -> dict:
+    return df.to_dict(orient=orient, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Alternative functions: load/save
+# ---------------------------------------------------------------------------
 
 def load(file: str,
          *,
-         dtype=None,  # list of columns types
-         boolean=None,  # boolean columns
-         integer=None,  # integer columns
-         numeric=None,  # numerical/float columns
-
-         categorical=None,  # pandas categorical columns
-         onehot=None,  # categorical columns to convert using onehot encoding.
-         binhot=None,  # categorical columns to convert using binary hot encoding.
-
-         index=None,  # columns to use as index
-         ignore=None,  # columns to ignore
-         ignore_unnamed=False,  # if to ignore 'Unnamed *' columns
-
-         datetime=None,  # datetime column to convert in a PeriodTime
-
-         periodic=None,  # [EXPERIMENTAL] to add datetime periodic representation
-         count=False,  # [EXPERIMENTAL] if to add the column 'count' with value 1
-         reindex=False,  # [EXPERIMENTAL] if to reindex the dataset
-         sort=False,  # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
-
-         rename=None,  # [EXPERIMENTAL] rename some columns
-
-         dropna=False,  # if to drop the rows containing NaN values
-         na_values=None,  # strings to consider NaN values
-         **kwargs  # parameters to pass to 'pandas.read_*(...)' routine
-         ):
+         dtype=None,
+         boolean=None,
+         integer=None,
+         numeric=None,
+         categorical=None,
+         onehot=None,
+         binhot=None,
+         index=None,
+         ignore=None,
+         ignore_unnamed=False,
+         datetime=None,
+         periodic=None,
+         count=False,
+         reindex=False,
+         sort=False,
+         rename=None,
+         dropna=False,
+         na_values=None,
+         **kwargs
+ ) -> pd.DataFrame:
     return read_data(
         file,
         dtype=dtype,
@@ -502,3 +703,7 @@ def load(file: str,
 
 def save(df: pd.DataFrame, file: str, **kwargs):
     write_data(df, file, **kwargs)
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

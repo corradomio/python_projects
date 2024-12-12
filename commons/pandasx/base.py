@@ -897,27 +897,53 @@ def nan_drop(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = No
     :param inplace:
     :return: the dataframe without the removed rows
     """
-    if isinstance(columns, str):
-        columns = [columns]
-
     if df is None:
-        pass
-    elif columns in [None, False]:
-        pass
-    elif columns is True:
-        if inplace:
-            df.dropna(how='any', axis=0, inplace=True)
-        else:
-            df.dropna(how='any', axis=0, inplace=False)
+        return None
+
+    if inplace:
+        df.dropna(how='any',axis=0, inplace=True)
     else:
-        if inplace:
-            nan_rows = df[columns].isna().any(axis=1)
-            df.drop(nan_rows, axis=0, inplace=True)
-        else:
-            valid_rows = df[columns].notna().all(axis=1)
-            df = df[valid_rows]
+        df = df.dropna(how='any',axis=0, inplace=False)
+
     return df
-# end
+
+
+# def nan_drop_old(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = None, inplace=False) -> PANDAS_TYPE:
+#     """
+#     Drop the rows having NA in the specifided list of columns
+#     :param df: dataframe to analyze
+#     :param columns: columns to consider. Possible values
+#             - None, False: no column is considered
+#             - True: all columns are considered
+#             - str: colum's name
+#             - list[str]: list of columns
+#     :param inplace:
+#     :return: the dataframe without the removed rows
+#     """
+#     if isinstance(columns, str):
+#         columns = [columns]
+#
+#     if df is None:
+#         pass
+#     elif columns in [None, False]:
+#         pass
+#     elif columns is True:
+#             df.dropna(how='any', axis=0, inplace=True)
+#             # if inplace:
+#             #     df.dropna(how='any', axis=0, inplace=True)
+#             # else:
+#             #     df = df.dropna(how='any', axis=0, inplace=False)
+#         else:
+#             nan_rows = df[columns].isna().any(axis=1)
+#             df.drop(nan_rows, axis=0, inplace=True)
+#             # if inplace:
+#             #     nan_rows = df[columns].isna().any(axis=1)
+#             #     df.drop(nan_rows, axis=0, inplace=True)
+#             # else:
+#             #     valid_rows = df[columns].notna().all(axis=1)
+#             #     df = df[valid_rows]
+#     return df
+# # end
 
 
 def nan_set(df: PANDAS_TYPE, columns: Union[str, list[str]], *, on: str, ge: Any, inplace=False) -> PANDAS_TYPE:
@@ -946,6 +972,7 @@ def nan_set(df: PANDAS_TYPE, columns: Union[str, list[str]], *, on: str, ge: Any
 def type_encode(df: pd.DataFrame, type: Union[str, type], columns: Union[None, str, list[str]]) -> pd.DataFrame:
     columns = as_list(columns, 'columns')
     for col in columns:
+        if col not in df.columns: continue
         df[col] = df[col].astype(type)
     return df
 

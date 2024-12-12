@@ -63,6 +63,9 @@ def concat(
         for df in df_list
     ]
 
+    # IF IS possible some dictionaries are EMPTY
+    df_dict_list = [df_dict for df_dict in df_dict_list if len(df_dict) > 0]
+
     concat_dict = {}
 
     keys = list(df_dict_list[0].keys())

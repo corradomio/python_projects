@@ -63,10 +63,12 @@ def main():
     # same probability of "000003" & 50 locations
     locprob = 1815.0/6566.0
 
-    gen_req_avail_parts( 50, locations, warehouses, requests_distrib, locprob)
-    gen_req_avail_parts(100, locations, warehouses, requests_distrib, locprob*2)
-    gen_req_avail_parts(200, locations, warehouses, requests_distrib, locprob*3)
-    gen_req_avail_parts(500, locations, warehouses, requests_distrib, 1.)
+    # gen_req_avail_parts( 50, locations, warehouses, requests_distrib, locprob)
+    gen_req_avail_parts( 60, locations, warehouses, requests_distrib, locprob*1.5)
+    gen_req_avail_parts( 80, locations, warehouses, requests_distrib, locprob*1.75)
+    # gen_req_avail_parts(100, locations, warehouses, requests_distrib, locprob*2)
+    # gen_req_avail_parts(200, locations, warehouses, requests_distrib, locprob*3)
+    # gen_req_avail_parts(500, locations, warehouses, requests_distrib, 1.)
     pass
 
 

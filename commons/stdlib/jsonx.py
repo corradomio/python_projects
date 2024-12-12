@@ -2,8 +2,22 @@
 # Extensions to 'json' standard package:
 #
 #   1) to use 'load' and 'dump' directly with a file path
+#
+#   NO! It introduces a lot of problems
 #   2) returning an 'stdlib.dict', a dictionary with a lot
 #      of improvements useful for configurations
+#
+# Added support for Pandas dataframes
+#   https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_json.html
+#
+#   DataFrame.to_json(path_or_buf=None, *, orient=None, date_format=None, double_precision=10, force_ascii=True,
+#       date_unit='ms', default_handler=None, lines=False, compression='infer', index=None, indent=None,
+#       storage_options=None, mode='w')
+#
+# 'orient':
+#       Series      {‘split’, ‘records’, ‘index’, ‘table’}.
+#       Dataframe   {‘split’, ‘records’, ‘index’, ‘columns’, ‘values’, ‘table’}.
+#
 #
 
 #
@@ -62,13 +76,14 @@ def pandas_to_jsonx(
     # end
 
     assert isinstance(data, (pd.DataFrame, pd.Series))
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     if path is None:
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%ff')
         json_file = f"tmp-{timestamp}.json"
     else:
         json_file = path
 
-    data.to_json(json_file, **kwargs)
+    with open(json_file, mode="w") as fp:
+        data.to_json(fp, **kwargs)
 
     if path is None:
         with open(json_file, mode='r') as t:
@@ -139,6 +154,14 @@ def ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
 # JSONX encoder
 # ---------------------------------------------------------------------------
 
+def period_to_jsonx(period: pd.Period) -> str:
+    return str(period)
+
+
+def timestamp_to_jsonx(timestamp: pd.Timestamp) -> str:
+    return str(timestamp)
+
+
 JSONX_ENCODERS = {
     # Python datetime
     'datetime.datetime': lambda o: cast(dt.datetime, o).strftime(TIMESTAMP_FORMAT),
@@ -154,9 +177,9 @@ JSONX_ENCODERS = {
     # Pandas Series & DataFrame
     # 'pandas.core.series.Series': ser_to_jsonx,
     # 'pandas.core.frame.DataFrame': df_to_jsonx,
-    # 'pandas._libs.tslibs.period.Period': period_to_jsonx,
-    # 'pandas._libs.tslibs.timestamps.Timestamp': timestamp_to_jsonx,
-    # 'pandas._libs.missing.NAType': (lambda o: None),
+    'pandas._libs.tslibs.period.Period': period_to_jsonx,
+    'pandas._libs.tslibs.timestamps.Timestamp': timestamp_to_jsonx,
+    'pandas._libs.missing.NAType': (lambda o: None),
     # 'pandas.core.indexes.base.Index': lambda o: cast(pd.Index, o).tolist()
 }
 
@@ -217,8 +240,11 @@ def dump(obj, file: str, **kwargs):
             open_kwargs[k] = kwargs[k]
             del kwargs[k]
 
-    with open(file, mode="w", **open_kwargs) as fp:
-        json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
+    if isinstance(file, str):
+        with open(file, mode="w", **open_kwargs) as fp:
+            json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
+    else:
+        json.dump(obj, file, cls=JSONxEncoder, **kwargs)
 # end
 
 # ---------------------------------------------------------------------------

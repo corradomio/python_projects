@@ -16,11 +16,11 @@ class dict_keys(dict):
             super().__init__(seq)
 
     def __getitem__(self, item):
-        if item not in self._keys: raise ValueError(f"Item {item} not a valid key")
+        if item not in self._keys: raise ValueError(f"Invalide key {item}")
         return super().__getitem__(item)
 
     def __setitem__(self, item, value):
-        if item not in self._keys: raise ValueError(f"Item {item} not a valid key")
+        if item not in self._keys: raise ValueError(f"Invalid key {item}")
         return super().__setitem__(item, value)
 
     def __getattr__(self, item):

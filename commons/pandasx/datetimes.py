@@ -29,7 +29,7 @@ FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
               'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
 
 
-def _to_datetime(dt_series, format, freq):
+def _to_datetime(dt_series, format, freq) -> pd.Series:
 
     def remove_tz(x):
         if hasattr(x, 'tz_localize'):
@@ -70,7 +70,8 @@ def _to_datetime(dt_series, format, freq):
     #     pass
 
     if freq is not None:
-        dt_series = dt_series.dt.to_period(freq)
+        # dt_series = dt_series.dt.to_period(freq)
+        dt_series.asfreq(freq)
     return dt_series
 
 
@@ -101,7 +102,8 @@ def datetime_encode(df: pd.DataFrame,
         datetime, format, freq = datetime
 
     dt_series = df[datetime]
-    df[datetime] = _to_datetime(dt_series, format, freq)
+    dt_series = _to_datetime(dt_series, format, freq)
+    df[datetime] = dt_series
 
     return df
 # end

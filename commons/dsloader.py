@@ -1,5 +1,6 @@
 import logging
 from typing import Optional, Union
+import json
 
 import pandas as pd
 import sqlalchemy.engine as sae
@@ -50,8 +51,8 @@ def _normalize_datasource(datasource) -> dict:
     if isinstance(url, str):
         return datasource
 
-    url_config = dict_select(url, ['drivername', 'username', 'password', 'host', 'port', 'database'])
     table = url['table']
+    url_config = dict_select(url, ['drivername', 'username', 'password', 'host', 'port', 'database'])
     url: sae.URL = sae.URL.create(**url_config)
     surl: str = f"{str(url)}/{table}"
 
@@ -72,14 +73,27 @@ class DatasourceLoader:
     #
 
     @staticmethod
-    def from_datasource(datasource: dict) -> "DatasourceLoader":
-        datasource = _normalize_datasource(datasource)
+    def from_file(config_file: str) -> "DatasourceLoader":
+        with open(config_file) as fp:
+            config = json.load(fp)
+            return DatasourceLoader.from_config(config)
+    # end
+
+    @staticmethod
+    def from_config(config: dict) -> "DatasourceLoader":
+        datasource = _normalize_datasource(config)
 
         url = datasource['url']
         if is_filesystem(url):
             return FilesystemDatasourceLoader(datasource)
         else:
             return SQLAlchemyDatasourceLoader(datasource)
+    # end
+
+    # deprecated: use 'from_config(...)'
+    @staticmethod
+    def from_datasource(config: dict) -> "DatasourceLoader":
+        return DatasourceLoader.from_file(config)
     # end
 
     # -----------------------------------------------------------------------

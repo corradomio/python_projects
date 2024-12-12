@@ -14,9 +14,30 @@ def dict_get(d:dict, keys:list[str], defval):
             return defval
     # end
     k = keys[-1]
-    if k not in c:
-        return defval
-    else:
-        return c[k]
+    return c[k] if k in c else defval
+# end
+
+
+def dict_select(d:dict, keys:list[str]) -> dict:
+    """
+    Create a dict containing only the keys in the list
+    """
+    s = {}
+    for k in d:
+        if k in keys:
+            s[k] = d[k]
+    return s
+# end
+
+
+def dict_exclude(d:dict, keys:list[str]) -> dict:
+    """
+    Create a dict containing only the keys not in the list
+    """
+    s = {}
+    for k in d:
+        if k not in keys:
+            s[k] = d[k]
+    return s
 # end
 

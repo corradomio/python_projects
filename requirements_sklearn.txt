@@ -38,7 +38,7 @@ numpy
 # https://scipy.org/
 scipy
 
-# https://pandas.pydata.org/
+# https://matplotlib.org/
 matplotlib
 
 # https://seaborn.pydata.org/
@@ -55,8 +55,9 @@ seaborn
 # https://pandas.pydata.org/
 pandas
 
+# there are incompatibilities between polars and pandas
 # https://pola.rs
-polars
+# polars
 
 
 # ---------------------------------------------------------------------------

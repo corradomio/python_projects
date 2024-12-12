@@ -1,0 +1,161 @@
+Pandas
+    pd.read_csv
+        filepath_or_buffer: FilePath | ReadCsvBuffer[bytes] | ReadCsvBuffer[str],
+        *,
+        sep: str | None | lib.NoDefault = lib.no_default,
+        delimiter: str | None | lib.NoDefault = None,
+        # Column and Index Locations and Names
+        header: int | Sequence[int] | None | Literal["infer"] = "infer",
+        names: Sequence[Hashable] | None | lib.NoDefault = lib.no_default,
+        index_col: IndexLabel | Literal[False] | None = None,
+        usecols: UsecolsArgType = None,
+        # General Parsing Configuration
+        dtype: DtypeArg | None = None,
+        engine: CSVEngine | None = None,
+        converters: Mapping[Hashable, Callable] | None = None,
+        true_values: list | None = None,
+        false_values: list | None = None,
+        skipinitialspace: bool = False,
+        skiprows: list[int] | int | Callable[[Hashable], bool] | None = None,
+        skipfooter: int = 0,
+        nrows: int | None = None,
+        # NA and Missing Data Handling
+        na_values: Hashable
+        | Iterable[Hashable]
+        | Mapping[Hashable, Iterable[Hashable]]
+        | None = None,
+        keep_default_na: bool = True,
+        na_filter: bool = True,
+        verbose: bool | lib.NoDefault = lib.no_default,
+        skip_blank_lines: bool = True,
+        # Datetime Handling
+        parse_dates: bool | Sequence[Hashable] | None = None,
+        infer_datetime_format: bool | lib.NoDefault = lib.no_default,
+        keep_date_col: bool | lib.NoDefault = lib.no_default,
+        date_parser: Callable | lib.NoDefault = lib.no_default,
+        date_format: str | dict[Hashable, str] | None = None,
+        dayfirst: bool = False,
+        cache_dates: bool = True,
+        # Iteration
+        iterator: bool = False,
+        chunksize: int | None = None,
+        # Quoting, Compression, and File Format
+        compression: CompressionOptions = "infer",
+        thousands: str | None = None,
+        decimal: str = ".",
+        lineterminator: str | None = None,
+        quotechar: str = '"',
+        quoting: int = csv.QUOTE_MINIMAL,
+        doublequote: bool = True,
+        escapechar: str | None = None,
+        comment: str | None = None,
+        encoding: str | None = None,
+        encoding_errors: str | None = "strict",
+        dialect: str | csv.Dialect | None = None,
+        # Error Handling
+        on_bad_lines: str = "error",
+        # Internal
+        delim_whitespace: bool | lib.NoDefault = lib.no_default,
+        low_memory: bool = _c_parser_defaults["low_memory"],
+        memory_map: bool = False,
+        float_precision: Literal["high", "legacy"] | None = None,
+        storage_options: StorageOptions | None = None,
+        dtype_backend: DtypeBackend | lib.NoDefault = lib.no_default,
+
+    pd.read_json
+        path_or_buf: FilePath | ReadBuffer[str] | ReadBuffer[bytes],
+        *,
+        orient: str | None = None,
+        typ: Literal["frame", "series"] = "frame",
+        dtype: DtypeArg | None = None,
+        convert_axes: bool | None = None,
+        convert_dates: bool | list[str] = True,
+        keep_default_dates: bool = True,
+        precise_float: bool = False,
+        date_unit: str | None = None,
+        encoding: str | None = None,
+        encoding_errors: str | None = "strict",
+        lines: bool = False,
+        chunksize: int | None = None,
+        compression: CompressionOptions = "infer",
+        nrows: int | None = None,
+        storage_options: StorageOptions | None = None,
+        dtype_backend: DtypeBackend | lib.NoDefault = lib.no_default,
+        engine: JSONEngine = "ujson",
+
+    pd.read_sql
+        sql,
+        con,
+        index_col: str | list[str] | None = None,
+        coerce_float: bool = True,
+        params=None,
+        parse_dates=None,
+        columns: list[str] | None = None,
+        chunksize: int | None = None,
+        dtype_backend: DtypeBackend | lib.NoDefault = lib.no_default,
+        dtype: DtypeArg | None = None,
+
+
+    DataFrame.from_dict
+        data: dict,
+        orient: FromDictOrient = "columns",
+        dtype: Dtype | None = None,
+        columns: Axes | None = None,
+
+---------------------------------------
+
+    DataFrame.to_csv
+        path_or_buf: FilePath | WriteBuffer[bytes] | WriteBuffer[str] | None = None,
+        sep: str = ",",
+        na_rep: str = "",
+        float_format: str | Callable | None = None,
+        columns: Sequence[Hashable] | None = None,
+        header: bool_t | list[str] = True,
+        index: bool_t = True,
+        index_label: IndexLabel | None = None,
+        mode: str = "w",
+        encoding: str | None = None,
+        compression: CompressionOptions = "infer",
+        quoting: int | None = None,
+        quotechar: str = '"',
+        lineterminator: str | None = None,
+        chunksize: int | None = None,
+        date_format: str | None = None,
+        doublequote: bool_t = True,
+        escapechar: str | None = None,
+        decimal: str = ".",
+        errors: OpenFileErrors = "strict",
+        storage_options: StorageOptions | None = None,
+
+    DataFrame.to_json
+        path_or_buf: FilePath | WriteBuffer[bytes] | WriteBuffer[str] | None = None,
+        orient: Literal["split", "records", "index", "table", "columns", "values"]
+        | None = None,
+        date_format: str | None = None,
+        double_precision: int = 10,
+        force_ascii: bool_t = True,
+        date_unit: TimeUnit = "ms",
+        default_handler: Callable[[Any], JSONSerializable] | None = None,
+        lines: bool_t = False,
+        compression: CompressionOptions = "infer",
+        index: bool_t | None = None,
+        indent: int | None = None,
+        storage_options: StorageOptions | None = None,
+        mode: Literal["a", "w"] = "w",
+
+    DataFrame.to_sql
+        name: str,
+        con,
+        schema: str | None = None,
+        if_exists: Literal["fail", "replace", "append"] = "fail",
+        index: bool_t = True,
+        index_label: IndexLabel | None = None,
+        chunksize: int | None = None,
+        dtype: DtypeArg | None = None,
+        method: Literal["multi"] | Callable | None = None,
+
+    DataFrame.to_dict
+        orient: Literal["dict", "list", "series", "split", "tight", "index"] = ...,
+        *,
+        into: type[MutableMappingT] | MutableMappingT,
+        index: bool = ...,
