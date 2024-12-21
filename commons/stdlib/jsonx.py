@@ -77,7 +77,8 @@ def pandas_to_jsonx(
 
     assert isinstance(data, (pd.DataFrame, pd.Series))
     if path is None:
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%ff')
+        dtnow = datetime.now()
+        timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
         json_file = f"tmp-{timestamp}.json"
     else:
         json_file = path

@@ -1,7 +1,29 @@
 from collections import deque
 from typing import Iterator
 
+import networkx as nx
+
 from .graph import Graph, NODE_TYPE
+
+
+# ---------------------------------------------------------------------------
+# is_dag
+# ---------------------------------------------------------------------------
+
+def is_dag(G: Graph) -> bool:
+    if not nx.is_directed(G):
+        return False
+    try:
+        nx.find_cycle(G, orientation='original')
+        return False
+    except nx.NetworkXNoCycle:
+        return True
+# end
+
+
+# ---------------------------------------------------------------------------
+# Structure
+# ---------------------------------------------------------------------------
 
 #
 # G.cache: dict[str, dict[...]]
@@ -26,7 +48,7 @@ def sources(G: Graph) -> set[NODE_TYPE]:
 
 def destinations(G: Graph) -> set[NODE_TYPE]:
     """
-    Direct Graph sources: nodes with 0 out-degree
+    Direct Graph destinations: nodes with 0 out-degree
     """
     assert G.is_directed()
     if "nodes" not in G.cache["destinations"]:
@@ -97,7 +119,6 @@ def descendants(G: Graph, u: NODE_TYPE) -> set[NODE_TYPE]:
 # find_all_paths
 # ---------------------------------------------------------------------------
 
-
 def _find_path(G: Graph, u_path: list[NODE_TYPE], s: int, v: NODE_TYPE, u_processed: set[NODE_TYPE]) \
         -> Iterator[list[NODE_TYPE]]:
     if s == v:
@@ -143,3 +164,7 @@ def find_all_paths(G: Graph, u: NODE_TYPE, v: NODE_TYPE) -> list[list[NODE_TYPE]
         G.cache["find_paths"][uv] = uv_paths
     return G.cache["find_paths"][uv]
 # end
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

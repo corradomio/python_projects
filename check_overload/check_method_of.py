@@ -1,4 +1,4 @@
-from languagex import method_of
+from language import method_of
 
 
 class C:

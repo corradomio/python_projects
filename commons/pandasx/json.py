@@ -207,6 +207,10 @@ def from_json(
     """
     if isinstance(path_or_buf, dict):
         return _from_memory(path_or_buf, **kwargs)
+
+    if orient is None and isinstance(path_or_buf, dict):
+        orient = _guess_orient(path_or_buf)
+
     if orient == "list":
         return _from_flat_columns(path_or_buf, **kwargs)
     else:
@@ -238,6 +242,20 @@ def from_json(
 
 # ---------------------------------------------------------------------------
 
+def _guess_orient(data: dict) -> str:
+    assert isinstance(data, dict|list)
+    if isinstance(data, list):
+        return "records"
+    if "columns" in data and "data" in data and "index" in data:
+        return "split"
+    if "shema" in data and"data" in data:
+        return "table"
+    if "$index" in data:
+        return "list"
+    raise ValueError("Unable to guess data 'format'")
+# end
+
+
 def _from_flat_columns(path: str, **kwargs) -> pd.DataFrame:
     jflat = json.load(path)
     jdata = {}
@@ -248,7 +266,8 @@ def _from_flat_columns(path: str, **kwargs) -> pd.DataFrame:
         values = jflat[col]
         jdata[col] = {str(index[i]): values[i] for i in range(n)}
 
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%ff')
+    dtnow = datetime.now()
+    timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
     json_file = f"tmp-{timestamp}.json"
     json.dump(jdata, json_file)
     try:
@@ -261,7 +280,8 @@ def _from_flat_columns(path: str, **kwargs) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 
 def _from_memory(jdata: dict, **kwargs) -> pd.DataFrame:
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%ff')
+    dtnow = datetime.now()
+    timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
     json_file = f"tmp-{timestamp}.json"
     json.dump(jdata, json_file)
 

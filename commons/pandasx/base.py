@@ -906,6 +906,26 @@ def nan_drop(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = No
         df = df.dropna(how='any',axis=0, inplace=False)
 
     return df
+# end
+
+
+def nan_fill(df: PANDAS_TYPE, *, fillna=None) -> PANDAS_TYPE:
+    # pandas.NA
+    # numpy NaT
+    # numpy nan
+    # None
+    # if fillna is None:
+    #     df.fillna(None, inplace=True)
+    if fillna in ["na", "NA"]:
+        df.fillna(pd.NA, inplace=True)
+    elif fillna in ["NaN", "nan", "NAN"]:
+        df.fillna(np.nan, inplace=True)
+    # elif fillna in ["None", "null"]:
+    #     df.fillna(None, inplace=True)
+    else:
+        df.fillna(fillna, inplace=True)
+    return df
+# end
 
 
 # def nan_drop_old(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = None, inplace=False) -> PANDAS_TYPE:

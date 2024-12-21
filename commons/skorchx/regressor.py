@@ -54,7 +54,7 @@ class NeuralNetRegressor(skorch.NeuralNetRegressor):
         return y_proba
 
     def forward_iter(self, X, training=False, device='cpu', **params):
-        """Extended with 'predict_params'"""
+        """Extended with 'params'"""
         dataset = self.get_dataset(X)
         iterator = self.get_iterator(dataset, training=training)
         for batch in iterator:
@@ -62,7 +62,7 @@ class NeuralNetRegressor(skorch.NeuralNetRegressor):
             yield to_device(yp, device=device)
 
     def evaluation_step(self, batch, training=False, **eval_params):
-        """Extended with 'predict_params'"""
+        """Extended with 'eval_params'"""
         self.check_is_fitted()
         Xi, _ = unpack_data(batch)
         with torch.set_grad_enabled(training):

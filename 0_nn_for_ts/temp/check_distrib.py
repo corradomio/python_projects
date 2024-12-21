@@ -2,7 +2,7 @@ import torch
 import torch.distributions as D
 import matplotlib.pyplot as plt
 
-from languagex import method_of
+from language import method_of
 
 
 @method_of(D.Distribution)

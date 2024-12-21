@@ -93,38 +93,77 @@ def _read_from_file(config: dict)-> pd.DataFrame:
 # _read_from_inline
 # ---------------------------------------------------------------------------
 
-SUPPORTED_ORIENTS = {'split', 'records', 'index', 'columns', 'values', 'table'}
+SUPPORTED_ORIENTS = {"split", "records", "index", "columns", "values", "table", "list"}
 
 #
+#   "split"
 #   {
 #       "columns": [...]
 #       "index": [...]
 #       "data": [[...], ... ]
 #   }
 #
+#
+#
 def _na_values(data_dict, na_values) -> dict:
-    if len(na_values) == 0:
+    if na_values is None or len(na_values) == 0:
         return data_dict
 
-    data = data_dict["data"]
+    if "data" in data_dict:
+        data = data_dict["data"]
 
-    n = len(data)
-    m = len(data[0]) if n > 0 else 0
-    for i in range(n):
-        for j in range(m):
-            if data[i][j] in na_values:
-                data[i][j] = None
+        n = len(data)
+        for i in range(n):
+            idata = data[i]
+            idata = _list_na_values(idata, na_values)
+            data[i] = idata
+        # end
+
+        data_dict["data"] = data
+        return data_dict
     # end
 
-    data_dict["data"] = data
-
+    keys = list(data_dict.keys())
+    k0 = list(keys)[0]
+    if isinstance(data_dict[k0], dict):
+        for k in keys:
+            kdata = data_dict[k]
+            kdata = _dict_na_values(kdata, na_values)
+            data_dict[k] = kdata
+        # end
+    if isinstance(data_dict[k0], list):
+        for k in keys:
+            kdata = data_dict[k]
+            kdata = _list_na_values(kdata, na_values)
+            data_dict[k] = kdata
+        # end
+    else:
+        raise ValueError("Unsupported data format")
     return data_dict
 # end
 
 
+def _list_na_values(data: list, na_values: list[str]) -> list:
+    m = len(data)
+    for j in range(m):
+        v = data[j]
+        v = None if v in na_values else v
+        data[j] = v
+    return data
+# end
+
+def _dict_na_values(data: dict, na_values: list[str]) -> dict:
+    for k in data.keys():
+        v = data[k]
+        v = None if v in na_values else v
+        data[k] = v
+    return data
+# end
+
 def _to_df(data: dict, orient: str) -> pd.DataFrame:
     # note: it is necessary to save the JSON in a file
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
+    dtnow = datetime.now()
+    timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
     json_file = f"tmp-{timestamp}.json"
 
     with open(json_file, mode="w") as fp:
@@ -138,12 +177,12 @@ def _to_df(data: dict, orient: str) -> pd.DataFrame:
 # end
 
 
-def _guess_orient(data: dict):
-    if "columns" in data and "data" in data and "index" in data:
-        return "split"
-    else:
-        return "no format"
-# end
+# def _guess_orient(data: dict):
+#     if "columns" in data and "data" in data and "index" in data:
+#         return "split"
+#     else:
+#         return "no format"
+# # end
 
 
 #
@@ -165,9 +204,9 @@ def _read_from_inline(config: dict)-> pd.DataFrame:
     assert "url" in config, "Missing 'url' parameter"
     assert "data" in config, "Missing 'data' parameter"
 
-    url: str = config["url"]
+    # url: str = config["url"]
     data = config["data"]
-    na_values = config.get("na_values", [])
+    orient = config["format"] if "format" in config else None
 
     # retrieve the JSON data 'format:
     # 1) from "url"
@@ -175,15 +214,15 @@ def _read_from_inline(config: dict)-> pd.DataFrame:
     #   memory:///<format>
     # 2) from "format" parameter
     #
-    if "format" in config:
-        orient = config["format"]
-    else:
-        p = url.rfind('/')
-        orient = url[p+1:]
+    # if "format" in config:
+    #     orient = config["format"]
+    # else:
+    #     p = url.rfind('/')
+    #     orient = url[p+1:]
 
     # guess the format based in the tags in 'config["data"]
-    if orient in [None, ""]:
-        orient = _guess_orient(data)
+    # if orient in [None, ""]:
+    #     orient = _guess_orient(data)
 
     # Supported formats:
     #   https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_json.html
@@ -191,14 +230,17 @@ def _read_from_inline(config: dict)-> pd.DataFrame:
     #   ['split', 'records', 'index', 'columns', 'values', 'table']
     #
     #
-    if not orient in SUPPORTED_ORIENTS:
-        raise ValueError(f"Unknown data format '{orient}'")
-
+    # if orient != "list" and not orient in SUPPORTED_ORIENTS:
+    #     raise ValueError(f"Unknown data format '{orient}'")
+    #
     # parse null values
+    na_values = config.get("na_values", [])
     data = _na_values(data, na_values)
+    #
+    # # convert {...} into a dataframe
+    # df = _to_df(data, orient)
 
-    # convert {...} into a dataframe
-    df = _to_df(data, orient)
+    df = pdx.from_json(data, orient=orient)
 
     # apply cleanup
     kwargs = dict_exclude(config, ["url", "format", "data"])
@@ -235,80 +277,88 @@ def _read_from_inline(config: dict)-> pd.DataFrame:
 #   "sql": "SELECT ..."
 #   "params": { ... }
 
-def _from_jdbc_url(config: dict) -> URL:
-    # jdbc:<dbms>://<host>:<port>/<database>
-    surl = config["url"]
-    surl = surl[5:]
-    return _from_sqlalchemy_url(config | dict(url=surl))
+# def _from_jdbc_url(config: dict) -> URL:
+#     # jdbc:<dbms>://<host>:<port>/<database>
+#     surl = config["url"]
+#     # surl = surl[5:]
+#     # return _from_sqlalchemy_url(config | dict(url=surl))
+#     return surl[5:]
 
 
-def _from_sqlalchemy_url(config: dict) -> URL:
-    # <drivername>://<host>:<port>/<database>
-    url: str = config["url"]
-
-    # <drivername>
-    b = 0
-    p = url.find('://')
-    drivername = url[b:p]
-
-    # <host>:<port>
-    b = p+3
-    p = url.find('/', b)
-    host_port = url[b:p]
-    s = host_port.find(':')
-    if s == -1:
-        host = host_port
-        port = 5432
-    else:
-        host = host_port[0:s]
-        port = int(host_port[s+1:])
-
-    # <database>
-    b = p+1
-    database = url[b:]
-
-    #   "ip": "10.193.20.15",
-    #   "port": "5432",
-    #   "user": "postgres",
-    #   "password": "p0stgres",
-    #   "db": "btdigital_ipredict_development",
-    config = config | dict(
-        ip=host,
-        port=port,
-        db=database,
-        drivername=drivername
-    )
-
-    return _from_iplan_url(config)
-
-
-def _from_iplan_url(config: dict):
-    #         drivername: str,
-    #         username: Optional[str] = None,
-    #         password: Optional[str] = None,
-    #         host: Optional[str] = None,
-    #         port: Optional[int] = None,
-    #         database: Optional[str] = None,
-    #         query: Mapping[str, Union[Sequence[str], str]] = util.EMPTY_DICT,
-
-    drivername = config.get("drivername", "postgresql")
-    username = config.get("user")
-    password = config.get("password")
-    host = config.get("ip")
-    port = config.get("port")
-    database = config.get("db")
-    return URL.create(drivername, username, password, host, port, database)
+# def _from_sqlalchemy_url(config: dict) -> URL:
+#     # <drivername>://<host>:<port>/<database>
+#     url: str = config["url"]
+#
+#     # <drivername>
+#     b = 0
+#     p = url.find('://')
+#     drivername = url[b:p]
+#
+#     # <host>:<port>
+#     b = p+3
+#     p = url.find('/', b)
+#     host_port = url[b:p]
+#     s = host_port.find(':')
+#     if s == -1:
+#         host = host_port
+#         port = 5432
+#     else:
+#         host = host_port[0:s]
+#         port = int(host_port[s+1:])
+#
+#     # <database>
+#     b = p+1
+#     database = url[b:]
+#
+#     #   "ip": "10.193.20.15",
+#     #   "port": "5432",
+#     #   "user": "postgres",
+#     #   "password": "p0stgres",
+#     #   "db": "btdigital_ipredict_development",
+#     config = config | dict(
+#         ip=host,
+#         port=port,
+#         db=database,
+#         drivername=drivername
+#     )
+#
+#     return _from_iplan_url(config)
 
 
-def _get_dbms_url(config: dict) -> URL:
-    str_url: Optional[str] = config["url"] if "url" in config else None
-    url: URL = None
-    if str_url is not None and str_url.startswith("jdbc:"):
-        url = _from_jdbc_url(config)
-    elif str_url is not None:
-        url = _from_sqlalchemy_url(config)
+# def _from_iplan_url(config: dict):
+#     #         drivername: str,
+#     #         username: Optional[str] = None,
+#     #         password: Optional[str] = None,
+#     #         host: Optional[str] = None,
+#     #         port: Optional[int] = None,
+#     #         database: Optional[str] = None,
+#     #         query: Mapping[str, Union[Sequence[str], str]] = util.EMPTY_DICT,
+#
+#     drivername = config.get("drivername", "postgresql")
+#     username = config.get("user")
+#     password = config.get("password")
+#     host = config.get("ip")
+#     port = config.get("port")
+#     database = config.get("db")
+#     return URL.create(drivername, username, password, host, port, database)
+
+
+def _get_dbms_url(config: dict) -> str:
+    url: Optional[str] = config["url"] if "url" in config else None
+
+    if url is not None and url.startswith("jdbc:"):
+        # url = _from_jdbc_url(config)
+        url = url[5:]
+    elif url is not None:
+        # url = _from_sqlalchemy_url(config)
+        pass
     elif "ip" in config:
-        url = _from_iplan_url(config)
+        # url = _from_iplan_url(config)
+        ip = config["ip"]
+        port = config["port"]
+        db = config["db"]
+        drivername = config.get("drivername", "postgresql")
+        return f"{drivername://{ip}:{port}/{db}}"
     else:
         raise ValueError(f"Unvalid database configuration: {config}")
 
@@ -316,9 +366,9 @@ def _get_dbms_url(config: dict) -> URL:
 
 
 def _read_from_database(config: dict)-> pd.DataFrame:
-    dbms_url = str(_get_dbms_url(config))
-    kwargs = dict_exclude(config, ["url", "user", "password"])
-    return pdx.read_data(dbms_url, **kwargs)
+    url = str(_get_dbms_url(config))
+    kwargs = dict_exclude(config, ["url", "ip", "port", "db"])
+    return pdx.read_data(url, **kwargs)
 # end
 
 

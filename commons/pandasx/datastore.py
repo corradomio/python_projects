@@ -107,7 +107,7 @@ TO_JSON_PARAMS = [
 ]
 
 def _write_to_inline(df: pd.DataFrame, config: dict) -> dict:
-    orient = config['format']
+    orient = config.get('format', 'list')
     kwargs = dict_select(config, TO_JSON_PARAMS)
     jdata = pdx.write_data(df, "inline:", orient=orient, **kwargs)
     return {

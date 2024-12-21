@@ -5,9 +5,9 @@ import pandasx as pdx
 
 def main():
     # df = pdx.read_from("file:///vw_food_import_kg_train_test_area_skill.csv")
-    # df = pdx.read_from(jsonx.load("from_file.json"))
+    df = pdx.read_from(jsonx.load("from_file.json"))
     # df = pdx.read_from(jsonx.load("from_table.json"))
-    df = pdx.read_from(jsonx.load("from_json.json"))
+    # df = pdx.read_from(jsonx.load("from_json.json"))
 
     print(df.head())
     pass

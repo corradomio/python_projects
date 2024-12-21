@@ -3,6 +3,8 @@ from typing import Union, Iterator, Any, Optional
 
 __version__ = "1.1.0"
 
+import networkx as nx
+
 #
 # Networkx graph types
 #
@@ -91,6 +93,19 @@ class Graph:
         self.cache: dict[str, Any] = defaultdict(lambda : {})
     # end
 
+    def copy(self):
+        # networks
+        C = Graph(direct=self._direct,
+                  loops=self.has_loops(),
+                  multi=self.is_multigraph(),
+                  acyclic=self._acyclic,
+                  **self._props)
+
+        C.add_nodes_from(self.nodes())
+        C.add_edges_from(self.edges)
+        return C
+
+
     # -----------------------------------------------------------------------
     # Properties
 
@@ -111,9 +126,11 @@ class Graph:
             return self._props
 
     def is_directed(self) -> bool:
+        # networkx
         return self._direct
 
     def is_multigraph(self) -> bool:
+        # networkx
         return self._edges.multi
 
     def has_loops(self) -> bool:
@@ -152,7 +169,7 @@ class Graph:
         return self._edges.pred
 
     # -----------------------------------------------------------------------
-    # Compatibility with 'networkx'
+    # Compatibility with 'networkx' !
 
     @property
     def _succ(self):
@@ -168,18 +185,22 @@ class Graph:
     #   n in G.nodes
 
     def order(self) -> int:
+        # networkx
         return len(self._nodes)
 
     def number_of_nodes(self) -> int:
+        # networkx
         return len(self._nodes)
 
     def nodes(self) -> Iterator[NODE_TYPE]:
         return iter(self._nodes.keys())
 
     def has_node(self, n: NODE_TYPE) -> bool:
+        # networkx
         return n in self._nodes
 
     def add_node(self, n: NODE_TYPE, **nprops):
+        # networkx
         return self.add_node_(n, nprops)
 
     def add_node_(self, n: NODE_TYPE, nprops: dict):
@@ -191,7 +212,8 @@ class Graph:
         self.cache.clear()
         return self
 
-    def add_nodes_from(self, nlist: list[NODE_TYPE], **nprops):
+    def add_nodes_from(self, nlist: list[NODE_TYPE] | Iterator[NODE_TYPE], **nprops):
+        # networkx
         for n in nlist:
             if isinstance(n, tuple):
                 v, vprops = n
@@ -209,6 +231,7 @@ class Graph:
             True    in
         :return:
         """
+        # networkx
         return sorted(self._edges.neighbors(n, inbound))
 
     def node_edges(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> dict[EDGE_TYPE, dict]:
@@ -223,7 +246,10 @@ class Graph:
         return nedges
     # end
 
-    # compatibility
+    # -----------------------------------------------------------------------
+    # compatibility with networkx
+    # -----------------------------------------------------------------------
+
     def __contains__(self, n: int) -> bool:
         return n in self._nodes
 
@@ -237,21 +263,37 @@ class Graph:
         for n in nlist:
             self.remove_node(n)
 
+    def nbunch_iter(self, source) -> Iterator:
+        if source is None:
+            return self.nodes()
+        if isinstance(source, list | tuple):
+            for n in source:
+                yield n
+        else:
+            yield source
+
     # -----------------------------------------------------------------------
     # Operations/edges
     #   G.edges
     #   e in G.edges
 
     def size(self) -> int:
+        # networkx
         return len(self._edges)
 
     def number_of_edges(self) -> int:
+        # networkx
         return len(self._edges)
 
+    # def edges(self):
+    #     return self._edges.keys()
+
     def has_edge(self, u: NODE_TYPE, v: NODE_TYPE) -> bool:
+        # networkx
         return (u, v) in self._edges
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, **eprops):
+        # networkx
         return self.add_edge_(u, v, eprops)
 
     # edge props as dict
@@ -266,6 +308,7 @@ class Graph:
     def add_edges_from(self,
                        elist: list[Union[tuple[NODE_TYPE, NODE_TYPE], tuple[NODE_TYPE, NODE_TYPE, dict]]],
                        **eprops):
+        # networkx
         for e in elist:
             if len(e) == 2:
                 u, v = e
@@ -276,9 +319,11 @@ class Graph:
         return self
 
     def remove_edge(self, u: NODE_TYPE, v: NODE_TYPE):
+        # networkx
         self._edges.remove_edge(u, v)
 
     def remove_edges_from(self, elist: list[EDGE_TYPE]):
+        # networkx
         for e in elist:
             self.remove_edge(*e)
 
@@ -307,9 +352,11 @@ class Graph:
     #
 
     def __len__(self) -> int:
+        # networkx
         return len(self._nodes)
 
     def __iter__(self) -> Iterator:
+        # networkx
         return iter(self._nodes)
 
     # -----------------------------------------------------------------------
@@ -320,6 +367,7 @@ class Graph:
         :param n_e: node or edge
         :return:
         """
+        # networkx
         return self._edges.succ[n_e]
 
     # -----------------------------------------------------------------------
@@ -354,9 +402,12 @@ class Graph:
     # -----------------------------------------------------------------------
 
     def __repr__(self):
+        # networkx
         nv = len(self._nodes)
         ne = len(self._edges)
         return f"{self.name}=(|V|={nv}, |E|={ne})"
+
+    # -----------------------------------------------------------------------
 
 # end
 

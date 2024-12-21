@@ -1,11 +1,11 @@
 import logging
-from typing import Optional
+from typing import Optional, Union
 
 import pandas as pd
 from sqlalchemy import create_engine, text, URL
 
 from .base import (
-    set_index, nan_drop, as_list,
+    set_index, nan_drop, nan_fill, as_list,
     find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore,
     type_encode, count_encode,
     NoneType
@@ -258,8 +258,9 @@ def read_data(
     sort=False,             # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
     rename=None,            # [EXPERIMENTAL] rename some columns
 
-    dropna=False,           # if to drop the rows containing NaN values
     na_values=None,         # strings to consider NA values
+    dropna=False,           # if to drop the rows containing NaN values
+    fillna=None,            # if to fill na with a value
     **kwargs                # parameters to pass to 'pandas.read_*(...)' routine
 ) -> pd.DataFrame:
     """
@@ -332,6 +333,8 @@ def read_data(
                 rows containing NA values are removed
             ['col1', '...]:
                 remove rows containing NA in the selected columns
+    :param fillna: value to use to replace NA values.
+           Note: it is an alternative to "dropna"
     :param periodic: if to add  one or multiple 'periodic' information (EXPERIMENTAL)
 
     :param reindex: if to 'reindex' the dataframe in such way to force ALL timestamp (EXPERIMENTAL)
@@ -409,6 +412,7 @@ def read_data(
         sort=sort,
         rename=rename,
         dropna=dropna,
+        fillna=fillna,
         # na_values=na_values,
         **kwargs
     )
@@ -440,7 +444,8 @@ def cleanup_data(
         rename=None,        # [EXPERIMENTAL] rename some columns
 
         dropna=False,       # if to drop the rows containing NaN values
-        na_values=None,     # strings to consider NaN values
+        fillna=None,        # if to fill NA values with an alternative value
+        # na_values=None,     # strings to consider NaN values
         **kwargs            # parameters to pass to 'pandas.read_*(...)' routine
 ) -> pd.DataFrame:
     log = logging.getLogger("pandasx")
@@ -544,6 +549,8 @@ def cleanup_data(
     #       BEFORE to rename columns
     if dropna:
         df = nan_drop(df, columns=dropna)
+    if fillna is not None:
+        df = nan_fill(df, fillna=fillna)
 
     # force a sort
     # Note: here it is possible to use columns not yet removed
@@ -599,7 +606,12 @@ def write_data(df: pd.DataFrame, file: Optional[str], **kwargs):
     ret = None
 
     # handle FORMAT_PARAMS
-    df = _format_columns(df, kwargs)
+    if "datetime" in kwargs:
+        df = _format_datetime(df, kwargs["datetime"])
+    if "string" in kwargs:
+        df = _format_strings(df, kwargs["string"])
+    if "na_values" in kwargs:
+        df = _format_na_values(df, kwargs["na_values"])
 
     # exclude ["na_values", "datetime"]
     kwargs = dict_exclude(kwargs, FORMAT_PARAMS)
@@ -631,20 +643,51 @@ def write_data(df: pd.DataFrame, file: Optional[str], **kwargs):
 # end
 
 
-def _format_columns(df: pd.DataFrame, kwargs) -> pd.DataFrame:
-    if "datetime" in kwargs:
-        from .json import _convert_datetime
-        datetime = kwargs["datetime"]
-        df = _convert_datetime(df, datetime)
-    if "na_values" in kwargs:
-        na_value =  kwargs["na_values"]
-        if isinstance(na_value, list):
-            na_value = na_value[0]
-        if na_value is not None:
-            df.fillna(na_value)
-    return df
+def _format_datetime(df: pd.DataFrame, datetime: Union[str, tuple[str, str]]) -> pd.DataFrame:
+    from .json import _convert_datetime
+    return _convert_datetime(df, datetime)
 # end
 
+
+def _format_na_values(df: pd.DataFrame, na_value) -> pd.DataFrame:
+    assert isinstance(df, pd.DataFrame)
+    if na_value is None:
+        return df
+    if isinstance(na_value, list):
+        na_value = na_value[0]
+    return nan_fill(df, fillna=na_value)
+# end
+
+
+# def _format_columns(df: pd.DataFrame, kwargs) -> pd.DataFrame:
+#     if "datetime" in kwargs:
+#         from .json import _convert_datetime
+#         datetime = kwargs["datetime"]
+#         df = _convert_datetime(df, datetime)
+#     if "na_values" in kwargs:
+#         na_value =  kwargs["na_values"]
+#         if isinstance(na_value, list):
+#             na_value = na_value[0]
+#         if na_value is not None:
+#             df.fillna(na_value)
+#     return df
+# # end
+
+
+def _format_strings(df: pd.DataFrame, columns: Union[None, str, list[str]]) -> pd.DataFrame:
+    assert isinstance(df, pd.DataFrame)
+
+    columns = as_list(columns, 'columns')
+    if len(columns) == 0:
+        return df
+
+    for col in columns:
+        ser = df[col]
+        ser = ser.map(str)
+        df[col] = ser
+    # end
+    return df
+# end
 
 
 def write_dict(df: pd.DataFrame, orient: Optional[str] = None, **kwargs) -> dict:

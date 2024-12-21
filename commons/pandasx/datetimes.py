@@ -58,6 +58,8 @@ def _to_datetime(dt_series, format, freq) -> pd.Series:
         if '%z' in format or '%Z' in format:
             # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
             dt_series = dt_series.apply(remove_tz)
+    else:
+        dt_series = pd.to_datetime(dt_series)
 
     # np.dtypes.DateTime64DType == "datetime64[ns]"
     # np.dtypes.ObjectDType

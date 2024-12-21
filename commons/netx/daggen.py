@@ -8,13 +8,18 @@ import networkx as nx
 from stdlib.iset import ilexsubset, imembers
 from .util import is_symmetric
 
+# ---------------------------------------------------------------------------
+# is_dag
+# ---------------------------------------------------------------------------
+
+
 
 # ---------------------------------------------------------------------------
 # random_dag
 # extends_dag
 # ---------------------------------------------------------------------------
 
-def random_dag(n: int, m: int, connected=True):
+def random_dag(n: int, m: int, connected=True, create_using=None):
     """
     Generate a random directed acyclic graph
 
@@ -26,7 +31,7 @@ def random_dag(n: int, m: int, connected=True):
     assert m <= (n*(n-1))/2, "Too edges specified"
     # assert connected and m >= (n-1), "Not enough edges for a connected graph"
 
-    G = nx.DiGraph()
+    G = nx.DiGraph() if create_using is None else create_using
     G.add_nodes_from(list(range(n)))
     return extends_dag(G, m, connected=connected)
 # end
@@ -100,7 +105,7 @@ def iset_to_amdag(S: int, n: int) -> np.ndarray:
 # end
 
 
-def dag_enum(n: int) -> Generator:
+def dag_enum(n: int, create_using=None) -> Generator:
     """
     Generate all connected DAGs with n nodes
     :param n: n of nodes
@@ -108,10 +113,13 @@ def dag_enum(n: int) -> Generator:
     """
     N = n * (n - 1) // 2
 
+    if create_using is None:
+        create_using = nx.DiGraph()
+
     for S in ilexsubset(n=N, k=(n - 1, N)):
         A = iset_to_amdag(S, n)
 
-        G = nx.from_numpy_array(A, create_using=nx.DiGraph())
+        G = nx.from_numpy_array(A, create_using=create_using)
         if not nx.is_weakly_connected(G):
             continue
         yield G

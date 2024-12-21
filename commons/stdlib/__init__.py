@@ -9,4 +9,4 @@ from .bag import bag
 from .dict import dict
 from .dictx import dict_select, dict_exclude, dict_get
 from .is_instance import is_instance, IS_INSTANCE_OF, IsInstance
-from .languagex import method_of
+from .language import method_of

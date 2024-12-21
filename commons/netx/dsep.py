@@ -31,16 +31,19 @@ def d_separation(adj_matrix):
 # end
 
 
-def d_separation_pairs(G: Union[nx.DiGraph, np.ndarray]) -> np.ndarray:
+def d_separation_pairs(G: Union[nx.DiGraph, np.ndarray], create_using=None) -> np.ndarray:
     """
     Compute the 'd-separation' matrix based on networkx 'is_d_separated()'
     applied to each node pairs
     :param G: digraph or adjacency matrix
     :return: 'd-separation' matrix
     """
+    if create_using is None:
+        create_using = nx.nx.DiGraph()
+
     if isinstance(G, np.ndarray):
         A: np.ndarray = G
-        G = nx.from_numpy_array(A, create_using=nx.DiGraph())
+        G = nx.from_numpy_array(A, create_using=create_using)
     n = G.number_of_nodes()
     mat = np.zeros((n, n), dtype=np.int8)
     empty = set()
