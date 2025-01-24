@@ -1,3 +1,7 @@
+#
+# NO Torch
+#
+
 path
 h5py
 
@@ -16,8 +20,8 @@ catboost
 xgboost
 
 
-torch
-skorch
+# torch
+# skorch
 
 # available ONLY for Python 3.7, 3.8
 # mindspore
@@ -30,5 +34,5 @@ causica
 pygam
 causalpy
 
-pydot
+# pydot
 # pygraphviz

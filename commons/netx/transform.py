@@ -30,7 +30,7 @@ def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, d
 
     # create an empty graph
     if create_using is not None:
-        coarsed = create_using
+        coarsed = create_using()
     elif direct:
         coarsed = nx.DiGraph(**kwargs)
     else:
@@ -96,7 +96,7 @@ def closure_coarsening_graph(g: nx.DiGraph, create_using=None, direct=True, **kw
 
     # create an empty graph
     if create_using is not None:
-        coarsed = create_using
+        coarsed = create_using()
     elif direct:
         coarsed = nx.DiGraph(**kwargs)
     else:

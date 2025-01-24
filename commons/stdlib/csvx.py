@@ -303,7 +303,7 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
     nr = 0
     line = 0
     with openfile(fname, mode="r") as csv_file:
-        rdr = csv.reader(csv_file)
+        rdr = csv.reader(csv_file, **kwargs)
 
         for _ in range(skiprows):
             next(rdr)

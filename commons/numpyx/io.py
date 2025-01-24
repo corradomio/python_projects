@@ -10,7 +10,10 @@ import csvx
 # ---------------------------------------------------------------------------
 
 def load_data(fname: str, ycol=-1, dtype=None, skiprows=0, na: Optional[str] = None):
-    data, _ = csvx.load(fname, dtype=dtype, skiprows=skiprows, na=na)
+    if fname.endswith(".arff"):
+        data, _, dtype = csvx.load_arff(fname, na=na)
+    else:
+        data, _ = csvx.load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
 
     data = asarray(data)
     nr, nc = data.shape

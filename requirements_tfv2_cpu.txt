@@ -1,0 +1,43 @@
+path
+
+numpy
+scipy
+pandas
+
+scikit-learn
+sktime
+category_encoders
+xgboost
+
+statsmodels
+
+matplotlib
+seaborn
+
+ipython
+jupyter
+
+# 2022/11/16
+#tensorflow-gpu==2.8
+#keras==2.8
+
+# lastes: keras integrated
+tensorflow
+
+# NO
+#keras
+
+
+#tensorflow_probability==0.16.0
+#keras-mdn-layer
+#keras_multi_head
+#keras-self-attention
+#keras-tcn
+
+#numba
+
+pydot
+graphviz
+
+opencv-python
+

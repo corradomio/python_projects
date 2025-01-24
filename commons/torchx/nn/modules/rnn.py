@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 from torch import Tensor, matmul, sigmoid, tanh, relu
 
+from stdlib import mul_
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -11,11 +12,15 @@ from torch import Tensor, matmul, sigmoid, tanh, relu
 
 class RNNComposer:
 
-    def __init__(self, return_sequence, return_state):
+    def __init__(self, return_sequence, return_state, return_shape):
         self.return_sequence = return_sequence
         self.return_state = return_state
+        self.return_shape = return_shape
 
     def compose_result(self, seq, state):
+        if seq is not None and not isinstance(self.return_shape, int):
+            shape = seq.shape[:-1] + self.return_shape
+            seq = torch.reshape(seq, shape)
         if self.return_sequence is True and self.return_state:
             return seq, state
         elif self.return_sequence is True and self.return_state is False:
@@ -100,19 +105,20 @@ class LSTM(nn.LSTM):
     # dtype=None
 
     def __init__(self,
-                 input_size, hidden_size,
-                 num_layers=1,
-                 bias=True,
-                 dropout=0.,
-                 bidirectional=False,
-                 batch_first=True,
-                 return_sequence=True,
-                 return_state=False,
-                 nonlinearity="tanh",
+                 input_size: Union[int, tuple[int, ...]],
+                 hidden_size: Union[int, tuple[int, ...]],
+                 num_layers: int=1,
+                 bias: bool=True,
+                 dropout: float=0.,
+                 bidirectional: bool=False,
+                 batch_first: bool=True,
+                 return_sequence: bool=True,
+                 return_state: bool=False,
+                 nonlinearity: str="tanh",
                  **kwargs):
         super().__init__(
-            input_size=input_size,
-            hidden_size=hidden_size,
+            input_size=mul_(input_size),
+            hidden_size=mul_(hidden_size),
             num_layers=num_layers,
             bias=bias,
             dropout=dropout,
@@ -128,18 +134,25 @@ class LSTM(nn.LSTM):
         else:
             raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
 
+        self.input_shape = input_size
+        self.hidden_shape = hidden_size
+
         self.return_sequence = return_sequence
         self.return_state = return_state
         self.nonlinearity = nonlinearity
         self._use_tanh = (nonlinearity == "tanh")
-        self._composer = RNNComposer(return_sequence, return_state)
+
+        self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
                 input: Tensor,
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+        t = input
+        if len(input.shape) > 3:
+            t = torch.flatten(t, start_dim=2)
 
         # input:
-        #   input   (N, L, Hin)
+        #   input   (N, L, Hin, ...)
         #   hx      (D*num_layers, N, Hout)
         # output:
         #   seq     (N, L, D*Hout)
@@ -152,9 +165,9 @@ class LSTM(nn.LSTM):
         #   Hout:   output_size
 
         if self.return_state == 'all':
-            seq, state = self._loop_forward(input, hx)
+            seq, state = self._loop_forward(t, hx)
         else:
-            seq, state = self._forward(input, hx)
+            seq, state = self._forward(t, hx)
 
         return self._composer.compose_result(seq, state)
 
@@ -317,19 +330,20 @@ class GRU(nn.GRU):
         nonlinearity: supported 'tanh' (default), 'relu', None
     """
     def __init__(self,
-                 input_size, hidden_size,
-                 num_layers=1,
+                 input_size: Union[int, tuple[int, ...]],
+                 hidden_size: Union[int, tuple[int, ...]],
+                 num_layers: int=1,
                  bias=True,
-                 dropout=0.,
-                 bidirectional=False,
-                 batch_first=True,
-                 return_sequence=True,
-                 return_state=False,
-                 nonlinearity="tanh",
+                 dropout: float=0.,
+                 bidirectional: bool=False,
+                 batch_first: bool=True,
+                 return_sequence: bool=True,
+                 return_state: bool=False,
+                 nonlinearity: str="tanh",
                  **kwargs):
         super().__init__(
-            input_size=input_size,
-            hidden_size=hidden_size,
+            input_size=mul_(input_size),
+            hidden_size=mul_(hidden_size),
             num_layers=num_layers,
             bias=bias,
             dropout=dropout,
@@ -338,10 +352,6 @@ class GRU(nn.GRU):
             # nonlinearity=nonlinearity, NOT SUPPORTED
             **kwargs
         )
-        self.return_sequence = return_sequence
-        self.return_state = return_state
-        self.nonlinearity = nonlinearity
-        self._use_tanh = (nonlinearity == "tanh")
 
         if nonlinearity == "tanh":
             self.activation = tanh
@@ -350,14 +360,25 @@ class GRU(nn.GRU):
         else:
             raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
 
-        self._composer = RNNComposer(return_sequence, return_state)
+        self.input_shape = input_size
+        self.hidden_shape = hidden_size
+
+        self.return_sequence = return_sequence
+        self.return_state = return_state
+        self.nonlinearity = nonlinearity
+        self._use_tanh = (nonlinearity == "tanh")
+
+        self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
                 input: Tensor,
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+        t = input
+        if len(input.shape) > 3:
+            t = torch.flatten(t, start_dim=2)
 
         # input:
-        #   input   (N, L, Hin)
+        #   input   (N, L, Hin, ...)
         #   hx      (D*num_layers, N, Hout)
         # output:
         #   seq     (N, L, D*Hout)
@@ -370,9 +391,9 @@ class GRU(nn.GRU):
         #   Hout:   output_size
 
         if self.return_state == 'all':
-            seq, state = self._loop_forward(input, hx)
+            seq, state = self._loop_forward(t, hx)
         else:
-            seq, state = self._forward(input, hx)
+            seq, state = self._forward(t, hx)
 
         return self._composer.compose_result(seq, state)
 
@@ -503,19 +524,20 @@ class RNN(nn.RNN):
         nonlinearity: natively supported 'tanh' and 'relu'
     """
     def __init__(self,
-                 input_size, hidden_size,
-                 num_layers=1,
-                 bias=True,
-                 dropout=0.,
-                 bidirectional=False,
-                 batch_first=True,
-                 return_sequence=True,
-                 return_state=False,
-                 nonlinearity="tanh",
+                 input_size: Union[int, tuple[int, ...]],
+                 hidden_size: Union[int, tuple[int, ...]],
+                 num_layers: int=1,
+                 bias: bool=True,
+                 dropout: float=0.,
+                 bidirectional: bool=False,
+                 batch_first: bool=True,
+                 return_sequence: bool=True,
+                 return_state: bool=False,
+                 nonlinearity: str="tanh",
                  **kwargs):
         super().__init__(
-            input_size=input_size,
-            hidden_size=hidden_size,
+            input_size=mul_(input_size),
+            hidden_size=mul_(hidden_size),
             num_layers=num_layers,
             bias=bias,
             dropout=dropout,
@@ -524,16 +546,30 @@ class RNN(nn.RNN):
             nonlinearity=nonlinearity,
             **kwargs
         )
+
+        if nonlinearity == "tanh":
+            self.activation = tanh
+        elif nonlinearity == "relu":
+            self.activation = relu
+        else:
+            raise ValueError(f"Unsupported nonlinearity {nonlinearity}")
+
+        self.input_shape = input_size
+        self.hidden_shape = hidden_size
+
         self.return_sequence = return_sequence
         self.return_state = return_state
-        self._composer = RNNComposer(return_sequence, return_state)
+        self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
                 input: Tensor,
                 hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+        t = input
+        if len(input.shape) > 3:
+            t = torch.flatten(t, start_dim=2)
 
         # input:
-        #   input   (N, L, Hin)
+        #   input   (N, L, Hin, ...)
         #   hx      (D*num_layers, N, Hout)
         # output:
         #   seq     (N, L, D*Hout)
@@ -546,9 +582,9 @@ class RNN(nn.RNN):
         #   Hout:   output_size
 
         if self.return_state == 'all':
-            seq, state = self._loop_forward(input, hx)
+            seq, state = self._loop_forward(t, hx)
         else:
-            seq, state = self._forward(input, hx)
+            seq, state = self._forward(t, hx)
 
         return self._composer.compose_result(seq, state)
 

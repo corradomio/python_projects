@@ -3,7 +3,8 @@ from typing import Union, Iterator, Any, Optional
 
 __version__ = "1.1.0"
 
-import networkx as nx
+import numpy as np
+from networkx.classes import is_directed
 
 #
 # Networkx graph types
@@ -138,6 +139,9 @@ class Graph:
 
     def is_acyclic(self) -> bool:
         return self._acyclic
+
+    def is_dag(self) -> bool:
+        return self._direct and self._acyclic
 
     # -----------------------------------------------------------------------
     # property G.nodes is NOT compatible with 'networkx'
@@ -408,8 +412,27 @@ class Graph:
         return f"{self.name}=(|V|={nv}, |E|={ne})"
 
     # -----------------------------------------------------------------------
-
 # end
+
+
+# ---------------------------------------------------------------------------
+# Adjacency matrix
+# ---------------------------------------------------------------------------
+
+def adjacency_matrix(G: Graph) -> np.ndarray:
+    n = G.order()
+    is_directed = G.is_directed()
+    A = np.zeros((n, n), dtype=int)
+    for e in G.edges:
+        u, v = e
+        w = 1
+        if is_directed:
+            A[u, v] = w
+        else:
+            A[u, v] = w
+            A[v, u] = w
+    # end
+    return A
 
 
 # ---------------------------------------------------------------------------

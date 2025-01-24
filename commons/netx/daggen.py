@@ -1,12 +1,12 @@
-import random as rnd
 from typing import Generator
 
+import random as rnd
 import numpy as np
-
 import networkx as nx
-# import netx as nxx
+from stdlib import NoneType
 from stdlib.iset import ilexsubset, imembers
 from .util import is_symmetric
+from .graph import Graph
 
 # ---------------------------------------------------------------------------
 # is_dag
@@ -31,7 +31,7 @@ def random_dag(n: int, m: int, connected=True, create_using=None):
     assert m <= (n*(n-1))/2, "Too edges specified"
     # assert connected and m >= (n-1), "Not enough edges for a connected graph"
 
-    G = nx.DiGraph() if create_using is None else create_using
+    G = nx.DiGraph() if create_using is None else create_using()
     G.add_nodes_from(list(range(n)))
     return extends_dag(G, m, connected=connected)
 # end
@@ -114,7 +114,7 @@ def dag_enum(n: int, create_using=None) -> Generator:
     N = n * (n - 1) // 2
 
     if create_using is None:
-        create_using = nx.DiGraph()
+        create_using = nx.DiGraph
 
     for S in ilexsubset(n=N, k=(n - 1, N)):
         A = iset_to_amdag(S, n)
@@ -138,7 +138,7 @@ def from_numpy_array(A: np.ndarray, create_using=None):
     """
     symmetric = False if create_using else is_symmetric(A)
     if create_using:
-        G = create_using
+        G = create_using()
     elif symmetric:
         G = nx.Graph()
     else:

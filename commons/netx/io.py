@@ -40,7 +40,7 @@ def read_vecsv(path: str, comments="#", header=True, separator=",", create_using
     efile = vecsv_edges_file(path)
 
     if create_using is not None:
-        g = create_using
+        g = create_using()
     elif direct:
         g = nx.DiGraph()
     else:

@@ -31,6 +31,19 @@ def chop(x: Union[float, list[float]], l: float, u: float) -> Union[float, list[
 
 
 # ---------------------------------------------------------------------------
+# argsort
+# ---------------------------------------------------------------------------
+
+# def argsort(values: Iterable, descending: bool = False) -> List[int]:
+#     """Sort the values in ascending (ore descending) order and return the indices"""
+#     n = len(list(values))
+#     pairs = [(i, values[i]) for i in range(n)]
+#     pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
+#     return [p[0] for p in pairs]
+# # end
+
+
+# ---------------------------------------------------------------------------
 # Real comparisons with error
 # ---------------------------------------------------------------------------
 # The following comparison predicates can be used for float values where it

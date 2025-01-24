@@ -1,16 +1,27 @@
-# This is a sample Python script.
+import matplotlib.pyplot as plt
+import networkx as nx
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+import netx
+import stdlib.logging as logging
+from castlex.datasets import simulator as simx
 
 
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    print_hi('PyCharm')
+def main():
+    G = netx.random_dag(6, 7, create_using=nx.DiGraph)
+    netx.draw(G)
+    plt.show()
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+    # W = netx.adjacency_matrix(G)
+
+    iidsim = simx.IIDSimulation()
+    iidsim.fit(G)
+
+    data = iidsim.generate(n=10000)
+    pass
+
+
+
+if __name__ == "__main__":
+    logging.config.fileConfig('logging_config.ini')
+    logging.getLogger('root').info('Logging initialized')
+    main()

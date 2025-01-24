@@ -50,8 +50,9 @@ class NNELU(Module):
         1 + elu(x)
     """
 
-    def forward(self, x):
-        return torch.add(F.elu(x), ONE)
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        device = x.device
+        return torch.add(F.elu(x), ONE.to(device))
 
 
 # ---------------------------------------------------------------------------

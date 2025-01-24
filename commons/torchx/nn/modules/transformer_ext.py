@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 # This import refers the 'original' pytorch transformer
-from torch.nn.modules import transformer as ttx
+from torch.nn.modules import transformer as nnt
 
 # extended Conv1d layer
 from .module import Module
@@ -16,14 +16,14 @@ from . import cnn as cnnx
 # 'transformer_torch', used for debugging.
 # See the documentation at the begin of the file
 #
-# from . import transformer_torch as ttx
+# from . import transformer_torch as nnt
 
 
 # ---------------------------------------------------------------------------
 # (Extended) Transformer
 # ---------------------------------------------------------------------------
 
-class Transformer(ttx.Transformer):
+class Transformer(nnt.Transformer):
     """
     It extends the original Pytorch Transformer with flags to specify if to create
     or not the encoder/decoder layer norms. It is reasonable to have the layer norm
@@ -57,17 +57,17 @@ class Transformer(ttx.Transformer):
 
         factory_kwargs = {'device': device, 'dtype': dtype}
         if not layer_norm:
-            encoder_layer = ttx.TransformerEncoderLayer(
+            encoder_layer = nnt.TransformerEncoderLayer(
                 d_model, nhead, dim_feedforward, dropout,
                 activation, layer_norm_eps, batch_first, norm_first,
                 bias, **factory_kwargs)
-            custom_encoder = ttx.TransformerEncoder(encoder_layer, num_encoder_layers, None)
+            custom_encoder = nnt.TransformerEncoder(encoder_layer, num_encoder_layers, None)
         if not layer_norm:
-            decoder_layer = ttx.TransformerDecoderLayer(
+            decoder_layer = nnt.TransformerDecoderLayer(
                 d_model, nhead, dim_feedforward, dropout,
                 activation, layer_norm_eps, batch_first, norm_first,
                 bias, **factory_kwargs)
-            custom_decoder = ttx.TransformerDecoder(decoder_layer, num_decoder_layers, None)
+            custom_decoder = nnt.TransformerDecoder(decoder_layer, num_decoder_layers, None)
         super().__init__(
             d_model=d_model,
             nhead=nhead,
@@ -182,7 +182,7 @@ class LayerNoNorm(nn.Module):
 # end
 
 
-class CNNEncoderLayer(ttx.TransformerEncoderLayer):
+class CNNEncoderLayer(nnt.TransformerEncoderLayer):
     def __init__(self, d_model: int, nhead: int, dim_feedforward: int = 2048, dropout: float = 0.1,
                  activation: Union[str, Callable[[Tensor], Tensor]] = F.relu,
                  layer_norm_eps: float = 1e-5, batch_first: bool = False, norm_first: bool = False,

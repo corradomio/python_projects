@@ -67,7 +67,7 @@ jupyter
 # Pytorch
 # ---------------------------------------------------------------------------
 # better to use Python=3.11
---extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu124
 torch
 torchvision
 torchaudio

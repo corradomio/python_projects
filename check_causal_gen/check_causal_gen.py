@@ -1,8 +1,8 @@
 import networkx as nx
 import matplotlib.pyplot as plt
 import netx as nxx
-from causalx import IIDSimulation
-from causalx.algorithms import PC
+from castlex.datasets.simulator import IIDSimulation
+from castlex.algorithms import PC
 
 
 def gen():

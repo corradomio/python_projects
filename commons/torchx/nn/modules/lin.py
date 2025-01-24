@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, Optional
 
 import torch
 import torch.nn as nn
@@ -26,7 +26,9 @@ class Linear(nn.Linear):
     def __init__(self,
                  in_features: Union[int, tuple[int, ...]],
                  out_features: Union[int, tuple[int, ...]],
-                 bias: bool = True, device=None, dtype=None):
+                 bias: bool = True,
+                 device: Optional[str]=None,
+                 dtype=None):
 
         super().__init__(
             in_features=mul_(in_features),

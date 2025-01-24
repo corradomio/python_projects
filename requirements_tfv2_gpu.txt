@@ -22,8 +22,10 @@ jupyter
 #keras==2.8
 
 # lastes: keras integrated
-tensorflow
-keras
+tensorflow[and-cuda]
+
+# NO
+#keras
 
 
 #tensorflow_probability==0.16.0
@@ -35,7 +37,7 @@ keras
 #numba
 
 pydot
-#graphviz
+graphviz
 
 opencv-python
 

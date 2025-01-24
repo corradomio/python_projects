@@ -39,7 +39,7 @@ def d_separation_pairs(G: Union[nx.DiGraph, np.ndarray], create_using=None) -> n
     :return: 'd-separation' matrix
     """
     if create_using is None:
-        create_using = nx.nx.DiGraph()
+        create_using = nx.DiGraph
 
     if isinstance(G, np.ndarray):
         A: np.ndarray = G
