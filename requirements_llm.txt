@@ -67,6 +67,7 @@ jupyter
 # Pytorch
 # ---------------------------------------------------------------------------
 # better to use Python=3.11
+
 --extra-index-url https://download.pytorch.org/whl/cu124
 torch
 torchvision
@@ -117,12 +118,21 @@ peft
 evaluate
 # trl         # transformer reinforcement learning
 
+
+# ---------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------
+
 # https://github.com/lyogavin/airllm
 airllm
 
 
 # https://docs.vllm.ai/en/latest/
-vllm
+# vllm
+
+
+# langchain
+langchain[google-vertexai]
 
 
 # ---------------------------------------------------------------------------
