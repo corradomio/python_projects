@@ -107,7 +107,7 @@ def test_degrees_graph():
     assert G.order() == 4
     assert G.size() == 4
 
-    for n in G.nodes_:
+    for n in G.nodes():
         assert G.degree(n, 2)
         assert G.in_degree(n, 2)
         assert G.out_degree(n, 2)

@@ -1,3 +1,6 @@
+#
+# Read & write graphs in some non-standard format, but used very often
+#
 import networkx as nx
 
 

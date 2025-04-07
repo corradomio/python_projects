@@ -1,3 +1,6 @@
+#
+# It used .graph.Graph, a better(?) graph representation
+#
 from .graph import Graph, NODE_TYPE
 
 
@@ -18,9 +21,10 @@ def replace_nodes(G: Graph, n: NODE_TYPE, neighbors: list[NODE_TYPE], r: NODE_TY
     for u in neighbors:
         ulist = G.neighbors(u, inbound=False)
         for v in ulist:
-            eprops: dict = G.edges[(u, v)]
+            eprops: dict = G._edges[(u, v)]
             G.add_edge(r, v, **eprops)
 
     G.remove_edges_from([(n, v) for v in neighbors])
     G.remove_singletons()
     return G
+# end

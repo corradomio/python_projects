@@ -1,6 +1,6 @@
 from typing import Iterator
 import networkx as nx
-from .dagfun import is_dag
+from .dagfun import is_directed_acyclic_graph
 
 
 # ---------------------------------------------------------------------------
@@ -14,7 +14,7 @@ def is_partial_directed(G) -> bool:
     if not nx.is_directed(G):
         return False
 
-    edges = list(G.edges)
+    edges = list(G.edges())
     for e in edges:
         u, v = e
         if (v, u) in edges:
@@ -29,7 +29,7 @@ def undirect_edges(G) -> list[tuple[int, int]]:
     :param G: partial directed graph
     :return: list of undirected edges
     """
-    edges = list(G.edges)
+    edges = list(G.edges())
 
     uedges = []
     if not nx.is_directed(G):
@@ -65,6 +65,7 @@ def _bitsgen(nbits: int) -> Iterator[list[int]]:
             else:
                 bits[i] = 0
     yield ones
+# end
 
 
 def pdag_enum(G: nx.Graph, dag=False) -> Iterator[nx.Graph]:
@@ -85,7 +86,7 @@ def pdag_enum(G: nx.Graph, dag=False) -> Iterator[nx.Graph]:
                 D.remove_edge(*redges[i])
             else:
                 D.remove_edge(*uedges[i])
-        if dag and not is_dag(D):
+        if dag and not is_directed_acyclic_graph(D):
             continue
         yield D
 # end

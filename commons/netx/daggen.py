@@ -1,17 +1,24 @@
+import random as rnd
 from typing import Generator
 
-import random as rnd
-import numpy as np
 import networkx as nx
-from stdlib import NoneType
+import numpy as np
+
 from stdlib.iset import ilexsubset, imembers
-from .util import is_symmetric
-from .graph import Graph
+
 
 # ---------------------------------------------------------------------------
-# is_dag
+# is_symmetric
 # ---------------------------------------------------------------------------
 
+def is_symmetric(M: np.ndarray):
+    n = len(M)
+    for i in range(n-1):
+        for j in range(i+1, n):
+            if M[i, j] != M[j, i]:
+                return False
+    return True
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -49,7 +56,7 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
     """
     n = G.order()
 
-    completed = m <= len(G.edges)
+    completed = m <= len(G.edges())
     while not completed:
         u = rnd.randrange(n)
         v = rnd.randrange(n)
@@ -65,7 +72,7 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
 
         # check is the DAG must be connected OR it is reached the
         # required number of edges
-        completed = not (connected and not nx.is_weakly_connected(G) or len(G.edges) < m)
+        completed = not (connected and not nx.is_weakly_connected(G) or len(G.edges()) < m)
     # end
     return G
 # end

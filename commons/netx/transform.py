@@ -42,7 +42,7 @@ def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, d
     # force partitions to be a list
     partitions = list(partitions)
     in_part = in_partition(g.order())
-    for u, v in list(g.edges):
+    for u, v in list(g.edges()):
         cu = in_part[u]
         cv = in_part[v]
         if cu != cv:

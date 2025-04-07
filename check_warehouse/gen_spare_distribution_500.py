@@ -9,7 +9,7 @@ def gen_parts(N: int):
     # 7000001
     # 7050001
     #
-    P = 700001 + N*100
+    P = 700001 # + N*100
     return [str(P + i) for i in range(10)]
 
 
@@ -51,6 +51,10 @@ def main():
     fillprob = 0.75
 
     gen_req_avail_parts( 50, warehouses, max_quantity, max_country_stock, fillprob)
+    gen_req_avail_parts( 60, warehouses, max_quantity, max_country_stock, fillprob)
+    gen_req_avail_parts( 70, warehouses, max_quantity, max_country_stock, fillprob)
+    gen_req_avail_parts( 80, warehouses, max_quantity, max_country_stock, fillprob)
+    gen_req_avail_parts( 90, warehouses, max_quantity, max_country_stock, fillprob)
     gen_req_avail_parts(100, warehouses, max_quantity, max_country_stock, fillprob)
     gen_req_avail_parts(200, warehouses, max_quantity, max_country_stock, fillprob)
     gen_req_avail_parts(500, warehouses, max_quantity, max_country_stock, fillprob)

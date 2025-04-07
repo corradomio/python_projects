@@ -1,22 +1,22 @@
 import matplotlib.pyplot as plt
 
-import netx as nx
+import netx
 
 
 def main():
-    G = nx.random_dag(20, 19)
+    G = netx.random_dag(20, 19)
     G.dump()
     H = G.clone("H")
     H.dump()
 
     plt.gca()
-    nx.draw(G)
+    netx.draw(G)
     plt.title(G.name)
     plt.show()
     print(G)
 
     plt.gca()
-    nx.draw(H)
+    netx.draw(H)
     plt.title(H.name)
     plt.show()
     print(H)

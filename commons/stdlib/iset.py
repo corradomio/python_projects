@@ -4,9 +4,9 @@
 #
 # https://graphics.stanford.edu/~seander/bithacks.html
 #
-from typing import *
 from itertools import combinations
-
+from typing import *
+import random as rnd
 
 # ---------------------------------------------------------------------------
 # Support
@@ -31,25 +31,6 @@ _BIT_COUNTS = \
      4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7, 4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8]
 
 
-def _comb(n: int, k: int) -> int:
-    """Combinations/binomial coefficient"""
-    if k < 0 or n < k:
-        return 0
-    if k == 0 or n == k:
-        return 1
-    c = 1.
-    while k >= 1:
-        c *= n
-        c /= k
-        n -= 1
-        k -= 1
-    c = int(round(c, 0))
-    return c
-
-
-comb = _comb
-
-
 def _iset(l: Iterable[int]) -> int:
     """list -> iset"""
     return sum(1 << i for i in l)
@@ -67,6 +48,25 @@ def _isetm(m: int, l: Collection) -> int:
         if m & (1 << i):
             s += 1 << l[i]
     return s
+
+
+def _comb(n: int, k: int) -> int:
+    """Combinations/binomial coefficient"""
+    if k < 0 or n < k:
+        return 0
+    if k == 0 or n == k:
+        return 1
+    c = 1.
+    while k >= 1:
+        c *= n
+        c /= k
+        n -= 1
+        k -= 1
+    c = int(round(c, 0))
+    return c
+
+
+comb = _comb
 
 
 # ---------------------------------------------------------------------------
@@ -120,33 +120,6 @@ def ilowbit(S: int) -> int:
         b += 1
         S >>= 1
     return b
-
-
-# ---------------------------------------------------------------------------
-
-def parse_k(k: Union[None, int, list[int], tuple], n: int, b: int = 0) -> tuple[int, int]:
-    """
-    Parse k
-        None        -> [0, n]
-        int         -> [k, k]
-        [int]       -> [0, k]
-        [int,int]   - [kmin, kmax]
-
-    :param k: what to parse
-    :param n: set's cardinality
-    :param b: initial value of the range
-    """
-    if k is None:
-        kmin, kmax = 0, n
-    elif isinstance(k, int):
-        kmin, kmax = k, k
-    elif len(k) == 1:
-        kmin, kmax = 0, k[0]
-    else:
-        kmin, kmax = k
-    if kmax < 0:
-        kmax = n + kmax
-    return max(b, kmin), kmax
 
 
 # ---------------------------------------------------------------------------
@@ -315,7 +288,7 @@ def ilexsubset(B: Optional[int] = None,
     if B is None and E is None and n is None:
         raise ValueError("Missing B, E, n")
     if B is None and E is None:
-        B, E = 0, (1 << n)-1
+        B, E = 0, (1 << n) - 1
     if E is None:
         B, E = 0, B
     if n is None:
@@ -332,6 +305,33 @@ def ilexsubset(B: Optional[int] = None,
 
 
 isubsets_lex = ilexsubset
+
+
+# ---------------------------------------------------------------------------
+
+def parse_k(k: Union[None, int, list[int], tuple], n: int, b: int = 0) -> tuple[int, int]:
+    """
+    Parse k
+        None        -> [0, n]
+        int         -> [k, k]
+        [int]       -> [0, k]
+        [int,int]   - [kmin, kmax]
+
+    :param k: what to parse
+    :param n: set's cardinality
+    :param b: initial value of the range
+    """
+    if k is None:
+        kmin, kmax = 0, n
+    elif isinstance(k, int):
+        kmin, kmax = k, k
+    elif len(k) == 1:
+        kmin, kmax = 0, k[0]
+    else:
+        kmin, kmax = k
+    if kmax < 0:
+        kmax = n + kmax
+    return max(b, kmin), kmax
 
 
 # ---------------------------------------------------------------------------
@@ -361,6 +361,20 @@ def ibinset(bits: Iterable[int]) -> int:
     return S
 
 
+def ibinlist(S: int, n: int) -> list[int]:
+    """
+    Convert ibitset S i a list of bits:
+    :param S:
+    :param n:
+    :return:
+    """
+    M = (1 << n)
+    L = [0]*n
+    for i in ilist(S):
+        L[i] = 1
+    return L
+
+
 def isetn(n: int) -> int:
     """Full set"""
     return (1 << n) - 1
@@ -379,6 +393,26 @@ def iset(L: Iterable[int]) -> int:
     return _iset(L)
 
 
+def ilistset(L: Iterable[int]) -> int:
+    """
+    Convert the list of bits into a integer
+
+        [1,1,0,0] -> 3
+
+    :param L: list of flags
+    :return: set as integer
+    """
+    assert type(L) in [list, tuple]
+    S = 0
+    F = 1
+    for l in L:
+        if l:
+            S += F
+        F *= 2
+    return S
+# end
+
+
 def ilist(S: int) -> list[int]:
     """
     Convert a bitset in the tuple of elements
@@ -388,7 +422,8 @@ def ilist(S: int) -> list[int]:
     :param S: bitset
     :return: list of elements
     """
-    return list(imembers(S))
+    L = list(imembers(S))
+    return L
 
 
 def ilist_tuple(S: int) -> list[int]:
@@ -605,7 +640,6 @@ def ipowerset(N: int, empty: bool = True, full: bool = True) -> Iterator[int]:
     s = 0 if empty else 1
     e = N if full else (N - 1)
     return range(s, e + 1)
-# end
 
 
 def ipowersetn(n: int, empty: bool = True, full: bool = True) -> Iterator[int]:
@@ -852,7 +886,7 @@ def irandset(n: int, rnd=None) -> int:
     :param rnd: random number generator
     :return: random set as integer
     """
-    from random import random, Random
+    from random import Random
     if rnd is None:
         rnd = Random()
     if not isinstance(rnd, Random):
@@ -1027,6 +1061,51 @@ def imapset(M : Union[List[List[int]], Dict[int, List[int]]]) -> List[int]:
         S[i] = iset(M[i])
     # end
     return S
+
+
+# ---------------------------------------------------------------------------
+# Boolean functions
+# ---------------------------------------------------------------------------
+# There are 2^2^n binary functions with n parameters
+# More in general:  k^k^n k-functions with n parameters
+#
+
+# def iboolfun(k: int, n: int) -> list[int]:
+#     """
+#     Return the k-th boolean function in n variables
+#     If k is -1, it generates a random function
+#
+#     :param k: k-th boolean function, or -1
+#     :param n: n of parameters
+#     :return: list of {0,1}
+#     """
+#     M = (1 << n)
+#     if k == -1:
+#         T = [1 if rnd.random() >= 0.5 else 0 for _ in range(M)]
+#     else:
+#         T = ibinlist(k, n)
+#     return T
+
+
+def ibooltable(k: int, n: int) -> list[int]:
+    """
+    Return the k-th boolean table in n variables
+    If k is -1, it generates a random function
+
+    :param k: k-th boolean function, or -1
+    :param n: n of parameters
+    :return: list of {0,1}
+    """
+    if k == -1:
+        L = 2**(2**n)
+        k = rnd.randrange(0, L)
+    # end
+    N = (1 << n) - 1
+    T = [0]*(N + 1)
+    for S in isubsets(N):
+        T[S] = imember(k, S & N)
+    return T
+# end
 
 
 # ---------------------------------------------------------------------------
