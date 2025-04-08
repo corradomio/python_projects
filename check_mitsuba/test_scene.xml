@@ -1,0 +1,155 @@
+<scene version="3.0.0">
+    <default name="spp" value="1024"/>
+    <default name="res" value="1600"/>
+
+    <default name="adir" value="5"/>
+    <default name="side" value=".03"/>
+    <default name="move" value="2.5"/>
+
+    <!--<integrator type='direct'/>-->
+    <!--<integrator type='path'>
+
+    </integrator>-->
+
+    <integrator type="ptracer">
+        <integer name="max_depth" value="16"/>
+    </integrator>
+
+    <sensor type="perspective" id="sensor">
+        <transform name="to_world">
+            <lookat target="0, 0, 5"
+                    origin="0, 20, 5"
+                    up    ="0, 0, 1"/>
+        </transform>
+        <sampler type="independent">
+            <integer name="sample_count" value="$spp"/>
+        </sampler>
+        <film type="hdrfilm">
+            <rfilter type="box"/>
+            <integer name="width"  value="$res"/>
+            <integer name="height" value="$res"/>
+        </film>
+    </sensor>
+
+    <!--
+        Lights
+    -->
+
+    <!-- works -->
+    <!--<emitter type="constant">
+        <rgb name="radiance" value=".3"/>
+    </emitter>-->
+
+    <!-- works -->
+    <!--<emitter type="point">
+        <point name="position" value="5 0 10"/>
+        <rgb name="intensity" value="100"/>
+    </emitter>-->
+
+    <!-- works -->
+    <!--<emitter type="point">
+        <point name="position" value="-5 0 10"/>
+        <rgb name="intensity" value="100"/>
+    </emitter>-->
+
+    <!-- works (in modo strano) -->
+    <!--<emitter type="projector">
+        <rgb name="irradiance" value="10"/>
+        <float name="fov" value="45"/>
+        <transform name="to_world">
+            <lookat origin="0 5 5"
+                    target="0 0 0"
+                    up="0, 1, 0"/>
+        </transform>
+    </emitter>-->
+
+    <shape type="cube">
+        <emitter type="directionalarea">
+            <rgb name="radiance" value="100.0"/>
+        </emitter>
+
+        <transform name="to_world">
+            <scale value="12 12 .1"/>
+            <lookat origin="0,-25,5" target="0,0,5"/>
+        </transform>
+    </shape>
+
+    <!-- works -->
+    <!--<emitter type="directional">
+        <vector name="direction" value="0, 0, -1"/>
+        <rgb name="irradiance" value="1"/>
+    </emitter>-->
+
+    <!--
+        Scene
+    -->
+
+    <shape type="obj">
+        <string name="filename" value="objs/ellipsoid-20x15.obj"/>
+        <!--<bsdf type="diffuse">
+            <rgb name="reflectance" value="0.9 0.9 0.9"/>
+        </bsdf>-->
+        <!--<bsdf type="dielectric">
+            <string name="int_ior" value="water"/>
+            <string name="ext_ior" value="air"/>
+        </bsdf>-->
+        <bsdf type="dielectric">
+            <float name="int_ior" value=".9"/>
+            <float name="ext_ior" value="1.0"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="1 1 1"/>
+            <translate value="0 0 2"/>
+        </transform>
+    </shape>
+
+    <shape type="obj">
+        <string name="filename" value="objs/rough_surface-50x50.obj"/>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="1"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="3 3 .1"/>
+        </transform>
+    </shape>
+
+    <!--
+        Axes
+    -->
+    <shape type="cube">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="1 0 0"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="$adir $side $side"/>
+            <translate value="$move 0 0"/>
+        </transform>
+    </shape>
+    <shape type="cube">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 1 0"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="$side $adir $side"/>
+            <translate value="0 $move 0"/>
+        </transform>
+    </shape>
+    <shape type="cube">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 0 1"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="$side $side $adir"/>
+            <translate value="0 0 $move"/>
+        </transform>
+    </shape>
+
+    <!--
+        End
+    -->
+</scene>
