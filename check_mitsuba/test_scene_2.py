@@ -7,7 +7,7 @@ mi.set_variant('cuda_ad_mono')
 
 # scene = mi.load_file("examples/shape_instance_fractal.xml")
 # scene = mi.load_file("examples/dragon/scene_v3.xml")
-scene = mi.load_file("test_scene.xml")
+scene = mi.load_file("test_scene_2.xml")
 
 image = mi.render(scene)
 image: np.ndarray = np.array(image)

@@ -6,12 +6,12 @@
     <default name="alen" value="5"/>
     <default name="amove" value="2.5"/>
 
-    <default name="tableup" value="4.5"/>
+    <default name="tableup" value="-5"/>
 
     <!-- integrator -->
 
     <integrator type="volpath">
-        <integer name="max_depth" value="6"/>
+        <integer name="max_depth" value="12"/>
     </integrator>
 
     <!-- camera -->
@@ -35,12 +35,12 @@
     <sensor type="thinlens">
         <transform name="to_world">
             <lookat target="0, 0, 5"
-                    origin="0, 40, 5"
+                    origin="5, 40, 5"
                     up    ="0, 0, 1"/>
         </transform>
         <float name="aperture_radius" value=".75"/>
         <float name="focus_distance" value="40"/>
-        <float name="fov" value="8"/>
+        <float name="fov" value="45"/>
 
         <sampler type="independent">
             <integer name="sample_count" value="$spp"/>
@@ -56,9 +56,9 @@
 
     <!-- light -->
 
-    <!--<emitter type="constant">
+    <emitter type="constant">
         <rgb name="radiance" value=".1"/>
-    </emitter>-->
+    </emitter>
 
     <shape type="cube">
         <emitter type="area">
@@ -69,7 +69,6 @@
             <translate value="0 -150 5"/>
         </transform>
     </shape>
-
 
     <!--<emitter type="projector">
         <rgb name="irradiance" value="1000"/>
@@ -83,31 +82,26 @@
 
     <!-- scene -->
 
-    <shape type="obj">
-        <string name="filename" value="objs/ellipsoid-20x15.obj"/>
-        <bsdf type="dielectric">
-            <string name="int_ior" value="water"/>
-            <string name="ext_ior" value="vacuum"/>
-        </bsdf>
-
-        <transform name="to_world">
-            <scale value="1 1 1"/>
-            <translate value="0 0 5"/>
-        </transform>
-    </shape>
-
     <shape type="cube">
         <bsdf type="twosided">
-            <bsdf type="diffuse">
-                <rgb name="reflectance" value="1"/>
+            <bsdf type="roughconductor">
             </bsdf>
         </bsdf>
         <transform name="to_world">
             <scale value="20 20 .1"/>
-            <translate value="0 0 8"/>
+            <translate value="0 0 15"/>
         </transform>
     </shape>
-
+    <!--<shape type="cube">
+        <bsdf type="twosided">
+            <bsdf type="roughconductor">
+            </bsdf>
+        </bsdf>
+        <transform name="to_world">
+            <scale value="20 20 .1"/>
+            <translate value="0 0 -5"/>
+        </transform>
+    </shape>-->
 
     <shape type="obj" id="tavolo_superficie">
         <string name="filename" value="objs/rough_surface-90x90.obj"/>
@@ -116,24 +110,13 @@
         </bsdf>
         <transform name="to_world">
             <scale value="20 20 .5"/>
-            <translate value="0 0 $tableup"/>
+            <translate value="0 0 -1"/>
         </transform>
     </shape>
-
-    <shape type="cube" id="tavolo_base">
-        <bsdf type="diffuse">
-            <rgb name="reflectance" value=".9"/>
-        </bsdf>
-        <transform name="to_world">
-            <scale value="20 20 10"/>
-            <translate value="0 0 -10"/>
-            <translate value="0 0 $tableup"/>
-        </transform>
-    </shape>
-
 
     <!-- axes -->
-    <!--<shape type="cube">
+
+    <shape type="cube" id="x-axes">
         <bsdf type="diffuse">
             <rgb name="reflectance" value="1 0 0"/>
         </bsdf>
@@ -142,7 +125,7 @@
             <translate value="$amove 0 0"/>
         </transform>
     </shape>
-    <shape type="cube">
+    <shape type="cube" id="y-axes">
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0 1 0"/>
         </bsdf>
@@ -151,7 +134,7 @@
             <translate value="0 $amove 0"/>
         </transform>
     </shape>
-    <shape type="cube">
+    <shape type="cube" id="z-axes">
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0 0 1"/>
         </bsdf>
@@ -159,7 +142,7 @@
             <scale value="$aside $aside $alen"/>
             <translate value="0 0 $amove"/>
         </transform>
-    </shape>-->
+    </shape>
 
     <!-- end -->
 </scene>
