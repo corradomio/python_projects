@@ -95,12 +95,6 @@ def _get_type(xml: ET.Element) -> str:
     stype = xml.attrib["type"]
     return _resolve_default(stype)
 
-
-def _get_value(xml: ET.Element) -> str:
-    assert "value" in xml.attrib
-    svalue = xml.attrib["value"]
-    return _resolve_default(svalue)
-
 # ---------------------------------------------------------------------------
 
 def _parse_array(xml: ET.Element) -> Union[float, list[float]]:
@@ -113,7 +107,7 @@ def _parse_array(xml: ET.Element) -> Union[float, list[float]]:
     if "x" in xml.attrib or "y" in xml.attrib or "z" in xml.attrib:
         return _parse_array_xyz(xml)
     else:
-        return _parse_array_value(_get_value(xml))
+        return _parse_array_value(xml.attrib["value"])
 
 
 def _parse_array_xyz(xml: ET.Element) -> list[float]:
@@ -376,7 +370,7 @@ def _parse_path(data: dict, xml: ET.Element):
 def _parse_boolean(data: dict, xml: ET.Element):
     assert xml.tag == "boolean"
     name = xml.attrib["name"]
-    value = _get_value(xml)
+    value = xml.attrib["value"]
     data[name] = _bool(value)
     pass
 
@@ -384,7 +378,7 @@ def _parse_boolean(data: dict, xml: ET.Element):
 def _parse_integer(data: dict, xml: ET.Element):
     assert xml.tag == "integer"
     name = xml.attrib["name"]
-    value = _get_value(xml)
+    value = xml.attrib["value"]
     data[name] = _int(value)
     pass
 
@@ -392,7 +386,7 @@ def _parse_integer(data: dict, xml: ET.Element):
 def _parse_float(data: dict, xml: ET.Element):
     assert xml.tag == "float"
     name = xml.attrib["name"]
-    value = _get_value(xml)
+    value = xml.attrib["value"]
     data[name] = _float(value)
     pass
 
@@ -400,7 +394,7 @@ def _parse_float(data: dict, xml: ET.Element):
 def _parse_string(data: dict, xml: ET.Element):
     assert xml.tag == "string"
     name = xml.attrib["name"]
-    value = _get_value(xml)
+    value = xml.attrib["value"]
     data[name] = _str(value)
     pass
 
@@ -525,7 +519,7 @@ def _parse_translate(t, xml: ET.Element):
 def _parse_matrix(t, xml: ET.Element):
     assert xml.tag == "matrix"
     # <matrix value="-1 0 0 0 0 1 0 1 0 0 -1 6.8 0 0 0 1" />
-    m = _parse_matrix_value(_get_value(xml))
+    m = _parse_matrix_value(xml.attrib["value"])
 
     tm = mi.ScalarTransform4f(m)
     return tm @ t
