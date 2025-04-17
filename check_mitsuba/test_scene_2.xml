@@ -1,5 +1,5 @@
 <scene version="3.0.0">
-    <default name="spp" value="128"/>
+    <default name="spp" value="16"/>
     <default name="res" value="1024"/>
 
     <default name="aside" value=".03"/>
@@ -16,29 +16,13 @@
 
     <!-- camera -->
 
-    <!--<sensor type="perspective" id="sensor">
-        <transform name="to_world">
-            <lookat target="0, 0, 5"
-                    origin="0, 35, 5"
-                    up    ="0, 0, 1"/>
-        </transform>
-        <sampler type="independent">
-            <integer name="sample_count" value="$spp"/>
-        </sampler>
-        <film type="hdrfilm">
-            <rfilter type="box"/>
-            <integer name="width"  value="$res"/>
-            <integer name="height" value="$res"/>
-        </film>
-    </sensor>-->
-
     <sensor type="thinlens">
         <transform name="to_world">
-            <lookat target="0, 0, 5"
-                    origin="5, 40, 5"
+            <lookat target="0, 0, 0"
+                    origin="0, 40, 5"
                     up    ="0, 0, 1"/>
         </transform>
-        <float name="aperture_radius" value=".75"/>
+        <float name="aperture_radius" value="4"/>
         <float name="focus_distance" value="40"/>
         <float name="fov" value="45"/>
 
@@ -47,7 +31,6 @@
         </sampler>
 
         <film type="hdrfilm">
-            <rfilter type="box"/>
             <integer name="width"  value="$res"/>
             <integer name="height" value="$res"/>
             <string name="pixel_format" value="luminance"/>
@@ -56,60 +39,54 @@
 
     <!-- light -->
 
-    <emitter type="constant">
+    <!--<emitter type="constant">
         <rgb name="radiance" value=".1"/>
-    </emitter>
+    </emitter>-->
 
     <shape type="cube">
         <emitter type="area">
             <rgb name="radiance" value="1.0"/>
         </emitter>
         <transform name="to_world">
-            <scale value="20 .1 20"/>
+            <scale value="40 .1 40"/>
             <translate value="0 -150 5"/>
         </transform>
     </shape>
 
-    <!--<emitter type="projector">
-        <rgb name="irradiance" value="1000"/>
-        <float name="fov" value="40"/>
-        <transform name="to_world">
-            <lookat origin="0 -20 5"
-                    target="0 0 5"
-                    up="0, 0, 1"/>
-        </transform>
-    </emitter>-->
-
     <!-- scene -->
 
-    <shape type="cube">
-        <bsdf type="twosided">
-            <bsdf type="roughconductor">
-            </bsdf>
+    <shape type="obj">
+        <string name="filename" value="objs/ellipsoid-20x15.obj"/>
+        <bsdf type="dielectric">
+            <string name="int_ior" value="water"/>
+            <string name="ext_ior" value="vacuum"/>
         </bsdf>
+
         <transform name="to_world">
-            <scale value="20 20 .1"/>
-            <translate value="0 0 15"/>
+            <scale value="8 8 4"/>
+            <translate value="0 0 -3"/>
         </transform>
     </shape>
-    <!--<shape type="cube">
-        <bsdf type="twosided">
-            <bsdf type="roughconductor">
-            </bsdf>
-        </bsdf>
-        <transform name="to_world">
-            <scale value="20 20 .1"/>
-            <translate value="0 0 -5"/>
-        </transform>
-    </shape>-->
+
 
     <shape type="obj" id="tavolo_superficie">
         <string name="filename" value="objs/rough_surface-90x90.obj"/>
-        <bsdf type="diffuse">
-            <rgb name="reflectance" value="1"/>
+        <bsdf type="roughconductor">
+            <float name="specular_reflectance" value=".1"/>
+            <string name="distribution" value="ggx"/>
         </bsdf>
         <transform name="to_world">
-            <scale value="20 20 .5"/>
+            <scale value="20 20 .2"/>
+            <translate value="0 0 -1"/>
+        </transform>
+    </shape>
+    <shape type="cube" id="tavolo_base">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value=".9"/>
+        </bsdf>
+        <transform name="to_world">
+            <scale value="20 20 10"/>
+            <translate value="0 0 -10"/>
             <translate value="0 0 -1"/>
         </transform>
     </shape>

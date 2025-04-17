@@ -12,6 +12,7 @@ scene = mi.load_file("test_scene_2.xml")
 image = mi.render(scene)
 image: np.ndarray = np.array(image)
 image = (image ** (1./2.2)).clip(0,1)
+print(image.shape)
 
 plt.gca().set_aspect('equal')
 plt.axis("off")

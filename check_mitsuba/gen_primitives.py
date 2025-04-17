@@ -172,12 +172,13 @@ def main():
     # ellipsoid(5, 3)
     # ellipsoid(20, 15)
     # ellipsoid(40, 30)
+    ellipsoid(80, 60)
 
     # rough_surface(2, 0)
     # rough_surface(10, 1)
     # rough_surface(20, 1)
     # rough_surface(50, 1)
-    rough_surface(90, 1)
+    # rough_surface(90, 1)
 
     pass
 
