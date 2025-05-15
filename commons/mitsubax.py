@@ -4,6 +4,7 @@ from typing import Union
 
 import mitsuba as mi
 
+
 # ---------------------------------------------------------------------------
 # Globals
 # ---------------------------------------------------------------------------
@@ -46,6 +47,12 @@ def _resolve_default(value: str) -> str:
     if not value.startswith("$"):
         return value
     name = value[1:]
+    # handle "$var1 $var2 ..."
+    if "$" in name:
+        return value
+    # if name not in REF_ELEMENTS:
+    #     return value
+
     assert name in REF_ELEMENTS, f"default value {value} not defined"
     return REF_ELEMENTS[name]
 # end

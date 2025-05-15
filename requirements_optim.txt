@@ -7,10 +7,10 @@
 
 
 # https://pypi.org/project/Deprecated/
-deprecated
+#deprecated
 
 # https://python-future.org/
-future
+#future
 
 # https://path.readthedocs.io/en/latest/
 path
@@ -30,7 +30,7 @@ tabulate
 # IPython
 # ---------------------------------------------------------------------------
 
-ipython
+#ipython
 
 
 # ---------------------------------------------------------------------------
@@ -87,12 +87,12 @@ pymoo
 
 
 # https://platypus.readthedocs.io/en/latest/
-platypus
+#platypus
 
 
 # https://pymoo.org/
 # https://github.com/anyoptimization/pymoo
-parmoo
+#parmoo
 
 
 # https://github.com/DEAP/deap
@@ -114,12 +114,12 @@ parmoo
 
 # https://github.com/coin-or/pulp
 # 2022
-#pulp
+pulp
 
 # https://developers.google.com/optimization/introduction/python
 # https://developers.google.com/optimization/
 # 2023
-#ortools
+ortools
 
 # https://en.wikibooks.org/wiki/GLPK/Python
 # http://ftp.gnu.org/gnu/glpk/
@@ -132,7 +132,7 @@ parmoo
 
 # https://www.mosek.com/downloads/
 # 2023
-#mosek
+mosek
 
 # https://nlopt.readthedocs.io/en/latest/
 # 2022
@@ -140,15 +140,15 @@ parmoo
 
 # https://pypi.org/project/cplex/
 # 2023
-#cplex
+cplex
 
 # https://pypi.org/project/docplex/
 # 2023
-#docplex
+docplex
 
 # https://www.cvxpy.org/
 # 2023
-#cvxpy
+cvxpy
 
 # https://pypi.org/project/cvxopt/
 # 2023
@@ -156,7 +156,7 @@ cvxopt
 
 # https://www.gurobi.com/
 # https://pypi.org/project/gurobipy/
-#gurobipy
+gurobipy
 
 
 

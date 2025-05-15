@@ -1,5 +1,5 @@
 
-def dict_get(d:dict, keys:list[str], defval):
+def dict_get(d:dict, keys:list[str], defval=None):
     """
     Scan the dictionary and retrieve the value specified by the
     list of keys, or the default value

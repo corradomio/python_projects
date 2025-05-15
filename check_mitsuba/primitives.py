@@ -1,24 +1,38 @@
 from math import pi, sin, cos
 from random import random
 
+
 twopi = 2*pi
 halfpi = 0.5*pi
 eps = 1.e-10
 
-def chop(x):
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def _chop(x):
     return x if x < -eps or x > eps else 0.
 
 
-def deg(a):
+def _deg(a):
     return a*180/pi
 
 
-def fwriteln(f, line):
+def _reverse(l : list | tuple) -> list:
+    return list(reversed(l))
+
+
+# ---------------------------------------------------------------------------
+# save_obj
+# ---------------------------------------------------------------------------
+
+def _fwriteln(f, line):
     f.write(line)
     f.write('\n')
 
 
-def to_face(ilist):
+def _to_face(ilist):
     face = ""
     for i in ilist:
         if len(face) > 0:
@@ -28,23 +42,30 @@ def to_face(ilist):
 # end
 
 
-def save_obj(fname, header, vertices, faces):
+def _save_obj(fname, header, vertices, faces):
     with open(fname, 'w') as ff:
-        fwriteln(ff, f"# {header}")
+        _fwriteln(ff, f"# {header}")
         for v in vertices:
-            fwriteln(ff, f"v {v[0]} {v[1]} {v[2]}")
+            _fwriteln(ff, f"v {v[0]} {v[1]} {v[2]}")
 
         for s in faces:
-            fwriteln(ff, f"f {to_face(s)}")
+            _fwriteln(ff, f"f {_to_face(s)}")
+# end
 
-    pass
 
 
-def reverse(l : list| tuple) -> list:
-    return list(reversed(l))
-
+# ---------------------------------------------------------------------------
+# Primitives
+# ---------------------------------------------------------------------------
 
 def ellipsoid(Nu: int, Nv: int):
+    """
+    Ellipsoid created from top to bottom
+
+    :param Nu: on XY plane
+    :param Nv: on Z axis
+    :return:
+    """
     du = twopi/Nu
     dv = pi/(Nv+1)
 
@@ -55,9 +76,9 @@ def ellipsoid(Nu: int, Nv: int):
         for u in range(Nu):
             theta = u*du
 
-            x = chop(sin(phi)*cos(theta))
-            y = chop(sin(phi)*sin(theta))
-            z = chop(cos(phi))
+            x = _chop(sin(phi) * cos(theta))
+            y = _chop(sin(phi) * sin(theta))
+            z = _chop(cos(phi))
 
             points.append([x, y, z])
     # end
@@ -81,7 +102,7 @@ def ellipsoid(Nu: int, Nv: int):
     faces.append([v for v in range(Nu)])
     faces.append(reversed([Nl + v for v in range(Nu)]))
 
-    save_obj(f"objs/ellipsoid-{Nu}x{Nv}.obj", f"ellipsoid {Nu}x{Nv}", points, faces)
+    _save_obj(f"objs/ellipsoid-{Nu}x{Nv}.obj", f"ellipsoid {Nu}x{Nv}", points, faces)
 # end
 
 
@@ -152,8 +173,8 @@ def rough_surface(Np: int, rough: float):
     # end
 
     base_face = [N2+0, N2+1, N2+3, N2+2]
-    left_face = reverse(left_indices) + [N2+0, N2+2]
-    bottom_face = reverse(bottom_indices) + [N2+2, N2+3]
+    left_face = _reverse(left_indices) + [N2 + 0, N2 + 2]
+    bottom_face = _reverse(bottom_indices) + [N2 + 2, N2 + 3]
     right_face = right_indices + [N2+3, N2+1]
     top_face = top_indices + [N2+1, N2+0]
 
@@ -163,7 +184,7 @@ def rough_surface(Np: int, rough: float):
     faces.append(right_face)
     faces.append(top_face)
 
-    save_obj(f"objs/rough_surface-{Np}x{Np}.obj", f"rough surface {Np}x{Np}, {rough}", points, faces)
+    _save_obj(f"objs/rough_surface-{Np}x{Np}.obj", f"rough surface {Np}x{Np}, {rough}", points, faces)
 # end
 
 

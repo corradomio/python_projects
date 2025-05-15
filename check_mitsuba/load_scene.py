@@ -4,12 +4,12 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import mitsuba as mi
 import numpy as np
-from pprint import pprint
+
 import mitsubax as mix
 
 print(mi.variants())
-mi.set_variant('cuda_ad_mono')
-# mi.set_variant("scalar_rgb")
+# mi.set_variant('cuda_ad_mono')
+mi.set_variant("scalar_rgb")
 
 
 def render_scene(scene, fname=None):
