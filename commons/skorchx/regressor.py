@@ -5,14 +5,17 @@
 #   Then, these parameters are propagated to 'model.forward(X, ...)'
 #   of the NN model.
 #
-import numpy as np
 import torch
-import skorch
-from skorch.utils import to_numpy
-from skorch.utils import to_device
-from skorch.dataset import unpack_data
-from .net import scheduler_params, add_scheduler
 
+import skorch
+from skorch.dataset import unpack_data
+from skorch.utils import to_device
+from .net import scheduler_params, add_scheduler, concatenate
+
+
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
 
 class NeuralNetRegressor(skorch.NeuralNetRegressor):
     """
@@ -157,8 +160,8 @@ class NeuralNetRegressor(skorch.NeuralNetRegressor):
             # yp = yp[0] if isinstance(yp, tuple) else yp
             if isinstance(yp, torch.Tensor):
                 yp = nonlin(yp)
-            y_probas.append(to_numpy(yp))
-        y_proba = np.concatenate(y_probas, 0)
+            y_probas.append(yp)
+        y_proba = concatenate(y_probas, 0)
         return y_proba
 
     def forward_iter(self, X, training=False, device='cpu', **params):

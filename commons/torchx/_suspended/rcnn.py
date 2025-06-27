@@ -176,6 +176,7 @@ def transform_boxes_to_original_size(boxes, new_size, original_size):
     return torch.stack((xmin, ymin, xmax, ymax), dim=1)
 
 
+
 #   ( 0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
 #   ( 1): ReLU(inplace=True)
 #   ( 2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
@@ -831,7 +832,6 @@ class ROIHead(nn.Module):
 
 
 class FasterRCNN(nn.Module):
-
     def __init__(
         self,
         # model_config,
@@ -1013,6 +1013,7 @@ class FasterRCNN(nn.Module):
             # Transform boxes to original image dimensions called only during inference
             frcnn_output['boxes'] = transform_boxes_to_original_size(frcnn_output['boxes'], image.shape[-2:], old_shape)
         return rpn_output, frcnn_output
+# end
 
 
 class FasterRCNNLoss(nn.Module):
@@ -1030,8 +1031,128 @@ class FasterRCNNLoss(nn.Module):
         loss = rpn_loss + frcnn_loss
 
         return loss / acc_steps
+# end
 
-# ---------------------------------------------------------------------------
-# End
-# ---------------------------------------------------------------------------
 
+
+# class VGGFeaturesOld(nn.Module):
+#     def __init__(self, **model_config):
+#         super(VGGFeatures, self).__init__()
+#
+#         input_shape = model_config['input_shape']
+#         use_batch_norm = model_config['use_batch_norm']
+#
+#         self.input_shape = input_shape
+#         self.permute = (input_shape[-1] == 3)
+#
+#         # 1/1
+#         self.layer1=nn.Sequential(
+#             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(64) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 3/2
+#         self.layer2=nn.Sequential(
+#             nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(64) if use_batch_norm else Identity(),
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2))
+#         # 7/3
+#         self.layer3=nn.Sequential(
+#             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(128) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 10/4
+#         self.layer4=nn.Sequential(
+#             nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(128) if use_batch_norm else Identity(),
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2))
+#         # 14/5
+#         self.layer5=nn.Sequential(
+#             nn.Conv2d(128, 256, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(256) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 17/6
+#         self.layer6=nn.Sequential(
+#             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(256) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 20/7
+#         self.layer7=nn.Sequential(
+#             nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(256) if use_batch_norm else Identity(),
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2))
+#         # 24/8
+#         self.layer8=nn.Sequential(
+#             nn.Conv2d(256, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 27/9
+#         self.layer9=nn.Sequential(
+#             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 30/10
+#         self.layer10=nn.Sequential(
+#             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2))
+#         # 34/11
+#         self.layer11=nn.Sequential(
+#             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 37/12
+#         self.layer12=nn.Sequential(
+#             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU())
+#         # 40/13
+#         self.layer13=nn.Sequential(
+#             nn.Conv2d(512, 512, kernel_size=3, stride=1, padding=1),
+#             nn.BatchNorm2d(512) if use_batch_norm else Identity(),
+#             nn.ReLU(),
+#             nn.MaxPool2d(kernel_size=2, stride=2))
+#
+#         # 44/14
+#         # self.fc=nn.Sequential(
+#         #     nn.Dropout(0.5),
+#         #     nn.Linear(7*7*512, 4096),
+#         #     nn.ReLU())
+#         # 47/15
+#         # self.fc1=nn.Sequential(
+#         #     nn.Dropout(0.5),
+#         #     nn.Linear(4096, 4096),
+#         #     nn.ReLU())
+#         # 50/16
+#         # self.fc2= nn.Sequential(
+#         #     nn.Linear(4096, num_classes))
+#         # 51/end
+#
+#     def forward(self, x):
+#         if self.permute:
+#             x = x.permute(0, 3, 1, 2)
+#
+#         out=self.layer1(x)
+#         out=self.layer2(out)
+#         out=self.layer3(out)
+#         out=self.layer4(out)
+#         out=self.layer5(out)
+#         out=self.layer6(out)
+#         out=self.layer7(out)
+#         out=self.layer8(out)
+#         out=self.layer9(out)
+#         out=self.layer10(out)
+#         out=self.layer11(out)
+#         out=self.layer12(out)
+#         out=self.layer13(out)
+#
+#         # flatten
+#         # out=out.reshape(out.size(0), -1)
+#
+#         # out=self.fc(out)
+#         # out=self.fc1(out)
+#         # out=self.fc2(out)
+#         return out

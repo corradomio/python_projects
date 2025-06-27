@@ -10,6 +10,7 @@ from tqdm import tqdm
 from dataset.voc import VOCDataset
 from torch.utils.data.dataloader import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
+from stdlib.tprint import tprint
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 

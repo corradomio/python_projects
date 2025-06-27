@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import torchvision
 import math
 
@@ -434,7 +435,8 @@ class RegionProposalNetwork(nn.Module):
         :return:
         """
         # Call RPN layers
-        rpn_feat = nn.ReLU()(self.rpn_conv(feat))
+        # rpn_feat = nn.ReLU()(self.rpn_conv(feat))
+        rpn_feat = F.relu(self.rpn_conv(feat))
         cls_scores = self.cls_layer(rpn_feat)
         box_transform_pred = self.bbox_reg_layer(rpn_feat)
 
@@ -628,10 +630,12 @@ class ROIHead(nn.Module):
         size = feat.shape[-2:]
         possible_scales = []
         for s1, s2 in zip(size, image_shape):
-            approx_scale = float(s1) / float(s2)
-            scale = 2 ** float(torch.tensor(approx_scale).log2().round())
+            # approx_scale = float(s1) / float(s2)
+            # scale = 2 ** float(torch.tensor(approx_scale).log2().round())
+            approx_scale = s1 / s2
+            scale = math.pow(2., math.log2(approx_scale))
             possible_scales.append(scale)
-        assert possible_scales[0] == possible_scales[1]
+        # assert possible_scales[0] == possible_scales[1]
         
         # ROI pooling and call all layers for prediction
         proposal_roi_pool_feats = torchvision.ops.roi_pool(feat, [proposals],
@@ -744,39 +748,59 @@ class FasterRCNN(nn.Module):
     def __init__(self, model_config, num_classes):
         super(FasterRCNN, self).__init__()
         self.model_config = model_config
+
         vgg16 = torchvision.models.vgg16(pretrained=True)
         self.backbone = vgg16.features[:-1]
+
         self.rpn = RegionProposalNetwork(model_config['backbone_out_channels'],
                                          scales=model_config['scales'],
                                          aspect_ratios=model_config['aspect_ratios'],
                                          model_config=model_config)
-        self.roi_head = ROIHead(model_config, num_classes, in_channels=model_config['backbone_out_channels'])
+
+        self.roi_head = ROIHead(model_config,
+                                num_classes,
+                                in_channels=model_config['backbone_out_channels'])
+
         for layer in self.backbone[:10]:
             for p in layer.parameters():
                 p.requires_grad = False
+
         self.image_mean = [0.485, 0.456, 0.406]
         self.image_std = [0.229, 0.224, 0.225]
+
         self.min_size = model_config['min_im_size']
         self.max_size = model_config['max_im_size']
+
+        self._mean = None
+        self._stdv = None
     
     def normalize_resize_image_and_boxes(self, image, bboxes):
         dtype, device = image.dtype, image.device
         
         # Normalize
-        mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)
-        std = torch.as_tensor(self.image_std, dtype=dtype, device=device)
-        image = (image - mean[:, None, None]) / std[:, None, None]
+        # mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)
+        # std = torch.as_tensor(self.image_std, dtype=dtype, device=device)
+        # image = (image - mean[:, None, None]) / std[:, None, None]
+
+        if self._mean is None:
+            self._mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)[:, None, None]
+            self._stdv = torch.as_tensor(self.image_std,  dtype=dtype, device=device)[:, None, None]
+        image = (image - self._mean) / self._stdv
         #############
         
         # Resize to 1000x600 such that lowest size dimension is scaled upto 600
         # but larger dimension is not more than 1000
         # So compute scale factor for both and scale is minimum of these two
+
+        # h, w = image.shape[-2:]
+        # im_shape = torch.tensor(image.shape[-2:])
+        # min_size = torch.min(im_shape).to(dtype=torch.float32)
+        # max_size = torch.max(im_shape).to(dtype=torch.float32)
+        # scale = torch.min(float(self.min_size) / min_size, float(self.max_size) / max_size)
+        # scale_factor = scale.item()
+
         h, w = image.shape[-2:]
-        im_shape = torch.tensor(image.shape[-2:])
-        min_size = torch.min(im_shape).to(dtype=torch.float32)
-        max_size = torch.max(im_shape).to(dtype=torch.float32)
-        scale = torch.min(float(self.min_size) / min_size, float(self.max_size) / max_size)
-        scale_factor = scale.item()
+        scale_factor = min(self.min_size / min(h, w), self.max_size / max(h, w))
         
         # Resize image based on scale computed
         image = torch.nn.functional.interpolate(
@@ -812,10 +836,8 @@ class FasterRCNN(nn.Module):
             target['bboxes'] = bboxes
         else:
             image, _ = self.normalize_resize_image_and_boxes(image, None)
-        
         # Call backbone
         feat = self.backbone(image)
-        
         # Call RPN and get proposals
         rpn_output = self.rpn(image, feat, target)
         proposals = rpn_output['proposals']
@@ -824,7 +846,5 @@ class FasterRCNN(nn.Module):
         frcnn_output = self.roi_head(feat, proposals, image.shape[-2:], target)
         if not self.training:
             # Transform boxes to original image dimensions called only during inference
-            frcnn_output['boxes'] = transform_boxes_to_original_size(frcnn_output['boxes'],
-                                                                     image.shape[-2:],
-                                                                     old_shape)
+            frcnn_output['boxes'] = transform_boxes_to_original_size(frcnn_output['boxes'], image.shape[-2:], old_shape)
         return rpn_output, frcnn_output

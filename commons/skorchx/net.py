@@ -1,19 +1,61 @@
 #
 #
 #
-import torch
-import skorch
+from ctypes import cast
+
 import numpy as np
+import torch
 from torch.utils.data import DataLoader
+
+import skorch
 from skorch.dataset import Dataset
-from skorch.utils import to_numpy
-from skorch.utils import to_device
 from skorch.dataset import unpack_data
+from skorch.utils import to_numpy, to_tensor, to_device
 
 
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
+
+def concatenate(y_probas: list[np.ndarray] | list[torch.Tensor], axis) -> np.ndarray|torch.Tensor:
+    """
+    Concatenate the list of y_probas in an object of the same type
+    It is supposed all elements are of the same type
+
+    :param y_probas: list of elements to concatenate
+    :param axis: axes used for the concatenation
+    :return: tensor result
+    """
+    if len(y_probas) == 1:
+        return y_probas[0]
+    elif isinstance(y_probas[0], np.ndarray):
+        y_proba = np.concatenate(y_probas, axis)
+    elif isinstance(y_probas[0], torch.Tensor):
+        y_proba = torch.cat(y_probas, axis)
+    else:
+        raise ValueError(f"Unsupported value type {type(y_probas[0])}")
+    return y_proba
+# end
+
+
+def to_type(tensor, template):
+    """
+    Convert tensor to the same type of template
+
+    :param tensor: tensor to convert
+    :param template: tensor to use as template for the type
+    :return: tensor converted
+    """
+    tensor_t = type(tensor)
+    template_t = type(template)
+    if tensor_t == template_t:
+        return tensor
+    if template_t == np.ndarray:
+        return to_numpy(cast(torch.Tensor, tensor))
+    else:
+        return to_tensor(tensor, device=cast(torch.Tensor, tensor).device)
+# end
+
 
 def scheduler_params(kwargs: dict, select: bool=False):
     nkwargs = {}
@@ -27,25 +69,16 @@ def scheduler_params(kwargs: dict, select: bool=False):
                 p = k[11:]
                 nkwargs[p] = kwargs[k]
     return nkwargs
-# end
 
 
-def add_scheduler(self: skorch.NeuralNet, scheduler, **kwargs):
+def add_scheduler(self: skorch.NeuralNet, scheduler, **scheduler_kwargs):
     if scheduler is not None:
-        lr_scheduler = skorch.callbacks.LRScheduler(policy=scheduler, **scheduler_params(kwargs, True))
+        lr_scheduler = skorch.callbacks.LRScheduler(policy=scheduler, **scheduler_kwargs)
         if self.callbacks is None:
             self.callbacks = [lr_scheduler]
         else:
             self.callbacks.append(lr_scheduler)
     # end
-# end
-
-
-def concatenate(arrays, axis=None, out=None, *, dtype=None, casting=None):
-    if len(arrays) == 1:
-        return arrays[0]
-    else:
-        return np.concatenate(arrays, axis=axis, out=out, dtype=dtype, casting=casting)
 
 
 # ---------------------------------------------------------------------------
@@ -244,8 +277,8 @@ class NeuralNet(skorch.NeuralNet):
             return self.infer(Xi, **eval_params)
 
     def initialize(self):
-        self._initialize_scheduler()
         super().initialize()
+        self._initialize_scheduler()
     # end
 
     def _initialize_scheduler(self):

@@ -106,6 +106,7 @@ nnet = NeuralNet(
     #     weight_decay=5E-4,
     #     momentum=0.9
     # ),
+    #
     max_epochs=1,
     batch_size=1,
     lr=0.1,
@@ -131,7 +132,7 @@ def main():
 
     # nnet.fit(waterdrop_dataset)
     nnet.initialize()
-
+    #
     predicted = nnet.predict(im_tensor)
 
     pass

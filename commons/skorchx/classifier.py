@@ -5,53 +5,17 @@
 #   Then, these parameters are propagated to 'model.forward(X, ...)'
 #   of the NN model.
 #
-from typing import cast
-
-import numpy as np
 import torch
+
 import skorch
-from skorch.utils import to_numpy, to_tensor, to_device
 from skorch.dataset import unpack_data
-from .net import scheduler_params, add_scheduler
+from skorch.utils import to_device
+from .net import scheduler_params, add_scheduler, concatenate
 
 
-def concatenate(y_probas: list[np.ndarray] | list[torch.Tensor], axis) -> np.ndarray|torch.Tensor:
-    """
-    Concatenate the list of y_probas in an object of the same type
-    It is supposes all elements are of the same type
-
-    :param y_probas: list of elements to concatenate
-    :param axis: axes used for the concatenation
-    :return: tensor result
-    """
-    if isinstance(y_probas[0], np.ndarray):
-        y_proba = np.concatenate(y_probas, axis)
-    elif isinstance(y_probas[0], torch.Tensor):
-        y_proba = torch.cat(y_probas, axis)
-    else:
-        raise ValueError(f"Unsupported value type {type(y_probas[0])}")
-    return y_proba
-# end
-
-
-def to_type(tensor, template):
-    """
-    Convert tensor to the same type of template
-
-    :param tensor: tensor to convert
-    :param template: tensor to use as template for the type
-    :return: tensor converted
-    """
-    tensor_t = type(tensor)
-    template_t = type(template)
-    if tensor_t == template_t:
-        return tensor
-    if template_t == np.ndarray:
-        return to_numpy(cast(torch.Tensor, tensor))
-    else:
-        return to_tensor(tensor, device=cast(torch.Tensor, tensor).device)
-# end
-
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
 
 class NeuralNetClassifier(skorch.NeuralNetClassifier):
     """
