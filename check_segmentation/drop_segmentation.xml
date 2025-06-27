@@ -1,0 +1,166 @@
+<scene version="3.0.0">
+    <default name="spp" value="128"/>
+    <default name="res" value="1024"/>
+
+    <default name="camera_shift_z" value="0"/>
+    <default name="scene_shift_z" value="0"/>
+
+    <default name="drop_radius" value="5"/>
+    <default name="drop_shift_x" value="0"/>
+    <default name="drop_shift_y" value="0"/>
+    <default name="drop_shift_z" value="0"/>
+
+    <default name="table_rot_z" value="0"/>
+
+<default name="table_reflectance" value="0.05"/>
+
+    <default name="dispenser_side" value="1"/>
+    <default name="dispenser_shift_x" value="0"/>
+    <default name="dispenser_shift_y" value="0"/>
+    <default name="dispenser_shift_z" value="0"/>
+
+<default name="dispenser_reflectance" value=".5"/>
+
+    <default name="focus_distance" value="53.5"/>
+    <default name="aperture_radius" value="0.75"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- camera -->
+
+    <!--<sensor type="thinlens" id="camera">
+        <transform name="to_world">
+            <lookat target="0   0  $scene_shift_z"
+                    origin="0  52.5  $camera_shift_z"
+                    up    ="0   0  1"
+            />
+        </transform>
+
+        <float name="aperture_radius" value="$aperture_radius"/>
+        <float name="focus_distance"  value="$focus_distance"/>
+        <float name="fov" value="8"/>
+
+        <sampler type="independent">
+            <integer name="sample_count" value="$spp"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <integer name="width"  value="640"/>
+            <integer name="height" value="480"/>
+            <string name="pixel_format" value="luminance"/>
+        </film>
+    </sensor>-->
+
+    <sensor type="perspective" id="camera">
+        <transform name="to_world">
+            <lookat target="0   0  $scene_shift_z"
+                    origin="0  52.5  $camera_shift_z"
+                    up    ="0   0  1"
+            />
+        </transform>
+
+        <float name="focus_distance"  value="$focus_distance"/>
+        <float name="fov" value="8"/>
+
+        <sampler type="independent">
+            <integer name="sample_count" value="$spp"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <integer name="width"  value="640"/>
+            <integer name="height" value="480"/>
+            <string name="pixel_format" value="rgb"/>
+        </film>
+    </sensor>
+
+    <!-- light -->
+
+    <!--<shape type="cube" id="square-light">
+        <emitter type="area">
+            <rgb name="radiance" value="1.0"/>
+        </emitter>
+        <transform name="to_world">
+            <scale value="20 0.1 20"/>
+            <translate value="0 -175 0"/>
+        </transform>
+    </shape>-->
+
+    <emitter type="constant">
+        <rgb name="radiance" value="1 1 1"/>
+    </emitter>
+
+    <!-- scene -->
+
+    <shape type="cube" id="drop-dispenser">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="1 0 0"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="0.25 0.25 2"/>
+            <scale value="$dispenser_side $dispenser_side 1"/>
+            <translate value="0 0 3.5"/>
+            <translate
+                    x="$dispenser_shift_x"
+                    y="$dispenser_shift_y"
+                    z="$dispenser_shift_z"/>
+        </transform>
+    </shape>
+
+    <!--<shape type="obj" id="water_drop">
+        <string name="filename" value="objs/ellipsoid-80x60.obj"/>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 1 0"
+            />
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="$drop_radius"/>
+            <translate value="$drop_shift_x $drop_shift_y $drop_shift_z"/>
+            <translate z="$table_shift_z"/>
+        </transform>
+    </shape>-->
+
+    <shape type="sphere" id="waterdrop">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 1 0"
+            />
+        </bsdf>
+
+        <float name="radius" value="$drop_radius"/>
+        <point name="center" value="$drop_shift_x $drop_shift_y $drop_shift_z"/>
+    </shape>
+
+    <!-- -->
+
+    <!--<shape type="obj" id="rough_table">
+        <string name="filename" value="objs/rough_surface-90x90.obj"/>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 0 1"
+            />
+        </bsdf>
+
+        <transform name="to_world">
+            <rotate z="1" angle="$table_rot_z"/>
+            <scale value="5 20 0.05"/>
+            <translate value="0 0 0"/>
+        </transform>
+    </shape>-->
+
+    <shape type="cube" id="base_table">
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 0 1"/>
+        </bsdf>
+
+        <transform name="to_world">
+            <scale value="20 20 10"/>
+            <translate value="0 0 -10"/>
+        </transform>
+    </shape>
+
+    <!-- end -->
+</scene>

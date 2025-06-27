@@ -2,9 +2,10 @@ from typing import Optional, Tuple, Union, Any
 
 import torch
 import torch.nn as nn
-from torch import Tensor, matmul, sigmoid, tanh, relu
+from torch import matmul, sigmoid, tanh, relu
 
-from stdlib import mul_
+from ...utils import mul_
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -145,8 +146,8 @@ class LSTM(nn.LSTM):
         self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
-                input: Tensor,
-                hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+                input: torch.Tensor,
+                hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Union[torch.Tensor, Tuple[torch.Tensor, Any]]:
         t = input
         if len(input.shape) > 3:
             t = torch.flatten(t, start_dim=2)
@@ -371,8 +372,8 @@ class GRU(nn.GRU):
         self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
-                input: Tensor,
-                hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+                input: torch.Tensor,
+                hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Union[torch.Tensor, Tuple[torch.Tensor, Any]]:
         t = input
         if len(input.shape) > 3:
             t = torch.flatten(t, start_dim=2)
@@ -562,8 +563,8 @@ class RNN(nn.RNN):
         self._composer = RNNComposer(return_sequence, return_state, hidden_size)
 
     def forward(self,
-                input: Tensor,
-                hx: Optional[Tuple[Tensor, Tensor]] = None) -> Union[Tensor, Tuple[Tensor, Any]]:
+                input: torch.Tensor,
+                hx: Optional[Tuple[torch.Tensor, torch.Tensor]] = None) -> Union[torch.Tensor, Tuple[torch.Tensor, Any]]:
         t = input
         if len(input.shape) > 3:
             t = torch.flatten(t, start_dim=2)
@@ -604,31 +605,6 @@ class RNN(nn.RNN):
     def _forward(self, x, hx):
         # torch RNN supports natively 'nonlinearity' parameter
         return super().forward(x, hx)
-# end
-
-
-# ---------------------------------------------------------------------------
-# create_rnn
-# ---------------------------------------------------------------------------
-
-RNNX_FLAVOURS = {
-    'lstm': LSTM,
-    'gru': GRU,
-    'rnn': RNN,
-}
-
-RNNX_PARAMS = [
-    'input_size', 'hidden_size', 'num_layers', 'bidirectional', 'bias', 'dropout',
-    # extended parameters
-    'return_sequence', 'return_state'
-]
-
-
-def create_rnn(flavour: str, **kwargs):
-    if flavour not in RNNX_FLAVOURS:
-        raise ValueError(f"Unsupported RNN flavour {flavour}")
-    else:
-        return RNNX_FLAVOURS[flavour](**kwargs)
 # end
 
 

@@ -3,7 +3,10 @@ The parameter names in Torch are not so consistent as in Tensorflow!
 Parameter names:
 
     (in|out)_features           int | tuple
+    in_channels                 int             for images
+    num_classes                 int             for classification
     (input|hidden|output)_size  int | tuple
+    (input|hidden|output)_shape int | tuple
     num_(layers|features)       int
 
     <name>                      if input  configuration

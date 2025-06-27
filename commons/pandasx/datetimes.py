@@ -40,7 +40,7 @@ def _to_datetime(dt_series, format, freq) -> pd.Series:
             return x
 
     # Note: if 'format' contains the timezone (%z, %Z), it is necessary to normalize
-    # the datetime removing it in a 'intelligent' way.
+    # the datetime removing it in an 'intelligent' way.
     # The first  solution is to remove the timezone and stop.
     # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
     # then to remove the TZ reference.
@@ -72,8 +72,8 @@ def _to_datetime(dt_series, format, freq) -> pd.Series:
     #     pass
 
     if freq is not None:
-        # dt_series = dt_series.dt.to_period(freq)
-        dt_series.asfreq(freq)
+        dt_series = dt_series.dt.to_period(freq)
+        # dt_series = dt_series.asfreq(freq)
     return dt_series
 
 

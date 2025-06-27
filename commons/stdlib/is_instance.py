@@ -484,6 +484,19 @@ class IsDeque(IsCollection):
 
 # ---------------------------------------------------------------------------
 
+class IsSequence(IsCollection):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        if not isinstance(obj, (list, tuple, str)):
+            return False
+        else:
+            return super().is_instance(obj)
+
+
+# ---------------------------------------------------------------------------
+
 class IsMapping(IsInstance):
     def __init__(self, tp, dictionary_type=Mapping):
         super().__init__(tp)
@@ -658,6 +671,9 @@ IS_INSTANCE_OF = {
     'collections.namedtuple': IsNamedTuple,
     'collections.OrderedDict': IsOrderedDict,
 
+    'collections.abc.Collection': IsCollection,
+    'collections.abc.Mapping': IsMapping,
+
     'typing.None': IsNone,
     'typing.Union': IsUnion,
     'typing.Any': IsAny,
@@ -676,6 +692,7 @@ IS_INSTANCE_OF = {
     'typing.NewType': IsNewType,
     'typing.Collection': IsCollection,
     'typing.Mapping': IsMapping,
+    'typing.Sequence': IsSequence,
 
     'typing.All': IsAll,
     'typing.Immutable': IsImmutable,
@@ -736,7 +753,7 @@ def is_instance(obj, a_type, msg=None) -> bool:
     #     return is_instance(obj, a_type.__supertype__)
 
     # is_instance(obj, (T1, T2, ...))
-    if isinstance(a_type, tuple):
+    if isinstance(a_type, (tuple, list)):
         a_types: tuple[type] = a_type
         for a_type in a_types:
             if is_instance(obj, a_type):

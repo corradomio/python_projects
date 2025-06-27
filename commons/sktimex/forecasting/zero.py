@@ -3,11 +3,12 @@ __all__ = [
     "ZeroForecaster",
 ]
 
+from typing import Literal
 
 import numpy as np
 
 from .base import BaseForecaster
-from ..utils import PD_TYPES
+from stdlib.is_instance import is_instance
 
 
 # ---------------------------------------------------------------------------
@@ -23,11 +24,25 @@ class ZeroForecaster(BaseForecaster):
         "requires-fh-in-fit": False,
     }
 
-    def __init__(self, const_value=0):
+    def __init__(self, mode: Literal[0, "zero", "mean", "median", "min", "max"]):
         super().__init__()
-        self.const_value = const_value
 
-    def _fit(self, y, X=None, fh=None):
+        assert is_instance(mode, Literal[0, "zero", "mean", "median", "min", "max"])
+
+        self.mode = mode
+        self._y_value = None
+
+    def _fit(self, y: np.ndarray, X=None, fh=None):
+        if self.mode == 0:
+            self._y_value = 0
+        elif self.mode == 'mean':
+            self._y_value = y.mean()
+        elif self.mode == 'median':
+            self._y_value = np.median(y)
+        elif self.mode == "min":
+            self._y_value = y.min()
+        elif self.mode == "max":
+            self._y_value = y.mean()
         return self
 
     def _predict(self, fh, X=None):

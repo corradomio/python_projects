@@ -1,7 +1,3 @@
-import cplex
-import docplex.mp
-
-
 # first import the Model class from docplex.mp
 from docplex.mp.model import Model
 

@@ -1,9 +1,9 @@
 from typing import Union
+
 import torch
 import torch.nn as nn
-from torch import Tensor
-from stdlib import mul_
-from ...utils import time_repeat, is_shape
+
+from ...utils import time_repeat, is_shape, mul_
 
 
 class ZeroCache(nn.Module):
@@ -45,7 +45,7 @@ class TimeLinear(nn.Linear):
         self.replicate = out_features[0]
     # end
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         if len(x.shape) > 2:
             batch_size = len(x)
             x = torch.reshape(x, (batch_size, -1))

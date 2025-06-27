@@ -1,6 +1,14 @@
-#
+# ---------------------------------------------------------------------------
+# Standard libraries
+# ---------------------------------------------------------------------------
+numpy
+scipy
+pandas
+
+
+# ---------------------------------------------------------------------------
 # Utilities
-#
+# ---------------------------------------------------------------------------
 path
 multimethod
 tabulate
@@ -9,38 +17,46 @@ tqdm
 # html parser
 #beautifulsoup4
 
-#
+PyYAML
+
+# ---------------------------------------------------------------------------
+# IPython/Jupiter
+# ---------------------------------------------------------------------------
+ipython
+jupyter
+
+
+# ---------------------------------------------------------------------------
 # IO
-#
+# ---------------------------------------------------------------------------
 #pyarrow
 # fastparquet
 
 
-#
-# Standard libraries
-#
-numpy
-scipy
-pandas
-
-
-#
+# ---------------------------------------------------------------------------
 # Plotting
-#
+# ---------------------------------------------------------------------------
 matplotlib
 seaborn
 
 
-#
-# Image handling
-#
+# ---------------------------------------------------------------------------
+# Image processing
+# ---------------------------------------------------------------------------
 pillow
+
 opencv-python
 
+# skimage -> scikit-image
+scikit-image
+imageio
 
-#
+albumentations
+
+
+# ---------------------------------------------------------------------------
 # scikit-learn
-#
+# ---------------------------------------------------------------------------
 scikit-learn
 xgboost
 catboost
@@ -48,31 +64,29 @@ catboost
 #imbalanced-learn
 
 
-#
+# ---------------------------------------------------------------------------
 # sktime
-#
+# ---------------------------------------------------------------------------
 sktime
 pmdarima
 statsmodels
 
 
-#
-# IPython/Jupiter
-#
-ipython
-jupyter
-
-
 # ---------------------------------------------------------------------------
 # Pytorch
 # ---------------------------------------------------------------------------
-# better to use Python=3.11
---extra-index-url https://download.pytorch.org/whl/cu124
+# better to use Python=3.12
+# 
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+#
+# import torch
+# torch.cuda.is_available()
+#
+--extra-index-url https://download.pytorch.org/whl/cu126
 torch
 torchvision
 torchaudio
 torchtext
-
 
 # https://lightning.ai/docs/pytorch/stable/
 # https://github.com/Lightning-AI/pytorch-lightning
@@ -86,6 +100,9 @@ skorch
 # ---------------------------------------------------------------------------
 # Pytorch extensions
 # ---------------------------------------------------------------------------
+
+torchmetrics 
+torchinfo
 
 # pytorch-forecasting
 # pytorch-geometric
@@ -106,25 +123,26 @@ accelerate
 safetensors
 datasets
 
-# fine tuning
-# bitsandbytes-windows (not necessary)
 bitsandbytes
-peft
-wandb
+# peft
+# wandb
 
-#evaluate
-#trl         # transformer reinforcement learning
+# evaluate
+# trl         # transformer reinforcement learning
 
 # https://github.com/lyogavin/airllm
-airllm
+# airllm
 
 
 # ---------------------------------------------------------------------------
 # Huggingface: sentences
 # ---------------------------------------------------------------------------
 
-sentence-transformers
-sentencepiece
+# https://sbert.net/
+# sentence-transformers
+
+# https://github.com/google/sentencepiece
+# sentencepiece
 
 # https://github.com/intel/
 # intel-extension-for-transformers
@@ -135,7 +153,7 @@ sentencepiece
 # ---------------------------------------------------------------------------
 
 # https://github.com/arogozhnikov/einops
-einops
+# einops
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +164,7 @@ einops
 #tiktoken
 
 # Sacremoses tokenizer
-sacremoses
+# sacremoses
 
 
 # ---------------------------------------------------------------------------
@@ -202,3 +220,8 @@ umap-learn
 
 # https://omegaconf.readthedocs.io/en/2.3_branch/
 # omegaconf
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

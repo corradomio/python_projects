@@ -174,6 +174,7 @@ def test_collection():
 
 
 def test_mapping():
+    # Mapping
     assert (is_instance({'one': 1}, Mapping[str, int]))
 
 
@@ -205,7 +206,7 @@ def test_frozenset():
 
 
 def test_literals():
-    VALUES = ['a', 'b', 'c']
+    VALUES = ('a', 'b', 'c')
     assert (is_instance(1, Union[int, Literals[VALUES]]))
     assert (is_instance('a', Union[int, Literals[VALUES]]))
     assert (is_instance('a', VALUES))

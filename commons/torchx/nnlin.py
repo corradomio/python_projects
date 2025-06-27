@@ -1,10 +1,9 @@
 from typing import Union, Optional
 
-import torch
 import torch.nn as nn
+
 from stdlib import is_instance
 from . import nn as nnx
-
 from .nn_init import activation_function
 
 

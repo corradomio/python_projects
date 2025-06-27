@@ -8,10 +8,10 @@ import pandasx as pdx
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.naive import NaiveForecaster
 from sktimex.forecasting.cnn import CNNLinearForecaster
-from sktimex.forecasting.lnn import LinearNNForecaster
+from sktimex.forecasting.lnn import LNNLinearForecaster
 from sktimex.forecasting.rnn import RNNLinearForecaster
 
-from sktimex.forecasting.sklearn import ReducerForecaster
+from sktimex.forecasting.reducer import ReducerForecaster
 from sktimex.utils.plotting import plot_series, show
 
 warnings.filterwarnings("ignore", category=FutureWarning)

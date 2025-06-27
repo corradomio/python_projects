@@ -1,17 +1,22 @@
-from typing import Sequence, Literal, Optional
+from typing import Sequence, Literal
 
+import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
 from matplotlib.colorizer import Colorizer
 from matplotlib.colors import Colormap, Normalize
-from matplotlib.pyplot import ArrayLike, ColorType, MarkerType
-import matplotlib.pyplot as plt
+from matplotlib.typing import (
+    ColorType,
+    MarkerType,
+)
+from numpy.typing import ArrayLike
+
+
+# ArrayLike = Sequence[float]
 
 
 def scatter(
         x: float | ArrayLike,
         y: float | ArrayLike,
-        xerr: Optional[float, ArrayLike],
-        yerr: Optional[float, ArrayLike],
         s: float | ArrayLike | None = None,
         c: ArrayLike | Sequence[ColorType] | ColorType | None = None,
         marker: MarkerType | None = None,

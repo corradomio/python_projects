@@ -22,7 +22,7 @@ multimethod
 tabulate
 
 # https://docs.h5py.org/en/stable/quick.html#quick
-h5py
+#h5py
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +36,7 @@ numpy
 # xarray
 
 # https://scipy.org/
-scipy
+scipy<=1.15.3
 
 # https://matplotlib.org/
 matplotlib
@@ -133,9 +133,9 @@ statsmodels
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch
 torchvision
-torchaudio
-torchtext
-torchmetrics
+#torchaudio
+#torchtext
+#torchmetrics
 
 
 # https://skorch.readthedocs.io/en/stable/
@@ -179,11 +179,11 @@ sqlalchemy
 # ---------------------------------------------------------------------------
 
 # https://fastcore.fast.ai/
-fastcore
+#fastcore
 
 
 # https://github.com/fastai/nbdev
-nbdev
+#nbdev
 
 
 # ---------------------------------------------------------------------------

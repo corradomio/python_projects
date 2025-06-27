@@ -536,7 +536,18 @@ def cleanup_data(
     if ignore_unnamed:
         ignore += find_unnamed_columns(df)
 
-    # remove the 'ignore' columns
+    # force a sort
+    # Note: here it is possible to use columns not yet removed
+    if sort is not False:
+        df = dataframe_sort(df, sort=sort)
+
+    # compose the index
+    if len(index) > 0:
+        df = set_index(df, index, inplace=True)
+    if len(datetime_index) > 0:
+        df = set_index(df, datetime_index, inplace=True, as_datetime=True)
+
+    # remove the 'ignore' columns BEFORE to remove the columns for NaN
     if len(ignore) > 0:
         df = columns_ignore(df, ignore)
 
@@ -551,17 +562,6 @@ def cleanup_data(
         df = nan_drop(df, columns=dropna)
     if fillna is not None:
         df = nan_fill(df, fillna=fillna)
-
-    # force a sort
-    # Note: here it is possible to use columns not yet removed
-    if sort is not False:
-        df = dataframe_sort(df, sort=sort)
-
-    # compose the index
-    if len(index) > 0:
-        df = set_index(df, index, inplace=True)
-    if len(datetime_index) > 0:
-        df = set_index(df, datetime_index, inplace=True, as_datetime=True)
 
     # rename the columns
     if rename is not None:

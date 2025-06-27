@@ -4,7 +4,7 @@ import pandasx as pdx
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.forecasting.darts.block_rnn_model import BlockRNNModel
 from sktimex.forecasting.darts.dlinear import DLinearModel
-from sktimex.forecasting.darts.linear_regression_model import LinearRegressionModel
+# from sktimex.forecasting.darts.linear_regression_model import LinearRegressionModel
 from sktimex.forecasting.darts.nbeats import NBEATSModel
 from sktimex.forecasting.darts.nhits import NHiTSModel
 from sktimex.forecasting.darts.nlinear import NLinearModel

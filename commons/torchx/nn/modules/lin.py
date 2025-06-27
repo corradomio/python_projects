@@ -2,15 +2,20 @@ from typing import Union, Optional
 
 import torch
 import torch.nn as nn
-from torch import Tensor
 
-from stdlib import mul_
+from ...utils import mul_
 
 
 # ---------------------------------------------------------------------------
 # Linear
 # ---------------------------------------------------------------------------
 # It extends nn.Linear with an integrated Flatten and Unflatten layers
+#
+# [2025/06/20] extension
+# if 'in_features' and 'out_features' are tuples, with the same number of
+# elements, it is possible to apply a more intelligent transformation:
+# to convert each dimension at the time
+#
 #
 
 class Linear(nn.Linear):
@@ -23,13 +28,14 @@ class Linear(nn.Linear):
         out_features: can be a tuple
     """
 
-    def __init__(self,
-                 in_features: Union[int, tuple[int, ...]],
-                 out_features: Union[int, tuple[int, ...]],
-                 bias: bool = True,
-                 device: Optional[str]=None,
-                 dtype=None):
-
+    def __init__(
+            self,
+            in_features: Union[int, tuple[int, ...]],
+            out_features: Union[int, tuple[int, ...]],
+            bias: bool = False,
+            device: Optional[str]=None,
+            dtype=None
+    ):
         super().__init__(
             in_features=mul_(in_features),
             out_features=mul_(out_features),
@@ -45,11 +51,9 @@ class Linear(nn.Linear):
         # self.unflatten = None if isinstance(out_features, int) \
         #     else nn.Unflatten(1, unflattened_size=out_features)
 
-    def forward(self, input: Tensor) -> Tensor:
+    def forward(self, input: torch.Tensor) -> torch.Tensor:
         t = input
 
-        # if not isinstance(self.input_shape, int):
-        #     t = torch.flatten(t, start_dim=1)
         if len(input.shape) > 2:
             t = torch.flatten(t, start_dim=1)
 

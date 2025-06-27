@@ -1,12 +1,12 @@
 from typing import Optional
 
+import torch
 import torch.nn as nn
 from numpy.typing import ArrayLike
-from torch import Tensor
 
 from .ts import TimeSeriesModel
 from .tsutils import apply_if
-from ..modules.tcn import TCN
+from ..extras.tcn import TCN
 
 
 class TSTCN(TimeSeriesModel):
@@ -73,7 +73,7 @@ class TSTCN(TimeSeriesModel):
             use_skip_connections=use_skip_connections
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         t = apply_if(x, self.input_adapter)
         t = self.tcn(t)
         y = apply_if(t, self.output_adapter)

@@ -1,7 +1,34 @@
 from ortools.linear_solver import pywraplp
 
+ORTOOLS_SOLVERS = [
+    "CLP_LINEAR_PROGRAMMING", "CLP",
+    "CBC_MIXED_INTEGER_PROGRAMMING", "CBC",
+    "GLOP_LINEAR_PROGRAMMING", "GLOP",
+    "BOP_INTEGER_PROGRAMMING", "BOP",
+    "SAT_INTEGER_PROGRAMMING", "SAT", "CP_SAT",
+    "SCIP_MIXED_INTEGER_PROGRAMMING", "SCIP",
+    "GUROBI_LINEAR_PROGRAMMING", "GUROBI_LP",
+    "GUROBI_MIXED_INTEGER_PROGRAMMING", "GUROBI", "GUROBI_MIP",
+    "CPLEX_LINEAR_PROGRAMMING", "CPLEX_LP",
+    "CPLEX_MIXED_INTEGER_PROGRAMMING", "CPLEX", "CPLEX_MIP",
+    "XPRESS_LINEAR_PROGRAMMING", "XPRESS_LP",
+    "XPRESS_MIXED_INTEGER_PROGRAMMING", "XPRESS", "XPRESS_MIP",
+    "GLPK_LINEAR_PROGRAMMING", "GLPK_LP",
+    "GLPK_MIXED_INTEGER_PROGRAMMING", "GLPK", "GLPK_MIP",
+]
 
-def main():
+def check_solvers():
+    for sname in ORTOOLS_SOLVERS:
+        solver = pywraplp.Solver.CreateSolver(sname)
+        if solver is None:
+            print(f"ERROR: {sname}")
+        else:
+            print(f"_____: {sname}")
+    # end
+# end
+
+
+def example():
     # Create the linear solver with the GLOP backend.
     solver = pywraplp.Solver.CreateSolver("GLOP")
     if not solver:
@@ -34,6 +61,11 @@ def main():
     print("x =", x.solution_value())
     print("y =", y.solution_value())
 
+
+def main():
+    check_solvers()
+    example()
+    pass
 
 if __name__ == "__main__":
     main()

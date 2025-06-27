@@ -9,8 +9,25 @@ from torch import Tensor
 # Utilities
 # ---------------------------------------------------------------------------
 
-def dim_of(dim: Union[int, list[int]]):
+def dim_of(dim: Union[int, list[int], tuple[int]]):
     return [dim] if isinstance(dim, int) else dim
+# end
+
+def mul_(x: int|float) -> int|float:
+    """
+    Multiplicative version of 'sum' supporting None and numerical values
+    """
+    if x is None:
+        return 1
+    elif isinstance(x, (int, float)):
+        return x
+    else:
+        m = 1
+        for e in x:
+            m *= e
+        return m
+    # end
+# end
 
 
 # ---------------------------------------------------------------------------

@@ -6,7 +6,7 @@ __all__ = [
 import torch.nn as nn
 
 from stdlib import kwselect
-from torchx.nn.modules.rnn import RNNX_FLAVOURS, RNNX_PARAMS
+from torchx.nn.modules.rnn_flavours import RNNX_FLAVOURS, RNNX_PARAMS
 from torchx.utils import time_repeat
 
 
@@ -90,4 +90,10 @@ class Seq2SeqNetwork(nn.Module):
         staten = time_repeat(state1, batch_len)
         output = self.decoder(contextn, staten)
         return output
+    # end
+# end
 
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

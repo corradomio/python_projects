@@ -1,0 +1,24 @@
+numpy
+scipy
+matplotlib
+seaborn
+
+ultralytics
+albumentations
+gitpython
+pillow
+
+tqdm
+
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch
+torchvision
+torchaudio
+torchtext
+
+skorch
+pytorch_lightning
+scikit-learn
+scikit-image
+
+

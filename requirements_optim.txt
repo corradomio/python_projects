@@ -87,24 +87,24 @@ pymoo
 
 
 # https://platypus.readthedocs.io/en/latest/
-#platypus
+# platypus
 
 
 # https://pymoo.org/
 # https://github.com/anyoptimization/pymoo
-#parmoo
+# parmoo
 
 
 # https://github.com/DEAP/deap
 # https://pypi.org/project/deap/
 # https://deap.readthedocs.io/en/master/
-#deap
+# deap
 
 
 # 
 # https://pypi.org/project/scoop/
 # https://scoop.readthedocs.io/en/0.7/
-#scoop
+# scoop
 
 
 
@@ -159,11 +159,18 @@ cvxopt
 gurobipy
 
 
+# no windows
+# https://coin-or.github.io/CyLP/
+# cypl
+
+# https://pypi.org/project/cbcpy/   (2019)
+# cbcpy
+
 
 # ---------------------------------------------------------------------------
 # Database
 # ---------------------------------------------------------------------------
-psycopg2
+# psycopg2
 
 # https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
 #mysql-connector-python
@@ -173,7 +180,7 @@ psycopg2
 # https://docs.sqlalchemy.org/en/14/dialects/mysql.html
 # https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
 #sqlalchemy<2.0
-sqlalchemy
+# sqlalchemy
 
 
 # ---------------------------------------------------------------------------

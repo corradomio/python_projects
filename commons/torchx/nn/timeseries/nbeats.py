@@ -2,25 +2,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 from numpy import ndarray
-from torch import Tensor
 from torch.nn import functional as F
 
-from stdlib import mul_
 from .ts import TimeSeriesModel
+from ...utils import mul_
 
 
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
 
-def squeeze_last_dim(tensor: Tensor) -> Tensor:
+def squeeze_last_dim(tensor: torch.Tensor) -> torch.Tensor:
     # Already converted into 2D tensors
     # if len(tensor.shape) == 3 and tensor.shape[-1] == 1:  # (128, 10, 1) => (128, 10).
     #     return tensor[..., 0]
     return tensor
 
 
-def seasonality_model(thetas: Tensor, t: ndarray) -> Tensor:
+def seasonality_model(thetas: torch.Tensor, t: ndarray) -> torch.Tensor:
     p = thetas.shape[-1]
     assert p <= thetas.shape[1], 'thetas_dim is too big.'
     p1, p2 = (p // 2, p // 2) if p % 2 == 0 else (p // 2, p // 2 + 1)
@@ -30,7 +29,7 @@ def seasonality_model(thetas: Tensor, t: ndarray) -> Tensor:
     return thetas.mm(S.to(thetas.device))
 
 
-def trend_model(thetas: Tensor, t: ndarray) -> Tensor:
+def trend_model(thetas: torch.Tensor, t: ndarray) -> torch.Tensor:
     p = thetas.shape[-1]
     assert p <= 4, 'thetas_dim is too big.'
     T = torch.tensor(np.array([t ** i for i in range(p)])).float()
@@ -66,7 +65,7 @@ class Block(nn.Module):
             self.theta_b_fc = nn.Linear(units, thetas_dim, bias=False)
             self.theta_f_fc = nn.Linear(units, thetas_dim, bias=False)
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = squeeze_last_dim(x)
         x = F.relu(self.fc1(x.to(x.device)))
         x = F.relu(self.fc2(x))
@@ -256,7 +255,7 @@ class TSNBeats(TimeSeriesModel):
             nb_harmonics=nb_harmonics
         )
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         t = torch.flatten(x, start_dim=1)
         backcast, forecast = self.nbeats(t)
         y = torch.reshape(forecast, self.output_reshape)

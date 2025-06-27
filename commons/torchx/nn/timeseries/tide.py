@@ -14,7 +14,6 @@
 
 import torch
 import torch.nn as nn
-from torch import Tensor
 
 from .ts import TimeSeriesModel
 from ... import nn as nnx
@@ -190,7 +189,7 @@ class TiDE(TimeSeriesModel):
         if self.use_future_features:
             assert isinstance(x, (list, tuple))
         else:
-            assert isinstance(x, Tensor)
+            assert isinstance(x, torch.Tensor)
 
         # concatenate and flatten: return [Xy;Xf], Xf
         xc, yp, xf = self._concat_split_flatten(x)
@@ -252,7 +251,7 @@ class TSTiDE(TiDE):
                  ):
         super().__init__(**locals())
 
-    def forward(self, x: Tensor) -> Tensor:
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return super().forward(x)
 # end
 

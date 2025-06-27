@@ -12,7 +12,6 @@ from typing import Optional
 
 import torch
 import torch.nn as nn
-from torch import Tensor
 
 from .ts import TimeSeriesModel
 from .tstran import positional_encoding
@@ -82,7 +81,7 @@ class TSEncoderOnlyTransformer(TimeSeriesModel):
     def reset_parameters(self):
         pass
 
-    def forward(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         # B, S, D = x.shape
         t = self.input_adapter(x)
         t *= self.sqrt_D
@@ -156,7 +155,7 @@ class TSCNNEncoderTransformer(TimeSeriesModel):
     def reset_parameters(self):
         pass
 
-    def forward(self, x: Tensor, mask: Optional[Tensor] = None) -> Tensor:
+    def forward(self, x: torch.Tensor, mask: Optional[torch.Tensor] = None) -> torch.Tensor:
         # B, S, D = x.shape
         t = self.input_adapter(x)
         t *= self.sqrt_D

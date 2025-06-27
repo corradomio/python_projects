@@ -10,8 +10,6 @@ import warnings
 from collections.abc import Callable, Iterable, Iterator, Mapping
 from typing import Any, Literal, Optional, TypeVar, Union, get_type_hints, overload as tp_overload
 
-__version__ = '1.11.2'
-
 
 class DispatchError(TypeError):
     pass
@@ -31,6 +29,13 @@ def get_mro(cls) -> tuple:  # `inspect.getmro` doesn't handle all cases
     return type.mro(cls) if isinstance(cls, type) else cls.mro()
 
 
+def common_bases(*bases):
+    counts = collections.Counter()
+    for base in bases:
+        counts.update(cls for cls in get_mro(base) if issubclass(abc.ABCMeta, type(cls)))
+    return tuple(cls for cls in counts if counts[cls] == len(bases))
+
+
 class subtype(abc.ABCMeta):
     """A normalized generic type which checks subscripts.
 
@@ -45,11 +50,13 @@ class subtype(abc.ABCMeta):
         if tp is Any:
             return object
         if hasattr(tp, '__supertype__'):  # isinstance(..., NewType) only supported >=3.10
-            tp = tp.__supertype__
+            return cls(tp.__supertype__, *args)
+        if hasattr(typing, 'TypeAliasType') and isinstance(tp, typing.TypeAliasType):
+            return cls(tp.__value__, *args)
         if isinstance(tp, TypeVar):
-            if not tp.__constraints__:
-                return object
-            tp = Union[tp.__constraints__]
+            return cls(Union[tp.__constraints__], *args) if tp.__constraints__ else object
+        if isinstance(tp, typing._AnnotatedAlias):
+            return cls(tp.__origin__, *args)
         origin = get_origin(tp) or tp
         if hasattr(types, 'UnionType') and isinstance(tp, types.UnionType):
             origin = Union  # `|` syntax added in 3.10
@@ -58,12 +65,11 @@ class subtype(abc.ABCMeta):
             return origin
         bases = (origin,) if type(origin) in (type, abc.ABCMeta) else ()
         if origin is Literal:
-            bases = (subtype(Union[tuple(map(type, args))]),)
+            bases = (cls(Union[tuple(map(type, args))]),)
         if origin is Union:
-            counts = collections.Counter()
-            for arg in args:
-                counts.update(cls for cls in get_mro(arg) if issubclass(abc.ABCMeta, type(cls)))
-            bases = tuple(cls for cls in counts if counts[cls] == len(args))[:1]
+            bases = common_bases(*args)[:1]
+            if bases[0] in args:
+                return bases[0]
         if origin is Callable and args[:1] == (...,):
             args = args[1:]
         namespace = {'__origin__': origin, '__args__': args}
@@ -397,31 +403,34 @@ class multidispatch(multimethod, dict[tuple[type, ...], Callable[..., RETURN]]):
     Allows dispatching on keyword arguments based on the first function signature.
     """
 
-    signature: Optional[inspect.Signature]
+    signatures: dict[tuple, inspect.Signature]
 
     def __new__(cls, func: Callable[..., RETURN]) -> "multidispatch[RETURN]":
-        return functools.update_wrapper(dict.__new__(cls), func)
+        return functools.update_wrapper(dict.__new__(cls), func)  # type: ignore
 
     def __init__(self, func: Callable[..., RETURN]) -> None:
         self.pending = set()
         self.generics = []
-        try:
-            self.signature = inspect.signature(func)
-        except ValueError:
-            self.signature = None
-        msg = "base implementation will eventually ignore annotations as `singledispatch does`"
-        with contextlib.suppress(NameError, AttributeError, TypeError):
-            hints = signature.from_hints(func)
-            if hints and all(map(issubclass, hints, hints)):
-                warnings.warn(msg, DeprecationWarning)
-        super().__init__(func)
+        self.signatures = {}
+        self[()] = func
 
     def __get__(self, instance, owner) -> Callable[..., RETURN]:
         return self if instance is None else types.MethodType(self, instance)  # type: ignore
 
+    def __setitem__(self, types: tuple, func: Callable):
+        super().__setitem__(types, func)
+        with contextlib.suppress(ValueError):
+            signature = inspect.signature(func)
+            self.signatures.setdefault(tuple(signature.parameters), signature)
+
     def __call__(self, *args: Any, **kwargs: Any) -> RETURN:
         """Resolve and dispatch to best method."""
-        params = self.signature.bind(*args, **kwargs).args if (kwargs and self.signature) else args
+        params = args
+        if kwargs:
+            for signature in self.signatures.values():  # pragma: no branch
+                with contextlib.suppress(TypeError):
+                    params = signature.bind(*args, **kwargs).args
+                    break
         func = self.dispatch(*params)
         return func(*args, **kwargs)
 

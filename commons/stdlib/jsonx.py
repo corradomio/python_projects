@@ -38,6 +38,8 @@ import numpy as np
 import numpy.dtypes as npdt
 import pandas as pd
 
+# from pandasx.arff import dumps
+
 # from .dict import dict
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']

@@ -22,6 +22,7 @@ class AE(nn.Module):
         t = self.encoder(x)
         y = self.decoder(t)
         return y
+# end
 
 
 # ---------------------------------------------------------------------------

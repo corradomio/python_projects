@@ -4,8 +4,8 @@
 # https://lilianweng.github.io/posts/2018-06-24-attention/
 #
 
-from math import sqrt
 from typing import Optional
+from math import sqrt
 
 from torch import Tensor, zeros, transpose, reshape, softmax, norm, einsum, div
 from torch.nn.functional import tanh
