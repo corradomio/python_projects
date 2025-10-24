@@ -30,7 +30,6 @@ def say(what: float): ...
 def say(what: str): ...
 
 
-
 def say(what: int):
     print("say int:", what)
 
@@ -67,7 +66,7 @@ def ciccio(i: int, j: int):
 
 def main():
     alpha(1)
-    alpha(1,2)
+    # alpha(1,2)
 
     say(1)
     say(2.)

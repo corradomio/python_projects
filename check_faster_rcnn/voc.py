@@ -1,6 +1,6 @@
 import glob
 import os
-import random
+
 from functools import lru_cache
 
 import torch
@@ -12,7 +12,7 @@ from torch.utils.data.dataset import Dataset
 import xml.etree.ElementTree as ET
 
 
-def load_images_and_anns(im_dir, ann_dir, label2idx):
+def load_images_and_anns(im_dir, ann_dir, label2idx, max_images=0):
     r"""
     Method to get the xml files and for each file
     get all the objects and their ground truth detection
@@ -24,6 +24,9 @@ def load_images_and_anns(im_dir, ann_dir, label2idx):
     """
     im_infos = []
     for ann_file in tqdm(glob.glob(os.path.join(ann_dir, '*.xml'))):
+        if max_images > 0 and len(im_infos) >= max_images:
+            break
+
         im_info = {}
         im_info['img_id'] = os.path.basename(ann_file).split('.xml')[0]
         im_info['filename'] = os.path.join(im_dir, '{}.jpg'.format(im_info['img_id']))
@@ -41,10 +44,16 @@ def load_images_and_anns(im_dir, ann_dir, label2idx):
             label = label2idx[obj.find('name').text]
             bbox_info = obj.find('bndbox')
             bbox = [
-                int(float(bbox_info.find('xmin').text))-1,
-                int(float(bbox_info.find('ymin').text))-1,
-                int(float(bbox_info.find('xmax').text))-1,
-                int(float(bbox_info.find('ymax').text))-1
+                # why subtract 1 ???
+                # at limit: subtract 1 on .min and add 1 to .max
+                # int(float(bbox_info.find('xmin').text))-1,
+                # int(float(bbox_info.find('ymin').text))-1,
+                # int(float(bbox_info.find('xmax').text))-1,
+                # int(float(bbox_info.find('ymax').text))-1
+                int(float(bbox_info.find('xmin').text)),
+                int(float(bbox_info.find('ymin').text)),
+                int(float(bbox_info.find('xmax').text)),
+                int(float(bbox_info.find('ymax').text))
             ]
             det['label'] = label
             det['bbox'] = bbox
@@ -55,35 +64,35 @@ def load_images_and_anns(im_dir, ann_dir, label2idx):
     return im_infos
 
 
-def pil_resize(im: Image.Image, bboxes: list[list[int]], labels: list[int], new_size: tuple[int, int], n_targets: int) \
-        -> tuple[Image.Image, list[list[int]], list[int]]:
-    width, height = im.size
-    new_width, new_height = new_size
-
-    def bbox_resize(bbox):
-        x1, y1, x2, y2 = bbox
-        return [
-            x1 * new_width // width,
-            y1 * new_height // height,
-            x2 * new_width // width,
-            y2 * new_height // height
-        ]
-    # end
-
-    new_im = im.resize(new_size)
-    new_bboxes = [
-        bbox_resize(bbox)
-        for bbox in bboxes
-    ]
-    new_labels = labels[:]
-    while len(new_bboxes) < n_targets:
-        new_bboxes.append([0,0,1,1])
-        new_labels.append(-1)
-    return new_im, new_bboxes, new_labels
+# def pil_resize(im: Image.Image, bboxes: list[list[int]], labels: list[int], new_size: tuple[int, int], n_targets: int) \
+#         -> tuple[Image.Image, list[list[int]], list[int]]:
+#     width, height = im.size
+#     new_width, new_height = new_size
+#
+#     def bbox_resize(bbox):
+#         x1, y1, x2, y2 = bbox
+#         return [
+#             x1 * new_width // width,
+#             y1 * new_height // height,
+#             x2 * new_width // width,
+#             y2 * new_height // height
+#         ]
+#     # end
+#
+#     new_im = im.resize(new_size)
+#     new_bboxes = [
+#         bbox_resize(bbox)
+#         for bbox in bboxes
+#     ]
+#     new_labels = labels[:]
+#     while len(new_bboxes) < n_targets:
+#         new_bboxes.append([0,0,1,1])
+#         new_labels.append(-1)
+#     return new_im, new_bboxes, new_labels
 
 
 class VOCDataset(Dataset):
-    def __init__(self, split, im_dir, ann_dir):
+    def __init__(self, split, im_dir, ann_dir, max_images=0):
         self.split = split
         self.im_dir = im_dir
         self.ann_dir = ann_dir
@@ -97,7 +106,7 @@ class VOCDataset(Dataset):
         self.label2idx = {classes[idx]: idx for idx in range(len(classes))}
         self.idx2label = {idx: classes[idx] for idx in range(len(classes))}
         pprint(self.idx2label)
-        self.images_info = load_images_and_anns(im_dir, ann_dir, self.label2idx)
+        self.images_info = load_images_and_anns(im_dir, ann_dir, self.label2idx, max_images)
         self.ToTensor = torchvision.transforms.ToTensor()
     
     def __len__(self):
@@ -106,7 +115,54 @@ class VOCDataset(Dataset):
     @lru_cache(maxsize=1024)
     def __getitem__(self, index):
         im_info = self.images_info[index]
-        im = Image.open(im_info['filename'])
+        im_filename = im_info['filename']
+
+        im = Image.open(im_filename)
+        # [[262, 210, 323, 338], [164, 263, 252, 371], [4, 243, 66, 373], [240, 193, 294, 298], [276, 185, 311, 219]]
+        bboxes = [detection['bbox'] for detection in im_info['detections']]
+        # [9, 9, 9, 9, 9]
+        labels = [detection['label'] for detection in im_info['detections']]
+
+        # im, bboxes, labels = pil_resize(im, bboxes, labels, (500, 500), 42)
+
+        to_flip = False
+        # if self.split == 'train' and random.random() < 0.5:
+        #     to_flip = True
+        #     im = im.transpose(Image.FLIP_LEFT_RIGHT)
+
+        im_tensor = self.ToTensor(im)
+        targets = {
+            "bboxes": torch.as_tensor(bboxes),
+            "labels": torch.as_tensor(labels)
+        }
+
+        # targets = {}
+        # targets['bboxes'] = torch.as_tensor(bboxes)
+        # targets['labels'] = torch.as_tensor(labels)
+
+        # if to_flip:
+        #     for idx, box in enumerate(targets['bboxes']):
+        #         x1, y1, x2, y2 = box
+        #         w = x2-x1
+        #         im_w = im_tensor.shape[-1]
+        #         x1 = im_w - x1 - w
+        #         x2 = x1 + w
+        #         targets['bboxes'][idx] = torch.as_tensor([x1, y1, x2, y2])
+
+        # return im_tensor, targets, im_info['filename']
+        return (im_tensor, targets), targets
+        # return {
+        #     "rpn_output": im_tensor,
+        #     "frcnn_output": targets,
+        #     "im_filename": im_filename,
+        # }, targets
+    # end
+
+    def get_image(self, index):
+        im_info = self.images_info[index]
+        im_filename = im_info['filename']
+
+        im = Image.open(im_filename)
         # [[262, 210, 323, 338], [164, 263, 252, 371], [4, 243, 66, 373], [240, 193, 294, 298], [276, 185, 311, 219]]
         bboxes = [detection['bbox'] for detection in im_info['detections']]
         # [9, 9, 9, 9, 9]
@@ -135,8 +191,14 @@ class VOCDataset(Dataset):
         #         targets['bboxes'][idx] = torch.as_tensor([x1, y1, x2, y2])
 
         # return im_tensor, targets, im_info['filename']
-        return (im_tensor, targets), targets
-    # end
+        return im_tensor, targets, im_filename
+
+    def get(self, index):
+        (im_tensor, targets), _ = self[index]
+
+        im_tensor = im_tensor[None, ...]
+        targets = [targets]
+        return im_tensor, targets,
 # end
 
 
@@ -154,7 +216,9 @@ def main():
         if t_bboxes > n_bboxes:
             n_bboxes = t_bboxes
             print(n_bboxes, filename)
+    # end
     print(n_bboxes)
+
 
 
 

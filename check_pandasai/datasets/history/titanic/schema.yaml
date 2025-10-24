@@ -1,0 +1,11 @@
+name: titanic
+source:
+  type: postgres
+  connection:
+    host: localhost
+    port: 5432
+    database: python
+    user: postgres
+    password: p0stgres
+  table: titanic
+description: Titanic passengers alive and death after the disaster

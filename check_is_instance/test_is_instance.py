@@ -232,3 +232,21 @@ def test_has_methods():
 
     assert has_methods(C, ['fit', 'predict', 'score'])
     assert is_instance(C, has_methods(['fit', 'predict', 'score']))
+
+
+def test_optional_int():
+    assert is_instance(None, Optional[int])
+    assert is_instance(1, Optional[int])
+    assert not is_instance("a", Optional[int])
+    assert is_instance(None, Optional[list[int]])
+
+
+def test_optional_list_int():
+    assert is_instance(None, Optional[list[int]])
+    assert is_instance([], Optional[list[int]])
+    assert is_instance([1,2,3], Optional[list[int]])
+
+
+def test_optional_str():
+    assert is_instance(None, Optional[str])
+    assert is_instance('a', Optional[str])
