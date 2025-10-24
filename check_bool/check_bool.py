@@ -17,12 +17,18 @@ XOR = [0,1,1,0]
 # print(iboolfun(14, 2))
 # print(iboolfun(6, 2))
 
-for n in range(1, 4):
+for n in range(0, 4):
     print("n:", n)
     M = 2**(2**n)
-    for j in range(M):
-        # print(iboolfun(j, n))
-        print(ibooltable(j, n))
+    for k in range(M):
+        bf = ibooltable(k, n)
+        tt = truth_table(bf)
+        vv = expression_vars("x", n, False)
+        exp = simplify_expression(vv, tt)
+
+        print(bf, end="")
+        print(f" -> ({exp})", end="")
+        print(f" -> {used_vars(vv, exp)}")
         pass
     pass
 pass
