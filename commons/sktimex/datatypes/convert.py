@@ -13,10 +13,10 @@ def convert_to(
     y_cutoff=None
 ):
     """
-    This function resolve a problem with the original one that, when it convert
+    This function resolves a problem with the original one that, when it converts
     something in a series/dataframe, doesn't assign the correct index.
-    Here, the correct index in extracted from X, if available, or, it is created
-    using cutoff AND fh in relative way
+    Here, the correct index is extracted from X, if available, or, it is created
+    using cutoff AND fh in relatives way
     """
     y_out = sktdtc.convert_to(
         y_pred,

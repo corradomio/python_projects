@@ -4,7 +4,7 @@ from sktime.forecasting.compose._reduce import _check_strategy, _check_scitype, 
 from sktime.forecasting.compose._reduce import _DirectReducer, _MultioutputReducer, _DirRecReducer
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.utils.estimators.dispatch import construct_dispatch
-from ._trf import (FlexibeDirectRegressionForecaster, FlexibleMultioutputRegressionForecaster,
+from ._trf import (FlexibleDirectRegressionForecaster, FlexibleMultioutputRegressionForecaster,
                    FlexibleRecursiveRegressionForecaster, FlexibleDirRecRegressionForecaster)
 
 
@@ -35,7 +35,7 @@ class RecursiveTabularRegressionForecaster(sfcr.RecursiveTabularRegressionForeca
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -64,7 +64,7 @@ class DirectTabularRegressionForecaster(sfcr.DirectTabularRegressionForecaster):
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length+1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -91,7 +91,7 @@ class DirRecTabularRegressionForecaster(sfcr.DirRecTabularRegressionForecaster):
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -118,7 +118,7 @@ class MultioutputTabularRegressionForecaster(sfcr.MultioutputTabularRegressionFo
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -151,7 +151,7 @@ class DirectTimeSeriesRegressionForecaster(_DirectReducer):
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -178,7 +178,7 @@ class MultioutputTimeSeriesRegressionForecaster(_MultioutputReducer):
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -205,7 +205,7 @@ class DirRecTimeSeriesRegressionForecaster(_DirRecReducer):
         self.prediction_length = prediction_length
         self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
-    def _fit(self, y, X=None, fh=None):
+    def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
@@ -221,7 +221,7 @@ def _get_forecaster(scitype, strategy):
             # "multioutput": MultioutputTabularRegressionForecaster,
             # "dirrec": DirRecTabularRegressionForecaster,
 
-            "direct": FlexibeDirectRegressionForecaster,
+            "direct": FlexibleDirectRegressionForecaster,
             "recursive": FlexibleRecursiveRegressionForecaster,
             "multioutput": FlexibleMultioutputRegressionForecaster,
             "dirrec": FlexibleDirRecRegressionForecaster,
@@ -233,6 +233,19 @@ def _get_forecaster(scitype, strategy):
             "dirrec": DirRecTimeSeriesRegressionForecaster,
         },
     }
+
+    if scitype not in registry:
+        raise ValueError(
+            "Error in make_reduction, no reduction strategies defined for "
+            f"specified or inferred scitype of estimator: {scitype}. "
+            f"Valid scitypes are: {list(registry.keys())}."
+        )
+    if strategy not in registry[scitype]:
+        raise ValueError(
+            f"Error in make_reduction, strategy {strategy} not defined for "
+            f"specified or inferred scitype {scitype}. "
+            f"Valid strategies are: {list(registry[scitype].keys())}."
+        )
     return registry[scitype][strategy]
 
 
@@ -258,7 +271,7 @@ def make_reduction(
     if scitype == "infer":
         scitype = _infer_scitype(estimator)
 
-    Forecaster = _get_forecaster(scitype, strategy)
+    forecaster = _get_forecaster(scitype, strategy)
 
     dispatch_params = {
         "estimator": estimator,
@@ -269,4 +282,4 @@ def make_reduction(
         "windows_identical": windows_identical,
     }
 
-    return construct_dispatch(Forecaster, dispatch_params)
+    return construct_dispatch(forecaster, dispatch_params)

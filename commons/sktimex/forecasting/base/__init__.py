@@ -1,2 +1,2 @@
-from ._base import BaseForecaster, KwArgsForecaster, TransformForecaster
-from ._fh import ForecastingHorizon
+from ._base import BaseForecaster, ScaledForecaster
+from ._fh import ForecastingHorizonExt
