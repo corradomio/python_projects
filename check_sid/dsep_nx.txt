@@ -1,0 +1,1345 @@
+A->B | () False
+A->B | ('F',) False
+A->B | ('F', 'P') False
+A->B | ('F', 'P', 'Q') False
+A->B | ('F', 'P', 'Q', 'X') True
+A->B | ('F', 'P', 'Q', 'X', 'Y') True
+A->B | ('F', 'P', 'Q', 'Y') False
+A->B | ('F', 'P', 'X') True
+A->B | ('F', 'P', 'X', 'Y') True
+A->B | ('F', 'P', 'Y') False
+A->B | ('F', 'Q') False
+A->B | ('F', 'Q', 'X') True
+A->B | ('F', 'Q', 'X', 'Y') True
+A->B | ('F', 'Q', 'Y') False
+A->B | ('F', 'X') True
+A->B | ('F', 'X', 'Y') True
+A->B | ('F', 'Y') False
+A->B | ('P',) False
+A->B | ('P', 'Q') False
+A->B | ('P', 'Q', 'X') True
+A->B | ('P', 'Q', 'X', 'Y') True
+A->B | ('P', 'Q', 'Y') False
+A->B | ('P', 'X') True
+A->B | ('P', 'X', 'Y') True
+A->B | ('P', 'Y') False
+A->B | ('Q',) False
+A->B | ('Q', 'X') True
+A->B | ('Q', 'X', 'Y') True
+A->B | ('Q', 'Y') False
+A->B | ('X',) True
+A->B | ('X', 'Y') True
+A->B | ('Y',) False
+A->F | () False
+A->F | ('B',) True
+A->F | ('B', 'P') True
+A->F | ('B', 'P', 'Q') True
+A->F | ('B', 'P', 'Q', 'X') True
+A->F | ('B', 'P', 'Q', 'X', 'Y') True
+A->F | ('B', 'P', 'Q', 'Y') True
+A->F | ('B', 'P', 'X') True
+A->F | ('B', 'P', 'X', 'Y') True
+A->F | ('B', 'P', 'Y') True
+A->F | ('B', 'Q') True
+A->F | ('B', 'Q', 'X') True
+A->F | ('B', 'Q', 'X', 'Y') True
+A->F | ('B', 'Q', 'Y') True
+A->F | ('B', 'X') True
+A->F | ('B', 'X', 'Y') True
+A->F | ('B', 'Y') True
+A->F | ('P',) False
+A->F | ('P', 'Q') False
+A->F | ('P', 'Q', 'X') True
+A->F | ('P', 'Q', 'X', 'Y') True
+A->F | ('P', 'Q', 'Y') False
+A->F | ('P', 'X') True
+A->F | ('P', 'X', 'Y') True
+A->F | ('P', 'Y') False
+A->F | ('Q',) False
+A->F | ('Q', 'X') True
+A->F | ('Q', 'X', 'Y') True
+A->F | ('Q', 'Y') False
+A->F | ('X',) True
+A->F | ('X', 'Y') True
+A->F | ('Y',) False
+A->P | () False
+A->P | ('B',) False
+A->P | ('B', 'F') False
+A->P | ('B', 'F', 'Q') False
+A->P | ('B', 'F', 'Q', 'X') True
+A->P | ('B', 'F', 'Q', 'X', 'Y') True
+A->P | ('B', 'F', 'Q', 'Y') False
+A->P | ('B', 'F', 'X') True
+A->P | ('B', 'F', 'X', 'Y') True
+A->P | ('B', 'F', 'Y') False
+A->P | ('B', 'Q') False
+A->P | ('B', 'Q', 'X') True
+A->P | ('B', 'Q', 'X', 'Y') True
+A->P | ('B', 'Q', 'Y') False
+A->P | ('B', 'X') True
+A->P | ('B', 'X', 'Y') True
+A->P | ('B', 'Y') False
+A->P | ('F',) False
+A->P | ('F', 'Q') False
+A->P | ('F', 'Q', 'X') True
+A->P | ('F', 'Q', 'X', 'Y') True
+A->P | ('F', 'Q', 'Y') False
+A->P | ('F', 'X') True
+A->P | ('F', 'X', 'Y') True
+A->P | ('F', 'Y') False
+A->P | ('Q',) False
+A->P | ('Q', 'X') True
+A->P | ('Q', 'X', 'Y') True
+A->P | ('Q', 'Y') False
+A->P | ('X',) True
+A->P | ('X', 'Y') True
+A->P | ('Y',) False
+A->Q | () False
+A->Q | ('B',) False
+A->Q | ('B', 'F') False
+A->Q | ('B', 'F', 'P') False
+A->Q | ('B', 'F', 'P', 'X') True
+A->Q | ('B', 'F', 'P', 'X', 'Y') True
+A->Q | ('B', 'F', 'P', 'Y') False
+A->Q | ('B', 'F', 'X') True
+A->Q | ('B', 'F', 'X', 'Y') True
+A->Q | ('B', 'F', 'Y') False
+A->Q | ('B', 'P') False
+A->Q | ('B', 'P', 'X') True
+A->Q | ('B', 'P', 'X', 'Y') True
+A->Q | ('B', 'P', 'Y') False
+A->Q | ('B', 'X') True
+A->Q | ('B', 'X', 'Y') True
+A->Q | ('B', 'Y') False
+A->Q | ('F',) False
+A->Q | ('F', 'P') False
+A->Q | ('F', 'P', 'X') True
+A->Q | ('F', 'P', 'X', 'Y') True
+A->Q | ('F', 'P', 'Y') False
+A->Q | ('F', 'X') True
+A->Q | ('F', 'X', 'Y') True
+A->Q | ('F', 'Y') False
+A->Q | ('P',) False
+A->Q | ('P', 'X') True
+A->Q | ('P', 'X', 'Y') True
+A->Q | ('P', 'Y') False
+A->Q | ('X',) True
+A->Q | ('X', 'Y') True
+A->Q | ('Y',) False
+A->X | () False
+A->X | ('B',) False
+A->X | ('B', 'F') False
+A->X | ('B', 'F', 'P') False
+A->X | ('B', 'F', 'P', 'Q') False
+A->X | ('B', 'F', 'P', 'Q', 'Y') False
+A->X | ('B', 'F', 'P', 'Y') False
+A->X | ('B', 'F', 'Q') False
+A->X | ('B', 'F', 'Q', 'Y') False
+A->X | ('B', 'F', 'Y') False
+A->X | ('B', 'P') False
+A->X | ('B', 'P', 'Q') False
+A->X | ('B', 'P', 'Q', 'Y') False
+A->X | ('B', 'P', 'Y') False
+A->X | ('B', 'Q') False
+A->X | ('B', 'Q', 'Y') False
+A->X | ('B', 'Y') False
+A->X | ('F',) False
+A->X | ('F', 'P') False
+A->X | ('F', 'P', 'Q') False
+A->X | ('F', 'P', 'Q', 'Y') False
+A->X | ('F', 'P', 'Y') False
+A->X | ('F', 'Q') False
+A->X | ('F', 'Q', 'Y') False
+A->X | ('F', 'Y') False
+A->X | ('P',) False
+A->X | ('P', 'Q') False
+A->X | ('P', 'Q', 'Y') False
+A->X | ('P', 'Y') False
+A->X | ('Q',) False
+A->X | ('Q', 'Y') False
+A->X | ('Y',) False
+A->Y | () False
+A->Y | ('B',) False
+A->Y | ('B', 'F') False
+A->Y | ('B', 'F', 'P') True
+A->Y | ('B', 'F', 'P', 'Q') True
+A->Y | ('B', 'F', 'P', 'Q', 'X') True
+A->Y | ('B', 'F', 'P', 'X') True
+A->Y | ('B', 'F', 'Q') False
+A->Y | ('B', 'F', 'Q', 'X') True
+A->Y | ('B', 'F', 'X') True
+A->Y | ('B', 'P') True
+A->Y | ('B', 'P', 'Q') True
+A->Y | ('B', 'P', 'Q', 'X') True
+A->Y | ('B', 'P', 'X') True
+A->Y | ('B', 'Q') False
+A->Y | ('B', 'Q', 'X') True
+A->Y | ('B', 'X') True
+A->Y | ('F',) False
+A->Y | ('F', 'P') False
+A->Y | ('F', 'P', 'Q') False
+A->Y | ('F', 'P', 'Q', 'X') True
+A->Y | ('F', 'P', 'X') True
+A->Y | ('F', 'Q') False
+A->Y | ('F', 'Q', 'X') True
+A->Y | ('F', 'X') True
+A->Y | ('P',) False
+A->Y | ('P', 'Q') False
+A->Y | ('P', 'Q', 'X') True
+A->Y | ('P', 'X') True
+A->Y | ('Q',) False
+A->Y | ('Q', 'X') True
+A->Y | ('X',) True
+B->A | () False
+B->A | ('F',) False
+B->A | ('F', 'P') False
+B->A | ('F', 'P', 'Q') False
+B->A | ('F', 'P', 'Q', 'X') True
+B->A | ('F', 'P', 'Q', 'X', 'Y') True
+B->A | ('F', 'P', 'Q', 'Y') False
+B->A | ('F', 'P', 'X') True
+B->A | ('F', 'P', 'X', 'Y') True
+B->A | ('F', 'P', 'Y') False
+B->A | ('F', 'Q') False
+B->A | ('F', 'Q', 'X') True
+B->A | ('F', 'Q', 'X', 'Y') True
+B->A | ('F', 'Q', 'Y') False
+B->A | ('F', 'X') True
+B->A | ('F', 'X', 'Y') True
+B->A | ('F', 'Y') False
+B->A | ('P',) False
+B->A | ('P', 'Q') False
+B->A | ('P', 'Q', 'X') True
+B->A | ('P', 'Q', 'X', 'Y') True
+B->A | ('P', 'Q', 'Y') False
+B->A | ('P', 'X') True
+B->A | ('P', 'X', 'Y') True
+B->A | ('P', 'Y') False
+B->A | ('Q',) False
+B->A | ('Q', 'X') True
+B->A | ('Q', 'X', 'Y') True
+B->A | ('Q', 'Y') False
+B->A | ('X',) True
+B->A | ('X', 'Y') True
+B->A | ('Y',) False
+B->F | () False
+B->F | ('A',) False
+B->F | ('A', 'P') False
+B->F | ('A', 'P', 'Q') False
+B->F | ('A', 'P', 'Q', 'X') False
+B->F | ('A', 'P', 'Q', 'X', 'Y') False
+B->F | ('A', 'P', 'Q', 'Y') False
+B->F | ('A', 'P', 'X') False
+B->F | ('A', 'P', 'X', 'Y') False
+B->F | ('A', 'P', 'Y') False
+B->F | ('A', 'Q') False
+B->F | ('A', 'Q', 'X') False
+B->F | ('A', 'Q', 'X', 'Y') False
+B->F | ('A', 'Q', 'Y') False
+B->F | ('A', 'X') False
+B->F | ('A', 'X', 'Y') False
+B->F | ('A', 'Y') False
+B->F | ('P',) False
+B->F | ('P', 'Q') False
+B->F | ('P', 'Q', 'X') False
+B->F | ('P', 'Q', 'X', 'Y') False
+B->F | ('P', 'Q', 'Y') False
+B->F | ('P', 'X') False
+B->F | ('P', 'X', 'Y') False
+B->F | ('P', 'Y') False
+B->F | ('Q',) False
+B->F | ('Q', 'X') False
+B->F | ('Q', 'X', 'Y') False
+B->F | ('Q', 'Y') False
+B->F | ('X',) False
+B->F | ('X', 'Y') False
+B->F | ('Y',) False
+B->P | () False
+B->P | ('A',) False
+B->P | ('A', 'F') False
+B->P | ('A', 'F', 'Q') False
+B->P | ('A', 'F', 'Q', 'X') True
+B->P | ('A', 'F', 'Q', 'X', 'Y') False
+B->P | ('A', 'F', 'Q', 'Y') False
+B->P | ('A', 'F', 'X') True
+B->P | ('A', 'F', 'X', 'Y') False
+B->P | ('A', 'F', 'Y') False
+B->P | ('A', 'Q') False
+B->P | ('A', 'Q', 'X') True
+B->P | ('A', 'Q', 'X', 'Y') False
+B->P | ('A', 'Q', 'Y') False
+B->P | ('A', 'X') True
+B->P | ('A', 'X', 'Y') False
+B->P | ('A', 'Y') False
+B->P | ('F',) False
+B->P | ('F', 'Q') False
+B->P | ('F', 'Q', 'X') True
+B->P | ('F', 'Q', 'X', 'Y') False
+B->P | ('F', 'Q', 'Y') False
+B->P | ('F', 'X') True
+B->P | ('F', 'X', 'Y') False
+B->P | ('F', 'Y') False
+B->P | ('Q',) False
+B->P | ('Q', 'X') True
+B->P | ('Q', 'X', 'Y') False
+B->P | ('Q', 'Y') False
+B->P | ('X',) True
+B->P | ('X', 'Y') False
+B->P | ('Y',) False
+B->Q | () False
+B->Q | ('A',) False
+B->Q | ('A', 'F') False
+B->Q | ('A', 'F', 'P') False
+B->Q | ('A', 'F', 'P', 'X') True
+B->Q | ('A', 'F', 'P', 'X', 'Y') True
+B->Q | ('A', 'F', 'P', 'Y') False
+B->Q | ('A', 'F', 'X') True
+B->Q | ('A', 'F', 'X', 'Y') False
+B->Q | ('A', 'F', 'Y') False
+B->Q | ('A', 'P') False
+B->Q | ('A', 'P', 'X') True
+B->Q | ('A', 'P', 'X', 'Y') True
+B->Q | ('A', 'P', 'Y') False
+B->Q | ('A', 'X') True
+B->Q | ('A', 'X', 'Y') False
+B->Q | ('A', 'Y') False
+B->Q | ('F',) False
+B->Q | ('F', 'P') False
+B->Q | ('F', 'P', 'X') True
+B->Q | ('F', 'P', 'X', 'Y') True
+B->Q | ('F', 'P', 'Y') False
+B->Q | ('F', 'X') True
+B->Q | ('F', 'X', 'Y') False
+B->Q | ('F', 'Y') False
+B->Q | ('P',) False
+B->Q | ('P', 'X') True
+B->Q | ('P', 'X', 'Y') True
+B->Q | ('P', 'Y') False
+B->Q | ('X',) True
+B->Q | ('X', 'Y') False
+B->Q | ('Y',) False
+B->X | () False
+B->X | ('A',) False
+B->X | ('A', 'F') False
+B->X | ('A', 'F', 'P') False
+B->X | ('A', 'F', 'P', 'Q') False
+B->X | ('A', 'F', 'P', 'Q', 'Y') False
+B->X | ('A', 'F', 'P', 'Y') False
+B->X | ('A', 'F', 'Q') False
+B->X | ('A', 'F', 'Q', 'Y') False
+B->X | ('A', 'F', 'Y') False
+B->X | ('A', 'P') False
+B->X | ('A', 'P', 'Q') False
+B->X | ('A', 'P', 'Q', 'Y') False
+B->X | ('A', 'P', 'Y') False
+B->X | ('A', 'Q') False
+B->X | ('A', 'Q', 'Y') False
+B->X | ('A', 'Y') False
+B->X | ('F',) False
+B->X | ('F', 'P') False
+B->X | ('F', 'P', 'Q') False
+B->X | ('F', 'P', 'Q', 'Y') False
+B->X | ('F', 'P', 'Y') False
+B->X | ('F', 'Q') False
+B->X | ('F', 'Q', 'Y') False
+B->X | ('F', 'Y') False
+B->X | ('P',) False
+B->X | ('P', 'Q') False
+B->X | ('P', 'Q', 'Y') False
+B->X | ('P', 'Y') False
+B->X | ('Q',) False
+B->X | ('Q', 'Y') False
+B->X | ('Y',) False
+B->Y | () False
+B->Y | ('A',) False
+B->Y | ('A', 'F') False
+B->Y | ('A', 'F', 'P') False
+B->Y | ('A', 'F', 'P', 'Q') False
+B->Y | ('A', 'F', 'P', 'Q', 'X') False
+B->Y | ('A', 'F', 'P', 'X') False
+B->Y | ('A', 'F', 'Q') False
+B->Y | ('A', 'F', 'Q', 'X') False
+B->Y | ('A', 'F', 'X') False
+B->Y | ('A', 'P') False
+B->Y | ('A', 'P', 'Q') False
+B->Y | ('A', 'P', 'Q', 'X') False
+B->Y | ('A', 'P', 'X') False
+B->Y | ('A', 'Q') False
+B->Y | ('A', 'Q', 'X') False
+B->Y | ('A', 'X') False
+B->Y | ('F',) False
+B->Y | ('F', 'P') False
+B->Y | ('F', 'P', 'Q') False
+B->Y | ('F', 'P', 'Q', 'X') False
+B->Y | ('F', 'P', 'X') False
+B->Y | ('F', 'Q') False
+B->Y | ('F', 'Q', 'X') False
+B->Y | ('F', 'X') False
+B->Y | ('P',) False
+B->Y | ('P', 'Q') False
+B->Y | ('P', 'Q', 'X') False
+B->Y | ('P', 'X') False
+B->Y | ('Q',) False
+B->Y | ('Q', 'X') False
+B->Y | ('X',) False
+F->A | () False
+F->A | ('B',) True
+F->A | ('B', 'P') True
+F->A | ('B', 'P', 'Q') True
+F->A | ('B', 'P', 'Q', 'X') True
+F->A | ('B', 'P', 'Q', 'X', 'Y') True
+F->A | ('B', 'P', 'Q', 'Y') True
+F->A | ('B', 'P', 'X') True
+F->A | ('B', 'P', 'X', 'Y') True
+F->A | ('B', 'P', 'Y') True
+F->A | ('B', 'Q') True
+F->A | ('B', 'Q', 'X') True
+F->A | ('B', 'Q', 'X', 'Y') True
+F->A | ('B', 'Q', 'Y') True
+F->A | ('B', 'X') True
+F->A | ('B', 'X', 'Y') True
+F->A | ('B', 'Y') True
+F->A | ('P',) False
+F->A | ('P', 'Q') False
+F->A | ('P', 'Q', 'X') True
+F->A | ('P', 'Q', 'X', 'Y') True
+F->A | ('P', 'Q', 'Y') False
+F->A | ('P', 'X') True
+F->A | ('P', 'X', 'Y') True
+F->A | ('P', 'Y') False
+F->A | ('Q',) False
+F->A | ('Q', 'X') True
+F->A | ('Q', 'X', 'Y') True
+F->A | ('Q', 'Y') False
+F->A | ('X',) True
+F->A | ('X', 'Y') True
+F->A | ('Y',) False
+F->B | () False
+F->B | ('A',) False
+F->B | ('A', 'P') False
+F->B | ('A', 'P', 'Q') False
+F->B | ('A', 'P', 'Q', 'X') False
+F->B | ('A', 'P', 'Q', 'X', 'Y') False
+F->B | ('A', 'P', 'Q', 'Y') False
+F->B | ('A', 'P', 'X') False
+F->B | ('A', 'P', 'X', 'Y') False
+F->B | ('A', 'P', 'Y') False
+F->B | ('A', 'Q') False
+F->B | ('A', 'Q', 'X') False
+F->B | ('A', 'Q', 'X', 'Y') False
+F->B | ('A', 'Q', 'Y') False
+F->B | ('A', 'X') False
+F->B | ('A', 'X', 'Y') False
+F->B | ('A', 'Y') False
+F->B | ('P',) False
+F->B | ('P', 'Q') False
+F->B | ('P', 'Q', 'X') False
+F->B | ('P', 'Q', 'X', 'Y') False
+F->B | ('P', 'Q', 'Y') False
+F->B | ('P', 'X') False
+F->B | ('P', 'X', 'Y') False
+F->B | ('P', 'Y') False
+F->B | ('Q',) False
+F->B | ('Q', 'X') False
+F->B | ('Q', 'X', 'Y') False
+F->B | ('Q', 'Y') False
+F->B | ('X',) False
+F->B | ('X', 'Y') False
+F->B | ('Y',) False
+F->P | () False
+F->P | ('A',) False
+F->P | ('A', 'B') True
+F->P | ('A', 'B', 'Q') True
+F->P | ('A', 'B', 'Q', 'X') True
+F->P | ('A', 'B', 'Q', 'X', 'Y') True
+F->P | ('A', 'B', 'Q', 'Y') True
+F->P | ('A', 'B', 'X') True
+F->P | ('A', 'B', 'X', 'Y') True
+F->P | ('A', 'B', 'Y') True
+F->P | ('A', 'Q') False
+F->P | ('A', 'Q', 'X') True
+F->P | ('A', 'Q', 'X', 'Y') False
+F->P | ('A', 'Q', 'Y') False
+F->P | ('A', 'X') True
+F->P | ('A', 'X', 'Y') False
+F->P | ('A', 'Y') False
+F->P | ('B',) True
+F->P | ('B', 'Q') True
+F->P | ('B', 'Q', 'X') True
+F->P | ('B', 'Q', 'X', 'Y') True
+F->P | ('B', 'Q', 'Y') True
+F->P | ('B', 'X') True
+F->P | ('B', 'X', 'Y') True
+F->P | ('B', 'Y') True
+F->P | ('Q',) False
+F->P | ('Q', 'X') True
+F->P | ('Q', 'X', 'Y') False
+F->P | ('Q', 'Y') False
+F->P | ('X',) True
+F->P | ('X', 'Y') False
+F->P | ('Y',) False
+F->Q | () False
+F->Q | ('A',) False
+F->Q | ('A', 'B') True
+F->Q | ('A', 'B', 'P') True
+F->Q | ('A', 'B', 'P', 'X') True
+F->Q | ('A', 'B', 'P', 'X', 'Y') True
+F->Q | ('A', 'B', 'P', 'Y') True
+F->Q | ('A', 'B', 'X') True
+F->Q | ('A', 'B', 'X', 'Y') True
+F->Q | ('A', 'B', 'Y') True
+F->Q | ('A', 'P') False
+F->Q | ('A', 'P', 'X') True
+F->Q | ('A', 'P', 'X', 'Y') True
+F->Q | ('A', 'P', 'Y') False
+F->Q | ('A', 'X') True
+F->Q | ('A', 'X', 'Y') False
+F->Q | ('A', 'Y') False
+F->Q | ('B',) True
+F->Q | ('B', 'P') True
+F->Q | ('B', 'P', 'X') True
+F->Q | ('B', 'P', 'X', 'Y') True
+F->Q | ('B', 'P', 'Y') True
+F->Q | ('B', 'X') True
+F->Q | ('B', 'X', 'Y') True
+F->Q | ('B', 'Y') True
+F->Q | ('P',) False
+F->Q | ('P', 'X') True
+F->Q | ('P', 'X', 'Y') True
+F->Q | ('P', 'Y') False
+F->Q | ('X',) True
+F->Q | ('X', 'Y') False
+F->Q | ('Y',) False
+F->X | () False
+F->X | ('A',) False
+F->X | ('A', 'B') True
+F->X | ('A', 'B', 'P') True
+F->X | ('A', 'B', 'P', 'Q') True
+F->X | ('A', 'B', 'P', 'Q', 'Y') True
+F->X | ('A', 'B', 'P', 'Y') True
+F->X | ('A', 'B', 'Q') True
+F->X | ('A', 'B', 'Q', 'Y') True
+F->X | ('A', 'B', 'Y') True
+F->X | ('A', 'P') False
+F->X | ('A', 'P', 'Q') False
+F->X | ('A', 'P', 'Q', 'Y') False
+F->X | ('A', 'P', 'Y') False
+F->X | ('A', 'Q') False
+F->X | ('A', 'Q', 'Y') False
+F->X | ('A', 'Y') False
+F->X | ('B',) True
+F->X | ('B', 'P') True
+F->X | ('B', 'P', 'Q') True
+F->X | ('B', 'P', 'Q', 'Y') True
+F->X | ('B', 'P', 'Y') True
+F->X | ('B', 'Q') True
+F->X | ('B', 'Q', 'Y') True
+F->X | ('B', 'Y') True
+F->X | ('P',) False
+F->X | ('P', 'Q') False
+F->X | ('P', 'Q', 'Y') False
+F->X | ('P', 'Y') False
+F->X | ('Q',) False
+F->X | ('Q', 'Y') False
+F->X | ('Y',) False
+F->Y | () False
+F->Y | ('A',) False
+F->Y | ('A', 'B') True
+F->Y | ('A', 'B', 'P') True
+F->Y | ('A', 'B', 'P', 'Q') True
+F->Y | ('A', 'B', 'P', 'Q', 'X') True
+F->Y | ('A', 'B', 'P', 'X') True
+F->Y | ('A', 'B', 'Q') True
+F->Y | ('A', 'B', 'Q', 'X') True
+F->Y | ('A', 'B', 'X') True
+F->Y | ('A', 'P') False
+F->Y | ('A', 'P', 'Q') False
+F->Y | ('A', 'P', 'Q', 'X') False
+F->Y | ('A', 'P', 'X') False
+F->Y | ('A', 'Q') False
+F->Y | ('A', 'Q', 'X') False
+F->Y | ('A', 'X') False
+F->Y | ('B',) True
+F->Y | ('B', 'P') True
+F->Y | ('B', 'P', 'Q') True
+F->Y | ('B', 'P', 'Q', 'X') True
+F->Y | ('B', 'P', 'X') True
+F->Y | ('B', 'Q') True
+F->Y | ('B', 'Q', 'X') True
+F->Y | ('B', 'X') True
+F->Y | ('P',) False
+F->Y | ('P', 'Q') False
+F->Y | ('P', 'Q', 'X') False
+F->Y | ('P', 'X') False
+F->Y | ('Q',) False
+F->Y | ('Q', 'X') False
+F->Y | ('X',) False
+P->A | () False
+P->A | ('B',) False
+P->A | ('B', 'F') False
+P->A | ('B', 'F', 'Q') False
+P->A | ('B', 'F', 'Q', 'X') True
+P->A | ('B', 'F', 'Q', 'X', 'Y') True
+P->A | ('B', 'F', 'Q', 'Y') False
+P->A | ('B', 'F', 'X') True
+P->A | ('B', 'F', 'X', 'Y') True
+P->A | ('B', 'F', 'Y') False
+P->A | ('B', 'Q') False
+P->A | ('B', 'Q', 'X') True
+P->A | ('B', 'Q', 'X', 'Y') True
+P->A | ('B', 'Q', 'Y') False
+P->A | ('B', 'X') True
+P->A | ('B', 'X', 'Y') True
+P->A | ('B', 'Y') False
+P->A | ('F',) False
+P->A | ('F', 'Q') False
+P->A | ('F', 'Q', 'X') True
+P->A | ('F', 'Q', 'X', 'Y') True
+P->A | ('F', 'Q', 'Y') False
+P->A | ('F', 'X') True
+P->A | ('F', 'X', 'Y') True
+P->A | ('F', 'Y') False
+P->A | ('Q',) False
+P->A | ('Q', 'X') True
+P->A | ('Q', 'X', 'Y') True
+P->A | ('Q', 'Y') False
+P->A | ('X',) True
+P->A | ('X', 'Y') True
+P->A | ('Y',) False
+P->B | () False
+P->B | ('A',) False
+P->B | ('A', 'F') False
+P->B | ('A', 'F', 'Q') False
+P->B | ('A', 'F', 'Q', 'X') True
+P->B | ('A', 'F', 'Q', 'X', 'Y') False
+P->B | ('A', 'F', 'Q', 'Y') False
+P->B | ('A', 'F', 'X') True
+P->B | ('A', 'F', 'X', 'Y') False
+P->B | ('A', 'F', 'Y') False
+P->B | ('A', 'Q') False
+P->B | ('A', 'Q', 'X') True
+P->B | ('A', 'Q', 'X', 'Y') False
+P->B | ('A', 'Q', 'Y') False
+P->B | ('A', 'X') True
+P->B | ('A', 'X', 'Y') False
+P->B | ('A', 'Y') False
+P->B | ('F',) False
+P->B | ('F', 'Q') False
+P->B | ('F', 'Q', 'X') True
+P->B | ('F', 'Q', 'X', 'Y') False
+P->B | ('F', 'Q', 'Y') False
+P->B | ('F', 'X') True
+P->B | ('F', 'X', 'Y') False
+P->B | ('F', 'Y') False
+P->B | ('Q',) False
+P->B | ('Q', 'X') True
+P->B | ('Q', 'X', 'Y') False
+P->B | ('Q', 'Y') False
+P->B | ('X',) True
+P->B | ('X', 'Y') False
+P->B | ('Y',) False
+P->F | () False
+P->F | ('A',) False
+P->F | ('A', 'B') True
+P->F | ('A', 'B', 'Q') True
+P->F | ('A', 'B', 'Q', 'X') True
+P->F | ('A', 'B', 'Q', 'X', 'Y') True
+P->F | ('A', 'B', 'Q', 'Y') True
+P->F | ('A', 'B', 'X') True
+P->F | ('A', 'B', 'X', 'Y') True
+P->F | ('A', 'B', 'Y') True
+P->F | ('A', 'Q') False
+P->F | ('A', 'Q', 'X') True
+P->F | ('A', 'Q', 'X', 'Y') False
+P->F | ('A', 'Q', 'Y') False
+P->F | ('A', 'X') True
+P->F | ('A', 'X', 'Y') False
+P->F | ('A', 'Y') False
+P->F | ('B',) True
+P->F | ('B', 'Q') True
+P->F | ('B', 'Q', 'X') True
+P->F | ('B', 'Q', 'X', 'Y') True
+P->F | ('B', 'Q', 'Y') True
+P->F | ('B', 'X') True
+P->F | ('B', 'X', 'Y') True
+P->F | ('B', 'Y') True
+P->F | ('Q',) False
+P->F | ('Q', 'X') True
+P->F | ('Q', 'X', 'Y') False
+P->F | ('Q', 'Y') False
+P->F | ('X',) True
+P->F | ('X', 'Y') False
+P->F | ('Y',) False
+P->Q | () True
+P->Q | ('A',) False
+P->Q | ('A', 'B') False
+P->Q | ('A', 'B', 'F') False
+P->Q | ('A', 'B', 'F', 'X') False
+P->Q | ('A', 'B', 'F', 'X', 'Y') False
+P->Q | ('A', 'B', 'F', 'Y') False
+P->Q | ('A', 'B', 'X') False
+P->Q | ('A', 'B', 'X', 'Y') False
+P->Q | ('A', 'B', 'Y') False
+P->Q | ('A', 'F') False
+P->Q | ('A', 'F', 'X') False
+P->Q | ('A', 'F', 'X', 'Y') False
+P->Q | ('A', 'F', 'Y') False
+P->Q | ('A', 'X') False
+P->Q | ('A', 'X', 'Y') False
+P->Q | ('A', 'Y') False
+P->Q | ('B',) False
+P->Q | ('B', 'F') False
+P->Q | ('B', 'F', 'X') False
+P->Q | ('B', 'F', 'X', 'Y') False
+P->Q | ('B', 'F', 'Y') False
+P->Q | ('B', 'X') False
+P->Q | ('B', 'X', 'Y') False
+P->Q | ('B', 'Y') False
+P->Q | ('F',) False
+P->Q | ('F', 'X') False
+P->Q | ('F', 'X', 'Y') False
+P->Q | ('F', 'Y') False
+P->Q | ('X',) False
+P->Q | ('X', 'Y') False
+P->Q | ('Y',) False
+P->X | () False
+P->X | ('A',) False
+P->X | ('A', 'B') False
+P->X | ('A', 'B', 'F') False
+P->X | ('A', 'B', 'F', 'Q') False
+P->X | ('A', 'B', 'F', 'Q', 'Y') False
+P->X | ('A', 'B', 'F', 'Y') False
+P->X | ('A', 'B', 'Q') False
+P->X | ('A', 'B', 'Q', 'Y') False
+P->X | ('A', 'B', 'Y') False
+P->X | ('A', 'F') False
+P->X | ('A', 'F', 'Q') False
+P->X | ('A', 'F', 'Q', 'Y') False
+P->X | ('A', 'F', 'Y') False
+P->X | ('A', 'Q') False
+P->X | ('A', 'Q', 'Y') False
+P->X | ('A', 'Y') False
+P->X | ('B',) False
+P->X | ('B', 'F') False
+P->X | ('B', 'F', 'Q') False
+P->X | ('B', 'F', 'Q', 'Y') False
+P->X | ('B', 'F', 'Y') False
+P->X | ('B', 'Q') False
+P->X | ('B', 'Q', 'Y') False
+P->X | ('B', 'Y') False
+P->X | ('F',) False
+P->X | ('F', 'Q') False
+P->X | ('F', 'Q', 'Y') False
+P->X | ('F', 'Y') False
+P->X | ('Q',) False
+P->X | ('Q', 'Y') False
+P->X | ('Y',) False
+P->Y | () False
+P->Y | ('A',) False
+P->Y | ('A', 'B') False
+P->Y | ('A', 'B', 'F') False
+P->Y | ('A', 'B', 'F', 'Q') False
+P->Y | ('A', 'B', 'F', 'Q', 'X') False
+P->Y | ('A', 'B', 'F', 'X') False
+P->Y | ('A', 'B', 'Q') False
+P->Y | ('A', 'B', 'Q', 'X') False
+P->Y | ('A', 'B', 'X') False
+P->Y | ('A', 'F') False
+P->Y | ('A', 'F', 'Q') False
+P->Y | ('A', 'F', 'Q', 'X') False
+P->Y | ('A', 'F', 'X') False
+P->Y | ('A', 'Q') False
+P->Y | ('A', 'Q', 'X') False
+P->Y | ('A', 'X') False
+P->Y | ('B',) False
+P->Y | ('B', 'F') False
+P->Y | ('B', 'F', 'Q') False
+P->Y | ('B', 'F', 'Q', 'X') False
+P->Y | ('B', 'F', 'X') False
+P->Y | ('B', 'Q') False
+P->Y | ('B', 'Q', 'X') False
+P->Y | ('B', 'X') False
+P->Y | ('F',) False
+P->Y | ('F', 'Q') False
+P->Y | ('F', 'Q', 'X') False
+P->Y | ('F', 'X') False
+P->Y | ('Q',) False
+P->Y | ('Q', 'X') False
+P->Y | ('X',) False
+Q->A | () False
+Q->A | ('B',) False
+Q->A | ('B', 'F') False
+Q->A | ('B', 'F', 'P') False
+Q->A | ('B', 'F', 'P', 'X') True
+Q->A | ('B', 'F', 'P', 'X', 'Y') True
+Q->A | ('B', 'F', 'P', 'Y') False
+Q->A | ('B', 'F', 'X') True
+Q->A | ('B', 'F', 'X', 'Y') True
+Q->A | ('B', 'F', 'Y') False
+Q->A | ('B', 'P') False
+Q->A | ('B', 'P', 'X') True
+Q->A | ('B', 'P', 'X', 'Y') True
+Q->A | ('B', 'P', 'Y') False
+Q->A | ('B', 'X') True
+Q->A | ('B', 'X', 'Y') True
+Q->A | ('B', 'Y') False
+Q->A | ('F',) False
+Q->A | ('F', 'P') False
+Q->A | ('F', 'P', 'X') True
+Q->A | ('F', 'P', 'X', 'Y') True
+Q->A | ('F', 'P', 'Y') False
+Q->A | ('F', 'X') True
+Q->A | ('F', 'X', 'Y') True
+Q->A | ('F', 'Y') False
+Q->A | ('P',) False
+Q->A | ('P', 'X') True
+Q->A | ('P', 'X', 'Y') True
+Q->A | ('P', 'Y') False
+Q->A | ('X',) True
+Q->A | ('X', 'Y') True
+Q->A | ('Y',) False
+Q->B | () False
+Q->B | ('A',) False
+Q->B | ('A', 'F') False
+Q->B | ('A', 'F', 'P') False
+Q->B | ('A', 'F', 'P', 'X') True
+Q->B | ('A', 'F', 'P', 'X', 'Y') True
+Q->B | ('A', 'F', 'P', 'Y') False
+Q->B | ('A', 'F', 'X') True
+Q->B | ('A', 'F', 'X', 'Y') False
+Q->B | ('A', 'F', 'Y') False
+Q->B | ('A', 'P') False
+Q->B | ('A', 'P', 'X') True
+Q->B | ('A', 'P', 'X', 'Y') True
+Q->B | ('A', 'P', 'Y') False
+Q->B | ('A', 'X') True
+Q->B | ('A', 'X', 'Y') False
+Q->B | ('A', 'Y') False
+Q->B | ('F',) False
+Q->B | ('F', 'P') False
+Q->B | ('F', 'P', 'X') True
+Q->B | ('F', 'P', 'X', 'Y') True
+Q->B | ('F', 'P', 'Y') False
+Q->B | ('F', 'X') True
+Q->B | ('F', 'X', 'Y') False
+Q->B | ('F', 'Y') False
+Q->B | ('P',) False
+Q->B | ('P', 'X') True
+Q->B | ('P', 'X', 'Y') True
+Q->B | ('P', 'Y') False
+Q->B | ('X',) True
+Q->B | ('X', 'Y') False
+Q->B | ('Y',) False
+Q->F | () False
+Q->F | ('A',) False
+Q->F | ('A', 'B') True
+Q->F | ('A', 'B', 'P') True
+Q->F | ('A', 'B', 'P', 'X') True
+Q->F | ('A', 'B', 'P', 'X', 'Y') True
+Q->F | ('A', 'B', 'P', 'Y') True
+Q->F | ('A', 'B', 'X') True
+Q->F | ('A', 'B', 'X', 'Y') True
+Q->F | ('A', 'B', 'Y') True
+Q->F | ('A', 'P') False
+Q->F | ('A', 'P', 'X') True
+Q->F | ('A', 'P', 'X', 'Y') True
+Q->F | ('A', 'P', 'Y') False
+Q->F | ('A', 'X') True
+Q->F | ('A', 'X', 'Y') False
+Q->F | ('A', 'Y') False
+Q->F | ('B',) True
+Q->F | ('B', 'P') True
+Q->F | ('B', 'P', 'X') True
+Q->F | ('B', 'P', 'X', 'Y') True
+Q->F | ('B', 'P', 'Y') True
+Q->F | ('B', 'X') True
+Q->F | ('B', 'X', 'Y') True
+Q->F | ('B', 'Y') True
+Q->F | ('P',) False
+Q->F | ('P', 'X') True
+Q->F | ('P', 'X', 'Y') True
+Q->F | ('P', 'Y') False
+Q->F | ('X',) True
+Q->F | ('X', 'Y') False
+Q->F | ('Y',) False
+Q->P | () True
+Q->P | ('A',) False
+Q->P | ('A', 'B') False
+Q->P | ('A', 'B', 'F') False
+Q->P | ('A', 'B', 'F', 'X') False
+Q->P | ('A', 'B', 'F', 'X', 'Y') False
+Q->P | ('A', 'B', 'F', 'Y') False
+Q->P | ('A', 'B', 'X') False
+Q->P | ('A', 'B', 'X', 'Y') False
+Q->P | ('A', 'B', 'Y') False
+Q->P | ('A', 'F') False
+Q->P | ('A', 'F', 'X') False
+Q->P | ('A', 'F', 'X', 'Y') False
+Q->P | ('A', 'F', 'Y') False
+Q->P | ('A', 'X') False
+Q->P | ('A', 'X', 'Y') False
+Q->P | ('A', 'Y') False
+Q->P | ('B',) False
+Q->P | ('B', 'F') False
+Q->P | ('B', 'F', 'X') False
+Q->P | ('B', 'F', 'X', 'Y') False
+Q->P | ('B', 'F', 'Y') False
+Q->P | ('B', 'X') False
+Q->P | ('B', 'X', 'Y') False
+Q->P | ('B', 'Y') False
+Q->P | ('F',) False
+Q->P | ('F', 'X') False
+Q->P | ('F', 'X', 'Y') False
+Q->P | ('F', 'Y') False
+Q->P | ('X',) False
+Q->P | ('X', 'Y') False
+Q->P | ('Y',) False
+Q->X | () False
+Q->X | ('A',) False
+Q->X | ('A', 'B') False
+Q->X | ('A', 'B', 'F') False
+Q->X | ('A', 'B', 'F', 'P') False
+Q->X | ('A', 'B', 'F', 'P', 'Y') False
+Q->X | ('A', 'B', 'F', 'Y') False
+Q->X | ('A', 'B', 'P') False
+Q->X | ('A', 'B', 'P', 'Y') False
+Q->X | ('A', 'B', 'Y') False
+Q->X | ('A', 'F') False
+Q->X | ('A', 'F', 'P') False
+Q->X | ('A', 'F', 'P', 'Y') False
+Q->X | ('A', 'F', 'Y') False
+Q->X | ('A', 'P') False
+Q->X | ('A', 'P', 'Y') False
+Q->X | ('A', 'Y') False
+Q->X | ('B',) False
+Q->X | ('B', 'F') False
+Q->X | ('B', 'F', 'P') False
+Q->X | ('B', 'F', 'P', 'Y') False
+Q->X | ('B', 'F', 'Y') False
+Q->X | ('B', 'P') False
+Q->X | ('B', 'P', 'Y') False
+Q->X | ('B', 'Y') False
+Q->X | ('F',) False
+Q->X | ('F', 'P') False
+Q->X | ('F', 'P', 'Y') False
+Q->X | ('F', 'Y') False
+Q->X | ('P',) False
+Q->X | ('P', 'Y') False
+Q->X | ('Y',) False
+Q->Y | () False
+Q->Y | ('A',) False
+Q->Y | ('A', 'B') False
+Q->Y | ('A', 'B', 'F') False
+Q->Y | ('A', 'B', 'F', 'P') True
+Q->Y | ('A', 'B', 'F', 'P', 'X') True
+Q->Y | ('A', 'B', 'F', 'X') False
+Q->Y | ('A', 'B', 'P') True
+Q->Y | ('A', 'B', 'P', 'X') True
+Q->Y | ('A', 'B', 'X') False
+Q->Y | ('A', 'F') False
+Q->Y | ('A', 'F', 'P') False
+Q->Y | ('A', 'F', 'P', 'X') True
+Q->Y | ('A', 'F', 'X') False
+Q->Y | ('A', 'P') False
+Q->Y | ('A', 'P', 'X') True
+Q->Y | ('A', 'X') False
+Q->Y | ('B',) False
+Q->Y | ('B', 'F') False
+Q->Y | ('B', 'F', 'P') True
+Q->Y | ('B', 'F', 'P', 'X') True
+Q->Y | ('B', 'F', 'X') False
+Q->Y | ('B', 'P') True
+Q->Y | ('B', 'P', 'X') True
+Q->Y | ('B', 'X') False
+Q->Y | ('F',) False
+Q->Y | ('F', 'P') False
+Q->Y | ('F', 'P', 'X') True
+Q->Y | ('F', 'X') False
+Q->Y | ('P',) False
+Q->Y | ('P', 'X') True
+Q->Y | ('X',) False
+X->A | () False
+X->A | ('B',) False
+X->A | ('B', 'F') False
+X->A | ('B', 'F', 'P') False
+X->A | ('B', 'F', 'P', 'Q') False
+X->A | ('B', 'F', 'P', 'Q', 'Y') False
+X->A | ('B', 'F', 'P', 'Y') False
+X->A | ('B', 'F', 'Q') False
+X->A | ('B', 'F', 'Q', 'Y') False
+X->A | ('B', 'F', 'Y') False
+X->A | ('B', 'P') False
+X->A | ('B', 'P', 'Q') False
+X->A | ('B', 'P', 'Q', 'Y') False
+X->A | ('B', 'P', 'Y') False
+X->A | ('B', 'Q') False
+X->A | ('B', 'Q', 'Y') False
+X->A | ('B', 'Y') False
+X->A | ('F',) False
+X->A | ('F', 'P') False
+X->A | ('F', 'P', 'Q') False
+X->A | ('F', 'P', 'Q', 'Y') False
+X->A | ('F', 'P', 'Y') False
+X->A | ('F', 'Q') False
+X->A | ('F', 'Q', 'Y') False
+X->A | ('F', 'Y') False
+X->A | ('P',) False
+X->A | ('P', 'Q') False
+X->A | ('P', 'Q', 'Y') False
+X->A | ('P', 'Y') False
+X->A | ('Q',) False
+X->A | ('Q', 'Y') False
+X->A | ('Y',) False
+X->B | () False
+X->B | ('A',) False
+X->B | ('A', 'F') False
+X->B | ('A', 'F', 'P') False
+X->B | ('A', 'F', 'P', 'Q') False
+X->B | ('A', 'F', 'P', 'Q', 'Y') False
+X->B | ('A', 'F', 'P', 'Y') False
+X->B | ('A', 'F', 'Q') False
+X->B | ('A', 'F', 'Q', 'Y') False
+X->B | ('A', 'F', 'Y') False
+X->B | ('A', 'P') False
+X->B | ('A', 'P', 'Q') False
+X->B | ('A', 'P', 'Q', 'Y') False
+X->B | ('A', 'P', 'Y') False
+X->B | ('A', 'Q') False
+X->B | ('A', 'Q', 'Y') False
+X->B | ('A', 'Y') False
+X->B | ('F',) False
+X->B | ('F', 'P') False
+X->B | ('F', 'P', 'Q') False
+X->B | ('F', 'P', 'Q', 'Y') False
+X->B | ('F', 'P', 'Y') False
+X->B | ('F', 'Q') False
+X->B | ('F', 'Q', 'Y') False
+X->B | ('F', 'Y') False
+X->B | ('P',) False
+X->B | ('P', 'Q') False
+X->B | ('P', 'Q', 'Y') False
+X->B | ('P', 'Y') False
+X->B | ('Q',) False
+X->B | ('Q', 'Y') False
+X->B | ('Y',) False
+X->F | () False
+X->F | ('A',) False
+X->F | ('A', 'B') True
+X->F | ('A', 'B', 'P') True
+X->F | ('A', 'B', 'P', 'Q') True
+X->F | ('A', 'B', 'P', 'Q', 'Y') True
+X->F | ('A', 'B', 'P', 'Y') True
+X->F | ('A', 'B', 'Q') True
+X->F | ('A', 'B', 'Q', 'Y') True
+X->F | ('A', 'B', 'Y') True
+X->F | ('A', 'P') False
+X->F | ('A', 'P', 'Q') False
+X->F | ('A', 'P', 'Q', 'Y') False
+X->F | ('A', 'P', 'Y') False
+X->F | ('A', 'Q') False
+X->F | ('A', 'Q', 'Y') False
+X->F | ('A', 'Y') False
+X->F | ('B',) True
+X->F | ('B', 'P') True
+X->F | ('B', 'P', 'Q') True
+X->F | ('B', 'P', 'Q', 'Y') True
+X->F | ('B', 'P', 'Y') True
+X->F | ('B', 'Q') True
+X->F | ('B', 'Q', 'Y') True
+X->F | ('B', 'Y') True
+X->F | ('P',) False
+X->F | ('P', 'Q') False
+X->F | ('P', 'Q', 'Y') False
+X->F | ('P', 'Y') False
+X->F | ('Q',) False
+X->F | ('Q', 'Y') False
+X->F | ('Y',) False
+X->P | () False
+X->P | ('A',) False
+X->P | ('A', 'B') False
+X->P | ('A', 'B', 'F') False
+X->P | ('A', 'B', 'F', 'Q') False
+X->P | ('A', 'B', 'F', 'Q', 'Y') False
+X->P | ('A', 'B', 'F', 'Y') False
+X->P | ('A', 'B', 'Q') False
+X->P | ('A', 'B', 'Q', 'Y') False
+X->P | ('A', 'B', 'Y') False
+X->P | ('A', 'F') False
+X->P | ('A', 'F', 'Q') False
+X->P | ('A', 'F', 'Q', 'Y') False
+X->P | ('A', 'F', 'Y') False
+X->P | ('A', 'Q') False
+X->P | ('A', 'Q', 'Y') False
+X->P | ('A', 'Y') False
+X->P | ('B',) False
+X->P | ('B', 'F') False
+X->P | ('B', 'F', 'Q') False
+X->P | ('B', 'F', 'Q', 'Y') False
+X->P | ('B', 'F', 'Y') False
+X->P | ('B', 'Q') False
+X->P | ('B', 'Q', 'Y') False
+X->P | ('B', 'Y') False
+X->P | ('F',) False
+X->P | ('F', 'Q') False
+X->P | ('F', 'Q', 'Y') False
+X->P | ('F', 'Y') False
+X->P | ('Q',) False
+X->P | ('Q', 'Y') False
+X->P | ('Y',) False
+X->Q | () False
+X->Q | ('A',) False
+X->Q | ('A', 'B') False
+X->Q | ('A', 'B', 'F') False
+X->Q | ('A', 'B', 'F', 'P') False
+X->Q | ('A', 'B', 'F', 'P', 'Y') False
+X->Q | ('A', 'B', 'F', 'Y') False
+X->Q | ('A', 'B', 'P') False
+X->Q | ('A', 'B', 'P', 'Y') False
+X->Q | ('A', 'B', 'Y') False
+X->Q | ('A', 'F') False
+X->Q | ('A', 'F', 'P') False
+X->Q | ('A', 'F', 'P', 'Y') False
+X->Q | ('A', 'F', 'Y') False
+X->Q | ('A', 'P') False
+X->Q | ('A', 'P', 'Y') False
+X->Q | ('A', 'Y') False
+X->Q | ('B',) False
+X->Q | ('B', 'F') False
+X->Q | ('B', 'F', 'P') False
+X->Q | ('B', 'F', 'P', 'Y') False
+X->Q | ('B', 'F', 'Y') False
+X->Q | ('B', 'P') False
+X->Q | ('B', 'P', 'Y') False
+X->Q | ('B', 'Y') False
+X->Q | ('F',) False
+X->Q | ('F', 'P') False
+X->Q | ('F', 'P', 'Y') False
+X->Q | ('F', 'Y') False
+X->Q | ('P',) False
+X->Q | ('P', 'Y') False
+X->Q | ('Y',) False
+X->Y | () False
+X->Y | ('A',) False
+X->Y | ('A', 'B') False
+X->Y | ('A', 'B', 'F') False
+X->Y | ('A', 'B', 'F', 'P') True
+X->Y | ('A', 'B', 'F', 'P', 'Q') True
+X->Y | ('A', 'B', 'F', 'Q') False
+X->Y | ('A', 'B', 'P') True
+X->Y | ('A', 'B', 'P', 'Q') True
+X->Y | ('A', 'B', 'Q') False
+X->Y | ('A', 'F') False
+X->Y | ('A', 'F', 'P') False
+X->Y | ('A', 'F', 'P', 'Q') False
+X->Y | ('A', 'F', 'Q') False
+X->Y | ('A', 'P') False
+X->Y | ('A', 'P', 'Q') False
+X->Y | ('A', 'Q') False
+X->Y | ('B',) False
+X->Y | ('B', 'F') False
+X->Y | ('B', 'F', 'P') True
+X->Y | ('B', 'F', 'P', 'Q') True
+X->Y | ('B', 'F', 'Q') False
+X->Y | ('B', 'P') True
+X->Y | ('B', 'P', 'Q') True
+X->Y | ('B', 'Q') False
+X->Y | ('F',) False
+X->Y | ('F', 'P') False
+X->Y | ('F', 'P', 'Q') False
+X->Y | ('F', 'Q') False
+X->Y | ('P',) False
+X->Y | ('P', 'Q') False
+X->Y | ('Q',) False
+Y->A | () False
+Y->A | ('B',) False
+Y->A | ('B', 'F') False
+Y->A | ('B', 'F', 'P') True
+Y->A | ('B', 'F', 'P', 'Q') True
+Y->A | ('B', 'F', 'P', 'Q', 'X') True
+Y->A | ('B', 'F', 'P', 'X') True
+Y->A | ('B', 'F', 'Q') False
+Y->A | ('B', 'F', 'Q', 'X') True
+Y->A | ('B', 'F', 'X') True
+Y->A | ('B', 'P') True
+Y->A | ('B', 'P', 'Q') True
+Y->A | ('B', 'P', 'Q', 'X') True
+Y->A | ('B', 'P', 'X') True
+Y->A | ('B', 'Q') False
+Y->A | ('B', 'Q', 'X') True
+Y->A | ('B', 'X') True
+Y->A | ('F',) False
+Y->A | ('F', 'P') False
+Y->A | ('F', 'P', 'Q') False
+Y->A | ('F', 'P', 'Q', 'X') True
+Y->A | ('F', 'P', 'X') True
+Y->A | ('F', 'Q') False
+Y->A | ('F', 'Q', 'X') True
+Y->A | ('F', 'X') True
+Y->A | ('P',) False
+Y->A | ('P', 'Q') False
+Y->A | ('P', 'Q', 'X') True
+Y->A | ('P', 'X') True
+Y->A | ('Q',) False
+Y->A | ('Q', 'X') True
+Y->A | ('X',) True
+Y->B | () False
+Y->B | ('A',) False
+Y->B | ('A', 'F') False
+Y->B | ('A', 'F', 'P') False
+Y->B | ('A', 'F', 'P', 'Q') False
+Y->B | ('A', 'F', 'P', 'Q', 'X') False
+Y->B | ('A', 'F', 'P', 'X') False
+Y->B | ('A', 'F', 'Q') False
+Y->B | ('A', 'F', 'Q', 'X') False
+Y->B | ('A', 'F', 'X') False
+Y->B | ('A', 'P') False
+Y->B | ('A', 'P', 'Q') False
+Y->B | ('A', 'P', 'Q', 'X') False
+Y->B | ('A', 'P', 'X') False
+Y->B | ('A', 'Q') False
+Y->B | ('A', 'Q', 'X') False
+Y->B | ('A', 'X') False
+Y->B | ('F',) False
+Y->B | ('F', 'P') False
+Y->B | ('F', 'P', 'Q') False
+Y->B | ('F', 'P', 'Q', 'X') False
+Y->B | ('F', 'P', 'X') False
+Y->B | ('F', 'Q') False
+Y->B | ('F', 'Q', 'X') False
+Y->B | ('F', 'X') False
+Y->B | ('P',) False
+Y->B | ('P', 'Q') False
+Y->B | ('P', 'Q', 'X') False
+Y->B | ('P', 'X') False
+Y->B | ('Q',) False
+Y->B | ('Q', 'X') False
+Y->B | ('X',) False
+Y->F | () False
+Y->F | ('A',) False
+Y->F | ('A', 'B') True
+Y->F | ('A', 'B', 'P') True
+Y->F | ('A', 'B', 'P', 'Q') True
+Y->F | ('A', 'B', 'P', 'Q', 'X') True
+Y->F | ('A', 'B', 'P', 'X') True
+Y->F | ('A', 'B', 'Q') True
+Y->F | ('A', 'B', 'Q', 'X') True
+Y->F | ('A', 'B', 'X') True
+Y->F | ('A', 'P') False
+Y->F | ('A', 'P', 'Q') False
+Y->F | ('A', 'P', 'Q', 'X') False
+Y->F | ('A', 'P', 'X') False
+Y->F | ('A', 'Q') False
+Y->F | ('A', 'Q', 'X') False
+Y->F | ('A', 'X') False
+Y->F | ('B',) True
+Y->F | ('B', 'P') True
+Y->F | ('B', 'P', 'Q') True
+Y->F | ('B', 'P', 'Q', 'X') True
+Y->F | ('B', 'P', 'X') True
+Y->F | ('B', 'Q') True
+Y->F | ('B', 'Q', 'X') True
+Y->F | ('B', 'X') True
+Y->F | ('P',) False
+Y->F | ('P', 'Q') False
+Y->F | ('P', 'Q', 'X') False
+Y->F | ('P', 'X') False
+Y->F | ('Q',) False
+Y->F | ('Q', 'X') False
+Y->F | ('X',) False
+Y->P | () False
+Y->P | ('A',) False
+Y->P | ('A', 'B') False
+Y->P | ('A', 'B', 'F') False
+Y->P | ('A', 'B', 'F', 'Q') False
+Y->P | ('A', 'B', 'F', 'Q', 'X') False
+Y->P | ('A', 'B', 'F', 'X') False
+Y->P | ('A', 'B', 'Q') False
+Y->P | ('A', 'B', 'Q', 'X') False
+Y->P | ('A', 'B', 'X') False
+Y->P | ('A', 'F') False
+Y->P | ('A', 'F', 'Q') False
+Y->P | ('A', 'F', 'Q', 'X') False
+Y->P | ('A', 'F', 'X') False
+Y->P | ('A', 'Q') False
+Y->P | ('A', 'Q', 'X') False
+Y->P | ('A', 'X') False
+Y->P | ('B',) False
+Y->P | ('B', 'F') False
+Y->P | ('B', 'F', 'Q') False
+Y->P | ('B', 'F', 'Q', 'X') False
+Y->P | ('B', 'F', 'X') False
+Y->P | ('B', 'Q') False
+Y->P | ('B', 'Q', 'X') False
+Y->P | ('B', 'X') False
+Y->P | ('F',) False
+Y->P | ('F', 'Q') False
+Y->P | ('F', 'Q', 'X') False
+Y->P | ('F', 'X') False
+Y->P | ('Q',) False
+Y->P | ('Q', 'X') False
+Y->P | ('X',) False
+Y->Q | () False
+Y->Q | ('A',) False
+Y->Q | ('A', 'B') False
+Y->Q | ('A', 'B', 'F') False
+Y->Q | ('A', 'B', 'F', 'P') True
+Y->Q | ('A', 'B', 'F', 'P', 'X') True
+Y->Q | ('A', 'B', 'F', 'X') False
+Y->Q | ('A', 'B', 'P') True
+Y->Q | ('A', 'B', 'P', 'X') True
+Y->Q | ('A', 'B', 'X') False
+Y->Q | ('A', 'F') False
+Y->Q | ('A', 'F', 'P') False
+Y->Q | ('A', 'F', 'P', 'X') True
+Y->Q | ('A', 'F', 'X') False
+Y->Q | ('A', 'P') False
+Y->Q | ('A', 'P', 'X') True
+Y->Q | ('A', 'X') False
+Y->Q | ('B',) False
+Y->Q | ('B', 'F') False
+Y->Q | ('B', 'F', 'P') True
+Y->Q | ('B', 'F', 'P', 'X') True
+Y->Q | ('B', 'F', 'X') False
+Y->Q | ('B', 'P') True
+Y->Q | ('B', 'P', 'X') True
+Y->Q | ('B', 'X') False
+Y->Q | ('F',) False
+Y->Q | ('F', 'P') False
+Y->Q | ('F', 'P', 'X') True
+Y->Q | ('F', 'X') False
+Y->Q | ('P',) False
+Y->Q | ('P', 'X') True
+Y->Q | ('X',) False
+Y->X | () False
+Y->X | ('A',) False
+Y->X | ('A', 'B') False
+Y->X | ('A', 'B', 'F') False
+Y->X | ('A', 'B', 'F', 'P') True
+Y->X | ('A', 'B', 'F', 'P', 'Q') True
+Y->X | ('A', 'B', 'F', 'Q') False
+Y->X | ('A', 'B', 'P') True
+Y->X | ('A', 'B', 'P', 'Q') True
+Y->X | ('A', 'B', 'Q') False
+Y->X | ('A', 'F') False
+Y->X | ('A', 'F', 'P') False
+Y->X | ('A', 'F', 'P', 'Q') False
+Y->X | ('A', 'F', 'Q') False
+Y->X | ('A', 'P') False
+Y->X | ('A', 'P', 'Q') False
+Y->X | ('A', 'Q') False
+Y->X | ('B',) False
+Y->X | ('B', 'F') False
+Y->X | ('B', 'F', 'P') True
+Y->X | ('B', 'F', 'P', 'Q') True
+Y->X | ('B', 'F', 'Q') False
+Y->X | ('B', 'P') True
+Y->X | ('B', 'P', 'Q') True
+Y->X | ('B', 'Q') False
+Y->X | ('F',) False
+Y->X | ('F', 'P') False
+Y->X | ('F', 'P', 'Q') False
+Y->X | ('F', 'Q') False
+Y->X | ('P',) False
+Y->X | ('P', 'Q') False
+Y->X | ('Q',) False
+
