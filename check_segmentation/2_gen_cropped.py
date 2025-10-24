@@ -5,7 +5,7 @@ from joblib import Parallel, delayed
 from commons import *
 
 
-CROP_SIZE = 384
+CROP_SIZE = 224
 RESIZE_FACTOR = 4
 
 

@@ -9,4 +9,12 @@ Image Segmentation
     https://www.v7labs.com/blog/image-segmentation-guide#h6
 
 
+vggnet
+SGD pretrained nobias   0.0039
+SGD pretrained bias     0.0039
 
+SGD notrained  bias     0.0016
+SGD notrained  nobias   0.0016
+
+efficientnet
+SGD notrained  nobias   0.0014

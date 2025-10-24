@@ -1,9 +1,10 @@
-from PIL import Image
 import numpy as np
-from path import Path as path
-from stdlib.tprint import tprint
+from PIL import Image
 from joblib import Parallel, delayed
-from commons import *
+from path import Path as path
+
+from commons import IMAGES_ROOT
+from stdlib.tprint import tprint
 
 
 def idof(s: str) -> str:
@@ -62,15 +63,15 @@ def generate_mask(scene_file: path):
 
 
 def generate_masks():
-    images_dir = IMAGES_RESIZED
+    images_dir = IMAGES_ROOT
     for idir in images_dir.dirs():
-        if idir.stem != "0000":
-            continue
+        # if idir.stem != "0000":
+        #     continue
         tprint(idir, force=True)
-        for scene_file in idir.files("drop_scene-*.png"):
-            generate_mask(scene_file)
-        # Parallel(n_jobs=10)(delayed(generate_mask)(scene_file)
-        #                     for scene_file in idir.files("drop_scene-*.png"))
+        # for scene_file in idir.files("drop_scene-*.png"):
+        #     generate_mask(scene_file)
+        Parallel(n_jobs=12)(delayed(generate_mask)(scene_file)
+                            for scene_file in idir.files("drop_scene-*.png"))
     # end
     tprint("done", force=True)
 # end

@@ -54,7 +54,7 @@ class WaterDropDataset(Dataset):
         # classes: [1,4] -> [0,3]
         drop_mask: np.ndarray = iio.imread(mask_file)-1
         drop_mask = drop_mask.astype(np.int64)
-        drop_mask = to_classes(drop_mask, 4, classes_last=self.classes_last)
+        drop_mask = to_classes(drop_mask, 3, classes_last=self.classes_last)
 
         drop_scene_t = torch.from_numpy(drop_scene).contiguous()
         drop_mask_t  = torch.from_numpy(drop_mask).contiguous()

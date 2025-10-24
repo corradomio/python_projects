@@ -44,7 +44,7 @@ def _mask_classes_array(image: np.ndarray) -> np.ndarray:
     if len(imclasses.shape) == 3:
         for iclass in range(num_classes):
             imclasses[:,:,iclass][image == (min_class + iclass)] = 1.
-        imclasses = np.swapaxes(imclasses, 0, 2)
+        imclasses = np.transpose(imclasses, [2, 0, 1])
     elif len(imclasses.shape) == 4:
         for iclass in range(num_classes):
             imclasses[:,:,:,iclass][image == (min_class + iclass)] = 1.
