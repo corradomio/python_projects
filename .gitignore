@@ -36,3 +36,7 @@ out
 removed
 req_*
 target
+*.safetensors
+*.pth
+*.jinja
+*.pt
