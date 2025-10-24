@@ -1,0 +1,4 @@
+outputs
+wandb
+*.csv
+*.gz
