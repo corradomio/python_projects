@@ -90,7 +90,7 @@ def main():
     # jmodels = jsonx.load("skx_models.json")
     # check_models(df, jmodels)
 
-    jmodels = jsonx.load("skx_models.json")
+    jmodels = jsonx.load("skt_models.json")
     check_models(df, jmodels)
     pass
 

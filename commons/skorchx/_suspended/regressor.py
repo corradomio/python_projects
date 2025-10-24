@@ -1,0 +1,217 @@
+# #
+# # Extension of skorch.NeuralNetRegressor
+# #
+# #   It permits to pass prediction parameters to 'predict' method.
+# #   Then, these parameters are propagated to 'model.forward(X, ...)'
+# #   of the NN model.
+# #
+# import torch
+#
+# import skorch
+# from skorch.dataset import unpack_data
+# from skorch.utils import to_device
+# from .net import scheduler_params, add_scheduler, concatenate, to_type
+#
+#
+# # ---------------------------------------------------------------------------
+# #
+# # ---------------------------------------------------------------------------
+#
+# class NeuralNetRegressor(skorch.NeuralNetRegressor):
+#     """
+#     Extends 'skorch.NeuralNetRegressor' adding specific parameters for the scheduler
+#     converted in a 'LRScheduler' callback
+#
+#     Extends 'skorch.NeuralNetRegressor' to permit to pass
+#     extra parameters to the 'predict()' method, and to propagate
+#     these parameters to the 'forward(...)' Pytorch's method.
+#     """
+#     def __init__(
+#             self,
+#             module,
+#             *args,
+#             criterion=torch.nn.MSELoss,
+#             # train_split=ValidSplit(5, stratified=True),
+#             train_split=None,
+#             scheduler=None,
+#             **kwargs
+#     ):
+#         # `train_split' is set to None to permit the NN usage also with
+#         # small datasets (1 element)
+#         super(NeuralNetRegressor, self).__init__(
+#             module,
+#             *args,
+#             criterion=criterion,
+#             train_split=train_split,
+#             **scheduler_params(kwargs, False)
+#         )
+#         self.scheduler = scheduler
+#         self.scheduler_kwargs = scheduler_params(kwargs, True)
+#
+#     def fit(self, X, y=None, **fit_params):
+#         """Initialize and fit the module.
+#
+#         If the module was already initialized, by calling fit, the
+#         module will be re-initialized (unless ``warm_start`` is True).
+#
+#         Note: extended with parameter `valid`
+#
+#         Parameters
+#         ----------
+#         X : input data, compatible with skorch.dataset.Dataset
+#           By default, you should be able to pass:
+#
+#             * numpy arrays
+#             * torch tensors
+#             * pandas DataFrame or Series
+#             * scipy sparse CSR matrices
+#             * a dictionary of the former three
+#             * a list/tuple of the former three
+#             * a Dataset
+#
+#           If this doesn't work with your data, you have to pass a
+#           ``Dataset`` that can deal with the data.
+#
+#         y : target data, compatible with skorch.dataset.Dataset
+#           The same data types as for ``X`` are supported. If your X is
+#           a Dataset that contains the target, ``y`` may be set to
+#           None.
+#
+#         **fit_params : dict
+#           Additional parameters passed to the ``forward`` method of
+#           the module and to the ``self.train_split`` call.
+#
+#         """
+#         self._valid_dataset(X, fit_params)
+#         return super(NeuralNetRegressor, self).fit(X, y, **fit_params)
+#
+#     def _valid_dataset(self, X, fit_params):
+#         if 'valid' not in fit_params or self.train_split is not None: return
+#         valid = fit_params['valid']
+#         assert isinstance(X, (skorch.dataset.Dataset, torch.utils.data.Dataset))
+#         assert isinstance(valid, (skorch.dataset.Dataset, torch.utils.data.Dataset))
+#         self.train_split = lambda _: (X, valid)
+#         del fit_params['valid']
+#
+#     def predict(self, X, **predict_params):
+#         """Where applicable, return class labels for samples in X.
+#
+#         If the module's forward method returns multiple outputs as a
+#         tuple, it is assumed that the first output contains the
+#         relevant information and the other values are ignored. If all
+#         values are relevant, consider using
+#         :func:`~skorch.NeuralNet.forward` instead.
+#
+#         Parameters
+#         ----------
+#         X : input data, compatible with skorch.dataset.Dataset
+#           By default, you should be able to pass:
+#
+#             * numpy arrays
+#             * torch tensors
+#             * pandas DataFrame or Series
+#             * scipy sparse CSR matrices
+#             * a dictionary of the former three
+#             * a list/tuple of the former three
+#             * a Dataset
+#
+#           If this doesn't work with your data, you have to pass a
+#           ``Dataset`` that can deal with the data.
+#
+#         **predict_params : dict
+#           Additional parameters passed to the ``forward`` method of
+#           the module and to the ``self.train_split`` call.
+#
+#         Returns
+#         -------
+#         y_pred : numpy ndarray
+#
+#         """
+#         predicted = self.predict_proba(X, **predict_params)
+#         return predicted
+#
+#     def predict_proba(self, X, **predict_params):
+#         """Where applicable, return probability estimates for
+#         samples.
+#
+#         If the module's forward method returns multiple outputs as a
+#         tuple, it is assumed that the first output contains the
+#         relevant information and the other values are ignored. If all
+#         values are relevant, consider using
+#         :func:`~skorch.NeuralNet.forward` instead.
+#
+#         Note: `predict_proba' supposes the predicted tensor has structure
+#
+#                 [B, C, ...]
+#
+#             that is, the second dimension (=1) contains the probabilities
+#             for the classification.
+#             If the prediction has structure
+#
+#                 [B, ... C]
+#
+#             it must be necessary to pass in `predict_params':
+#
+#                 classes_last=True
+#
+#         Parameters
+#         ----------
+#         X : input data, compatible with skorch.dataset.Dataset
+#           By default, you should be able to pass:
+#
+#             * numpy arrays
+#             * torch tensors
+#             * pandas DataFrame or Series
+#             * scipy sparse CSR matrices
+#             * a dictionary of the former three
+#             * a list/tuple of the former three
+#             * a Dataset
+#
+#           If this doesn't work with your data, you have to pass a
+#           ``Dataset`` that can deal with the data.
+#
+#         **predict_params : dict
+#           Additional parameters passed to the ``forward`` method of
+#           the module and to the ``self.train_split`` call.
+#
+#         Returns
+#         -------
+#         y_proba : numpy ndarray
+#
+#         """
+#         nonlin = self._get_predict_nonlinearity()
+#         y_probas = []
+#         for yp in self.forward_iter(X, training=False, **predict_params):
+#             # yp = yp[0] if isinstance(yp, tuple) else yp
+#             if isinstance(yp, torch.Tensor):
+#                 yp = nonlin(yp)
+#             y_probas.append(yp)
+#         y_proba = concatenate(y_probas, 0)
+#         return y_proba
+#
+#     def forward_iter(self, X, training=False, device='cpu', **params):
+#         """Extended with 'params'"""
+#         dataset = self.get_dataset(X)
+#         iterator = self.get_iterator(dataset, training=training)
+#         for batch in iterator:
+#             yp = self.evaluation_step(batch, training=training, **params)
+#             yield to_device(yp, device=device)
+#
+#     def evaluation_step(self, batch, training=False, **eval_params):
+#         """Extended with 'eval_params'"""
+#         self.check_is_fitted()
+#         Xi, _ = unpack_data(batch)
+#         with torch.set_grad_enabled(training):
+#             self._set_training(training)
+#             return self.infer(Xi, **eval_params)
+#
+#     def initialize(self):
+#         super().initialize()
+#         self._initialize_scheduler()
+#     # end
+#
+#     def _initialize_scheduler(self):
+#         add_scheduler(self, self.scheduler, **self.scheduler_kwargs)
+#
+#     def score(self, X, y, sample_weight=None):
+#         return super().score(X, y, sample_weight=sample_weight)
