@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import Union, Iterator, Any, Optional
+from typing import Union, Iterator, Any, Optional, Collection
 from functools import cached_property
 from collections import defaultdict, deque
 from typing import Optional
@@ -58,6 +58,10 @@ __version__ = "1.1.1"
 #   for v in G.adj[u] | for v in G.succ[u] | for v in G.prec[u]
 #
 
+# A DirectedAcyclicGraph (DAG) is a directed graph without cycles
+# A PartialDirectedGraph (PDG) is a directed graph where for some edge
+#   it is not specified the direction
+
 # ---------------------------------------------------------------------------
 # Edges
 # ---------------------------------------------------------------------------
@@ -74,7 +78,7 @@ class IEdges(dict):
         self.multi = multi
 
     @property
-    def adj(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         """
         Adjacency list:
             u -> [v1, v2, ...]
@@ -82,28 +86,28 @@ class IEdges(dict):
         return {}
 
     @property
-    def succ(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def succ(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         """
         Successors of a node
         """
         return {}
 
     @property
-    def pred(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         """
         Predecessors of a node
         :return:
         """
         return {}
 
-    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> list[NODE_TYPE]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> set[NODE_TYPE]:
         """
         Neighbors of a node
         :param n: node
         :param inbound: if to consider the inbound edges only
         :return:
         """
-        return []
+        return set()
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops):
         """
@@ -183,18 +187,19 @@ class UEdges(IEdges):
 
     def __init__(self, loops: bool, multi: bool):
         super().__init__(loops, multi)
-        self._adj: dict[NODE_TYPE, list[NODE_TYPE]] = defaultdict(lambda: list())
+        self._adj: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
+        pass
 
     @property
-    def adj(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._adj
 
     @property
-    def succ(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def succ(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._adj
 
     @property
-    def pred(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._adj
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops):
@@ -202,7 +207,7 @@ class UEdges(IEdges):
             u, v = v, u
         super().add_edge(u, v, eprops)
 
-    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> list[int]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> set[NODE_TYPE]:
         return self._adj[n]
 
     def remove_node(self, n: NODE_TYPE):
@@ -236,11 +241,16 @@ class UEdges(IEdges):
             return super().__setitem__(uv, eprops)
         else:
             if u not in self._adj or v not in self._adj[u]:
-                self._adj[u].append(v)
-                self._adj[v].append(u)
+                self._adj[u].add(v)
+                self._adj[v].add(u)
             # end
             return super().__setitem__(uv, eprops)
     # end
+
+    def __iter__(self):
+        for u in self._adj:
+            for v in self._adj[u]:
+                yield u,v
 # end
 
 
@@ -249,28 +259,28 @@ class DEdges(IEdges):
 
     def __init__(self, loops: bool, multi: bool):
         super().__init__(loops, multi)
-
-        self._succ: dict[NODE_TYPE, list[NODE_TYPE]] = defaultdict(lambda: list())
-        self._prec: dict[NODE_TYPE, list[NODE_TYPE]] = defaultdict(lambda: list())
+        self._succ: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
+        self._prec: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
+        pass
 
     @property
-    def adj(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._succ
 
     @property
-    def succ(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def succ(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._succ
 
     @property
-    def pred(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._prec
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops: dict):
         super().add_edge(u, v, eprops)
 
-    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> list[NODE_TYPE]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> set[NODE_TYPE]:
         if inbound is None:
-            return self._prec[n] + self._succ[n]
+            return self._prec[n].union(self._succ[n])
         elif inbound:
             return self._prec[n]
         else:
@@ -299,10 +309,15 @@ class DEdges(IEdges):
         elif super().__contains__(uv):
             return super().__setitem__(uv, epros)
         else:
-            self._succ[u].append(v)
-            self._prec[v].append(u)
+            self._succ[u].add(v)
+            self._prec[v].add(u)
             return super().__setitem__(uv, epros)
     # end
+
+    def __iter__(self):
+        for u in self._succ:
+            for v in self._succ[u]:
+                yield u,v
 # end
 
 
@@ -346,6 +361,9 @@ class DegreeView:
         self.G = G
         self.multi = multi
 
+    def __call__(self, n: NODE_TYPE):
+        return self.__getitem__(n)
+
     def __getitem__(self, n: NODE_TYPE):
         if self.degree_type == self.IN_DEGREE:
             return self.G._edges.in_degree(n, multi=self.multi)
@@ -380,11 +398,11 @@ class EdgesView:
 
     def __iter__(self):
         if self.edge_type == EdgesView.IN_EDGES:
-            return iter(self.G._edges.pred)
+            return iter(self.G._edges.__iter__())
         if self.edge_type == EdgesView.OUT_EDGES:
-            return iter(self.G._edges.succ)
+            return iter(self.G._edges.__iter__())
         else:
-            return iter(self.G._edges.adj)
+            return iter(self.G._edges.__iter__())
 # end
 
 
@@ -403,12 +421,16 @@ class NodesView:
 
     def __getitem__(self, n: NODE_TYPE):
         return self.G._nodes[n]
+# end
 
 
 class AdjacencyView:
     def __init__(self, G, adjacency_dict: dict):
         self.G = G
         self.adjacency_dict = adjacency_dict
+
+    def __call__(self, n: NODE_TYPE):
+        return self.__getitem__(n)
 
     def __getitem__(self, n: NODE_TYPE):
         return self.adjacency_dict[n]
@@ -454,7 +476,10 @@ class Graph:
 
         # local cache used to save results of some complex computation
         # Cleared on EACH change
-        self.cache: dict[str, Any] = defaultdict(lambda : {})
+        self.__netx_cache__: dict[str, dict] = defaultdict(lambda : dict())
+
+        self._succ = self._edges.succ
+        self._pred = self._edges.pred
     # end
 
     def copy(self):
@@ -539,10 +564,12 @@ class Graph:
     def order(self) -> int:
         # networkx
         return len(self._nodes)
+        # return max(self._nodes.keys()) + 1
 
     def number_of_nodes(self) -> int:
         # networkx
-        return len(self._nodes)
+        # return len(self._nodes)
+        return self.order()
 
     # -----------------------------------------------------------------------
 
@@ -556,7 +583,7 @@ class Graph:
         # networkx
         return self._add_node(n, nprops)
 
-    def add_nodes_from(self, nlist: list[NODE_TYPE] | Iterator[NODE_TYPE], **nprops):
+    def add_nodes_from(self, nlist: Union[Collection[NODE_TYPE], Iterator[NODE_TYPE]], **nprops):
         # networkx
         for n in nlist:
             if isinstance(n, tuple):
@@ -573,7 +600,7 @@ class Graph:
         del self._nodes[n]
         self._edges.remove_node(n)
 
-    def remove_nodes_from(self, nlist: list[NODE_TYPE]):
+    def remove_nodes_from(self, nlist: Collection[NODE_TYPE]):
         # networkx
         for n in nlist:
             self.remove_node(n)
@@ -582,7 +609,7 @@ class Graph:
         # networkx
         return n in self._nodes
 
-    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> list[NODE_TYPE]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> set[NODE_TYPE]:
         """
         :param n:
         :param inbound:
@@ -592,13 +619,13 @@ class Graph:
         :return:
         """
         # networkx
-        return sorted(self._edges.neighbors(n, inbound))
+        return set(self._edges.neighbors(n, inbound))
 
-    def nbunch_iter(self, source: Optional[list|tuple|NODE_TYPE]) -> Iterator[NODE_TYPE]:
+    def nbunch_iter(self, source: Optional[Union[list,tuple,NODE_TYPE]]) -> Iterator[NODE_TYPE]:
         # networkx
         if source is None:
             return self.nodes()
-        if isinstance(source, list | tuple):
+        if isinstance(source, Union[list, tuple]):
             for n in source:
                 yield n
         else:
@@ -620,10 +647,10 @@ class Graph:
     def _add_node(self, n: NODE_TYPE, nprops: dict):
         if n not in self._nodes:
             self._nodes[n] = nprops
-            self.adj[n] = []
+            # self.adj[n] = set()
         else:
             pass
-        self.cache.clear()
+        self.__netx_cache__.clear()
         return self
 
     # -----------------------------------------------------------------------
@@ -657,16 +684,27 @@ class Graph:
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, **eprops):
         # networkx
-        return self._add_edge(u, v, eprops)
+        self._add_edge(u, v, eprops)
+        return self
 
-    def add_edges_from(self, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops):
+    def add_edges_from(self, elist: Union[list[EDGE_TYPE], Iterator[EDGE_TYPE]], **eprops):
         # networkx
         for e in elist:
             if len(e) == 2:
                 u, v = e
                 self._add_edge(u, v, eprops)
+                continue
+
+            if isinstance(e[-1], dict):
+                uvprops = e[-1]
+                e = e[:-1]
             else:
-                u, v, uvprops = e
+                uvprops = {}
+
+            n = len(e)
+            for i in range(n-1):
+                u = e[i]
+                v = e[i+1]
                 self._add_edge(u, v, eprops | uvprops)
         return self
 
@@ -675,11 +713,13 @@ class Graph:
     def remove_edge(self, u: NODE_TYPE, v: NODE_TYPE):
         # networkx
         self._edges.remove_edge(u, v)
+        return self
 
     def remove_edges_from(self, elist: list[EDGE_TYPE]):
         # networkx
         for e in elist:
             self.remove_edge(*e)
+        return self
 
     # def update(self, edges=None, nodes=None):
 
@@ -710,24 +750,24 @@ class Graph:
         self.add_node(u)
         self.add_node(v)
         self._edges.add_edge(u, v, eprops)
-        self.cache.clear()
+        self.__netx_cache__.clear()
         return self
 
     # -----------------------------------------------------------------------
     # For undirected graphs, succ and pred are the same
 
     @property
-    def adj(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx
         return self._edges.adj
 
     @property
-    def succ(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def succ(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx (DiGraph)
         return self._edges.succ
 
     @property
-    def pred(self) -> dict[NODE_TYPE, list[NODE_TYPE]]:
+    def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx (DiGraph)
         return self._edges.pred
 

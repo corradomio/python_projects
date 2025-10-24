@@ -1,10 +1,12 @@
 #
 # It used .graph.Graph, a better(?) graph representation
 #
+from typing import Collection
+
 from .graph import Graph, NODE_TYPE
 
 
-def replace_nodes(G: Graph, n: NODE_TYPE, neighbors: list[NODE_TYPE], r: NODE_TYPE) -> Graph:
+def replace_nodes(G: Graph, n: NODE_TYPE, neighbors: Collection[NODE_TYPE], r: NODE_TYPE) -> Graph:
     """
     Replace 'nodes' with 'r'
     :param G: graph to modify
