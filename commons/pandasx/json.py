@@ -28,6 +28,10 @@ from pandas.api.types import is_datetime64_any_dtype as is_datetime
 from stdlib import dict_exclude
 from stdlib import jsonx as json
 
+
+__all__ = ["to_json", "from_json"]
+
+
 # ---------------------------------------------------------------------------
 # utilities
 # ---------------------------------------------------------------------------
@@ -297,5 +301,5 @@ def _from_memory(jdata: dict, **kwargs) -> pd.DataFrame:
 # end
 
 # ---------------------------------------------------------------------------
-# End
+# end
 # ---------------------------------------------------------------------------

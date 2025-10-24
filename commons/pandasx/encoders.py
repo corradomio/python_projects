@@ -1,3 +1,6 @@
+#
+# Collect the list of defined encoders in a single place
+#
 from .base import type_encode, count_encode
 from .binhot import binhot_encode
 from .datetimes import datetime_encode

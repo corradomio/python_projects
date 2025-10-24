@@ -1,8 +1,15 @@
 from typing import Optional
 
 import pandas as pd
-from pandas import DataFrame
+from pandas import DataFrame, Series
 from pandasx import groups_split, groups_merge
+
+__all__ = ['concat']
+
+
+# ---------------------------------------------------------------------------
+# concat
+# ---------------------------------------------------------------------------
 
 # objs: Iterable[Series | DataFrame] | Mapping[HashableT, Series | DataFrame],
 #     *,
@@ -47,13 +54,17 @@ def _concat_single(df_list:list[DataFrame], select:Optional[str]) -> DataFrame:
 
 
 def concat(
-    df_list: list[DataFrame],
+    df_list: list[DataFrame]|list[Series],
     select:Optional[str]=None,
-    groups:Optional[list[str]]=None
+    groups:Optional[list[str]]=None,
+    reset_index=False
 ) -> DataFrame:
     # extends concat to concatenate multiple dataframes based on datetime
     if select is None:
-        return pd.concat(df_list)
+        df_cat = pd.concat(df_list, ignore_index=reset_index)
+        if reset_index:
+            df_cat.reset_index(inplace=True)
+        return df_cat
 
     if groups is None and not isinstance(df_list[0].index, pd.MultiIndex):
         return _concat_single(df_list, select)
@@ -78,3 +89,16 @@ def concat(
     df_concat = groups_merge(concat_dict, groups=groups)
     return df_concat
 # end
+
+
+def concat_series(slist) -> Series:
+    slist = [s for s in slist if s is not None]
+    if len(slist) == 1:
+        return slist[0]
+    else:
+        return pd.concat(slist, axis=0)
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

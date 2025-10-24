@@ -12,6 +12,8 @@ import json
 from path import Path as path
 
 
+__all__ = ['read_from']
+
 # ---------------------------------------------------------------------------
 # read_from
 # ---------------------------------------------------------------------------
@@ -372,28 +374,28 @@ def _read_from_database(config: dict)-> pd.DataFrame:
 # end
 
 
-def _read_from_database_old(config: dict)-> pd.DataFrame:
-    dburl = _get_dbms_url(config)
-    sql: str = ""
-    params: dict = config.get("params",{})
-
-    if "table" in config:
-        table = config["table"]
-        sql = f"SELECT * FROM {table}"
-    elif "sql" in config:
-        sql = config["sql"]
-    else:
-        ValueError("Invalid datasource: missing table or sql statemenet")
-
-    engine = create_engine(dburl)
-    try:
-        with engine.connect() as con:
-            df = pd.read_sql(text(sql), con, params=params)
-    finally:
-        engine.dispose()
-
-    return df
-# end
+# def _read_from_database_old(config: dict)-> pd.DataFrame:
+#     dburl = _get_dbms_url(config)
+#     sql: str = ""
+#     params: dict = config.get("params",{})
+#
+#     if "table" in config:
+#         table = config["table"]
+#         sql = f"SELECT * FROM {table}"
+#     elif "sql" in config:
+#         sql = config["sql"]
+#     else:
+#         ValueError("Invalid datasource: missing table or sql statemenet")
+#
+#     engine = create_engine(dburl)
+#     try:
+#         with engine.connect() as con:
+#             df = pd.read_sql(text(sql), con, params=params)
+#     finally:
+#         engine.dispose()
+#
+#     return df
+# # end
 
 
 # ---------------------------------------------------------------------------

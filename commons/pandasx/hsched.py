@@ -4,6 +4,11 @@ import statsmodels.api as sm
 import numpy as np
 import pandas as pd
 
+__all__ = ['is_heteroschedastic']
+
+# ---------------------------------------------------------------------------
+# is_heteroschedastic
+# ---------------------------------------------------------------------------
 
 def is_heteroschedastic(
     df: Union[pd.Series, pd.DataFrame],
@@ -59,3 +64,7 @@ def is_heteroschedastic(
 
     return (het_breuschpagan[3] < p_value) if test == 'fm' else (het_breuschpagan[1] < p_value)
 # end
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

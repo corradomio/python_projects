@@ -4,12 +4,15 @@ from typing import Optional, Union, Collection
 import pandas as pd
 
 
-NAME_DATETIME = "$DT"
+__all__ = ['set_datetime_index', 'periodic_encode']
 
 
 # ---------------------------------------------------------------------------
 # set_datetime_index
 # ---------------------------------------------------------------------------
+
+NAME_DATETIME = "$DT"
+
 
 def set_datetime_index(df: pd.DataFrame, datetime: Union[str, list[str]]) -> pd.DataFrame:
     """
@@ -377,5 +380,5 @@ def _sincos_encoder(df, datetime, columns, year_scale, freq):
 last_week_in_month = _last_week_in_month
 
 # ---------------------------------------------------------------------------
-# End
+# end
 # ---------------------------------------------------------------------------

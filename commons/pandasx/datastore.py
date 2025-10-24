@@ -9,6 +9,8 @@ from stdlib.is_instance import is_instance
 from .datasource import _compose_url, _filepath
 
 
+__all__ = ['write_to']
+
 # ---------------------------------------------------------------------------
 # save_to
 # ---------------------------------------------------------------------------

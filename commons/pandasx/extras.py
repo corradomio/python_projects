@@ -184,3 +184,8 @@ def classification_quality(pred_proba: Union[pd.DataFrame, pd.Series], target=No
     # done
     return cq
 # end
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

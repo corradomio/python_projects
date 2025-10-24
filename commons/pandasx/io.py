@@ -2,23 +2,24 @@ import logging
 from typing import Optional, Union
 
 import pandas as pd
-from sqlalchemy import create_engine, text, URL
 
+from stdlib import dict_exclude
 from .base import (
     set_index, nan_drop, nan_fill, as_list,
     find_unnamed_columns, dataframe_sort, columns_rename, columns_ignore,
     type_encode, count_encode,
     NoneType
 )
-from stdlib import dict_select, dict_exclude
 from .binhot import binhot_encode
 from .datetimes import datetime_encode, datetime_reindex
-from .freq import infer_freq
 from .io_arff import read_arff
+from .json import from_json, to_json
 from .onehot import onehot_encode
 from .periodic import periodic_encode
-from .json import from_json, to_json
 from .sql import read_sql, write_sql
+
+__all__ = ['read_data', 'cleanup_data', 'write_data', 'load', 'save']
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -92,105 +93,9 @@ def _parse_datetime(datetime) -> tuple:
 # protocol://host:port/database?sql=...&p1=...&...
 # protocol://host:port/database/table
 
-# def _safe_val(x: str):
-#     if isinstance(x, list):
-#         return tuple(map(_safe_val, x))
-#
-#     try:
-#         return float(x)
-#     except:
-#         pass
-#     try:
-#         return int(x)
-#     except:
-#         pass
-#     if x.startswith("'") or x.startswith('"'):
-#         return x[1:-1]
-#     else:
-#         return x
-# # end
-
-
-# def _parse_url(url: str) -> dict:
-#     parts = dict(params={})
-#     p = url.find('?')
-#     if p != -1:
-#         url = url[:p]
-#         qargs = url[p+1:]
-#     else:
-#         qargs = ""
-#
-#     p = url.find("://")
-#     parts["drivername"] = url[:p]
-#     url = url[p+3:]
-#     p = url.find(":")
-#     parts["host"] = url[:p]
-#     url = url[p+1:]
-#     p = url.find("/")
-#     parts["port"] = int(url[:p])
-#     url = url[p+1:]
-#     p = url.find("/")
-#     if p == -1:
-#         parts["database"] = url
-#     else:
-#         parts["database"] = url[:p]
-#         parts["table"] = url[p+1:]
-#     # end
-#     if qargs.startswith("table="):
-#         parts["table"] = qargs[6:]
-#     if qargs.startswith("sql="):
-#         for kv in qargs.split("&"):
-#             k, v = kv.split("=")
-#
-#             # convert lists in tuples!
-#             # this is necessary for 'SELECT ... FROM ... WHERE col IN :param ...'
-#             if k == "sql":
-#                 parts["sql"] = v
-#             else:
-#                 parts["params"][k]= v
-#     # end
-#     return parts
-
-
-# def _parse_params(config: dict) -> dict:
-#     params = config["params"]
-#     for k in params.keys():
-#         params[k] = _safe_val(params[k])
-#     return params
-
-
-# def _to_url_select(config):
-#     url_config = dict_select(config, ['drivername','user', 'username', 'password', 'host', 'port', 'database'])
-#     if 'user' in url_config:
-#         url_config['username'] = url_config['user']
-#         del url_config['user']
-#     url: URL = URL.create(**url_config)
-#
-#     if "table" in config:
-#         table = config["table"]
-#         sql = f'select * from {table}'
-#     else:
-#         sql = config["sql"]
-#
-#     return url, sql
-
 
 def _read_database(dburl: str, dtype, **kwargs):
     return read_sql(dburl, **kwargs)
-
-    # config = _parse_url(dburl) | kwargs
-    #
-    # dburl, sql = _to_url_select(config)
-    # params = _parse_params(config)
-    #
-    # # convert lists in tuples!
-    # # this is necessary for 'SELECT ... FROM ... WHERE col IN :param ...'
-    # engine = create_engine(dburl)
-    # with engine.connect() as con:
-    #     query = text(sql)
-    #     df = read_sql(sql=query, con=con, params=params)
-    # return df
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -234,83 +139,109 @@ def _read_database(dburl: str, dtype, **kwargs):
 # na_values, dropna,
 #
 
+READ_DATA_PARAMETERS = [
+    "file",
+    "dtype",
+    "boolean",
+    "integer",
+    "numeric",
+    "categorical",
+    "onehot",
+    "binhot",
+    "index",
+    "datetime_index",
+    "ignore",
+    "ignore_unnamed",
+    "datetime",
+    "periodic",
+    "count",
+    "reindex",
+    "sort",
+    "rename",
+    "na_values",
+    "dropna",
+    "fillna",
+]
+
+
 def read_data(
     file: str, *,
     dtype=None,             # list of columns types
     boolean=None,           # boolean columns
     integer=None,           # integer columns
-    numeric=None,           # numerical/float columns
+    numerical=None,           # numerical/float columns
     categorical=None,       # pandas categorical columns
 
     onehot=None,            # categorical columns to convert using onehot encoding.
-    binhot=None,            # categorical columns to convert using binary hot encoding.
+    binhot=None,            # categorical columns to convert using binaryhot encoding.
 
-    index=None,             # columns to use as index
+    datetime=None,          # datetime column to convert in a PeriodTime, with format
+                            # 'column' | ('column', 'dateformat') | ('column', 'dateformat', 'freq')
+
+    index=None,             # columns to use as index (alternative to 'datetime_index')
     datetime_index=None,    # columns to use as datetime_index (alternative to 'index')
     ignore=None,            # columns to ignore
     ignore_unnamed=False,   # if to ignore 'Unnamed *' columns
 
-    datetime=None,          # datetime column to convert in a PeriodTime
-
     periodic=None,          # [EXPERIMENTAL] to add datetime periodic representation
     count=False,            # [EXPERIMENTAL] if to add the column 'count' with value 1
     reindex=False,          # [EXPERIMENTAL] if to reindex the dataset
-    sort=False,             # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
+    sort=False,             # [EXPERIMENTAL] sort the data based on the index or the selected column(s)
     rename=None,            # [EXPERIMENTAL] rename some columns
 
     na_values=None,         # strings to consider NA values
-    dropna=False,           # if to drop the rows containing NaN values
-    fillna=None,            # if to fill na with a value
+    fillna=None,            # if to fill NA with a value
+    dropna=False,           # if to drop the ROWS containing NA values
     **kwargs                # parameters to pass to 'pandas.read_*(...)' routine
 ) -> pd.DataFrame:
     """
-    Read the dataset from a file and convert it in a Pandas DataFrame.
-    It uses the correct 'read' function based on the file extensions.
+    Read the dataset from a file and convert it into a Pandas DataFrame.
+    It uses the correct 'read' function based on the filename extensions.
 
     Added support for '.arff' file format
 
     Note: parameters for '.csv' files:
 
-        sep             str, default ','
-        delimiter       alias for sep
-        header          int, list[int], None, default 'infer'
-        names           array-like, optional
-        index_col       int, str, sequence of int / str, or False, optional, default None
-        usecol          list-like or callable, optional
-        dtype           Type name or dict of column -> type, optional
-        true_values     list, optional
-        false_values    list, optional
+        sep                 str, default ','
+        delimiter           alias for sep
+        header              int, list[int], None, default 'infer'
+        names               array-like, optional
+        index_col           int, str, sequence of int / str, or False, optional, default None
+        usecol              list-like or callable, optional
+        dtype               Type name or dict of column -> type, optional
+        true_values         list, optional
+        false_values        list, optional
         skipinitialspace    bool, default False
-        skiprows        list-like, int or callable, optional
-        skipfooter      int, default 0
-        nrows           int, optional
-        na_values       scalar, str, list-like, or dict, optional
-        keep_default_na bool, default True
-        na_filter       bool, default True
+        skiprows            list-like, int or callable, optional
+        skipfooter          int, default 0
+        nrows               int, optional
+        na_values           scalar, str, list-like, or dict, optional
+        keep_default_na     bool, default True
+        na_filter           bool, default True
         skip_blank_lines    bool, default True
-        parse_dates     bool or list of int or names or list of lists or dict, default False
-        keep_date_col   bool, default False
-        date_format     str or dict of column -> format, default None
-        dayfirst        bool, default False
+        parse_dates         bool or list of int or names or list of lists or dict, default False
+        keep_date_col       bool, default False
+        date_format         str or dict of column -> format, default None
+        dayfirst            bool, default False
         ...
 
     for other parameters, see 'pandas.read_csv()' documentation
 
     :param file: file to read
     :param dtype: list of column types. A column type can be:
-                - None: column skipped
-                - str: string
-                - int: integer
-                - float: float
-                - bool: boolean value in form 0/1, off/on, close/open/ f/t, false/true
-                    (case insensitive)
-                - enum: string used as enumeration
-                - ienum: integer value used as enumeration
+                - None:     column skipped
+                - str:      string
+                - int:      integer
+                - float:    float
+                - bool:     boolean value in form 0/1, off/on, close/open/ f/t, false/true
+                            (case insensitive)
+                - enum:     string used as enumeration
+                - ienum:    integer value used as enumeration
     :param boolean: column(s) to convert in 'boolean' value (False, True)
-            It support several 'boolean' values:
+                It support several 'boolean' values:
                 0/1, 'f'/'t', 'F'/'T', 'false'/'true', 'False'/'True', 'off'/'on', 'close'/'open'
     :param integer: column(s) to convert in 'int' type. To force int values on float columns
-    :param numeric: column(s) to convert in 'float' type. To force float values on integer columns
+    :param numerical: column(s) to convert in 'float' type. To force float values on integer columns
     :param categorical: column(s) to convert in 'pandas.categorical' value
     :param onehot: column(s) to convert using onehot encoding
     :param binhot: column(s) to convert using binary hot encoding
@@ -397,7 +328,7 @@ def read_data(
         dtype=dtype,
         boolean=boolean,
         integer=integer,
-        numeric=numeric,
+        numerical=numerical,
         categorical=categorical,
         onehot=onehot,
         binhot=binhot,
@@ -411,8 +342,8 @@ def read_data(
         reindex=reindex,
         sort=sort,
         rename=rename,
-        dropna=dropna,
         fillna=fillna,
+        dropna=dropna,
         # na_values=na_values,
         **kwargs
     )
@@ -424,7 +355,7 @@ def cleanup_data(
         dtype=None,         # list of columns types
         boolean=None,       # boolean columns
         integer=None,       # integer columns
-        numeric=None,       # numerical/float columns
+        numerical=None,       # numerical/float columns
 
         categorical=None,   # pandas categorical columns
         onehot=None,        # categorical columns to convert using onehot encoding.
@@ -443,8 +374,8 @@ def cleanup_data(
         sort=False,         # [EXPERIMENTAL] sort the data based on the index of the selected column(s)
         rename=None,        # [EXPERIMENTAL] rename some columns
 
-        dropna=False,       # if to drop the rows containing NaN values
         fillna=None,        # if to fill NA values with an alternative value
+        dropna=False,       # if to drop the rows containing NaN values
         # na_values=None,     # strings to consider NaN values
         **kwargs            # parameters to pass to 'pandas.read_*(...)' routine
 ) -> pd.DataFrame:
@@ -463,7 +394,7 @@ def cleanup_data(
     categorical = as_list(categorical, 'categorical')
     boolean = as_list(boolean, 'boolean')
     integer = as_list(integer, 'integer')
-    numeric = as_list(numeric, 'numeric')
+    numerical = as_list(numerical, 'numerical')
     onehot = as_list(onehot, 'onehot')
     binhot = as_list(binhot, 'binhot')
     ignore = as_list(ignore, 'ignore')
@@ -503,10 +434,10 @@ def cleanup_data(
         df = type_encode(df, int, integer)
 
     # pandas float
-    # for col in numeric:
+    # for col in numerical:
     #     df[col] = df[col].astype(float)
-    if numeric:
-        df = type_encode(df, float, numeric)
+    if numerical:
+        df = type_encode(df, float, numerical)
 
     # add the 'count' column
     # if count and 'count' not in df.columns:
@@ -517,11 +448,11 @@ def cleanup_data(
     # convert the datetime column
     if datetime is not None:
         df = datetime_encode(df, datetime)
-        if datetime_freq is None:
-            datetime_freq = infer_freq(df.index)
+        # if datetime_freq is None:
+        #     datetime_freq = infer_freq(df.index)
 
     # encode periodicity columns
-    if periodic is not None:
+    if periodic is not None and datetime_freq is not None:
         df = periodic_encode(df, periodic, datetime_name, datetime_freq)
 
     # onehot encoding
@@ -545,7 +476,7 @@ def cleanup_data(
     if len(index) > 0:
         df = set_index(df, index, inplace=True)
     if len(datetime_index) > 0:
-        df = set_index(df, datetime_index, inplace=True, as_datetime=True)
+        df = set_index(df, datetime_index, inplace=True, as_datetime=False)
 
     # remove the 'ignore' columns BEFORE to remove the columns for NaN
     if len(ignore) > 0:
@@ -577,6 +508,9 @@ def cleanup_data(
 # end
 
 
+# ---------------------------------------------------------------------------
+# write_data
+# ---------------------------------------------------------------------------
 # DataFrame.to_<type>()
 #   to_orc(path=None, *, engine='pyarrow', index=None, engine_kwargs=None)
 #   to_parquet(path=None, *, engine='auto', compression='snappy', index=None, partition_cols=None, storage_options=None, **kwargs)
@@ -659,21 +593,6 @@ def _format_na_values(df: pd.DataFrame, na_value) -> pd.DataFrame:
 # end
 
 
-# def _format_columns(df: pd.DataFrame, kwargs) -> pd.DataFrame:
-#     if "datetime" in kwargs:
-#         from .json import _convert_datetime
-#         datetime = kwargs["datetime"]
-#         df = _convert_datetime(df, datetime)
-#     if "na_values" in kwargs:
-#         na_value =  kwargs["na_values"]
-#         if isinstance(na_value, list):
-#             na_value = na_value[0]
-#         if na_value is not None:
-#             df.fillna(na_value)
-#     return df
-# # end
-
-
 def _format_strings(df: pd.DataFrame, columns: Union[None, str, list[str]]) -> pd.DataFrame:
     assert isinstance(df, pd.DataFrame)
 
@@ -703,7 +622,7 @@ def load(file: str,
          dtype=None,
          boolean=None,
          integer=None,
-         numeric=None,
+         numerical=None,
          categorical=None,
          onehot=None,
          binhot=None,
@@ -725,7 +644,7 @@ def load(file: str,
         dtype=dtype,
         boolean=boolean,
         integer=integer,
-        numeric=numeric,
+        numerical=numerical,
         categorical=categorical,
         onehot=onehot,
         binhot=binhot,
@@ -748,5 +667,5 @@ def save(df: pd.DataFrame, file: str, **kwargs):
     write_data(df, file, **kwargs)
 
 # ---------------------------------------------------------------------------
-# End
+# end
 # ---------------------------------------------------------------------------

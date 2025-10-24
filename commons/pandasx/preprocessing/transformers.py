@@ -13,8 +13,8 @@ class IgnoreTransformer(BaseEncoder):
     def __init__(self, columns, keep=None, copy=True):
         """
 
-        :param columns: columns to remove of None
-        :param keep: columns to keep (as alternative to columns)
+        :param columns: columns to remove or None
+        :param keep: columns to keep (as an alternative to 'columns')
         """
         super().__init__(columns, copy)
         self.keep = as_list(keep, "keep")
@@ -27,7 +27,8 @@ class IgnoreTransformer(BaseEncoder):
         if keep:
             columns = set(columns).difference(keep)
 
-        X.drop(columns, axis=1, inplace=True)
+        remove = X.columns.intersection(columns)
+        X.drop(remove, axis=1, inplace=True)
         return X
 # end
 

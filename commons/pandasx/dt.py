@@ -1,10 +1,17 @@
-from typing import Literal, Union
+from datetime import datetime, date
+from typing import Literal, Union, Optional
 
 import numpy as np
 import pandas as pd
-from datetime import datetime, date
-from stdlib.dateutilx import relativeperiods
 
+from stdlib import is_instance
+from stdlib.dateutilx import relativeperiods
+from .base import infer_freq
+
+__all__ = [
+    'to_date_type', 'to_datetime', 'to_period', 'date_range',
+    'add_date_name'
+]
 
 # ---------------------------------------------------------------------------
 # to_date_type
@@ -26,14 +33,52 @@ def to_date_type(dt: Union[date, datetime], date_type):
 # to_datetime
 # ---------------------------------------------------------------------------
 
+FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
+              'Q', 'Q', 'QS', 'BQS',
+              'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
+
+
+def _to_datetime(dt_values, format, freq) -> pd.DatetimeIndex:
+
+    def remove_tz(x):
+        if hasattr(x, 'tz_localize'):
+            return x.tz_localize(None)
+        elif isinstance(x, datetime):
+            return x.replace(tzinfo=None)
+        else:
+            return x
+
+    # Note: if 'format' contains the timezone (%z, %Z), it is necessary to normalize
+    # the datetime removing it in an 'intelligent' way.
+    # The first  solution is to remove the timezone and stop.
+    # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
+    # then to remove the TZ reference.
+    # >> Implemented the first one
+
+    if format is not None:
+        dt_values = pd.to_datetime(dt_values, format=format)
+        dt_values = remove_tz(dt_values)
+
+    elif format is not None:
+        dt_values = pd.to_datetime(dt_values, format=format)
+
+        if '%z' in format or '%Z' in format:
+            # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
+            dt_values = dt_values.apply(remove_tz)
+    else:
+        dt_values = pd.to_datetime(dt_values)
+
+    return dt_values
+
+
 NP_FIRST_JAN_1970 = np.datetime64('1970-01-01T00:00:00')
 NP_ONE_SECOND = np.timedelta64(1, 's')
 
 
-def to_datetime(dt) -> datetime:
+def to_datetime(dt, format=None, freq=None) \
+        -> Union[datetime, pd.DatetimeIndex]:
     """
-    Try to convert into a datetime an object represented
-    in several formats
+    Try to convert into a datetime an object represented in several formats
 
     :param dt:  object to convert
     :return: datetime
@@ -62,10 +107,22 @@ def to_datetime(dt) -> datetime:
 # to_period
 # ---------------------------------------------------------------------------
 
-def to_period(dt: Union[str, datetime], freq=None) -> pd.Period:
+def to_period(dt: Union[str, list[str], datetime], *, format=None, freq=None) -> Union[pd.Period, pd.PeriodIndex]:
     if isinstance(dt, str):
         dt = to_datetime(dt)
-    return pd.Period(dt, freq=freq)
+        return pd.Period(dt, freq=freq)
+    elif isinstance(dt, list):
+        dt: pd.DatetimeIndex = pd.to_datetime(dt, format=format)
+        if freq is None:
+            freq = infer_freq(dt)
+        return dt if freq is None else dt.to_period(freq)
+    elif isinstance(dt, pd.DatetimeIndex):
+        if freq is None:
+            freq = infer_freq(dt)
+        return dt if freq is None else dt.to_period(freq)
+    else:
+        return pd.Period(dt, freq=freq)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -148,15 +205,16 @@ def date_range(start=None, end=None, periods=None,
         end_date    periods     freq            inclusive       (backward)
         start_date  end_date    freq    align   inclusive       (left:forward, right:backward)
 
+    It is possible to include or exclude the time limits: 'both', 'left', 'right', 'neither'
 
-    :param start:
-    :param end:
-    :param periods:
-    :param freq:
-    :param delta:
-    :param name:
-    :param inclusive:
-    :param align:
+    :param start: start date
+    :param end: end date
+    :param periods: n of periods
+    :param freq: frequency
+    :param delta: alternative to (periods, freq)
+    :param name: name of the series
+    :param inclusive: if to include/exclude the extreme ('left', 'right', 'both', 'neither')
+    :param align: if to aligh the date 'left' or 'right'
     :return:
     """
     assert isinstance(freq, (type(None), str))
@@ -204,3 +262,86 @@ def date_range(start=None, end=None, periods=None,
 
     return pd.DatetimeIndex(data=dr, name=name)
 # end
+
+
+
+# ---------------------------------------------------------------------------
+# FREQUENCIES
+# ---------------------------------------------------------------------------
+# https://pandas.pydata.org/docs/user_guide/timeseries.html
+#
+# B         business day frequency
+# C         custom business day frequency
+# D         calendar day frequency
+# W         weekly frequency
+# WOM       the x-th day of the y-th week of each month
+# LWOM      the x-th day of the last week of each month
+# M         month end frequency
+# MS        month start frequency
+# BM        business month end frequency
+# BMS       business month start frequency
+# CBM       custom business month end frequency
+# CBMS      custom business month start frequency
+# SM        semi-month end frequency (15th and end of month)
+# SMS       semi-month start frequency (1st and 15th)
+# Q         quarter end frequency
+# QS        quarter start frequency
+# BQ        business quarter end frequency
+# BQS       business quarter start frequency
+# REQ       retail (aka 52-53 week) quarter
+# A, Y      year end frequency
+# AS, YS    year start frequency
+# AS, BYS   year start frequency
+# BA, BY    business year end frequency
+# BAS, BYS  business year start frequency
+# RE        retail (aka 52-53 week) year
+# BH        business hour frequency
+# H         hourly frequency
+# T, min    minutely frequency
+# S         secondly frequency
+# L, ms     milliseconds
+# U, us     microseconds
+# N         nanoseconds
+#
+
+
+# ---------------------------------------------------------------------------
+# add_date_name
+# ---------------------------------------------------------------------------
+
+def add_date_name(df: pd.DataFrame, dateCol: str, freq: Literal['D', 'W', 'M'], dowCol: Optional[str] = None) \
+        -> tuple[pd.DataFrame, str]:
+    assert is_instance(freq, Literal['D', 'W', 'M'])
+
+    if dowCol is not None:
+        pass
+    elif freq in ['D']:
+        dowCol = 'dow'
+    elif freq in ['W']:
+        dowCol = 'moy'
+    elif freq in ['M']:
+        dowCol = 'moy'
+    else:
+        raise ValueError(f"Unsupported freq {freq}")
+
+    if dowCol in df.columns:
+        return df, dowCol
+
+    if freq in ['D']:
+        df[dowCol] = df[dateCol].dt.day_name()
+    elif freq in ['W']:
+        # the name of the day is not very useful because it is the same!
+        # an alternative is the name of the month
+        df[dowCol] = df[dateCol].dt.month_name()
+    elif freq in ['M']:
+        df[dowCol] = df[dateCol].dt.month_name()
+    else:
+        raise ValueError(f"Unsupported freq {freq}")
+
+    return df, dowCol
+# end
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

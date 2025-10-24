@@ -47,6 +47,11 @@ from typing import Union
 import pandas as pd
 from .base import as_list
 
+__all__ = ['nan_replace']
+
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
 
 def nan_replace(df: pd.DataFrame,
                 dropcol=.0,
@@ -182,3 +187,7 @@ def _invalid_columns(df: pd.DataFrame, quota: Union[float, int], columns: list[s
     # end
     return icols
 # end
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

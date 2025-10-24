@@ -1,9 +1,10 @@
-from typing import Union, Optional
-from datetime import datetime
-import numpy as np
+from typing import Union, Optional, cast
+
 import pandas as pd
 
 from stdlib import NoneType
+
+__all__ = ['datetime_encode', 'datetime_reindex']
 
 # ---------------------------------------------------------------------------
 # Datetime encoding:
@@ -24,59 +25,6 @@ from stdlib import NoneType
 # datetime_reindex
 # ---------------------------------------------------------------------------
 
-FREQ_VALID = ['W', 'M', 'SM', 'BM', 'CBM', 'MS', 'SMS', 'BMS', 'CBMS',
-              'Q', 'Q', 'QS', 'BQS',
-              'A', 'Y', 'BA', 'BY', 'AS', 'AY', 'BAS', 'BAY']
-
-
-def _to_datetime(dt_series, format, freq) -> pd.Series:
-
-    def remove_tz(x):
-        if hasattr(x, 'tz_localize'):
-            return x.tz_localize(None)
-        elif isinstance(x, datetime):
-            return x.replace(tzinfo=None)
-        else:
-            return x
-
-    # Note: if 'format' contains the timezone (%z, %Z), it is necessary to normalize
-    # the datetime removing it in an 'intelligent' way.
-    # The first  solution is to remove the timezone and stop.
-    # The second solution is to convert the timestamp in a 'default' timezone (for example UTC)
-    # then to remove the TZ reference.
-    # Implemented the first one
-
-    if format is not None and freq is not None:
-        dt_series = pd.to_datetime(dt_series, format=format)
-
-    elif format is not None:
-        dt_series = pd.to_datetime(dt_series, format=format)
-        # dt_series = dt_series.map(lambda x: pd.to_datetime(x, format=format))
-        # dt_series = dt_series.transform(lambda x: pd.to_datetime(x, format=format))
-        # dt_series = dt_series.apply(lambda x: pd.to_datetime(x, format=format))
-
-        if '%z' in format or '%Z' in format:
-            # dt_series = dt_series.apply(lambda x: x.tz_convert("UTC").tz_localize(None))
-            dt_series = dt_series.apply(remove_tz)
-    else:
-        dt_series = pd.to_datetime(dt_series)
-
-    # np.dtypes.DateTime64DType == "datetime64[ns]"
-    # np.dtypes.ObjectDType
-    # available in numpy v1.26.4
-    #       NOT in numpy v1.24.3
-    # try:
-    #     if not isinstance(dt_series.dtype, np.dtypes.DateTime64DType):
-    #         dt_series = dt_series.astype("datetime64[ns]")
-    # except:
-    #     pass
-
-    if freq is not None:
-        dt_series = dt_series.dt.to_period(freq)
-        # dt_series = dt_series.asfreq(freq)
-    return dt_series
-
-
 def datetime_encode(df: pd.DataFrame,
                     datetime: Union[str, tuple[str]],
                     format: Optional[str] = None,
@@ -92,26 +40,30 @@ def datetime_encode(df: pd.DataFrame,
     """
     assert isinstance(datetime, (str, list, tuple))
     assert isinstance(format, (NoneType, str))
-    assert isinstance(freq, (NoneType, str))
+    # assert isinstance(freq, (NoneType, str))
     # assert 1 < len(datetime) < 4
     if isinstance(datetime, str):
         pass
     elif len(datetime) == 1:
-        pass
+        datetime = datetime[0]
     elif len(datetime) == 2:
-        datetime, format = datetime
+        datetime, format = cast(list, datetime)
     else:
-        datetime, format, freq = datetime
+        datetime, format, freq = cast(list, datetime)
 
     dt_series = df[datetime]
-    dt_series = _to_datetime(dt_series, format, freq)
+    dt_series = pd.to_datetime(list(dt_series), format=format)
+    # if freq is None:
+    #     freq = infer_freq(dt_series)
+    # if freq is not None:
+    #     dt_series = dt_series.to_period(freq)
     df[datetime] = dt_series
 
     return df
 # end
 
 
-def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFrame:
+def datetime_reindex(df: pd.DataFrame, keep='first', method='pad') -> pd.DataFrame:
     """
     Make sure that the datetime index in dataframe is complete, based
     on the index's 'frequency'
@@ -130,3 +82,7 @@ def datetime_reindex(df: pd.DataFrame, keep='first', mehod='pad') -> pd.DataFram
     df = df.reindex(index=dtrange, method=mehod)
     return df
 # end
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

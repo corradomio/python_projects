@@ -5,6 +5,7 @@ from pandas._typing import *
 from stdlib import as_list, kwval
 from .base import groups_split, groups_merge, index_split, index_merge
 
+__all__ = ['resample']
 
 # ---------------------------------------------------------------------------
 # pandas resample
@@ -136,7 +137,10 @@ def resample(df: DataFrame,
         return _resample_groups(df, rule, method, **kwargs)
     else:
         return _resample_single(df, rule, method, **kwargs)
-
 # end
 
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------
 

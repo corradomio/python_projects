@@ -1,7 +1,9 @@
-from typing import Union
+from typing import Union, cast
 from stdlib import as_list, is_instance
 import pandas as pd
 from pandasx import groups_split, groups_merge
+
+__all__ = ["update", "merge"]
 
 
 # ---------------------------------------------------------------------------
@@ -36,7 +38,6 @@ def update(df: pd.DataFrame, df_update: pd.DataFrame,
            inplace=False) -> pd.DataFrame:
     """
     Update the columns 'update' of 'df' using the content of 'udf'.
-
 
     :param df: dataframe to update
     :param df_update: dataframe containing the values to use for the updating
@@ -98,7 +99,8 @@ def _merge_single(df: pd.DataFrame, to_merge: pd.DataFrame):
         return to_merge
 
     for col in df.columns:
-        df[col][m_index] = to_merge[col][m_index]
+        # df[col][m_index] = to_merge[col][m_index]
+        df.loc[m_index, col] = to_merge.loc[m_index, col]
 
     return df
 
@@ -131,17 +133,38 @@ def merge(df: pd.DataFrame, to_merge: pd.DataFrame,
             continue
 
         dfg = df_dict[g]
-        to_mergeg = to_merge_dict[g]
+        to_merge = to_merge_dict[g]
 
-        mergedg = _merge_single(dfg, to_mergeg)
+        merged = _merge_single(dfg, to_merge)
 
-        merge_dict[g] = mergedg
+        merge_dict[g] = merged
     # end
 
     merged = groups_merge(merge_dict, groups=groups)
 
     return merged
 # end
+
+
+def compose(df: pd.DataFrame, upd: Union[pd.Series, pd.DataFrame], inplace=False) -> pd.DataFrame:
+    assert isinstance(df, pd.DataFrame)
+    assert isinstance(upd, (pd.Series, pd.DataFrame))
+
+    if not inplace:
+        df = df.copy()
+    if isinstance(upd, pd.Series):
+        col = cast(pd.Series, upd).name
+        dtype = df[col].dtype
+        index = upd.index
+        df.loc[index, col] = upd.astype(dtype)
+    else:
+        index: pd.Index = upd.index
+        for col in upd.columns:
+            dtype = df[col].dtype
+            df.loc[index, col] = upd[col].astype(dtype)
+    return df
+# end
+
 
 
 # ---------------------------------------------------------------------------

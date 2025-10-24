@@ -3,10 +3,16 @@ from typing import Union
 import pandas as pd
 from pandas import CategoricalDtype
 
+__all__ = ['find_categorical_columns', 'unique_values']
+
+
+# ---------------------------------------------------------------------------
+# concat
+# ---------------------------------------------------------------------------
 
 def find_categorical_columns(df: pd.DataFrame) -> list[str]:
     """
-    Select the categorical solumns
+    Select the categorical columns
     """
     columns = []
     for col in df.columns:
@@ -32,3 +38,7 @@ def unique_values(df: pd.DataFrame, columns: Union[None, str, list[str]] = None)
         uvalues[col] = list(df[col].unique())
     return uvalues
 
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

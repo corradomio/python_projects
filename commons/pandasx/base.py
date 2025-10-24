@@ -14,8 +14,9 @@ __all__ = [
     "groups_select",
     "groups_count",
     "groups_apply",
+    "groups_set",
 
-    "split_column",     # DEPERECATED
+    "split_column",     # DEPRECATED
     "merge_column",     # DEPRECATED
 
     "columns_split",
@@ -50,7 +51,14 @@ __all__ = [
     "find_unnamed_columns",
 
     "columns_ignore", "columns_drop",
-    "columns_rename"
+    "columns_rename",
+
+    "to_numpy",
+    "to_dataframe",
+
+    "infer_freq",
+    "normalize_freq",
+    "FREQUENCIES"
 ]
 
 
@@ -59,7 +67,7 @@ import warnings
 import numpy as np
 import pandas as pd
 import datetime as dt
-from typing import Union, Optional, Collection, Any
+from typing import Union, Optional, Collection, Any, cast
 from pandas import CategoricalDtype
 from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
 
@@ -70,12 +78,13 @@ from stdlib import NoneType, CollectionType, as_list, as_tuple, is_instance
 
 DATAFRAME_OR_DICT = Union[pd.DataFrame, dict[tuple, pd.DataFrame]]
 TRAIN_TEST_TYPE = tuple[DATAFRAME_OR_DICT, Union[NoneType, DATAFRAME_OR_DICT]]
-PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series, NoneType]
+PANDAS_TYPE = Union[pd.DataFrame, pd.Series]
+OPTIONAL_PANDAS_TYPE = Union[NoneType, pd.DataFrame, pd.Series]
 
 
 # ---------------------------------------------------------------------------
 # safe_sorted
-# check_columns
+# validate_columns
 # ---------------------------------------------------------------------------
 
 def safe_sorted(values):
@@ -206,6 +215,16 @@ def groups_apply(df: pd.DataFrame, fun, *,
 # groups_split
 # ---------------------------------------------------------------------------
 
+def _normalize_tuple(t: tuple):
+    # make sure that the tuple is composed by str or int, NOT numpy values
+    if len(t) == 0:
+        return t
+    elif isinstance(t[0], np.integer):
+        return tuple(int(e) for e in t)
+    else:
+        return t
+
+
 def _groups_split_on_columns(df, groups, drop, keep):
     dfdict: dict[tuple, pd.DataFrame] = {}
 
@@ -213,11 +232,12 @@ def _groups_split_on_columns(df, groups, drop, keep):
     # The library generates a FutureWarning !!!!
     if len(groups) == 1:
         for g, gdf in df.groupby(by=groups[0]):
-            dfdict[(g,)] = gdf
+            dfdict[(g,)] = gdf.copy()
             if keep > 0 and len(dfdict) == keep: break
     else:
         for g, gdf in df.groupby(by=groups):
-            dfdict[g] = gdf
+            g = _normalize_tuple(g)
+            dfdict[g] = gdf.copy()
             if keep > 0 and len(dfdict) == keep: break
 
     if drop:
@@ -417,7 +437,7 @@ def _groups_select_by_index(df: pd.DataFrame, values: tuple, drop: bool):
 def groups_select(df: pd.DataFrame,
                   values: Union[None, str, list[str], tuple[str], dict[str, Any]], *,
                   groups: Union[None, str, list[str], tuple[str]] = None,
-                  drop=True) -> pd.DataFrame:
+                  drop=False) -> pd.DataFrame:
     """
     Select the sub-dataframe based on the list of columns & values.
     To use the dataframe index (a multiindex), 'groups' must be None.
@@ -444,6 +464,29 @@ def groups_select(df: pd.DataFrame,
         return _group_select_by_columns(df, groups, values, drop)
 # end
 
+
+# ---------------------------------------------------------------------------
+# groups_set
+# ---------------------------------------------------------------------------
+
+def groups_set(df: Union[pd.DataFrame, pd.Series],
+               values: Union[None, str, list[str], tuple[str], dict[str, Any]], *,
+               groups: Union[None, str, list[str], tuple[str]] = None,
+               inplace=False):
+    assert isinstance(df, (pd.DataFrame, pd.Series))
+
+    if isinstance(values, dict):
+        groups, values = _split_dict(values)
+
+    if isinstance(df, pd.Series):
+        df = df.to_frame(cast(pd.Series, df).name)
+    elif not inplace:
+        df = df.copy()
+
+    for i, col in enumerate(groups):
+        df[col] = values[i]
+
+    return df
 
 # ---------------------------------------------------------------------------
 # split_column
@@ -699,6 +742,232 @@ def columns_range(df: Union[pd.DataFrame, np.ndarray], min_counts=128):
 # index_merge
 # ---------------------------------------------------------------------------
 
+
+# ---------------------------------------------------------------------------
+# infer_freq
+# ---------------------------------------------------------------------------
+# Pandas already offer a 'infer_freq' method
+
+FREQUENCIES = {
+    # second
+    'S': 1,                     # one second
+    's': 1,                     # one second
+
+    # minute
+    'T': 60,
+    'min': 60,                  # one minute
+
+    # hour
+    'H': 60 * 60,               # one hour
+    'h': 60 * 60,               # one hour
+    'BH': 60 * 60,              # business hour
+    'CBH': 60 * 60,             # custom business hour
+
+    # day
+    'B': 60 * 60 * 24,          # business day (weekday)
+    'D': 60 * 60 * 24,          # one absolute day
+    'C': 60 * 60 * 24,          # custom business day
+
+    # week
+    'W': 60 * 60 * 24 * 7,      # one week, optionally anchored on a day of the week
+    'BW': 60 * 60 * 24 * 5,
+    'WOM': 60 * 60 * 24 * 7,    # the x-th day of the y-th week of each month
+    'LWOM': 60 * 60 * 24 * 7,   # the x-th day of the last week of each month
+
+    # 15 days/half month
+    'SM': 60 * 60 * 24 * 15,
+    'SME': 60 * 60 * 24 * 15,   # 15th (or other day_of_month) and calendar month end
+    'SMS': 60 * 60 * 24 * 15,   # 15th (or other day_of_month) and calendar month begin
+
+    # month
+    'M': 60 * 60 * 24 * 30,     # month
+    'MS': 60 * 60 * 24 * 30,    # calendar month begin
+    'ME': 60 * 60 * 24 * 30,    # calendar month end
+    'BM': 60 * 60 * 24 * 30,    # business month
+    'BME': 60 * 60 * 24 * 30,   # business month end
+    'BMS': 60 * 60 * 24 * 30,   # business month begin
+    'CBM': 60 * 60 * 24 * 30,   # custom business month
+    'CBME': 60 * 60 * 24 * 30,  # custom business month end
+    'CBMS': 60 * 60 * 24 * 30,  # custom business month begin
+    'MBS': 60 * 60 * 24 * 30,
+    'CMBS': 60 * 60 * 24 * 30,
+
+    # quarter
+    'Q': 60 * 60 * 24 * 91,
+    'QE': 60 * 60 * 24 * 91,    # calendar quarter end
+    'QS': 60 * 60 * 24 * 91,    # calendar quarter start
+    'BQ': 60 * 60 * 24 * 91,
+    'BQE': 60 * 60 * 24 * 91,   # business quarter end
+    'BQS': 60 * 60 * 24 * 91,   # business quarter begin
+
+    # year
+    'A': 60 * 60 * 24 * 365,
+    'Y': 60 * 60 * 24 * 365,
+    'YE': 60 * 60 * 24 * 365,   # calendar year end
+    'YS': 60 * 60 * 24 * 365,   # calendar year begin
+    'BA': 60 * 60 * 24 * 365,
+    'BY': 60 * 60 * 24 * 365,
+    'AS': 60 * 60 * 24 * 365,
+    'AY': 60 * 60 * 24 * 365,
+    'BAE': 60 * 60 * 24 * 365,  # business year end
+    'BAS': 60 * 60 * 24 * 365,  # business year begin
+    'BYE': 60 * 60 * 24 * 365,  # business year end
+    'BYS': 60 * 60 * 24 * 365,  # business year begin
+
+    'REQ': 60 * 60 * 24 * 7 * 52,   # retail (aka 52-53 week) quarter
+    'RE': 60 * 60 * 24 * 7 * 52,  # retail (aka 52-53 week) quarter
+
+    # 'L': 1, 'ms': 1,    # milliseconds
+    # 'U': 1, 'us': 1,    # microseconds
+    # 'N': 1              # nanoseconds
+
+    'WS': 60 * 60 * 24 * 7,  # one week, optionally anchored on a day of the week
+    'WE': 60 * 60 * 24 * 7,  # one week, optionally anchored on a day of the week
+
+}
+
+
+NORMALIZED_FREQ = {
+    None: None,
+    # second
+    'S': 'S',
+    's': 'S',
+
+    # minute
+    'T': 'min',
+    'min': 'min',
+
+    # hour
+    'H': 'H',
+    'h': 'H',
+    'BH': 'H',
+    'CBH': 'H',
+
+    # day
+    'B': 'D',
+    'D': 'D',
+    'C': 'D',
+
+    # week
+    'W': 'W',       # 7
+    'BW': 'W',     # 5
+    'WOM': 'W',     # 7
+    'LWOM': 'W',    # 7
+
+    # 15 days/half month
+    'SM': 'SM',
+    'SME': 'SM',
+    'SMS': 'SM',
+
+    # month
+    'M': 'M',
+    'MS': 'M',
+    'ME': 'M',
+    'BM': 'M',
+    'BME': 'M',
+    'BMS': 'M',
+    'CBM': 'M',
+    'CBME': 'M',
+    'CBMS': 'M',
+    'MBS': 'M',
+    'CMBS': 'M',
+
+    # quarter
+    'Q': 'Q',
+    'QE': 'Q',
+    'QS': 'Q',
+    'BQ': 'Q',
+    'BQE': 'Q',
+    'BQS': 'Q',
+
+    # year
+    'A': 'Y',
+    'Y': 'Y',
+    'YE': 'Y',
+    'YS': 'Y',
+    'BA': 'Y',
+    'BY': 'Y',
+    'AS': 'Y',
+    'AY': 'Y',
+    'BAE': 'Y',
+    'BAS': 'Y',
+    'BYE': 'Y',
+    'BYS': 'Y',
+
+    'REQ': 'RE',
+    'RE': 'RE',
+
+    'W-MON': 'W',
+    'W-TUE': 'W',
+    'W-WED': 'W',
+    'W-THU': 'W',
+    'W-FRI': 'W',
+    'W-SAT': 'W',
+    'W-SUN': 'W',
+}
+
+
+def normalize_freq(freq):
+    return NORMALIZED_FREQ[freq]
+    # return freq
+
+
+def infer_freq(datetime, steps=5, ntries=3, normalize=True) -> str:
+    """
+    Infer 'freq' checking randomly different positions of the index
+
+    [2024/02/23] implementation simplified using the services offered
+                 by pandas.infer_freq
+                 It add some extra cases not supported by
+
+    :param datetime: pandas' index to use
+    :param steps: number of success results
+    :param ntries: maximum number of retries if some check fails
+    :return: the inferred frequency
+    """
+    if isinstance(datetime, (pd.DatetimeIndex, pd.TimedeltaIndex)):
+        freq = pd.infer_freq(datetime)
+    elif isinstance(datetime, pd.PeriodIndex):
+        freq = datetime.iloc[0].freqstr
+    # other pandas index types
+    elif isinstance(datetime, pd.Index):
+        freq = None
+    # elif isinstance(datetime, pd.Series) and datetime.dtype == np.dtypes.ObjectDType:
+    #     freq = pd.infer_freq(datetime)
+    elif isinstance(datetime, pd.Series) and datetime.dtype == pd.PeriodDtype and hasattr(datetime.iloc[0], "freqstr"):
+        freq = datetime.iloc[0].freqstr
+    elif isinstance(datetime, pd.Period):
+        freq = datetime.freqstr
+    else:
+        freq = pd.infer_freq(datetime)
+
+    if freq is not None:
+        return NORMALIZED_FREQ[freq] if normalize else freq
+
+    freq = _infer_freq(datetime, steps, ntries)
+    return NORMALIZED_FREQ[freq] if normalize else freq
+# end
+
+
+def _infer_freq(datetime, steps=5, ntries=3):
+    n = len(datetime)-steps
+    freq = None
+    itry = 0
+    while itry < ntries:
+        i = random.randrange(n)
+        tfreq = pd.infer_freq(datetime[i:i+steps])
+        if tfreq is None:
+            itry += 1
+        elif tfreq != freq:
+            freq = tfreq
+            itry = 0
+        else:
+            itry += 1
+    # end
+    return freq
+# end
+
+
 def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex], levels=1) \
         -> list[tuple]:
     """
@@ -728,10 +997,12 @@ def multiindex_get_level_values(mi: Union[pd.DataFrame, pd.Series, pd.MultiIndex
 # end
 
 
-def set_index(df: pd.DataFrame, columns: Union[None, str, list[str]], *,
+def set_index(df: pd.DataFrame,
+              columns: Union[str, list[str]], *,
               inplace=False,
               drop=False,
-              as_datetime: bool = False,
+              as_datetime=False,
+              freq: Optional[str]=None
     ) -> pd.DataFrame:
     """
     Create a multiindex based on the columns list
@@ -742,10 +1013,32 @@ def set_index(df: pd.DataFrame, columns: Union[None, str, list[str]], *,
     :param drop: if to drop the columns
     :return: the new dataframe
     """
+    ser = df[columns]
+    if as_datetime:
+        ser = pd.to_datetime(ser)
+    if freq is not None:
+        ser = ser.dt.to_period(freq)
+
+    if not inplace:
+        df = df.copy()
+
+    df.set_index(ser, inplace=True)
+    if drop:
+        df.drop(columns=columns, inplace=True)
+
+    return df
+
     if inplace:
         df.set_index(columns, inplace=inplace, drop=drop)
     else:
         df = df.set_index(columns, inplace=inplace, drop=drop)
+
+    # freq = None
+    # if isinstance(df.index, pd.DatetimeIndex) and df.index.freq is None:
+    #     freq = infer_freq(df.index)
+    # if freq is not None:
+    #     df.asfreq(freq)
+
     if as_datetime and isinstance(df.index, pd.PeriodIndex):
         df.set_index(df.index.to_timestamp())
     return df
@@ -773,7 +1066,7 @@ def index_split(df: pd.DataFrame, *, levels: int = -1, drop=True) -> dict[tuple,
         dfdict = {}
         for lv in lvalues:
             dflv = df.loc[lv]
-            dfdict[lv] = dflv
+            dfdict[lv] = dflv.copy()
         # end
 
     if drop:
@@ -818,28 +1111,31 @@ def index_merge(dfdict: dict[tuple, pd.DataFrame], names: Union[None, str, list[
 # nan_split
 # ---------------------------------------------------------------------------
 
-def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str, list[str]] = None) \
+def xy_split(*df_list, target: Union[str, list[str]], shared: Union[None, str, list[str]] = None) \
         -> list[PANDAS_TYPE]:
     """
     Split the df in 'data_list' in X, y
 
-    :param data_list: df list
+    :param df_list: df list
     :param target: target column name
     :param shared: columns shared between 'X' and 'y' (they will be present in both parts)
     :return: list of split dataframes
     """
-    target = as_list(target, 'target')
+    tlist = as_list(target, 'target')
     shared = as_list(shared, 'shared')
 
     xy_list = []
-    for data in data_list:
-        assert isinstance(data, pd.DataFrame)
+    for df in df_list:
+        assert isinstance(df, pd.DataFrame)
 
-        columns = data.columns.difference(target).union(shared)
-        X = data[columns] if len(columns) > 0 else None
+        columns = df.columns.difference(tlist).union(shared)
+        X = df[columns] if len(columns) > 0 else None
 
-        columns = data.columns.difference(columns).union(target).union(shared)
-        y = data[columns] if len(columns) > 0 else None
+        if len(shared) == 0 and isinstance(target, str):
+            y = df[target]
+        else:
+            columns = df.columns.difference(columns).union(tlist).union(shared)
+            y = df[columns] if len(columns) > 0 else None
 
         xy_list += [X, y]
     # end
@@ -850,9 +1146,9 @@ def xy_split(*data_list, target: Union[str, list[str]], shared: Union[None, str,
 def nan_split(*data_list,
               columns: Union[None, str, list[str]] = None,
               ignore: Union[None, str, list[str]] = None,
-              empty=True) -> list[PANDAS_TYPE]:
+              empty=False) -> list[PANDAS_TYPE]:
     """
-    Remove the columns of the dataframe containing nans
+    Split the dataframe horizontally based on specified list of columns having nan values
 
     :param data_list: list of dataframes to analyze
     :param ignore: list of columns to ignore from the analysis (alternative to 'columns')
@@ -910,9 +1206,9 @@ def nan_drop(df: PANDAS_TYPE, *, columns: Union[None, bool, str, list[str]] = No
 
 
 def nan_fill(df: PANDAS_TYPE, *, fillna=None) -> PANDAS_TYPE:
-    # pandas.NA
-    # numpy NaT
-    # numpy nan
+    # pandas.NA     Not Available?
+    # numpy NaT     Not a Time
+    # numpy nan     not a number
     # None
     # if fillna is None:
     #     df.fillna(None, inplace=True)
@@ -1060,18 +1356,17 @@ def cutoff_split(*data_list, cutoff,
 def _train_test_split_single(data, train_size, test_size, datetime) \
         -> Union[tuple[pd.DataFrame, pd.DataFrame], tuple[NoneType, NoneType]]:
 
-    def _tsize(n) -> int:
-        tsize = train_size
+    def _train_size(n) -> int:
+        if 0 < train_size < 1:
+            return int(n*train_size)
+        elif train_size >= 1:
+            return train_size
         if 0 < test_size < 1:
-            tsize = 1 - test_size
-        elif test_size > 1:
-            tsize = n - test_size
-        if 0 < tsize < 1:
-            return int(n*tsize)
-        elif tsize > 1:
-            return tsize
+            return int(n*(1-test_size))
+        elif test_size >= 1:
+            return n - test_size
         else:
-            return 1
+            return n
 
     if data is None:
         return None, None
@@ -1085,10 +1380,10 @@ def _train_test_split_single(data, train_size, test_size, datetime) \
             raise ValueError(f"Unsupported index type {type(data.index)}")
         t = len(data[data.index < end_date])
     else:
-        t = _tsize(len(data))
+        t = _train_size(len(data))
 
-    train = data[:t]
-    test_ = data[t:]
+    train = data.iloc[:t]
+    test_ = data.iloc[t:]
     return train, test_
 # end
 
@@ -1214,7 +1509,7 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
 
     n, c = data.shape
     if isinstance(target, CollectionType):
-        pass
+        columns = target
     elif c == 1:
         columns = [target]
     else:
@@ -1225,18 +1520,33 @@ def to_dataframe(data: np.ndarray, *, target: Union[str, list[str]], index=None)
 # end
 
 
-def to_numpy(data: Union[pd.DataFrame, pd.Series]) -> np.ndarray:
-    """
-    Safe version of 'pd.DataFrame.to_numpy()'
-    :param data:
-    :return:
-    """
+# def to_numpy(data: Union[pd.DataFrame, pd.Series]) -> np.ndarray:
+#     """
+#     Safe version of 'pd.DataFrame.to_numpy()'
+#     :param data:
+#     :return:
+#     """
+#     return None if data is None else data.to_numpy()
+# # end
+
+
+def to_numpy(data: Union[NoneType, pd.Series, pd.DataFrame, np.ndarray], *,
+             dtype=None,
+             matrix=False) -> Optional[np.ndarray]:
+    assert isinstance(data, (NoneType, pd.Series, pd.DataFrame, np.ndarray))
+
     if data is None:
         return None
-    else:
-        return data.to_numpy()
-# end
+    elif isinstance(data, (pd.Series, pd.DataFrame)):
+        data = data.to_numpy()
 
+    if matrix and len(data.shape) == 1:
+        data = data.reshape((-1, 1))
+
+    if dtype is not None and data.dtype != dtype:
+        data = data.astype(dtype)
+    return data
+# end
 
 # ---------------------------------------------------------------------------
 # series_argmax

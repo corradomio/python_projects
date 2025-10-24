@@ -3,6 +3,12 @@ from typing import Optional, Union
 import numpy as np
 import pandas as pd
 
+__all__ = ['is_spike']
+
+
+# ---------------------------------------------------------------------------
+# is_spike
+# ---------------------------------------------------------------------------
 
 def is_spike(df: Union[pd.Series, pd.DataFrame], *, target: Optional[str] = None,
              outlier_std: float = 3.0,
@@ -58,3 +64,7 @@ def is_spike(df: Union[pd.Series, pd.DataFrame], *, target: Optional[str] = None
 
     return 0 < n_outliers < outliers
 # end
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

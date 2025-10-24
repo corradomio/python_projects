@@ -9,14 +9,6 @@ from ..base import safe_sorted
 # OneHotEncoder
 # ---------------------------------------------------------------------------
 
-def inverse_map(map):
-    imap = {}
-    for k in map:
-        v = map[k]
-        imap[v] = k
-    return imap
-
-
 class OneHotEncoder(BaseEncoder):
     """
     OneHot encoding of the columns. If a column contains 1 or 2 values, it is

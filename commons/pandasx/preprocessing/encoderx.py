@@ -16,12 +16,24 @@ class DTypeEncoder(BaseEncoder):
     def __init__(self, columns=None, dtype=float, copy=True):
         super().__init__(columns, copy)
         self.dtype = dtype
+        self._mapping = {}
+
+    def fit(self, X: DataFrame) -> "DTypeEncoder":
+        for col in self._get_columns(X):
+            self._mapping[col] = X[col].dtype
+        return self
 
     def transform(self, X: DataFrame) -> DataFrame:
         X = self._check_X(X)
 
         for col in self._get_columns(X):
             X[col] = X[col].astype(self.dtype)
+        return X
+
+    def inverse_transform(self, X: DataFrame) -> DataFrame:
+        X = self._check_X(X)
+        for col in self._get_columns(X):
+            X[col] = X[col].astype(self._mapping[col])
         return X
 # end
 
@@ -30,7 +42,7 @@ class DTypeEncoder(BaseEncoder):
 # OrderedLabelEncoder
 # ---------------------------------------------------------------------------
 
-class OrderedLabelsEncoder(BaseEncoder):
+class OrderedOneHotEncoder(BaseEncoder):
     # As an One Hot encoding but it ensure that the labels have a unique order
     # It is NOT reasonable to split the dataset in groups because it is possible
     # that each group can have different number of labels, than the number of
