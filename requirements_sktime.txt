@@ -97,15 +97,15 @@ lightgbm
 # ---------------------------------------------------------------------------
 
 # https://github.com/spotify/annoy
-annoy
+#annoy==1.17.3
 
 # https://github.com/eamid/trimap
 # trimap isa based on annoy (https://github.com/spotify/annoy)
 # can be downloaded from https://www.cgohlke.com/
-trimap
+#trimap
 
 # https://umap-learn.readthedocs.io/en/latest/
-umap-learn
+#umap-learn
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +129,11 @@ statsmodels
 # ---------------------------------------------------------------------------
 # NN but ONLY for scikit learn/time series
 # ---------------------------------------------------------------------------
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+# pip3 install torch torchvision
+
 
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch
@@ -204,6 +209,14 @@ neuralforecast
 # https://github.com/Nixtla/hierarchicalforecast/
 #hierarchicalforecast
 
+# https://pypi.org/project/xlstm/
+xlstm
+
+# https://pypi.org/project/statsforecast/
+statsforecast 
+
+
+prophet
 
 # ---------------------------------------------------------------------------
 # darts

@@ -1,0 +1,18 @@
+# Python 3.10
+
+pandas
+
+# pip install torch --index-url https://download.pytorch.org/whl/cu126
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch
+
+lotus-ai
+lotus-ai[qdrant]
+
+langchain 
+langchain_ollama
+langchain-openai
+langchain-community
+langchain-experimental
+
+qdrant-client[fastembed-gpu]

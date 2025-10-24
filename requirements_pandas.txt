@@ -1,0 +1,70 @@
+# ---------------------------------------------------------------------------
+# sklearn environment with support
+#   sktime (time series)
+#   pytorch (NN)
+# ---------------------------------------------------------------------------
+# Utilities
+
+# https://path.readthedocs.io/en/latest/
+path
+
+# https://pypi.org/project/multimethod/
+multimethod
+
+# https://pypi.org/project/tabulate/
+tabulate
+
+
+# ---------------------------------------------------------------------------
+# standard libraries
+# ---------------------------------------------------------------------------
+
+# https://numpy.org/
+numpy
+
+# https://scipy.org/
+scipy<=1.15.3
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+
+# ---------------------------------------------------------------------------
+# pandas-like libraries
+# ---------------------------------------------------------------------------
+
+# https://pandas.pydata.org/
+pandas
+
+# there are incompatibilities between polars and pandas
+# https://pola.rs
+# polars
+
+
+# https://www.sqlalchemy.org/
+# https://docs.sqlalchemy.org/en/14/dialects/mysql.html
+# https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
+sqlalchemy
+
+
+
+# ---------------------------------------------------------------------------
+# time series
+# ---------------------------------------------------------------------------
+
+# https://sktime.org/
+# sktime
+
+# http://alkaline-ml.com/pmdarima/
+# pmdarima
+
+# https://www.statsmodels.org/stable/index.html
+statsmodels
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

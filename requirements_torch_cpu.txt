@@ -17,12 +17,14 @@ tqdm
 # html parser
 #beautifulsoup4
 
+PyYAML
 
 # ---------------------------------------------------------------------------
 # IPython/Jupiter
 # ---------------------------------------------------------------------------
 ipython
 jupyter
+notebook
 
 
 # ---------------------------------------------------------------------------
@@ -66,16 +68,22 @@ catboost
 # ---------------------------------------------------------------------------
 # sktime
 # ---------------------------------------------------------------------------
-sktime
-pmdarima
-statsmodels
+#sktime
+#pmdarima
+#statsmodels
 
 
 # ---------------------------------------------------------------------------
 # Pytorch
 # ---------------------------------------------------------------------------
-# better to use Python=3.11
-# --extra-index-url https://download.pytorch.org/whl/cu124
+# better to use Python=3.12
+# 
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+#
+# import torch
+# torch.cuda.is_available()
+#
+#--extra-index-url https://download.pytorch.org/whl/cu126
 torch
 torchvision
 torchaudio
@@ -95,11 +103,18 @@ skorch
 # ---------------------------------------------------------------------------
 
 torchmetrics 
+torchinfo
+transformers_stream_generator
+transformer_lens
 
 # pytorch-forecasting
 # pytorch-geometric
 # pytorch-geometric-temporal
 # torch_geometric
+
+#pytorch-optimizer
+#torchao
+#q-galore-torch
 
 
 # ---------------------------------------------------------------------------
@@ -115,25 +130,26 @@ accelerate
 safetensors
 datasets
 
-# fine tuning
-# bitsandbytes-windows (not necessary)
 bitsandbytes
-peft
-wandb
+# peft
+# wandb
 
 #evaluate
 #trl         # transformer reinforcement learning
 
 # https://github.com/lyogavin/airllm
-airllm
+# airllm
 
 
 # ---------------------------------------------------------------------------
 # Huggingface: sentences
 # ---------------------------------------------------------------------------
 
-sentence-transformers
-sentencepiece
+# https://sbert.net/
+# sentence-transformers
+
+# https://github.com/google/sentencepiece
+# sentencepiece
 
 # https://github.com/intel/
 # intel-extension-for-transformers
@@ -146,16 +162,18 @@ sentencepiece
 # https://github.com/arogozhnikov/einops
 einops
 
+jaxtyping
+
 
 # ---------------------------------------------------------------------------
 # Tokenizers
 # ---------------------------------------------------------------------------
 
 # BPE tokenizer
-#tiktoken
+tiktoken
 
 # Sacremoses tokenizer
-sacremoses
+# sacremoses
 
 
 # ---------------------------------------------------------------------------

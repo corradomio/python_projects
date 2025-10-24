@@ -24,12 +24,13 @@ PyYAML
 # ---------------------------------------------------------------------------
 ipython
 jupyter
+notebook
 
 
 # ---------------------------------------------------------------------------
 # IO
 # ---------------------------------------------------------------------------
-#pyarrow
+# pyarrow
 # fastparquet
 
 
@@ -67,9 +68,9 @@ catboost
 # ---------------------------------------------------------------------------
 # sktime
 # ---------------------------------------------------------------------------
-sktime
-pmdarima
-statsmodels
+#sktime
+#pmdarima
+#statsmodels
 
 
 # ---------------------------------------------------------------------------
@@ -103,11 +104,17 @@ skorch
 
 torchmetrics 
 torchinfo
+transformers_stream_generator
+transformer_lens
 
 # pytorch-forecasting
 # pytorch-geometric
 # pytorch-geometric-temporal
 # torch_geometric
+
+#pytorch-optimizer
+#torchao
+#q-galore-torch
 
 
 # ---------------------------------------------------------------------------
@@ -152,16 +159,24 @@ bitsandbytes
 # Utilities
 # ---------------------------------------------------------------------------
 
+# https://pypi.org/project/einops/
 # https://github.com/arogozhnikov/einops
-# einops
+einops
 
+# https://pypi.org/project/jaxtyping/
+# https://github.com/patrick-kidger/jaxtyping
+jaxtyping
+
+# https://pypi.org/project/hf-xet/
+# https://pypi.org/project/hf-xet/#hf_xet-1.1.5-cp37-abi3-win_amd64.whl
+hf_xet
 
 # ---------------------------------------------------------------------------
 # Tokenizers
 # ---------------------------------------------------------------------------
 
 # BPE tokenizer
-#tiktoken
+tiktoken
 
 # Sacremoses tokenizer
 # sacremoses

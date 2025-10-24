@@ -1,0 +1,228 @@
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+pandas
+path
+
+tabulate
+python-dotenv
+
+matplotlib
+seaborn
+
+
+# ---------------------------------------------------------------------------
+# LLM
+# ---------------------------------------------------------------------------
+
+# https://ollama.com/
+ollama
+
+# https://lmstudio.ai/
+lmstudio
+
+# https://github.com/openai/openai-python
+openai
+
+
+# https://www.litellm.ai/
+# NO: it is a framework supporting cost tracking, guardrails, ...
+# litellm
+
+# https://www.crewai.com/
+# NO: it generates conflicts with chromadb
+# crewai
+
+
+# ---------------------------------------------------------------------------
+# MCP
+# ---------------------------------------------------------------------------
+# https://modelcontextprotocol.io/quickstart/server
+# https://modelcontextprotocol.io/introduction
+# mcp
+
+# Math calculator
+# https://pypi.org/project/mcp-server/
+#```json
+#"mcpServers": {
+#  "mcp-server": {
+#    "command": "uv",
+#    "args": [
+#      "--directory",
+#      "/Users/Ajinkya25/Documents/Idea-Labs/MCP/mcp-server",
+#      "run",
+#      "mcp-server"
+#    ]
+#  }
+#}
+# mcp-server
+
+
+# fastmcp v2
+# https://gofastmcp.com/getting-started/welcome
+# https://github.com/jlowin/fastmcp
+# fastmcp
+
+# WARNING: non funziona
+# https://github.com/TheRaLabs/legion-mcp
+# https://pypi.org/project/database-mcp/
+# database-mcp
+
+
+# https://github.com/runekaagaard/mcp-alchemy
+# mcp-alchemy
+
+# ---------------------------------------------------------------------------
+# langchain
+#   https://www.langchain.com/
+# ---------------------------------------------------------------------------
+langchain 
+langchain_openai
+# langchain-groq
+langchain_ollama
+langchain-openai
+langchain-qdrant
+langchain-community
+langchain-experimental
+langchain-text-splitters 
+langchain-postgres
+
+langchainhub
+langgraph 
+
+
+# ---------------------------------------------------------------------------
+# llma-index
+#   https://llamahub.ai/
+# ---------------------------------------------------------------------------
+# note: llama-index install: 
+#   core, llms-openai, embeddings-openai, program-openai, question-gen-openai, agent-openai, 
+#   readers-file, multi-modal-llms-openai
+llama-index
+
+#llama-index-core
+#llama-index-asimov
+
+# embedding
+# llama-index-embeddings-openai
+
+# agent
+# llama-index-agent-openai
+
+# question
+# llama-index-question-gen-openai
+
+# readers
+#llama-index-readers-file
+#llama-index-readers-web
+llama-index-readers-wikipedia
+llama-index-readers-database
+
+# index
+llama-index-extractors-entity
+llama-index-vector-stores-qdrant
+
+llama-index-llms-langchain
+llama-index-llms-lmstudio
+llama-index-llms-ollama
+llama-index-llms-openai
+llama-index-llms-huggingface
+#llama-index-llms-llama-cpp
+#llama-index-llms-llama-api
+#llama-index-llms-anthropic
+#llama-index-llms-deepseek
+#llama-index-llms-gemini
+#llama-index-llms-groq
+#llama-index-llms-mistralai
+#llama-index-llms-together
+#llama-index-llms-palm
+#llama-index-llms-perplexity
+
+
+
+
+
+
+
+
+#
+# LOTUS
+# https://pypi.org/project/lotus-ai/#files
+# https://www.lotusai.co.uk/
+# INCOMPATIBILITY: requires Python 3.10
+# INCOMPATIBILITY: requires numpy 1.x
+# lotus-ai
+
+
+#PandasAI
+# https://pandas-ai.com/
+# INCOMPATIBILITY: requires Python 3.11
+# pandasai
+# pandasai_openai
+# pandasai_local
+
+
+# ---------------------------------------------------------------------------
+# huggingface
+# ---------------------------------------------------------------------------
+#huggingface_hub[mcp]
+#tiktoken
+
+
+# ---------------------------------------------------------------------------
+# Vector database & similarity
+# ---------------------------------------------------------------------------
+
+# https://pypi.org/project/faiss-cpu/
+# https://github.com/facebookresearch/faiss
+faiss-cpu
+
+
+# https://www.lancedb.com/
+lancedb
+
+
+# https://www.trychroma.com/
+chromadb
+
+# NO: there are conflicts with chromadb
+#chromadb-client
+
+# https://github.com/qdrant/qdrant-client
+qdrant-client[fastembed-gpu]
+
+
+# ---------------------------------------------------------------------------
+# Relational databases
+# ---------------------------------------------------------------------------
+psycopg2
+#asyncpg
+
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+#streamlit
+#unstructured[pdf]
+#ragatouille
+
+
+# ---------------------------------------------------------------------------
+# Documentation
+# ---------------------------------------------------------------------------
+pymupdf
+pypdf
+docx2txt
+pyyaml
+
+#wikipedia
+#beautifulsoup4
+
+#arxiv 
+#duckduckgo-search
+
+
+# Parser for a lot of programming languages
+# https://tree-sitter.github.io/tree-sitter/
+#tree-sitter
+#tree-sitter-languages
