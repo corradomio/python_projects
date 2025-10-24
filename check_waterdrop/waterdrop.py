@@ -7,7 +7,7 @@ import mitsubac as mix
 import time
 
 from stdlib.jsonx import dump
-from math import pi, sin, atan2, degrees
+from math import pi, cos, sin, atan2, degrees, sqrt
 from typing import Optional, Union
 
 
@@ -20,6 +20,83 @@ halfpi = pi/2
 
 
 def sq(x): return x*x
+def atanxy(x, y): return atan2(y, x)
+
+
+# ---------------------------------------------------------------------------
+# Waterdrop properties
+# ---------------------------------------------------------------------------
+
+def waterdrop_info(
+        R: Optional[float] = None,
+        theta: Optional[float] = None,
+        b: Optional[float] = None,
+        h: Optional[float] = None,
+        degree=True
+) -> dict:
+    r = 0.
+
+    # theta in radians or degree, if defined
+    if theta is not None and degree:
+        theta = theta * pi / 180
+    if theta is not None:
+        alpha = halfpi - theta
+    else:
+        alpha = 0.
+
+
+    # (r, theta)
+    if R is not None and theta is not None:
+        h = R - R * sin(alpha)
+        r = R * cos(alpha)
+        b = 2 * r
+    # (b, theta)
+    elif b is not None and theta is not None:
+        r = b/2
+        R = r / cos(alpha)
+        h = R - R * sin(alpha)
+    # (b, h) == (0, 0)
+    elif b == 0 and h == 0:
+        R = 0
+        theta = 0
+        alpha = 0
+    # (b, h)
+    elif b is not None and h is not None:
+        #
+        # Solve[{h == R - R Sin[alpha], r == R Cos[alpha]}, {R, alpha}]
+        # beta = Pi/2 - alpha
+        #
+        r = b/2
+        r2 = sq(r)
+        h2 = sq(h)
+        h2r2 = h2 + r2
+        #
+        R = h2r2/(2*h)
+        #
+        x = (2*r*h)/h2r2
+        y = (r2-h2)/h2r2
+        alpha = atanxy(x, y)
+        theta = halfpi - alpha
+    else:
+        raise ValueError("Either r and theta or b and theta or b an h must be provided")
+
+    volume = pi * sq(h)*(R - h / 3)
+
+    # validations: OK
+    # h2 = R + sqrt(sq(R) - sq(r))
+    # b2 = 2*sqrt(2*h*R - sq(h))
+    # v2 = pi*h/6*(3*sq(r) + sq(h))
+
+    return {
+        "R": R + 0.,
+        "theta": theta * 180 / pi if degree else theta + 0.,
+        "alpha": alpha * 180 / pi if degree else alpha + 0.,
+        "r": r + 0.,
+        "b": b + 0.,
+        "h": h + 0.,
+        "volume": volume + 0.,
+        "degree": degree
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +105,7 @@ def sq(x): return x*x
 
 def droplet_radius_angle_zmove(B: float, H: float) -> tuple[float, float, float]:
     """
-    Compute R, beta, Z from B and H.
+    Compute R, beta, alpha, Z from B and H.
 
     Note: the contact_angle (for a sphere) is
 
@@ -84,6 +161,7 @@ def render_water_drop(
         dispenser_shift_xy: Union[float, list[float], tuple[float, float]]=0,
         dispenser_shift_z: float=0,
         scene_id=int(time.time()),
+        scene_root="image",
         cmap="gray",
         save_info=False,
 ):
@@ -122,7 +200,7 @@ def render_water_drop(
 
     scene = mix.load_scene(f"{scene_name}.xml", **params)
 
-    image_dir = f"images/{scene_id//1000:04}"
+    image_dir = f"{scene_root}/{scene_id//1000:04}"
     os.makedirs(image_dir, exist_ok=True)
 
     image_name=f"{image_dir}/{scene_name}-{scene_id:04}.png"
