@@ -19,10 +19,11 @@ def main():
             data = best_values(jdata)
             # print(data)
 
-            mean = data.mean()
-            std = data.std(ddof=1)
+            # valori standardizzati
+            rvs = (data - data.mean())/(data.std())
+            stat, pval = sps.kstest(rvs, "norm")
 
-            print(f"{algo.upper()} & {nw} & {mean:.2f} $\pm$ {std:.2f}")
+            print(f"{nw} & {algo.upper()} & {stat:.3} & {pval:.3}")
         pass
         print()
 

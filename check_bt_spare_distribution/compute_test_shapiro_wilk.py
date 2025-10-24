@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 import scipy.stats as sps
 from stdlib import jsonx
 
@@ -17,12 +18,11 @@ def main():
             jfile = f"results_sd/{nw}/sd-{nw}-700001-{algo}-perm-none.json"
             jdata = jsonx.load(jfile)
             data = best_values(jdata)
-            # print(data)
 
-            mean = data.mean()
-            std = data.std(ddof=1)
+            rvs = (data - data.mean()) / (data.std())
+            stat, pval = sps.shapiro(rvs)
 
-            print(f"{algo.upper()} & {nw} & {mean:.2f} $\pm$ {std:.2f}")
+            print(f"{nw} & {algo.upper()} & {stat:.3} & {pval:.3}")
         pass
         print()
 

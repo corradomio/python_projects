@@ -20,9 +20,12 @@ def main():
             # print(data)
 
             mean = data.mean()
-            std = data.std(ddof=1)
+            # std0 = data.std(ddof=0)
+            std1 = data.std(ddof=1)
+            cvar0 = (1+1/(4*nw))*std1/mean*100
+            cvar1 = std1/mean*100
 
-            print(f"{algo.upper()} & {nw} & {mean:.2f} $\pm$ {std:.2f}")
+            print(f"{nw} & {algo.upper()} & {cvar0:.2f}")
         pass
         print()
 

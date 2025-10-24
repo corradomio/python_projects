@@ -87,7 +87,7 @@ def nw_of(s: str) -> int:
 
 
 def plot_log(log_file: path):
-    print(log_file)
+    # print(log_file)
 
     nw = nw_of(log_file.stem)
     time = log_file.parent.stem
@@ -95,20 +95,26 @@ def plot_log(log_file: path):
     gl = GurobiLog(log_file)
     gl.parse()
 
+    pwidth = 6
+    pheight = 3  # 3.5
+
     plt.clf()
+    plt.gcf().set_size_inches(pwidth, pheight)
+
     plt.plot(gl.primal)
     plt.plot(gl.dual)
     plt.xlabel("steps")
-    plt.ylabel("objective value")
+    plt.ylabel("solution value")
     plt.legend(["primal", "dual"])
-    plt.title(f"ILP history ({nw})")
+    plt.title(f"ILP history (N={nw})")
 
-    plt.gcf().set_size_inches(6, 4)
+    # plt.gcf().set_size_inches(6, 4)
     plt.tight_layout()
 
     # plt.show()
-    fpath = f"results_plots_ilp/ilp_history-{time}-{nw:03}.png"
-    plt.savefig(fpath, dpi=300)
+    fname = f"results_plots_ilp/ilp_history-{time}-{nw:03}.png"
+    plt.savefig(fname, dpi=300)
+    print(fname)
 # end
 
 
@@ -116,7 +122,6 @@ def plot_log(log_file: path):
 # ---------------------------------------------------------------------------
 
 def main():
-
     GUROBI_HOME=path("3600s")
     for log in GUROBI_HOME.files("*.log"):
         plot_log(log)

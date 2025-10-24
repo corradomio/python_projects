@@ -20,11 +20,16 @@ def plot_fitfun():
 
             x = range(1, numCenters+1)
 
+            pwidth = 6
+            pheight = 3 # 3.5
+
             plt.clf()
+            plt.gcf().set_size_inches(pwidth, pheight)
+
             for ffeval in data:
                 plt.plot(x, ffeval)
 
-            plt.title(f"{fftitle} ({numCenters})")
+            plt.title(f"{fftitle} ({numCenters} warehouses)")
             plt.xlabel("n of warehouses")
             plt.ylabel("Fitness value")
 

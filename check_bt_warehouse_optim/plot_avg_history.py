@@ -21,8 +21,8 @@ def plot_history():
             # fname = fdir / f"best-{num_centers}-{item_code}-{algo_name}-{ffname}.png"
             fname = fdir / "avg-" + jfile.stem[3:] + ".png"
 
-            if fname.exists() and jfile.getmtime() < fname.getmtime():
-                continue
+            # if fname.exists() and jfile.getmtime() < fname.getmtime():
+            #     continue
 
             print(jfile)
 
@@ -37,8 +37,13 @@ def plot_history():
 
             n_experiments = len(fit_list)
 
+            pwidth = 6
+            pheight = 3
+
             plt.clf()
-            plt.figure(figsize=(5, 4))
+            plt.gcf().set_size_inches(pwidth, pheight)
+            # plt.figure(figsize=(pwidth, pheight))
+
             for i in range(n_experiments):
                 # history = -np.array(best_fit_list[i])
                 history = fit_list[i]
@@ -46,7 +51,7 @@ def plot_history():
 
             plt.xlabel("n generations")
             plt.ylabel("Fitness value")
-            plt.title(f"{fftitle} ({num_centers}, {algo_name})")
+            plt.title(f"{fftitle} ({algo_name}, {num_centers} warehouses)")
             # plt.gca().set_aspect(1.)
             plt.tight_layout()
 

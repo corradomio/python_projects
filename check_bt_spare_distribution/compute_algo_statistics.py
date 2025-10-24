@@ -1,28 +1,20 @@
-import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from path import Path as path
-
 from stdlib.dictx import dict_get
 from stdlib.jsonx import load
+import matplotlib.pyplot as plt
+import seaborn as sns
+
 
 RESULTS = path("./results_sd")
 
 ALGO_NAMES = [
     "rvhc-perm", "rvga-perm", "rvsa-perm", "rkeda-perm", "ilp-relaxed", "ilp-180"
-    # "RVHC"     "RVGA"       "RVSA"       "RKEDA"       "ILPR"         "ILP"
 ]
 ALGO_LABELS = [
-    "RVHC", "RVGA", "RVSA", "RKEDA", "ILPR", "ILP"
+    "RVHC", "RVGA", "RVSA", "RKEDA", "ILPR", "ILP180"
 ]
-
-ALGO_MAP = {
-"rvhc-perm":"RVHC",
-"rvga-perm": "RVGA",
-"rvsa-perm": "RVSA",
-"rkeda-perm": "RKEDA",
-"ilp-relaxed": "ILPR",
-"ilp-180": "ILP"
-}
 
 NW_LIST = [50,60,70,80,90,100]
 
@@ -59,61 +51,59 @@ def collect_algos_stats(d: path) -> dict:
     return algos_stats
 
 
-def print_algos_stats_boxplot(nw, algos_stats:dict):
+def print_algos_stats(nw, algos_stats:dict):
 
     # names = [
     #     algo_stats["name"]
     #     for algo_stats in algos_stats.values()
     # ]
-    names = ALGO_NAMES[:4]
-    D = [
-        algos_stats[name]["bestFits"]
-        for name in names
-    ]
+    # names = ALGO_NAMES
+    # D = [
+    #     algos_stats[name]["bestFits"]
+    #     for name in names
+    # ]
 
-    pwidth = 6
-    pheight = 3.5  # 3.5
+    for name in ALGO_NAMES:
+        bestFits = np.array(algos_stats[name]["bestFits"], dtype=float)
+        print(f"{nw:3} & {name:10} & {bestFits.mean():.3f} & {bestFits.std():.3f} \\\\")
 
-    plt.clf()
-    plt.gcf().set_size_inches(pwidth, pheight)
-
-    plt.boxplot(
-        D,
-        positions=[1,2,3,4],
-        showmeans=True, meanline=True,
-        notch=False
-    )
-
-    plt.gca().set_xticklabels(ALGO_LABELS[:4])
-    # plt.ylim(7000, 12000)
-    plt.ylabel("solution value")
+    # plt.clf()
+    #
+    # plt.boxplot(
+    #     D,
+    #     positions=[1,2,3,4],
+    #     showmeans=True, meanline=True,
+    #     notch=False
+    # )
+    #
+    # plt.gca().set_xticklabels(names)
+    # # plt.ylim(7000, 12000)
+    # plt.ylabel("solution value")
     # plt.xlabel("algorithms")
-    # plt.title(f"Algorithms statistics ({nw})")
-    plt.title(f"N={nw}")
-
-    fname = f"results_plots/boxplot-{nw:03}.png"
-    plt.savefig(fname, dpi=300)
-    print(fname)
+    # plt.title(f"Algorithms stats ({nw})")
+    #
+    # fname = f"results_plots/boxplot-{nw:03}.png"
+    # plt.savefig(fname, dpi=300)
 
     # plt.show()
     pass
 
 
-def plot_algos_stats_all_sizes():
+def compute_algos_stats_by_size():
     for d in RESULTS.dirs():
         # print(d)
         nw = int(d.stem)
 
         algos_stats = collect_algos_stats(d)
 
-        print_algos_stats_boxplot(nw, algos_stats)
+        print_algos_stats(nw, algos_stats)
     pass
 
 
-def plot_algo_behaviour_all_sizes():
+def compute_algo_behaviour_all_sizes():
     algos_stats_dict = {}
     for d in RESULTS.dirs():
-        # print(d)
+        print(d)
         nw = int(d.stem)
 
         algos_stats = collect_algos_stats(d)
@@ -144,25 +134,17 @@ def plot_algo_behaviour_all_sizes():
 
         # df = pd.DataFrame(data=data, columns=["nw", "mean", "std"])
 
-        pwidth = 6
-        pheight = 3  # 3.5
-
         plt.clf()
-        plt.gcf().set_size_inches(pwidth, pheight)
-
         plt.fill_between(data[:,0], data[:, 3], data[:, 4], alpha=.5, linewidth=0)
         plt.plot(data[:,0], data[:, 1])
-        plt.xlabel("number of warehouses")
+        plt.xlabel("n warehouses")
         plt.ylabel("solution value")
-        # plt.ylim(7500, 12000)
-        plt.ylim(6000, 12000)
-        plt.title(f"Algorithm {ALGO_MAP[name]}")
-        plt.tight_layout()
+        plt.ylim(7000, 12000)
+        plt.title(f"Algorithm {name}")
 
         fname = f"results_plots/line-{name}.png"
         # plt.show()
         plt.savefig(fname, dpi=300)
-        print(fname)
         pass
 
     # end
@@ -171,10 +153,10 @@ def plot_algo_behaviour_all_sizes():
 # end
 
 
-def plot_all_algos_behaviour_all_sizes():
+def compute_all_algos_behaviour_all_sizes():
     algos_stats_dict = {}
     for d in RESULTS.dirs():
-        # print(d)
+        print(d)
         nw = int(d.stem)
 
         algos_stats = collect_algos_stats(d)
@@ -182,11 +164,7 @@ def plot_all_algos_behaviour_all_sizes():
         algos_stats_dict[nw] = algos_stats
     # end
 
-    pwidth = 6
-    pheight = 4  # 3.5
-
     plt.clf()
-    plt.gcf().set_size_inches(pwidth, pheight)
 
     for name in ALGO_NAMES:
         means = []
@@ -215,23 +193,23 @@ def plot_all_algos_behaviour_all_sizes():
         plt.scatter(data[:,0], data[:, 1])
         pass
     # end
-    plt.xlabel("number of warehouses")
+    plt.xlabel("n warehouses")
     plt.ylabel("mean solution value")
-    plt.ylim(6000, 12000)
-    # plt.title(f"Best solutions of algorithms and solvers")
+    plt.ylim(7000, 12000)
+    plt.title(f"Algorithms' means of best solutions")
     plt.legend(ALGO_LABELS)
 
-    fname = f"results_plots/scatter-all.png"
+    fname = f"results_plots/line-all.png"
     # plt.show()
     plt.savefig(fname, dpi=300)
-    print(fname)
+
     pass
 
 
 def main():
-    plot_algos_stats_all_sizes()
-    plot_algo_behaviour_all_sizes()
-    plot_all_algos_behaviour_all_sizes()
+    compute_algos_stats_by_size()
+    # compute_algo_behaviour_all_sizes()
+    # compute_all_algos_behaviour_all_sizes()
     pass
 
 

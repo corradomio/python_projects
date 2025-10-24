@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from stdlib.jsonx import load
+from path import Path as path
 
 
 ITEMS = [
@@ -18,9 +19,14 @@ ITEMS = [
 
 def plot_locations(locations: dict):
     # locations = load("data_synth/new/locations_uk.json")["locations"]
-    print(len(locations))
+    # print(len(locations))
+
+    pwidth = 6
+    pheight = 3  # 3.5
 
     plt.clf()
+    plt.gcf().set_size_inches(pwidth, pheight)
+
     llon = []
     llat = []
     for l in locations.values():
@@ -33,7 +39,7 @@ def plot_locations(locations: dict):
     plt.scatter(llon, llat, c='blue', s=0.33, marker='.')
     plt.gca().set_aspect(1.5)
     plt.gca().set_axis_off()
-    plt.gcf().set_size_inches(4, 6)
+    # plt.gcf().set_size_inches(4, 6)
     plt.tight_layout()
 
     plt.savefig("plots/uk.png", dpi=300)
@@ -42,9 +48,15 @@ def plot_locations(locations: dict):
 
 
 def plot_warehouses(nw: int, locations: dict, warehouses: dict, stock_star: dict, item: str):
-    print(f"{nw}-{item}")
+    if nw > 100 or item != "700001":
+        return
+    # print(f"{nw}-{item}")
+
+    # pwidth = 6
+    # pheight = 3  # 3.5
 
     plt.clf()
+    # plt.gcf().set_size_inches(pwidth, pheight)
 
     # plot locations
     llon = []
@@ -94,10 +106,14 @@ def plot_warehouses(nw: int, locations: dict, warehouses: dict, stock_star: dict
 
     plt.gca().set_aspect(1.5)
     plt.gca().set_axis_off()
-    plt.gcf().set_size_inches(4, 6)
+    # plt.gcf().set_size_inches(4, 6)
     plt.tight_layout()
 
-    plt.savefig(f"plots/{nw}/wh_{nw:03}-{item}.png", dpi=300)
+    path(f"plots/{nw}").mkdir_p()
+
+    fname = f"plots/{nw}/wh_{nw:03}-{item}.png"
+    plt.savefig(fname, dpi=300)
+    print(fname)
 # end
 
 

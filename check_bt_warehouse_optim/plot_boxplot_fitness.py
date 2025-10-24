@@ -73,9 +73,11 @@ def plot_boxplot_fitness():
                 for name in ALGO_LIST
             ]
 
+            pwidth = 6
+            pheight = 3 # 3.5
+
             plt.clf()
-            plt.gcf().set_size_inches(6, 3.5)
-            # plt.gca().set_aspect(3.5/6)
+            plt.gcf().set_size_inches(pwidth, pheight)
 
             plt.boxplot(
                 D,
@@ -88,7 +90,7 @@ def plot_boxplot_fitness():
             plt.gca().set_xticklabels(ALGO_UPRC)
             plt.ylabel("Fitness value")
             # plt.xlabel("algorithms")
-            plt.title(f"Algorithms statistics ({nw})")
+            plt.title(f"Algorithms statistics ({nw} warehouses)")
             plt.tight_layout()
 
             plt.savefig(fname, dpi=300)

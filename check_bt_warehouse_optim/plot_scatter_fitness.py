@@ -70,9 +70,17 @@ def plot_scatter_fitness():
         fftitle = scenario_fftitle[scenario]
         fname = fdir / f"algo_fitness_values-{item_code}-{scenario}.png"
 
+        pwidth = 6
+        pheight = 3 # 3.5
+
         plt.clf()
-        plt.gcf().set_size_inches(6, 3.5)
+        plt.gcf().set_size_inches(pwidth, pheight)
         figures = []
+
+        xmin = float('inf')
+        xmax = float('-inf')
+        ymin = float('inf')
+        ymax = float('-inf')
 
         for i in range(len(ALGO_LIST)):
             algo_name = ALGO_LIST[i]
@@ -85,11 +93,21 @@ def plot_scatter_fitness():
 
             fig = plt.scatter(x, y, marker=marker)
             figures.append(fig)
+
+            xmin = min(xmin, min(x))
+            xmax = max(xmax, max(x))
+            ymin = min(ymin, min(y))
+            ymax = max(ymax, max(y))
         # end
+
+        # ar = (xmax - xmin) / (ymax - ymin) * (pheight/pwidth) * .87
+        # print(f"ar = {ar}")
+
         plt.legend(figures, ALGO_UPRC)
         plt.title(f"Average fitness values ({fftitle})")
         plt.ylabel("Fitness value")
         plt.xlabel("n of warehouses")
+        # plt.gca().set_aspect(ar)
         plt.tight_layout()
 
         plt.savefig(fname, dpi=300)
