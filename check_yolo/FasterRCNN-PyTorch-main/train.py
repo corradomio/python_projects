@@ -46,15 +46,23 @@ def train(args):
                                shuffle=False,
                                num_workers=4)
     
-    faster_rcnn_model = FasterRCNN(model_config, num_classes=dataset_config['num_classes'])
+    faster_rcnn_model = FasterRCNN(model_config, num_classes=dataset_config['num_classes'], pretrained=True)
     faster_rcnn_model.train()
     faster_rcnn_model.to(device)
 
     if not os.path.exists(train_config['task_name']):
         os.mkdir(train_config['task_name'])
 
+    sgd_params = filter(lambda p: p.requires_grad, faster_rcnn_model.parameters())
+
     optimizer = torch.optim.SGD(lr=train_config['lr'],
-                                params=filter(lambda p: p.requires_grad, faster_rcnn_model.parameters()),
+                                # params=filter(lambda p: p.requires_grad, faster_rcnn_model.parameters()),
+                                # params=faster_rcnn_model.parameters(),
+                                params=[
+                                    {
+                                        "params": faster_rcnn_model.parameters()
+                                    }
+                                ],
                                 weight_decay=5E-4,
                                 momentum=0.9)
     scheduler = MultiStepLR(optimizer, milestones=train_config['lr_steps'], gamma=0.1)
@@ -64,10 +72,11 @@ def train(args):
     step_count = 1
 
     for i in range(num_epochs):
-        rpn_classification_losses = []
-        rpn_localization_losses = []
-        frcnn_classification_losses = []
-        frcnn_localization_losses = []
+        # rpn_classification_losses = []
+        # rpn_localization_losses = []
+        # frcnn_classification_losses = []
+        # frcnn_localization_losses = []
+        losses = []
         optimizer.zero_grad()
         
         for im, target, fname in tqdm(train_dataset):
@@ -80,28 +89,34 @@ def train(args):
             frcnn_loss = frcnn_output['frcnn_classification_loss'] + frcnn_output['frcnn_localization_loss']
             loss = rpn_loss + frcnn_loss
             
-            rpn_classification_losses.append(rpn_output['rpn_classification_loss'].item())
-            rpn_localization_losses.append(rpn_output['rpn_localization_loss'].item())
-            frcnn_classification_losses.append(frcnn_output['frcnn_classification_loss'].item())
-            frcnn_localization_losses.append(frcnn_output['frcnn_localization_loss'].item())
+            # rpn_classification_losses.append(rpn_output['rpn_classification_loss'].item())
+            # rpn_localization_losses.append(rpn_output['rpn_localization_loss'].item())
+            # frcnn_classification_losses.append(frcnn_output['frcnn_classification_loss'].item())
+            # frcnn_localization_losses.append(frcnn_output['frcnn_localization_loss'].item())
 
             loss = loss / acc_steps
+
+            losses.append((float(loss)))
+
             loss.backward()
+
+            # this is an alternative to the batch because each image must be processed separately
             if step_count % acc_steps == 0:
                 optimizer.step()
                 optimizer.zero_grad()
             step_count += 1
-        print('Finished epoch {}'.format(i))
+        # print('Finished epoch {}'.format(i))
         optimizer.step()
         optimizer.zero_grad()
         torch.save(faster_rcnn_model.state_dict(), os.path.join(train_config['task_name'],
                                                                 train_config['ckpt_name']))
-        loss_output = ''
-        loss_output += 'RPN Classification Loss : {:.4f}'.format(np.mean(rpn_classification_losses))
-        loss_output += ' | RPN Localization Loss : {:.4f}'.format(np.mean(rpn_localization_losses))
-        loss_output += ' | FRCNN Classification Loss : {:.4f}'.format(np.mean(frcnn_classification_losses))
-        loss_output += ' | FRCNN Localization Loss : {:.4f}'.format(np.mean(frcnn_localization_losses))
-        print(loss_output)
+        # loss_output = ''
+        # loss_output += 'RPN Classification Loss : {:.4f}'.format(np.mean(rpn_classification_losses))
+        # loss_output += ' | RPN Localization Loss : {:.4f}'.format(np.mean(rpn_localization_losses))
+        # loss_output += ' | FRCNN Classification Loss : {:.4f}'.format(np.mean(frcnn_classification_losses))
+        # loss_output += ' | FRCNN Localization Loss : {:.4f}'.format(np.mean(frcnn_localization_losses))
+        # print(loss_output)
+        print(f"Finished epoch {i}, loss={np.mean(losses)}", flush=True)
         scheduler.step()
     print('Done Training...')
 
