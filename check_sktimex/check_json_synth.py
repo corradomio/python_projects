@@ -39,8 +39,8 @@ def check_models(df: pd.DataFrame, jmodels: dict[str, dict]):
         print("---", name, "---")
         fdir = create_fdir(jmodel)
 
-        imodel = 0
         for g in dfdict:
+            print("...", g)
             try:
                 dfg = dfdict[g]
 

@@ -664,7 +664,7 @@ class ROIHead(nn.Module):
             localization_loss = torch.nn.functional.smooth_l1_loss(
                 box_transform_pred[fg_proposals_idxs, fg_cls_labels],
                 regression_targets[fg_proposals_idxs],
-                beta=1/9,
+                beta=1 / 9,
                 reduction="sum",
             )
             localization_loss = localization_loss / labels.numel()
