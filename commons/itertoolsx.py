@@ -404,27 +404,30 @@ lex_index = lexicographic_index
 # Set operations
 # ---------------------------------------------------------------------------
 
-def sorted_tuple(l):
+def sorted_tuple(l) -> tuple:
     return tuple(sorted(l))
 # end
 
 
-def intersect(s1, s2):
-    return tuple(set(s1).intersection(s2))
+def intersect(s1, s2) -> tuple|set:
+    # return tuple(set(s1).intersection(s2))
+    return set(s1).intersection(s2)
 # end
 
 
-def difference(s1, s2):
-    return tuple(set(s1).difference(s2))
+def difference(s1, s2) -> tuple|set:
+    # return tuple(set(s1).difference(s2))
+    return set(s1).difference(s2)
 # end
 
 
-def union(s1, s2):
-    return tuple(set(s1).union(s2))
+def union(s1, s2) -> tuple|set:
+    # return tuple(set(s1).union(s2))
+    return set(s1).union(s2)
 # end
 
 
-def simdiff(s1, s2):
+def simdiff(s1, s2) -> tuple|set:
     return union(difference(s1, s2), difference(s2, s1))
 # end
 

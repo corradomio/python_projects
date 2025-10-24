@@ -28,7 +28,7 @@ def rank(tdict: grb.tupledict) -> int:
 # ---------------------------------------------------------------------------
 
 @multimethod
-def shape(a: np.ndarray) -> int:
+def shape(a: np.ndarray) -> tuple[int, ...]:
     return a.shape
 
 

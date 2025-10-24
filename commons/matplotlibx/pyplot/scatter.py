@@ -2,7 +2,7 @@ from typing import Sequence, Literal
 
 import matplotlib.pyplot as plt
 from matplotlib.collections import PathCollection
-from matplotlib.colorizer import Colorizer
+# from matplotlib.colorizer import Colorizer
 from matplotlib.colors import Colormap, Normalize
 from matplotlib.typing import (
     ColorType,
@@ -28,7 +28,7 @@ def scatter(
         linewidths: float | Sequence[float] | None = None,
         *,
         edgecolors: Literal["face", "none"] | ColorType | Sequence[ColorType] | None = None,
-        colorizer: Colorizer | None = None,
+        colorizer = None,
         plotnonfinite: bool = False,
         data=None,
         **kwargs,
