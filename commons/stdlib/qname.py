@@ -1,5 +1,4 @@
-from typing import Any
-
+from typing import Any, Optional, Union, cast
 from path import Path as path
 
 
@@ -53,6 +52,67 @@ def import_from(qname: str) -> Any:
     clazz = getattr(module, name)
     return clazz
 
+
+def create_from(instance_info: str | dict, aliases=None) -> Any:
+    """
+    Create and instance of the object.
+
+    instance_info: {
+        "class": "qname|alias|type",
+        "p1": <v1>, ...
+    }
+
+    aliases: {
+        "alias": "qname|type"
+    }
+    
+    """
+    if instance_info is None:
+        return None
+
+    if aliases is None:
+        aliases = {}
+    if isinstance(instance_info, (str, type)):
+        instance_info = {"class": instance_info}
+
+    assert isinstance(instance_info, dict)
+    assert isinstance(aliases, dict)
+
+    qname: str = ""
+    clazz_args = {}|instance_info
+
+    for k in ["class", "class_name", "clazz", "method"]:
+        if k in instance_info:
+            qname = instance_info[k]
+            if qname in aliases:
+                qname = aliases[qname]
+            del clazz_args[k]
+            break
+
+    assert isinstance(qname, str) and len(qname) > 0 or isinstance(qname, type), "Missing mandatory key: ('class', 'class_name', 'clazz', 'method')"
+    if isinstance(qname, type):
+        clazz = qname
+    else:
+        clazz = cast(type, import_from(qname))
+    return clazz(**clazz_args)
+
+
+def create_from_collection(collection: Union[None, list, dict]) -> Union[None, list, dict]:
+    if collection is None:
+        return None
+
+    if isinstance(collection, dict):
+        return {
+            k: create_from(collection[k])
+            for k in collection
+        }
+    elif isinstance(collection, list):
+        return [
+            create_from(e)
+            for e in collection
+        ]
+    else:
+        raise ValueError(f"Unsupported collection type {type(collection)}")
 
 # ---------------------------------------------------------------------------
 # Name handling

@@ -7,6 +7,8 @@
 from itertools import combinations
 from typing import *
 import random as rnd
+# DON'T REMOVE
+from .iboolgen import *
 
 # ---------------------------------------------------------------------------
 # Support
@@ -73,6 +75,15 @@ comb = _comb
 # Low level routines
 # ---------------------------------------------------------------------------
 
+def nbits(b: int) -> int:
+    n = 1
+    m = 1
+    while m < b:
+        m <<= 1
+        n += 1
+    return n
+
+
 def ipow(b: Union[int, float], n: int) -> int:
     """Integer power: b^n with b and n integers"""
     p = 1
@@ -81,13 +92,16 @@ def ipow(b: Union[int, float], n: int) -> int:
     return p
 
 
-def ilog2(p: int) -> int:
+def ilog2(b: int) -> int:
     """Integer logarithm based 2"""
+    if b == 0:
+        return 0
+    p = b
     l = -1
     while p != 0:
         l += 1
         p >>= 1
-    return l
+    return l if (1<<l) <= b else l+1
 
 
 def ihighbit(S: int) -> int:
@@ -341,7 +355,7 @@ def parse_k(k: Union[None, int, list[int], tuple], n: int, b: int = 0) -> tuple[
 # This means that the elements of the set are the numbers 0...(2^MAX_BITS)-1
 # It is not available the operation icompl(s) of a bitset because it is not
 # available the information about the TOTAL the number of elements in the
-# bitset but is is available as icompl(c | X) = idiff(X, s)
+# bitset but is available as icompl(c | X) = idiff(X, s)
 #
 
 def ibinset(bits: Iterable[int]) -> int:
@@ -368,10 +382,14 @@ def ibinlist(S: int, n: int) -> list[int]:
     :param n:
     :return:
     """
-    M = (1 << n)
+    # M = (1 << n)
     L = [0]*n
-    for i in ilist(S):
-        L[i] = 1
+    # for i in ilist(S):
+    #     L[i] = 1
+    m = 1
+    for i in range(n):
+        L[i] = 1 if (S & m) else 0
+        m <<= 1
     return L
 
 
@@ -818,6 +836,7 @@ def idisjointpairs(N: int, empty=True) -> Iterator[tuple[int, int]]:
         D = idiff_gt(N, S)
         for T in ilexsubset(D, k=[s, n]):
             yield S, T
+# end
 
 
 def ipowersetpairs(N: int, empty=True) -> Iterator[tuple[int, int]]:
@@ -872,6 +891,7 @@ def isubsetpairs(N: int, same=True, empty=True) -> Iterator[tuple[int, int]]:
     for S in ipowerset(N, empty=empty):
         for T in isubsets(S, lower=empty, upper=same):
             yield T, S
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -898,6 +918,7 @@ def irandset(n: int, rnd=None) -> int:
         if r < .5:
             S = iadd(S, i)
     return S
+# end
 
 
 # def irandsubsets(n: int, n_perm: int) -> list:
@@ -942,6 +963,7 @@ def ijaccard_index(S1: int, S2: int) -> float:
         return 1.
     else:
         return icard(iinterset(S1, S2)) / icard(iunion(S1, S2))
+# end
 
 
 def ihamming_distance(S1: int, S2: int) -> int:
@@ -955,6 +977,7 @@ def ihamming_distance(S1: int, S2: int) -> int:
     :return:
     """
     return icard(isdiff(S1, S2))
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -1032,6 +1055,7 @@ def isubsetsc(S: int, l=None, u=None) -> Iterator[int]:
     for k in range(l, u+1):
         for c in combinations(S, k):
             yield iset(c)
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -1061,6 +1085,7 @@ def imapset(M : Union[List[List[int]], Dict[int, List[int]]]) -> List[int]:
         S[i] = iset(M[i])
     # end
     return S
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -1070,42 +1095,188 @@ def imapset(M : Union[List[List[int]], Dict[int, List[int]]]) -> List[int]:
 # More in general:  k^k^n k-functions with n parameters
 #
 
-# def iboolfun(k: int, n: int) -> list[int]:
-#     """
-#     Return the k-th boolean function in n variables
-#     If k is -1, it generates a random function
-#
-#     :param k: k-th boolean function, or -1
-#     :param n: n of parameters
-#     :return: list of {0,1}
-#     """
-#     M = (1 << n)
-#     if k == -1:
-#         T = [1 if rnd.random() >= 0.5 else 0 for _ in range(M)]
-#     else:
-#         T = ibinlist(k, n)
-#     return T
-
-
-def ibooltable(k: int, n: int) -> list[int]:
+def _iboolfun(k: int, n: int, c=True) -> list[int]:
     """
-    Return the k-th boolean table in n variables
+    Return the k-th boolean function in n parameters
     If k is -1, it generates a random function
 
     :param k: k-th boolean function, or -1
     :param n: n of parameters
+    :param c: if to include constant functions (0, L-1)
     :return: list of {0,1}
     """
+    M = (1 << n)
     if k == -1:
-        L = 2**(2**n)
-        k = rnd.randrange(0, L)
+        F = 1 << M
+        if c:
+            S = rnd.randrange(0, F)
+        else:
+            S = rnd.randrange(1, F-1)
+    else:
+        S = k
     # end
-    N = (1 << n) - 1
-    T = [0]*(N + 1)
-    for S in isubsets(N):
-        T[S] = imember(k, S & N)
+
+    T = ibinlist(S, M)
     return T
 # end
+
+
+def truth_table(bf: list[int], flatten=True) -> Union[list[list[int]], list[tuple[list[int], int]]]:
+    M = len(bf)
+    n = ilog2(M)
+    tt = []
+
+    if flatten:
+        for i in range(M):
+            x = ibinlist(i, n)
+            tt.append( x + [bf[i]] )
+    else:
+        for i in range(M):
+            x = ibinlist(i, n)
+            tt.append( (x, bf[i]) )
+    return tt
+# end
+
+
+def iboolfun(k: int, n: int, c=True, p=False, vars: Optional[list[str]]=None) -> tuple[list[int], str]:
+    """
+    Return the k-th boolean function in n parameters
+    If k is -1, it generates a random function
+
+    :param k: k-th boolean function, or -1
+    :param n: n of parameters
+    :param c: if to include constant functions (0, L-1)
+    :param p: if the function must involve all parameters
+    :param vars:
+    :return:
+    """
+    if not p or k >= 0:
+        bfun = _iboolfun(k, n, c)
+        return bfun, iboolfun_to_expr(bfun, vars)
+
+    # if vars is None:
+    #     vars = expression_vars("x", n)
+    # assert len(vars) == n
+
+    # p=True) use all parameters
+    # c=False) exclude constant functions
+
+    # bfun = _iboolfun(k, n)
+    # tt = truth_table(bfun)
+    # expr = simplify_expression(vars, tt)
+    # while (p and not used_all_vars(vars, expr)) or (not c and expr in ["0", "1"]):
+    #     bfun = _iboolfun(k, n)
+    #     tt = truth_table(bfun)
+    #     expr = simplify_expression(vars, tt)
+    # return bfun, expr
+
+    bfun = _iboolfun(k, n)
+    use_all = use_all_params(bfun)
+    while use_all:
+        bfun = _iboolfun(k, n)
+        use_all = use_all_params(bfun)
+    while not use_all:
+        bfun = _iboolfun(k, n)
+        use_all = use_all_params(bfun)
+    return bfun, iboolfun_to_expr(bfun, vars)
+# end
+
+
+ibooltable = iboolfun
+
+
+def use_all_params(bf: list[int]) -> bool:
+    m = len(bf)
+    n = ilog2(m)
+    used = [False]*n
+    gc_list = gen_gray_codes(n)
+    assert m == len(gc_list)
+    for i in range(m-1):
+        gc1 = gc_list[i+0]
+        gc2 = gc_list[i+1]
+        k = gray_code_bit_index(gc1, gc2)
+        if bf[gc1] != bf[gc2]:
+            used[k] = True
+    # end
+    return all(used)
+# end
+
+
+def iboolfun_to_expr(bfun: list[int], vars:Optional[list[str]]=None) -> str:
+    if vars is None:
+        m = len(bfun)
+        n = nbits(m)
+        vars = expression_vars("x", n)
+    tt = truth_table(bfun)
+    expr = simplify_expression(vars, tt)
+    return expr
+# end
+
+
+# ---------------------------------------------------------------------------
+# Gray code
+# ---------------------------------------------------------------------------
+
+def _gray_codes_list(n: int) -> tuple[list[int], list[int]]:
+    assert n > 0
+    if n == 1:
+        return [0, 1], [0]
+    shorter_gray_codes, bits = _gray_codes_list(n - 1)
+    bitmask = 1 << (n - 1)
+    gray_codes = list(shorter_gray_codes)
+    for gray_code in reversed(shorter_gray_codes):
+        next_code = bitmask | gray_code
+        bits.append(gray_code_bit_index(gray_codes[-1], next_code))
+        gray_codes.append(next_code)
+    return gray_codes, bits
+
+def gray_codes_list(n: int) -> tuple[list[int], list[int]]:
+    gc_list, bits = _gray_codes_list(n)
+    bits.append(bits[-1])
+    return gc_list, bits
+
+
+def gen_gray_codes(n: int) -> List[int]:
+    assert n > 0
+    if n == 1:
+        return [0, 1]
+    shorter_gray_codes = gen_gray_codes(n - 1)
+    bitmask = 1 << (n - 1)
+    gray_codes = list(shorter_gray_codes)
+    for gray_code in reversed(shorter_gray_codes):
+        gray_codes.append(bitmask | gray_code)
+    return gray_codes
+
+
+def gray_code_bit_index(gc1: int, gc2: int) -> int:
+    n = max(nbits(gc1), nbits(gc2))
+    m = 1
+    for i in range(n):
+        if (gc1 & m) != (gc2 & m):
+            return i
+        m <<= 1
+    raise ValueError("gc1 == gc2")
+
+
+def gray_code_to_tc(g: int) -> int:
+    """gray_code_to_tc(g) converts gray code integer g to two's complement
+    integer. Raises ValueError if g < 0.
+    """
+    x = g
+    mask = x >> 1
+    while mask > 0:
+        x ^= mask
+        mask >>= 1
+    return x
+
+
+def tc_to_gray_code(x: int) -> int:
+    """tc_to_gray_code(x) converts two's complement integer x to gray code
+    integer. Raises ValueError if x < 0.
+    """
+    if x < 0:
+        raise AssertionError('x must be non-negative')
+    return x ^ (x >> 1)
 
 
 # ---------------------------------------------------------------------------

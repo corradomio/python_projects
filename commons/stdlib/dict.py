@@ -264,19 +264,6 @@ class configuration(dict):
     def __delattr__(self, item):
         return self.__delitem__(item)
 
-
-
-def reverse_dict(d: Union[BuiltinDict, dict]) -> dict:
-    """
-    Reverse the dictionary
-    :param d: dictionary
-    :return: the reversed dictionary
-    """
-    drev = {d[k]: k for k in d}
-    assert len(d) == len(drev)
-    return drev
-
-
 # ---------------------------------------------------------------------------
 # Extends 'is_instance'
 # ---------------------------------------------------------------------------

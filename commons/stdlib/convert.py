@@ -52,6 +52,14 @@ def as_dict(d: Union[NoneType, dict], *, key=None) -> dict:
         raise ValueError(f"Unsupported value type: {type(d)}")
 
 
+def as_str(obj: Union[NoneType,str, list[str]]) -> str:
+    if isinstance(obj, str):
+        return obj
+    elif isinstance(obj, (list, tuple)):
+        return str(obj[0])
+    else:
+        return str(obj)
+
 # ---------------------------------------------------------------------------
 # tobool
 # ---------------------------------------------------------------------------

@@ -20,6 +20,11 @@
 #
 #
 
+# [2025/09/13] add parameters
+#   $<varname>
+#   ${<varname>}
+#
+
 #
 # json.dumps(obj) -> str
 # json.dump(ooj, fp)
@@ -38,9 +43,6 @@ import numpy as np
 import numpy.dtypes as npdt
 import pandas as pd
 
-# from pandasx.arff import dumps
-
-# from .dict import dict
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
 PANDAS_KWARGS = ['orient', 'date_format', 'double_precision', 'force_ascii', 'date_unit', 'index']
@@ -189,11 +191,8 @@ JSONX_ENCODERS = {
 
 class JSONxEncoder(json.JSONEncoder):
     def __init__(self, **kwargs):
-        self._pandas_kwargs = {}
-        for k in PANDAS_KWARGS:
-            if k in kwargs:
-                self._pandas_kwargs[k] = kwargs[k]
-                del kwargs[k]
+        self._pandas_kwargs = _dict_select(kwargs, PANDAS_KWARGS)
+        kwargs = _dict_select(kwargs, PANDAS_KWARGS, exclude=True)
         super().__init__(**kwargs)
 
     def default(self, o):
@@ -219,35 +218,130 @@ class JSONxEncoder(json.JSONEncoder):
         return super().encode(o)
 
 
+def _dict_select(d:dict, keys: list[str], exclude=False) -> dict:
+    if exclude:
+        e = {}
+        for k in d:
+            if k not in keys:
+                e[k] = d[k]
+    else:
+        e = {}
+        for k in d:
+            if k in keys:
+                e[k] = d[k]
+    return e
+
+
+def _normalize(obj):
+    if not isinstance(obj, dict):
+        return obj
+    odict = cast(dict, obj)
+    if len(odict) == 0:
+        return odict
+    if not isinstance(list(odict.keys())[0], tuple):
+        return odict
+
+    def _set(d: dict, keys: tuple, v):
+        n = len(keys)
+        for i in range(n-1):
+            k = keys[i]
+            if k not in d:
+                d[k] = {}
+            d = d[k]
+        k = keys[-1]
+        d[k] = v
+    # end
+
+    ndict = {}
+    for t, v in odict.items():
+        _set(ndict, t, v)
+
+    return ndict
+
+
+
+def _fill_params(jdata: dict, params: dict):
+    def _check(name):
+        if name not in params:
+            raise KeyError(f"Parameter '{name}' not specified")
+    def _replace(v: str):
+        if v.startswith("${") and v.endswith("}"):
+            name = v[2:-1]
+            _check(name)
+            v = params[name]
+        elif "${" in v:
+            s = v.find("${")
+            e = v.find("}", s)
+            name = v[s+2:e]
+            _check(name)
+            v = v[:s] + str(params[name]) + v[e+1:]
+        elif v.startswith("$"):
+            name = v[1:]
+            _check(name)
+            v = params[name]
+        return v
+
+    for k in jdata:
+        v = jdata[k]
+        if isinstance(v, str):
+            jdata[k] = _replace(v)
+        elif isinstance(v, dict):
+            _fill_params(v, params)
+    return jdata
+
+
 # ---------------------------------------------------------------------------
 # jsonx.load(file) -> obj
 # jsonx.dump(obj, file)
 # ---------------------------------------------------------------------------
 
 def load(file: str, **kwargs) -> dict:
-    with open(file, mode="r", **kwargs) as fp:
-        return dict(json.load(fp))
+    """
+    Load the JSON in the specified file.
+    It can replace strings in format:
+
+        $<varname>
+        ${varname}
+
+    with the value passed in kwargs.
+
+    :param file:
+    :param kwargs:
+    :return:
+    """
+    open_kwargs = _dict_select(kwargs, OPEN_KWARGS)
+    with open(file, mode="r", **open_kwargs) as fp:
+        jdata = dict(json.load(fp))
+    return _fill_params(jdata, kwargs)
 
 
 def loads(s, **kwargs) -> dict:
-    return dict(json.loads(s, **kwargs))
+    jdata = dict(json.loads(s, **kwargs))
+    return _fill_params(jdata, kwargs)
 
 
 def dump(obj, file: str, **kwargs):
     if 'indent' not in kwargs:
         kwargs['indent'] = 4
 
-    open_kwargs = {}
-    for k in OPEN_KWARGS:
-        if k in kwargs:
-            open_kwargs[k] = kwargs[k]
-            del kwargs[k]
+    open_kwargs = _dict_select(kwargs, OPEN_KWARGS)
+    obj = _normalize(obj)
 
     if isinstance(file, str):
         with open(file, mode="w", **open_kwargs) as fp:
             json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
     else:
         json.dump(obj, file, cls=JSONxEncoder, **kwargs)
+# end
+
+
+def dumps(obj, *, skipkeys=False, ensure_ascii=True, check_circular=True,
+        allow_nan=True, cls=None, indent=None, separators=None,
+        default=None, sort_keys=False, **kw):
+    return json.dumps(obj, skipkeys=skipkeys, ensure_ascii=ensure_ascii,
+                      check_circular=check_circular, allow_nan=allow_nan,
+                      cls=cls, indent=indent, separators=separators,
+                      default=default, sort_keys=sort_keys, **kw)
 # end
 
 # ---------------------------------------------------------------------------

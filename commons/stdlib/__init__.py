@@ -1,12 +1,11 @@
 __version__ = "1.1.15"
 
-from .qname import module_path, import_from, qualified_name, qualified_type, name_of, ns_of
-from .convert import tobool, as_dict, as_list, as_tuple, tofloat, to_bool, to_float
-from .convert import NoneType, RangeType, CollectionType, FunctionType
 from .collections import list_map, lrange, mul_, sum_, prod_, argsort
-from .kwargs import kwexclude, kwparams, kwselect, kwval, kwmerge
-from .bag import bag
-from .dict import dict
+from .convert import tobool, as_dict, as_list, as_tuple, tofloat, to_bool, to_float, as_str
 from .dictx import dict_select, dict_exclude, dict_get
 from .is_instance import is_instance, IS_INSTANCE_OF, IsInstance
+from .kwargs import kwexclude, kwparams, kwselect, kwval, kwmerge
 from .language import method_of
+from .qname import module_path, qualified_name, qualified_type, name_of, ns_of
+from .qname import import_from, create_from, create_from_collection
+from .types import NoneType, RangeType, CollectionType, LambdaType

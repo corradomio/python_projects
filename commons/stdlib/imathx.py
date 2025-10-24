@@ -41,11 +41,29 @@ def ilog2(n: int) -> int:
     return r
 
 
+def ilog2up(n: int) -> int:
+    l = ilog2(n)
+    if l < 0: return 0
+    return l if 1<<l == n else l+1
+
+
 def isign(x: int, zero: bool = False) -> int:
     """integer sign"""
     if x < 0: return -1
     if x > 0: return +1
     return 1 if zero else 0
+
+
+# ---------------------------------------------------------------------------
+
+def iseven(n: int) -> bool:
+    """e' pari"""
+    return n % 2 == 0  # e' pari
+
+
+def isodd(n: int) -> bool:
+    """e' dispari"""
+    return n % 2 == 1  # e' dispari
 
 
 # ---------------------------------------------------------------------------

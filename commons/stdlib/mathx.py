@@ -15,6 +15,9 @@ INF: float = float('inf')
 def sq(x: float) -> float: return x * x
 
 
+# ArcTan
+def atanxy(x, y): return atan2(y, x)
+
 # ---------------------------------------------------------------------------
 # chop
 # ---------------------------------------------------------------------------
@@ -28,19 +31,6 @@ def chop(x: Union[float, list[float]], l: float, u: float) -> Union[float, list[
     else:
         return [chop(e, l, u) for e in x]
 # end
-
-
-# ---------------------------------------------------------------------------
-# argsort
-# ---------------------------------------------------------------------------
-
-# def argsort(values: Iterable, descending: bool = False) -> List[int]:
-#     """Sort the values in ascending (ore descending) order and return the indices"""
-#     n = len(list(values))
-#     pairs = [(i, values[i]) for i in range(n)]
-#     pairs = sorted(pairs, key=lambda p: p[1], reverse=descending)
-#     return [p[0] for p in pairs]
-# # end
 
 
 # ---------------------------------------------------------------------------
@@ -113,17 +103,6 @@ def isle(x: float, y: float, eps: float = EPS) -> bool:
     """is less or equal than"""
     return not isgt(x, y, eps=EPS)
 
-
-# ---------------------------------------------------------------------------
-
-def iseven(n: int) -> bool:
-    """e' pari"""
-    return n % 2 == 0  # e' pari
-
-
-def isodd(n: int) -> bool:
-    """e' dispari"""
-    return n % 2 == 1  # e' dispari
 
 
 # ---------------------------------------------------------------------------

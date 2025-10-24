@@ -1,7 +1,7 @@
 from typing import Optional
-from datetime import datetime
-
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+
 
 #
 #     ‘B’: Business Day
@@ -61,6 +61,23 @@ def relativeperiods(periods=1, freq='D'):
     return relativedelta(**{
         FREQ_TO_PERIOD[freq]: periods
     })
+
+
+def relativedifference(dt1: datetime, dt2: datetime, freq='D') -> int:
+    dd: timedelta = dt1 - dt2
+    if freq == 'D':
+        return dd.days
+    if freq == 'W':
+        # add 6 to ensure COMPLETE weeks
+        if dd.days < 0:
+            return (dd.days)//7             # WARNING: (-8)//7 == -2
+        else:
+            return (dd.days + 6)//7         # WARNING: (+8)//7 ==  1
+    if freq == 'M':
+        return 12*(dt1.year - dt2.year) + (dt1.month - dt2.month)
+    else:
+        raise ValueError(f"Unsupported freq {freq}")
+
 
 
 def now(freq: Optional[str] = None, tz=None) -> datetime:

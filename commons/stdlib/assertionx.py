@@ -129,9 +129,9 @@ def assert_almost_equal(first, second, places=None, msg=None, delta=None):
     if delta is not None:
         assert diff <= delta, msg
     elif places is None:
-        assert diff <= 10**-7, msg
+        assert diff <= 10 ** -7, msg
     else:
-        assert diff <= 10**(-places), msg
+        assert diff <= 10 ** (-places), msg
     pass
 
 
@@ -198,8 +198,10 @@ def assert_dict_contains_subset(expected, actual, msg=None):
 
 def assert_multi_line_equal(first, second, msg=None):
     """Assert that two multi-line strings are equal."""
+
     def strip(s):
         return s.replace('\\n', ' ').replace('\\r', ' ').replace('  ', ' ')
+
     assert strip(first) == strip(second), msg
 
 
