@@ -1,7 +1,0 @@
-*.png
-*.json
-images
-stable-diffusion-v1-5
-ddpm-*
-runwayml
-local-*
