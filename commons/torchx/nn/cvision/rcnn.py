@@ -1,9 +1,10 @@
-import math
-
 import torch
 import torch.nn as nn
-import torchvision
 import torch.nn.functional as F
+import torchvision
+import math
+
+# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
 def get_iou(boxes1, boxes2):
@@ -174,93 +175,6 @@ def transform_boxes_to_original_size(boxes, new_size, original_size):
     ymin = ymin * ratio_height
     ymax = ymax * ratio_height
     return torch.stack((xmin, ymin, xmax, ymax), dim=1)
-
-
-#   ( 0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   ( 1): ReLU(inplace=True)
-#   ( 2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   ( 3): ReLU(inplace=True)
-#   ( 4): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-# ------------------------------------------------------------------------------------
-#   ( 5): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   ( 6): ReLU(inplace=True)
-#   ( 7): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   ( 8): ReLU(inplace=True)
-#   ( 9): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-# ------------------------------------------------------------------------------------
-#   (10): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (11): ReLU(inplace=True)
-#   (12): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (13): ReLU(inplace=True)
-#   (14): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (15): ReLU(inplace=True)
-#   (16): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-# ------------------------------------------------------------------------------------
-#   (17): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (18): ReLU(inplace=True)
-#   (19): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (20): ReLU(inplace=True)
-#   (21): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (22): ReLU(inplace=True)
-#   (23): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-# ------------------------------------------------------------------------------------
-#   (24): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (25): ReLU(inplace=True)
-#   (26): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (27): ReLU(inplace=True)
-#   (28): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
-#   (29): ReLU(inplace=True)
-# ------------------------------------------------------------------------------------
-#   (30): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
-
-class VGGFeatures(nn.Module):
-    def __init__(self, **model_config):
-        super().__init__()
-        self.features = nn.Sequential(
-            # 0:    1000 / 600
-            nn.Conv2d(3, 64, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            #  5:   500 / 300
-            nn.Conv2d(64, 128, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(128, 128, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            # 10:   250 / 150
-            nn.Conv2d(128, 256, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(256, 256, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(256, 256, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            # 17:   125 / 75
-            nn.Conv2d(256, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2),
-            # 24:   62 / 37
-            nn.Conv2d(512, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.Conv2d(512, 512, 3, padding=1),
-            nn.ReLU(),
-            nn.MaxPool2d(2)
-            # 31:   31 / 18
-        )
-
-    def forward(self, x):
-        return self.features(x)
-        # for module in self.features:
-        #     x = module(x)
-        # return x
 
 
 class RegionProposalNetwork(nn.Module):
@@ -609,18 +523,18 @@ class ROIHead(nn.Module):
     and a bbox regression fc layer
     """
 
-    def __init__(self, model_config, num_classes: int, in_channels: int):
+    def __init__(self, model_config, num_classes, in_channels):
         super(ROIHead, self).__init__()
-        self.num_classes: int = num_classes
-        self.roi_batch_size: int = model_config['roi_batch_size']
-        self.roi_pos_count: int = int(model_config['roi_pos_fraction'] * self.roi_batch_size)
-        self.iou_threshold: float = model_config['roi_iou_threshold']
+        self.num_classes = num_classes
+        self.roi_batch_size = model_config['roi_batch_size']
+        self.roi_pos_count = int(model_config['roi_pos_fraction'] * self.roi_batch_size)
+        self.iou_threshold = model_config['roi_iou_threshold']
         self.low_bg_iou = model_config['roi_low_bg_iou']
-        self.nms_threshold: float = model_config['roi_nms_threshold']
+        self.nms_threshold = model_config['roi_nms_threshold']
         self.topK_detections = model_config['roi_topk_detections']
-        self.low_score_threshold: float = model_config['roi_score_threshold']
-        self.pool_size: int = model_config['roi_pool_size']
-        self.fc_inner_dim: int = model_config['fc_inner_dim']
+        self.low_score_threshold = model_config['roi_score_threshold']
+        self.pool_size = model_config['roi_pool_size']
+        self.fc_inner_dim = model_config['fc_inner_dim']
 
         self.fc6 = nn.Linear(in_channels * self.pool_size * self.pool_size, self.fc_inner_dim)
         self.fc7 = nn.Linear(self.fc_inner_dim, self.fc_inner_dim)
@@ -787,7 +701,7 @@ class ROIHead(nn.Module):
             pred_labels = pred_labels.reshape(-1)
 
             pred_boxes, pred_labels, pred_scores = self.filter_predictions(pred_boxes, pred_labels, pred_scores)
-            frcnn_output['boxes'] = pred_boxes
+            frcnn_output['bboxes'] = pred_boxes
             frcnn_output['scores'] = pred_scores
             frcnn_output['labels'] = pred_labels
             return frcnn_output
@@ -831,48 +745,156 @@ class ROIHead(nn.Module):
 
 
 class FasterRCNN(nn.Module):
+    def __init__(self, model_config, num_classes, pretrained=True):
+        super(FasterRCNN, self).__init__()
+        self.model_config = model_config
 
+        vgg16 = torchvision.models.vgg16(pretrained=pretrained)
+        self.backbone = vgg16.features[:-1]
+        if pretrained:
+            for layer in self.backbone[:10]:
+                for p in layer.parameters():
+                    p.requires_grad = False
+
+        self.rpn = RegionProposalNetwork(model_config['backbone_out_channels'],
+                                         scales=model_config['scales'],
+                                         aspect_ratios=model_config['aspect_ratios'],
+                                         model_config=model_config)
+
+        self.roi_head = ROIHead(model_config,
+                                num_classes,
+                                in_channels=model_config['backbone_out_channels'])
+
+        self.image_mean = [0.485, 0.456, 0.406]
+        self.image_std = [0.229, 0.224, 0.225]
+
+        self.min_size = model_config['min_im_size']
+        self.max_size = model_config['max_im_size']
+
+        self._mean = None
+        self._stdv = None
+
+    def normalize_resize_image_and_boxes(self, image, bboxes):
+        dtype, device = image.dtype, image.device
+
+        # Normalize
+        # mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)
+        # std = torch.as_tensor(self.image_std, dtype=dtype, device=device)
+        # image = (image - mean[:, None, None]) / std[:, None, None]
+
+        if self._mean is None:
+            self._mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)[:, None, None]
+            self._stdv = torch.as_tensor(self.image_std, dtype=dtype, device=device)[:, None, None]
+        image = (image - self._mean) / self._stdv
+        #############
+
+        # Resize to 1000x600 such that lowest size dimension is scaled upto 600
+        # but larger dimension is not more than 1000
+        # So compute scale factor for both and scale is minimum of these two
+
+        # h, w = image.shape[-2:]
+        # im_shape = torch.tensor(image.shape[-2:])
+        # min_size = torch.min(im_shape).to(dtype=torch.float32)
+        # max_size = torch.max(im_shape).to(dtype=torch.float32)
+        # scale = torch.min(float(self.min_size) / min_size, float(self.max_size) / max_size)
+        # scale_factor = scale.item()
+
+        h, w = image.shape[-2:]
+        scale_factor = min(self.min_size / min(h, w), self.max_size / max(h, w))
+
+        # Resize image based on scale computed
+        image = torch.nn.functional.interpolate(
+            image,
+            size=None,
+            scale_factor=scale_factor,
+            mode="bilinear",
+            recompute_scale_factor=True,
+            align_corners=False,
+        )
+
+        if bboxes is not None:
+            # Resize boxes by
+            ratios = [
+                torch.tensor(s, dtype=torch.float32, device=bboxes.device)
+                / torch.tensor(s_orig, dtype=torch.float32, device=bboxes.device)
+                for s, s_orig in zip(image.shape[-2:], (h, w))
+            ]
+            ratio_height, ratio_width = ratios
+            xmin, ymin, xmax, ymax = bboxes.unbind(2)
+            xmin = xmin * ratio_width
+            xmax = xmax * ratio_width
+            ymin = ymin * ratio_height
+            ymax = ymax * ratio_height
+            bboxes = torch.stack((xmin, ymin, xmax, ymax), dim=2)
+        return image, bboxes
+
+    def forward(self, image, target=None):
+        old_shape = image.shape[-2:]
+        if self.training:
+            # Normalize and resize boxes
+            image, bboxes = self.normalize_resize_image_and_boxes(image, target['bboxes'])
+            target['bboxes'] = bboxes
+        else:
+            image, _ = self.normalize_resize_image_and_boxes(image, None)
+        # Call backbone
+        feat = self.backbone(image)
+        # Call RPN and get proposals
+        rpn_output = self.rpn(image, feat, target)
+        proposals = rpn_output['proposals']
+
+        # Call ROI head and convert proposals to boxes
+        frcnn_output = self.roi_head(feat, proposals, image.shape[-2:], target)
+        if not self.training:
+            # Transform boxes to original image dimensions called only during inference
+            frcnn_output['bboxes'] = transform_boxes_to_original_size(frcnn_output['bboxes'], image.shape[-2:], old_shape)
+        return rpn_output, frcnn_output
+
+
+# ---------------------------------------------------------------------------
+# FasterRCNNArgs
+# FasterRCNNLoss
+# ---------------------------------------------------------------------------
+
+class FasterRCNNArgs(FasterRCNN):
     def __init__(
         self,
         # model_config,
         in_channels=3,
         # channels_last=False,
         # ---
-        pretrained=True,
+        pretrained=False,
         image_mean=[0.485, 0.456, 0.406],
         image_std=[0.229, 0.224, 0.225],
         # ---
         # im_channels=3,
-        aspect_ratios = (0.5, 1, 2),
-        scales = (128, 256, 512),
-        min_im_size = 600,
-        max_im_size = 1000,
-        backbone_out_channels = 512,
-        fc_inner_dim = 1024,
+        aspect_ratios=(0.5, 1, 2),
+        scales=(128, 256, 512),
+        min_im_size=600,
+        max_im_size=1000,
+        backbone_out_channels=512,
+        fc_inner_dim=1024,
         # ---
-        rpn_bg_threshold = 0.3,
-        rpn_fg_threshold = 0.7,
-        rpn_nms_threshold = 0.7,
-        rpn_train_prenms_topk = 12000,
-        rpn_test_prenms_topk = 6000,
-        rpn_train_topk = 2000,
-        rpn_test_topk = 300,
-        rpn_batch_size = 256,
-        rpn_pos_fraction = 0.5,
+        rpn_bg_threshold=0.3,
+        rpn_fg_threshold=0.7,
+        rpn_nms_threshold=0.7,
+        rpn_train_prenms_topk=12000,
+        rpn_test_prenms_topk=6000,
+        rpn_train_topk=2000,
+        rpn_test_topk=300,
+        rpn_batch_size=256,
+        rpn_pos_fraction=0.5,
         # ---
-        roi_iou_threshold = 0.5,
-        roi_low_bg_iou = 0.0,  # increase it to 0.1 for hard negative
-        roi_pool_size = 7,
-        roi_nms_threshold = 0.3,
-        roi_topk_detections = 100,
-        roi_score_threshold = 0.05,
-        roi_batch_size = 128,
-        roi_pos_fraction = 0.25,
+        roi_iou_threshold=0.5,
+        roi_low_bg_iou=0.0,  # increase it to 0.1 for hard negative
+        roi_pool_size=7,
+        roi_nms_threshold=0.3,
+        roi_topk_detections=100,
+        roi_score_threshold=0.05,
+        roi_batch_size=128,
+        roi_pos_fraction=0.25,
         # --
-        num_classes = 10
+        num_classes=10
     ):
-        super(FasterRCNN, self).__init__()
-
         model_config = dict(
             image_mean=image_mean,
             image_std=image_std,
@@ -904,115 +926,11 @@ class FasterRCNN(nn.Module):
             roi_batch_size=roi_batch_size,
             roi_pos_fraction=roi_pos_fraction,
         )
-        self.model_config = model_config
+        super().__init__(model_config, num_classes=num_classes, pretrained=pretrained)
 
-        # vgg16 = torchvision.models.vgg16(pretrained=pretrained)
-        # backbone = vgg16.features[:-1]
-        self.backbone = VGGFeatures(**model_config).features[:-1]
-
-        self.rpn = RegionProposalNetwork(backbone_out_channels,
-                                         scales=scales,
-                                         aspect_ratios=aspect_ratios,
-                                         model_config=model_config)
-
-        self.roi_head = ROIHead(model_config,
-                                num_classes=num_classes,
-                                in_channels=backbone_out_channels)
-
-        if pretrained:
-            for layer in self.backbone[:10]:
-                for p in layer.parameters():
-                    p.requires_grad = False
-
-        self.image_mean =  model_config['image_mean']
-        self.image_std = model_config['image_std']
-
-        self.min_size = model_config['min_im_size']
-        self.max_size = model_config['max_im_size']
-
-        self._mean = None
-        self._stdv = None
-
-    def normalize_resize_image_and_boxes(self, image, bboxes):
-        dtype, device = image.dtype, image.device
-
-        # Normalize
-        # mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)
-        # std = torch.as_tensor(self.image_std, dtype=dtype, device=device)
-        # image = (image - mean[:, None, None]) / std[:, None, None]
-
-        if self._mean is None:
-            self._mean = torch.as_tensor(self.image_mean, dtype=dtype, device=device)[:, None, None]
-            self._stdv = torch.as_tensor(self.image_std,  dtype=dtype, device=device)[:, None, None]
-        image = (image - self._mean) / self._stdv
-        #############
-
-        # Resize to 1000x600 such that lowest size dimension is scaled upto 600
-        # but larger dimension is not more than 1000
-        # So compute scale factor for both and scale is minimum of these two
-
-        # h, w = image.shape[-2:]
-        # im_shape = torch.tensor(image.shape[-2:])
-        # min_size = torch.min(im_shape).to(dtype=torch.float32)
-        # max_size = torch.max(im_shape).to(dtype=torch.float32)
-        # scale = torch.min(float(self.min_size) / min_size, float(self.max_size) / max_size)
-        # scale_factor = scale.item()
-
-        h, w = image.shape[-2:]
-        scale_factor = min(self.min_size/min(h, w), self.max_size/max(h, w))
-
-        # Resize image based on scale computed
-        image = torch.nn.functional.interpolate(
-            image,
-            size=None,
-            scale_factor=scale_factor,
-            mode="bilinear",
-            recompute_scale_factor=True,
-            align_corners=False,
-        )
-
-        if bboxes is not None:
-            # Resize boxes by
-            ratios = [
-                torch.tensor(s, dtype=torch.float32, device=bboxes.device)
-                / torch.tensor(s_orig, dtype=torch.float32, device=bboxes.device)
-                for s, s_orig in zip(image.shape[-2:], (h, w))
-            ]
-            ratio_height, ratio_width = ratios
-            xmin, ymin, xmax, ymax = bboxes.unbind(2)
-            xmin = xmin * ratio_width
-            xmax = xmax * ratio_width
-            ymin = ymin * ratio_height
-            ymax = ymax * ratio_height
-            bboxes = torch.stack((xmin, ymin, xmax, ymax), dim=2)
-        return image, bboxes
-
-    # def forward(self, image, target=None):
-    def forward(self, image_target):
+    def forward(self, image_target=None):
         image, target = image_target if self.training else (image_target, None)
-        # image = image.permute(0, 3, 1, 2) if self.channels_last else image
-
-        old_shape = image.shape[-2:]
-        if self.training:
-            # Normalize and resize boxes
-            image, bboxes = self.normalize_resize_image_and_boxes(image, target['bboxes'])
-            target['bboxes'] = bboxes
-        else:
-            image, _ = self.normalize_resize_image_and_boxes(image, None)
-        # (1, 3, 600, 600)
-        # Call backbone
-        feat = self.backbone(image)
-        # (1, 512, 37, 37)
-        # Call RPN and get proposals
-        rpn_output = self.rpn(image, feat, target)
-        proposals = rpn_output['proposals']
-
-        # Call ROI head and convert proposals to boxes
-        frcnn_output = self.roi_head(feat, proposals, image.shape[-2:], target)
-        if not self.training:
-            # Transform boxes to original image dimensions called only during inference
-            frcnn_output['boxes'] = transform_boxes_to_original_size(frcnn_output['boxes'], image.shape[-2:], old_shape)
-        return rpn_output, frcnn_output
+        return super().forward(image, target)
 
 
 class FasterRCNNLoss(nn.Module):
@@ -1022,14 +940,105 @@ class FasterRCNNLoss(nn.Module):
 
     def forward(self, input, target):
         acc_steps = self.acc_steps
-
         rpn_output, frcnn_output = input
 
         rpn_loss = rpn_output['rpn_classification_loss'] + rpn_output['rpn_localization_loss']
         frcnn_loss = frcnn_output['frcnn_classification_loss'] + frcnn_output['frcnn_localization_loss']
-        loss = rpn_loss + frcnn_loss
+        loss = (rpn_loss + frcnn_loss) / acc_steps
 
-        return loss / acc_steps
+        return loss
+
+
+# ---------------------------------------------------------------------------
+# VGG16
+# ---------------------------------------------------------------------------
+
+#   ( 0): Conv2d(3, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   ( 1): ReLU(inplace=True)
+#   ( 2): Conv2d(64, 64, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   ( 3): ReLU(inplace=True)
+#   ( 4): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+# ------------------------------------------------------------------------------------
+#   ( 5): Conv2d(64, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   ( 6): ReLU(inplace=True)
+#   ( 7): Conv2d(128, 128, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   ( 8): ReLU(inplace=True)
+#   ( 9): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+# ------------------------------------------------------------------------------------
+#   (10): Conv2d(128, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (11): ReLU(inplace=True)
+#   (12): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (13): ReLU(inplace=True)
+#   (14): Conv2d(256, 256, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (15): ReLU(inplace=True)
+#   (16): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+# ------------------------------------------------------------------------------------
+#   (17): Conv2d(256, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (18): ReLU(inplace=True)
+#   (19): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (20): ReLU(inplace=True)
+#   (21): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (22): ReLU(inplace=True)
+#   (23): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+# ------------------------------------------------------------------------------------
+#   (24): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (25): ReLU(inplace=True)
+#   (26): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (27): ReLU(inplace=True)
+#   (28): Conv2d(512, 512, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+#   (29): ReLU(inplace=True)
+# ------------------------------------------------------------------------------------
+#   (30): MaxPool2d(kernel_size=2, stride=2, padding=0, dilation=1, ceil_mode=False)
+
+class VGGFeatures(nn.Module):
+    def __init__(self, **model_config):
+        super().__init__()
+        self.features = nn.Sequential(
+            # 0:    1000 / 600
+            nn.Conv2d(3, 64, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            #  5:   500 / 300
+            nn.Conv2d(64, 128, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(128, 128, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            # 10:   250 / 150
+            nn.Conv2d(128, 256, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(256, 256, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            # 17:   125 / 75
+            nn.Conv2d(256, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2),
+            # 24:   62 / 37
+            nn.Conv2d(512, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.Conv2d(512, 512, 3, padding=1),
+            nn.ReLU(),
+            nn.MaxPool2d(2)
+            # 31:   31 / 18
+        )
+
+    def forward(self, x):
+        return self.features(x)
+        # for module in self.features:
+        #     x = module(x)
+        # return x
+# end
 
 # ---------------------------------------------------------------------------
 # End

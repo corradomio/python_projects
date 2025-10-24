@@ -788,7 +788,7 @@ class ROIHead(nn.Module):
             pred_labels = pred_labels.reshape(-1)
 
             pred_boxes, pred_labels, pred_scores = self.filter_predictions(pred_boxes, pred_labels, pred_scores)
-            frcnn_output['boxes'] = pred_boxes
+            frcnn_output['bboxes'] = pred_boxes
             frcnn_output['scores'] = pred_scores
             frcnn_output['labels'] = pred_labels
             return frcnn_output
@@ -1011,7 +1011,7 @@ class FasterRCNN(nn.Module):
         frcnn_output = self.roi_head(feat, proposals, image.shape[-2:], target)
         if not self.training:
             # Transform boxes to original image dimensions called only during inference
-            frcnn_output['boxes'] = transform_boxes_to_original_size(frcnn_output['boxes'], image.shape[-2:], old_shape)
+            frcnn_output['bboxes'] = transform_boxes_to_original_size(frcnn_output['bboxes'], image.shape[-2:], old_shape)
         return rpn_output, frcnn_output
 # end
 

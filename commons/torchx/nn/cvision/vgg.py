@@ -29,7 +29,7 @@ vgg19_bn = models.vgg19_bn
 
 
 class VGG16(nn.Module):
-    def __init__(self, num_classes=10):
+    def __init__(self, output=10, bias=False, weights=None):
         super(VGG16, self).__init__()
         # 1/1
         self.layer1=nn.Sequential(
@@ -104,20 +104,21 @@ class VGG16(nn.Module):
 
         # 44/14
         self.fc=nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(7*7*512, 4096),
+            nn.Dropout(p=0.5),
+            nn.Linear(7*7*512, 4096, bias=bias),
             nn.ReLU())
         # 47/15
         self.fc1=nn.Sequential(
-            nn.Dropout(0.5),
-            nn.Linear(4096, 4096),
+            nn.Dropout(p=0.5),
+            nn.Linear(4096, 4096, bias=bias),
             nn.ReLU())
         # 50/16
         self.fc2= nn.Sequential(
-            nn.Linear(4096, num_classes))
+            nn.Linear(4096, output, bias=bias))
         # 51/end
 
     def forward(self, x):
+        # input (3,224,224)
         out=self.layer1(x)
         out=self.layer2(out)
         out=self.layer3(out)
