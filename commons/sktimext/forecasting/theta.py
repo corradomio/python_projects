@@ -1,16 +1,17 @@
 import sktime.forecasting.theta as sktf
 from sktime.forecasting.base import ForecastingHorizon
 from .fix_fh import fix_fh_relative
+from .recpred import RecursivePredict
 
 #
 # fh_in_fit
 #
 
-class ThetaForecaster(sktf.ThetaForecaster):
+class ThetaForecaster(sktf.ThetaForecaster), RecursivePredict:
 
     def __init__(
         self,
-        prediction_length,
+        pred_len=1,
         initial_level=None,
         deseasonalize=True,
         sp=1,
@@ -22,13 +23,12 @@ class ThetaForecaster(sktf.ThetaForecaster):
             sp=sp,
             deseasonalize_model=deseasonalize_model,
         )
-        self.prediction_length = prediction_length
-        self._fh_in_fit = ForecastingHorizon(values=list(range(prediction_length)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
-    def _predict(self, fh: ForecastingHorizon, X):
+    def predict(self, fh=None, X=None):
         fh = fix_fh_relative(fh)
-        y_pred = super()._predict(fh, X)
-        return y_pred
+        return self.recursive_predict(fh, X)

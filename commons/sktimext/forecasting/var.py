@@ -3,7 +3,7 @@ from sktime.forecasting.base import ForecastingHorizon
 from .fix_fh import fix_fh_relative
 
 #
-# ONLY Multivriate
+# ONLY Multivariate
 #
 
 class VAR(sktf.VAR):

@@ -1,16 +1,17 @@
 import sktime.forecasting.autots as sktf
 from sktime.forecasting.base import ForecastingHorizon
 from .fix_fh import fix_fh_relative
+from .recpred import RecursivePredict
 
 #
 # fh_in_fit
 #
 
-class AutoTS(sktf.AutoTS):
+class AutoTS(sktf.AutoTS, RecursivePredict):
 
     def __init__(
         self,
-        prediction_length=1,
+        pred_len=1,
         model_name: str = "",
         model_list: list = "superfast",
         frequency: str = "infer",
@@ -82,13 +83,12 @@ class AutoTS(sktf.AutoTS):
             verbose=verbose,
             n_jobs=n_jobs
         )
-        self.prediction_length=prediction_length
-        self._fh_in_fit = ForecastingHorizon(values=list(range(prediction_length)))
+        self.pred_len=pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
-    def _predict(self, fh: ForecastingHorizon, X):
+    def predict(self, fh=None, X=None):
         fh = fix_fh_relative(fh)
-        y_pred = super()._predict(fh, X)
-        return y_pred
+        return self.recursive_predict(fh, X)

@@ -1,32 +1,33 @@
 import sktime.forecasting.es_rnn as sktf
 from sktime.forecasting.base import ForecastingHorizon
 from .fix_fh import fix_fh_relative
+from .recpred import RecursivePredict
 
 #
 # fh_in_fit
 #
 
-class ESRNNForecaster(sktf.ESRNNForecaster):
+class ESRNNForecaster(sktf.ESRNNForecaster, RecursivePredict):
 
     def __init__(
-            self,
-            prediction_length,
-            hidden_size=10,
-            num_layer=5,
-            season1_length=12,
-            season2_length=6,
-            seasonality_type="single",
-            window=10,
-            stride=1,
-            batch_size=32,
-            num_epochs=1000,
-            criterion=None,
-            optimizer="Adam",
-            lr=1e-1,
-            optimizer_kwargs=None,
-            criterion_kwargs=None,
-            custom_dataset_train=None,
-            custom_dataset_pred=None,
+        self,
+        pred_len=1,
+        hidden_size=10,
+        num_layer=5,
+        season1_length=12,
+        season2_length=6,
+        seasonality_type="single",
+        window=10,
+        stride=1,
+        batch_size=32,
+        num_epochs=1000,
+        criterion=None,
+        optimizer="Adam",
+        lr=1e-1,
+        optimizer_kwargs=None,
+        criterion_kwargs=None,
+        custom_dataset_train=None,
+        custom_dataset_pred=None,
     ):
         super().__init__(
             hidden_size=hidden_size,
@@ -46,13 +47,12 @@ class ESRNNForecaster(sktf.ESRNNForecaster):
             custom_dataset_train=custom_dataset_train,
             custom_dataset_pred=custom_dataset_pred,
         )
-        self.prediction_length = prediction_length
-        self._fh_in_fit = ForecastingHorizon(values=list(range(prediction_length)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
-    def _predict(self, fh=None, X=None):
+    def predict(self, fh=None, X=None):
         fh = fix_fh_relative(fh)
-        y_pred = super()._predict(fh, X)
-        return y_pred
+        return self.recursive_predict(fh, X)
