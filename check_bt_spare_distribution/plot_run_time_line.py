@@ -39,9 +39,7 @@ def plot_h_algos():
         plt.title(f"Time vs Value (N={nw})")
         plt.xlabel("time (s)")
         plt.ylabel("objective value")
-
-        # plt.gcf().set_size_inches(6, 4)
-        plt.tight_layout()
+        plt.tight_layout(pad=0.5)
 
         fname = f"results_plots_time/times-{nw}.png"
         plt.savefig(fname, dpi=300)
@@ -77,9 +75,7 @@ def plot_all_algos():
         plt.xlabel("time (s)")
         plt.ylabel("objective value")
         plt.legend(ALGO_LABELS[:5])
-
-        # plt.gcf().set_size_inches(6, 4)
-        plt.tight_layout()
+        plt.tight_layout(pad=0.5)
 
         fname = f"results_plots_time/times_all-{nw}.png"
         plt.savefig(fname, dpi=300)
@@ -109,7 +105,7 @@ def plot_aggregate_times():
     # end
 
     pwidth = 6
-    pheight = 3  # 3.5
+    pheight = 3.5  # 3.5
 
     plt.clf()
     plt.gcf().set_size_inches(pwidth, pheight)
@@ -127,13 +123,12 @@ def plot_aggregate_times():
 
     # plt.legend(ALGO_LABELS[:4])
     plt.legend()
-
-    # plt.gcf().set_size_inches(6, 4)
-    plt.tight_layout()
+    plt.tight_layout(pad=0.5)
 
     fname = f"results_plots_time/times-vs-size.png"
     plt.savefig(fname, dpi=300)
     print(fname)
+    pass
 
 
 def plot_aggregate_times_ilp():
@@ -175,13 +170,12 @@ def plot_aggregate_times_ilp():
 
     # plt.legend(ALGO_LABELS[:4])
     plt.legend()
-
-    # plt.gcf().set_size_inches(6, 4)
-    plt.tight_layout()
+    plt.tight_layout(pad=0.5)
 
     fname = f"results_plots_time/times-vs-size_ilp.png"
     plt.savefig(fname, dpi=300)
     print(fname)
+    pass
 
 
 def main():

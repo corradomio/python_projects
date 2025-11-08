@@ -110,7 +110,7 @@ def plot_scatter_fitness():
         # plt.gca().set_aspect(ar)
         plt.tight_layout()
 
-        plt.savefig(fname, dpi=300)
+        plt.savefig(fname, dpi=600)
 # end
 
 

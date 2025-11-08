@@ -3,7 +3,6 @@ from typing import Optional
 import neuralforecast as nf
 import neuralforecast.losses.pytorch as nflp
 import pandas as pd
-import pandasx as pdx
 
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.forecasting.base import ScaledForecaster
@@ -180,6 +179,23 @@ def name_of(model):
     return model.__class__.__name__ if model.alias is None else model.alias
 
 
+
+def concat_ser(slist) -> pd.Series:
+    slist = [s for s in slist if s is not None]
+    if len(slist) == 1:
+        return slist[0]
+    else:
+        return pd.concat(slist, axis=0)
+
+
+def concat_df(slist) -> pd.Series:
+    slist = [s for s in slist if s is not None]
+    if len(slist) == 1:
+        return slist[0]
+    else:
+        return pd.concat(slist, axis=0)
+
+
 # ---------------------------------------------------------------------------
 # BaseNFForecaster
 # ---------------------------------------------------------------------------
@@ -236,9 +252,7 @@ class _BaseNFForecaster(ScaledForecaster):
         self._kwargs = {}
         self._nfdf = None
 
-        # self._ignores_exogenous_X = self.get_tag("ignores-exogenous-X", True)
         self._ignores_exogenous_X = not self.get_tag("capability:exogenous", False)
-        # self._future_exogenous_X = self.get_tag("future-exogenous-X", False, False)
         self._future_exogenous_X = self.get_tag("capability:future-exogenous", False, False)
         self._analyze_locals(locals)
     # end
@@ -250,9 +264,13 @@ class _BaseNFForecaster(ScaledForecaster):
         for k in locals:
             if k in ["self", "__class__", "scaler"]:
                 continue
-            elif k in ["input_size", "input_length", "window_length"]:
+            # elif k in ["input_size", "input_length", "window_length"]:
+            #     self._init_kwargs["input_size"] = locals[k]
+            # elif k in ["h", "output_size", "output_length", "prediction_length"]:
+            #     self._init_kwargs["h"] = locals[k]
+            elif k in ["input_size"]:
                 self._init_kwargs["input_size"] = locals[k]
-            elif k in ["h", "output_size", "output_length", "prediction_length"]:
+            elif k in ["h"]:
                 self._init_kwargs["h"] = locals[k]
             elif k in ["activation"]:
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
@@ -269,7 +287,8 @@ class _BaseNFForecaster(ScaledForecaster):
                 self._init_kwargs[k] = loss
             elif k == "valid_loss":
                 loss_fun = locals[k]
-                loss = loss_from(loss_fun)
+                # loss = loss_from(loss_fun)
+                loss = create_from(loss_fun, NF_LOSSES)
                 self._init_kwargs[k] = loss
             elif k == "trainer_kwargs":
                 trainer_kwargs = locals[k]
@@ -313,7 +332,7 @@ class _BaseNFForecaster(ScaledForecaster):
 
     def _fit(self, y, X, fh):
 
-        y, X = self.transform(y, X)
+        # y, X = self.transform(y, X)
 
         # create the model
         model = self._compile_model(y, X)
@@ -343,8 +362,8 @@ class _BaseNFForecaster(ScaledForecaster):
 
         n = len(yext)
         Xext = X.iloc[:n] if X is not None else None
-        yall = pdx.concat_series([self._y, yext])
-        Xall = pdx.concat([self._X, Xext]) if self._X is not None else None
+        yall = concat_ser([self._y, yext])
+        Xall = concat_df([self._X, Xext]) if self._X is not None else None
         nfdf = self._to_nfdf(yall, Xall)
         return nfdf
 
@@ -357,7 +376,7 @@ class _BaseNFForecaster(ScaledForecaster):
         else:
             y_pred = self._predict_recursive(fh, X)
 
-        y_pred = self.inverse_transform(y_pred)
+        # y_pred = self.inverse_transform(y_pred)
         return y_pred
 
     def _predict_same(self, fh, X):
@@ -386,35 +405,10 @@ class _BaseNFForecaster(ScaledForecaster):
             h = len(y_nf)
             model_name = name_of(self._model)
             y_pred = from_nfdf([y_nf], fha[l:l+h], self._y, model_name)
-            y_rec = pdx.concat_series([y_rec, y_pred])
+            y_rec = concat_ser([y_rec, y_pred])
             l = len(y_rec)
         # end
         return y_rec.astype(self._y.dtype)
     # end
 
-    # def _predict_long(self, fh, X):
-    #     plen = self.h
-    #     fha = fh.to_absolute(self.cutoff)
-    #     nfh = len(fha)
-    #     past_df = to_nfdf(self._y, self._X)
-    #     futr_df_fh = to_pred_nfdf(fha, X)
-    #     model_name = name_of(self._model)
-    #
-    #     predictions = []
-    #     at = 0
-    #     while (at+plen) <= nfh:
-    #         futr_df = futr_df_fh.iloc[at:at+plen]
-    #
-    #         y_pred = self._nf.predict(
-    #             df=past_df,
-    #             futr_df=futr_df,
-    #             **self._data_kwargs
-    #         )
-    #
-    #         predictions.append(y_pred)
-    #         past_df = extends_nfdf(past_df, y_pred, X, at, model_name)
-    #
-    #         at += plen
-    #     # end
-    #     return from_nfdf(predictions, fha, self._y, model_name)
 # end

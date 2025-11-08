@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+from matplotlib import rcParams
 from path import Path as path
 
 
@@ -106,15 +107,22 @@ def plot_log(log_file: path):
     plt.xlabel("steps")
     plt.ylabel("solution value")
     plt.legend(["primal", "dual"])
-    plt.title(f"ILP history (N={nw})")
+    if nw == 50:
+        plt.title(f"(a)   ILP history (N={nw})", fontdict={
+            'fontsize': 14
+        })
+    elif nw == 100:
+        plt.title(f"(b)   ILP history (N={nw})", fontdict={
+            'fontsize': 14
+        })
+    else:
+        plt.title(f"ILP history (N={nw})")
+    plt.tight_layout(pad=0.5)
 
-    # plt.gcf().set_size_inches(6, 4)
-    plt.tight_layout()
-
-    # plt.show()
     fname = f"results_plots_ilp/ilp_history-{time}-{nw:03}.png"
     plt.savefig(fname, dpi=300)
     print(fname)
+    pass
 # end
 
 
@@ -122,10 +130,10 @@ def plot_log(log_file: path):
 # ---------------------------------------------------------------------------
 
 def main():
-    GUROBI_HOME=path("3600s")
-    for log in GUROBI_HOME.files("*.log"):
-        plot_log(log)
-    # end
+    # GUROBI_HOME=path("3600s")
+    # for log in GUROBI_HOME.files("*.log"):
+    #     plot_log(log)
+    # # end
 
     GUROBI_HOME=path("7200s")
     for log in GUROBI_HOME.files("*.log"):

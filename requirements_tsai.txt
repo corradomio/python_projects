@@ -125,10 +125,10 @@ statsmodels
 statsforecast 
 
 
-autots
-tbats
-arch
-transformers
+#autots
+#tbats
+#arch
+#transformers
 
 #dacite
 #tirex
@@ -224,17 +224,15 @@ xlstm
 
 prophet
 
-# ---------------------------------------------------------------------------
-# darts
-# ---------------------------------------------------------------------------
-
 # https://unit8co.github.io/darts/
 darts
 
-# ---------------------------------------------------------------------------
-# tsai
-# ---------------------------------------------------------------------------
 
+# https://pytorch-forecasting.readthedocs.io/en/stable/
+pytorch-forecasting
+
+
+# incopatible with torch 2.9 - it requires torch 2.7.1
 #tsai
 
 

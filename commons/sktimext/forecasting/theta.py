@@ -7,7 +7,7 @@ from .recpred import RecursivePredict
 # fh_in_fit
 #
 
-class ThetaForecaster(sktf.ThetaForecaster), RecursivePredict:
+class ThetaForecaster(sktf.ThetaForecaster, RecursivePredict):
 
     def __init__(
         self,

@@ -416,7 +416,7 @@ def _guess_value_type(s: str) -> str:
 # ---------------------------------------------------------------------------
 
 
-def _save_csv(fname: str, data: list, header: list=None, fmt: list=None):
+def _save_csv(fname: str, data: list, header: list=None, fmt: list=None, **kwargs):
     n = len(data[0])
 
     def _fmt(s:str):
@@ -458,7 +458,7 @@ def _save_csv(fname: str, data: list, header: list=None, fmt: list=None):
         fmtdata = lambda r: [fmt[i](r[i]) for i in range(n)]
     # end
 
-    def openfile(fname, mode):
+    def openfile(fname, mode, **kwargs):
         if fname.endswith(".zip"):
             zfile = zipfile.ZipFile(fname)
             zname = zfile.namelist()[0]
@@ -467,10 +467,10 @@ def _save_csv(fname: str, data: list, header: list=None, fmt: list=None):
             if mode.find('t') == -1: mode = mode + 't'
             return gzip.open(fname, mode=mode)
         else:
-            return open(fname, mode=mode)
+            return open(fname, mode=mode, **kwargs)
     # end
 
-    with openfile(fname, mode="w") as csv_file:
+    with openfile(fname, mode="w", **kwargs) as csv_file:
         wrt = csv.writer(csv_file, delimiter=',', lineterminator='\n')
         if header:
             wrt.writerow(header)
@@ -657,11 +657,11 @@ def _nameof(fname: str) -> str:
     return fname
 
 
-def dump(obj, fname: str, header: list[str], fmt: Optional[str] = None,  categories=None):
+def dump(obj, fname: str, header: Optional[list[str]] = None, fmt: Optional[str] = None,  categories=None, **kwargs):
     if fname.endswith('.csv'):
-        _save_csv(fname, data=obj, header=header, fmt=fmt)
+        _save_csv(fname, data=obj, header=header, fmt=fmt, **kwargs)
     elif fname.endswith('.arff'):
-        _save_arff(fname, data=obj, attributes=header, categories=categories, relation=_nameof(fname))
+        _save_arff(fname, data=obj, attributes=header, categories=categories, relation=_nameof(fname), **kwargs)
     else:
         raise ValueError(f"Unsupported file {fname}")
 

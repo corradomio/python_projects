@@ -90,10 +90,10 @@ def plot_boxplot_fitness():
             plt.gca().set_xticklabels(ALGO_UPRC)
             plt.ylabel("Fitness value")
             # plt.xlabel("algorithms")
-            plt.title(f"Algorithms statistics ({nw} warehouses)")
+            plt.title(f"Algorithms statistics (n={nw})")
             plt.tight_layout()
 
-            plt.savefig(fname, dpi=300)
+            plt.savefig(fname, dpi=600)
             plt.close()
     # end
 # end

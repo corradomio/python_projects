@@ -90,12 +90,11 @@ def print_algos_stats_boxplot(nw, algos_stats:dict):
     # plt.xlabel("algorithms")
     # plt.title(f"Algorithms statistics ({nw})")
     plt.title(f"N={nw}")
+    plt.tight_layout(pad=0.5)
 
     fname = f"results_plots/boxplot-{nw:03}.png"
     plt.savefig(fname, dpi=300)
     print(fname)
-
-    # plt.show()
     pass
 
 
@@ -157,16 +156,12 @@ def plot_algo_behaviour_all_sizes():
         # plt.ylim(7500, 12000)
         plt.ylim(6000, 12000)
         plt.title(f"Algorithm {ALGO_MAP[name]}")
-        plt.tight_layout()
+        plt.tight_layout(pad=0.5)
 
         fname = f"results_plots/line-{name}.png"
-        # plt.show()
         plt.savefig(fname, dpi=300)
         print(fname)
         pass
-
-    # end
-
     pass
 # end
 
@@ -183,7 +178,7 @@ def plot_all_algos_behaviour_all_sizes():
     # end
 
     pwidth = 6
-    pheight = 4  # 3.5
+    pheight = 3.5  # 4
 
     plt.clf()
     plt.gcf().set_size_inches(pwidth, pheight)
@@ -218,11 +213,10 @@ def plot_all_algos_behaviour_all_sizes():
     plt.xlabel("number of warehouses")
     plt.ylabel("mean solution value")
     plt.ylim(6000, 12000)
-    # plt.title(f"Best solutions of algorithms and solvers")
     plt.legend(ALGO_LABELS)
+    plt.tight_layout(pad=0.5)
 
     fname = f"results_plots/scatter-all.png"
-    # plt.show()
     plt.savefig(fname, dpi=300)
     print(fname)
     pass

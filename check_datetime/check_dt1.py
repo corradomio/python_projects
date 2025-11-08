@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from numpy import datetime64
 from pandas import Timestamp
-from datetimex import to_datetime
+from datetimex import convert
 
 
 def main():
@@ -24,13 +24,13 @@ def main():
         str, int, date, datetime, datetime64, Timestamp
     ]
 
-    print(to_datetime(this_string, to_type=str, to_format='%Y-%m-%d'))
+    print(convert(this_string, to_type=str, to_format='%Y-%m-%d'))
 
     for dt in dtlist:
         from_type = type(dt)
         for to_type in dttypes:
             print(f"{from_type.__name__}_to_{to_type.__name__}:")
-            print(f"... {dt} ->  {to_datetime(dt, to_type)}")
+            print(f"... {dt} ->  {convert(dt, to_type)}")
             pass
 
     pass

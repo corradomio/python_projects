@@ -51,11 +51,11 @@ def plot_history():
 
             plt.xlabel("n generations")
             plt.ylabel("Fitness value")
-            plt.title(f"{fftitle} ({algo_name}, {num_centers} warehouses)")
+            plt.title(f"{fftitle} ({algo_name}, n={num_centers})")
             # plt.gca().set_aspect(1.)
             plt.tight_layout()
 
-            plt.savefig(fname, dpi=300)
+            plt.savefig(fname, dpi=600)
             plt.close()
             pass
         # end

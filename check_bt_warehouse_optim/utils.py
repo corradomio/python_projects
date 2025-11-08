@@ -35,9 +35,9 @@ def ffname_of(params: dict) -> str:
 def fftitle_of(params: dict) -> str:
     ffname = ""
     if params["warehousesFactor"]:
-        ffname += "-whouse"
+        ffname += "-wh" #"-whouse"
     if params["equipmentFactor"]:
-        ffname += "-equip"
+        ffname += "-parts"
     if params["distanceFactor"]:
         ffname += "-dist"
     if params["locationsFactor"]:

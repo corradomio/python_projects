@@ -7,5 +7,5 @@ class RBFForecaster(sktf.RBFForecaster):
 
     def _predict(self, fh: ForecastingHorizon, X):
         fh = fix_fh_relative(fh)
-        y_pred = super()._predict(fh, X)
+        y_pred = super()._predict(fh=fh, X=X)
         return y_pred

@@ -57,7 +57,7 @@ def plot_best():
             plt.ylabel("best solution value")
             plt.xlabel("iterations")
             plt.title(f"{ALGO_MAP[algo_name]}, N={nw}")
-            plt.tight_layout()
+            plt.tight_layout(pad=0.5)
 
             plt.savefig(fname, dpi=300)
             print(fname)

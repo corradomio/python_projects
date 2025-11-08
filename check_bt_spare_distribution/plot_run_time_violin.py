@@ -23,7 +23,7 @@ def plot_violin():
     labels = []
 
     pwidth = 6
-    pheight = 4  # 3.5
+    pheight = 3.5  # 4
 
     plt.clf()
     plt.gcf().set_size_inches(pwidth, pheight)
@@ -68,9 +68,8 @@ def plot_violin():
     plt.xticks([1, 2, 3, 4, 5, 6], ["50", "60", "70", "80", "90", "100"])
 
     plt.legend(*zip(*labels), loc=2)
-    plt.tight_layout()
+    plt.tight_layout(pad=0.5)
 
-    # fname = f"results_plots_qq/{nw}/qq-{nw:03}.png"
     fname = f"results_plots_vp/times-vs-size-vp.png"
     plt.savefig(fname, dpi=300)
     print(fname)

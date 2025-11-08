@@ -51,7 +51,7 @@ class LTSFLinearForecaster(sktf.LTSFLinearForecaster, RecursivePredict):
         return self.recursive_predict(fh, X)
 
 
-class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster):
+class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster, RecursivePredict):
 
     def __init__(
         self,
@@ -95,7 +95,7 @@ class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster):
         return self.recursive_predict(fh, X)
 
 
-class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster):
+class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster, RecursivePredict):
 
     def __init__(
         self,
@@ -139,7 +139,7 @@ class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster):
         return self.recursive_predict(fh, X)
 
 
-class LTSFTransformerForecaster(sktf.LTSFTransformerForecaster):
+class LTSFTransformerForecaster(sktf.LTSFTransformerForecaster, RecursivePredict):
 
 
     def __init__(

@@ -229,9 +229,7 @@ class _BaseDartsForecaster(ScaledForecaster):
         self._init_kwargs = {}
         self._kwargs = {}
 
-        # self._ignores_exogeneous_X = self.get_tag("ignores-exogeneous-X", True)
         self._ignores_exogenous_X = not self.get_tag("capability:exogenous", False)
-        # self._future_exogenous_X = self.get_tag("future-exogenous-X", False, False)
         self._future_exogenous_X = self.get_tag("capability:future-exogenous", False, False)
         self._can_use_exogenous_X = (not self._ignores_exogenous_X) or self._future_exogenous_X
         self._analyze_locals(locals)
@@ -242,14 +240,14 @@ class _BaseDartsForecaster(ScaledForecaster):
         for k in locals:
             if k in ["self", "__class__", "scaler"]:
                 continue
-            elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
-                self._init_kwargs["input_chunk_length"] = locals[k]
-            elif k in ["output_chunk_length", "output_size", "output_length", "prediction_length"]:
-                self._init_kwargs["output_chunk_length"] = locals[k]
-            # elif k in ["input_chunk_length"]:
+            # elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
             #     self._init_kwargs["input_chunk_length"] = locals[k]
-            # elif k in ["output_chunk_length"]:
+            # elif k in ["output_chunk_length", "output_size", "output_length", "prediction_length"]:
             #     self._init_kwargs["output_chunk_length"] = locals[k]
+            elif k in ["input_chunk_length"]:
+                self._init_kwargs["input_chunk_length"] = locals[k]
+            elif k in ["output_chunk_length"]:
+                self._init_kwargs["output_chunk_length"] = locals[k]
             elif k == "activation":
                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
             elif k == "kwargs":
@@ -296,14 +294,10 @@ class _BaseDartsForecaster(ScaledForecaster):
         yts = to_timeseries(y)
         Xts = to_timeseries(X) if X is not None and self._can_use_exogenous_X else None
 
-        # if X is not None and not self._ignores_exogeneous_X:
-        #     covariates = to_timeseries(X)
-        # else:
-        #     covariates = None
-
         # create the model
         self._model = self._compile_model(y, X)
 
+        # train the model
         if self._future_exogenous_X:
             self._model.fit(yts, future_covariates=Xts)
         elif not self._ignores_exogenous_X:
@@ -311,17 +305,11 @@ class _BaseDartsForecaster(ScaledForecaster):
         else:
             self._model.fit(yts)
 
-        # if covariates is None:
-        #     self._model.fit(yts)
-        # elif not self._future_exogeneous_X:
-        #     self._model.fit(yts, past_covariates=covariates)
-        # else:
-        #     self._model.fit(yts, future_covariates=covariates)
-
         return self
 
     def _predict(self, fh: ForecastingHorizon, X=None):
 
+        nfh = len(fh)
         yts = to_timeseries(self._y)
 
         if self._ignores_exogenous_X:
@@ -331,20 +319,6 @@ class _BaseDartsForecaster(ScaledForecaster):
             Xts = to_timeseries(X_all)
         else:
             Xts = None
-        #
-        # if self._X is not None and X is not None:
-        #     X_all = pd.concat([self._X, X], axis="rows")
-        # elif self._X is not None:
-        #     X_all = self._X
-        # else:
-        #     X_all = None
-        #
-        # if X_all is not None and not self._ignores_exogeneous_X:
-        #     covariates = to_timeseries(X_all)
-        # else:
-        #     covariates = None
-
-        nfh = len(fh)
 
         if self._future_exogenous_X:
             ts_pred = self._model.predict(
@@ -363,19 +337,6 @@ class _BaseDartsForecaster(ScaledForecaster):
                 nfh,
                 series=yts
             )
-
-        # if covariates is None:
-        #     ts_pred: TimeSeries = self._model.predict(nfh)
-        # elif not self._future_exogeneous_X:
-        #     ts_pred: TimeSeries = self._model.predict(
-        #         nfh,
-        #         past_covariates=covariates,
-        #     )
-        # else:
-        #     ts_pred: TimeSeries = self._model.predict(
-        #         nfh,
-        #         future_covariates=covariates,
-        #     )
 
         y_pred = from_timeseries(ts_pred, self._y, X, self._cutoff)
 

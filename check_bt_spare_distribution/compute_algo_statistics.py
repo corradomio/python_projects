@@ -141,14 +141,12 @@ def compute_algo_behaviour_all_sizes():
         plt.ylabel("solution value")
         plt.ylim(7000, 12000)
         plt.title(f"Algorithm {name}")
+        plt.tight_layout(pad=0.5)
 
         fname = f"results_plots/line-{name}.png"
-        # plt.show()
         plt.savefig(fname, dpi=300)
+        print(fname)
         pass
-
-    # end
-
     pass
 # end
 
@@ -198,11 +196,11 @@ def compute_all_algos_behaviour_all_sizes():
     plt.ylim(7000, 12000)
     plt.title(f"Algorithms' means of best solutions")
     plt.legend(ALGO_LABELS)
+    plt.tight_layout(pad=0.5)
 
     fname = f"results_plots/line-all.png"
-    # plt.show()
     plt.savefig(fname, dpi=300)
-
+    print(fname)
     pass
 
 

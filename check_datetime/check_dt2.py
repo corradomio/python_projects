@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from numpy import datetime64
 from pandas import Timestamp
-from datetimex import to_datetime
+from datetimex import convert
 
 
 def main():
@@ -22,8 +22,8 @@ def main():
     ]
 
     for dt in dtlist:
-        timestamp = to_datetime(dt, int)
-        tt = to_datetime(timestamp, type(dt))
+        timestamp = convert(dt, int)
+        tt = convert(timestamp, type(dt))
         print(f"{type(dt).__name__}_to_timestamp: {dt} -> {tt}")
         pass
 

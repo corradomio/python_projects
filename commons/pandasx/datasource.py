@@ -1,16 +1,14 @@
+import json
 import os
+from datetime import datetime
 from typing import Union, Optional
 
-from datetime import datetime
 import pandas as pd
-from sqlalchemy import URL, create_engine, text
-
-import pandasx as pdx
-from stdlib.is_instance import is_instance
-from stdlib.dictx import dict_exclude
-import json
 from path import Path as path
 
+import pandasx as pdx
+from stdlib.dictx import dict_exclude
+from stdlib.is_instance import is_instance
 
 __all__ = ['read_from']
 

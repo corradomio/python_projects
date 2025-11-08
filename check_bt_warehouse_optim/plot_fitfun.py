@@ -29,12 +29,13 @@ def plot_fitfun():
             for ffeval in data:
                 plt.plot(x, ffeval)
 
-            plt.title(f"{fftitle} ({numCenters} warehouses)")
+            plt.title(f"{fftitle} (n={numCenters})")
             plt.xlabel("n of warehouses")
             plt.ylabel("Fitness value")
+            plt.tight_layout()
 
             fname = PLOTS_FF_DIR / ffdir.stem / fffile.stem + ".png"
-            plt.savefig(fname, dpi=300)
+            plt.savefig(fname, dpi=600)
         # end
     # end
 # end
