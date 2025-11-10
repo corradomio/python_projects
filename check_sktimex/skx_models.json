@@ -1,0 +1,37 @@
+{
+    "#-- constant --": {},
+
+    "mean": {
+        "class": "sktimex.forecasting.ConstantForecaster",
+        "mode": "mean"
+    },
+    "median": {
+        "class": "sktimex.forecasting.ConstantForecaster",
+        "mode": "median"
+    },
+
+    "#-- reducers --": {},
+
+    "reducer_lr": {
+        "class": "sktimex.forecasting.ReducerForecaster",
+        "estimator": "sklearn.linear_model.LinearRegression",
+        "estimator_args": {},
+        "strategy": "recursive",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "regressor_lin": {
+        "class": "sktimex.forecasting.RegressorForecaster",
+        "estimator": "sklearn.linear_model.LinearRegression",
+        "estimator_args": {},
+        "lags": [24,24,0],
+        "tlags": 6
+    },
+    "sklearn_lin": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.LinearRegression",
+        "estimator_args": {},
+        "window_length": 24,
+        "prediction_length": 6
+    }
+}

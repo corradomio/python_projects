@@ -1,0 +1,240 @@
+{
+    "Autoformer": {
+        "class": "sktimexnn.forecasting.nf.Autoformer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "BiTCN": {
+        "class": "sktimexnn.forecasting.nf.BiTCN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "DeepAR": {
+        "class": "sktimexnn.forecasting.nf.DeepAR",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "DeepNPTS": {
+        "class": "sktimexnn.forecasting.nf.DeepNPTS",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "DilatedRNN": {
+        "class": "sktimexnn.forecasting.nf.DilatedRNN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "DLinear": {
+        "class": "sktimexnn.forecasting.nf.DLinear",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "FEDformer": {
+        "class": "sktimexnn.forecasting.nf.FEDformer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "GRU": {
+        "class": "sktimexnn.forecasting.nf.GRU",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "Informer": {
+        "class": "sktimexnn.forecasting.nf.Informer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "iTransformer": {
+        "class": "sktimexnn.forecasting.nf.iTransformer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "KAN": {
+        "class": "sktimexnn.forecasting.nf.KAN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "LSTM": {
+        "class": "sktimexnn.forecasting.nf.LSTM",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "MLP": {
+        "class": "sktimexnn.forecasting.nf.MLP",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "MLPMultivariate": {
+        "class": "sktimexnn.forecasting.nf.MLPMultivariate",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "NBEATS": {
+        "class": "sktimexnn.forecasting.nf.NBEATS",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "NBEATSx": {
+        "class": "sktimexnn.forecasting.nf.NBEATSx",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "NHITS": {
+        "class": "sktimexnn.forecasting.nf.NHITS",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "NLinear": {
+        "class": "sktimexnn.forecasting.nf.NLinear",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "PatchTST": {
+        "class": "sktimexnn.forecasting.nf.PatchTST",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "RMoK": {
+        "class": "sktimexnn.forecasting.nf.RMoK",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "RNN": {
+        "class": "sktimexnn.forecasting.nf.RNN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "SOFTS": {
+        "class": "sktimexnn.forecasting.nf.SOFTS",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "StemGNN": {
+        "class": "sktimexnn.forecasting.nf.StemGNN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TCN": {
+        "class": "sktimexnn.forecasting.nf.TCN",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TFT": {
+        "class": "sktimexnn.forecasting.nf.TFT",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TiDE": {
+        "class": "sktimexnn.forecasting.nf.TiDE",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "#TimeLLM": {
+        "class": "sktimexnn.forecasting.nf.TimeLLM",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TimeMixer": {
+        "class": "sktimexnn.forecasting.nf.TimeMixer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TimesNet": {
+        "class": "sktimexnn.forecasting.nf.TimesNet",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TimeXer": {
+        "class": "sktimexnn.forecasting.nf.TimeXer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TSMixer": {
+        "class": "sktimexnn.forecasting.nf.TSMixer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "TSMixerx": {
+        "class": "sktimexnn.forecasting.nf.TSMixerx",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "VanillaTransformer": {
+        "class": "sktimexnn.forecasting.nf.VanillaTransformer",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    },
+    "xLSTM": {
+        "class": "sktimexnn.forecasting.nf.xLSTM",
+        "input_size": 24,
+        "h": 6,
+        "max_steps": 100,
+        "enable_progress_bar": true
+    }
+}
