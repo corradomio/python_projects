@@ -75,9 +75,10 @@
     },
     "skl.gamma": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.GammaRegressor",
+        "estimator": "sklearnx.linear_model.GammaRegressor",
         "window_length": 24,
-        "prediction_length": 6
+        "prediction_length": 6,
+        "#warn": "It works ONLY with y values > 0"
     },
     "skl.poisson": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",

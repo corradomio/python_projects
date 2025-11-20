@@ -5,7 +5,10 @@ matplotlib
 seaborn
 
 pillow
+opencv-python
 opencv-python-headless
+opencv-contrib-python
+
 cv2-enumerate-cameras
 
 

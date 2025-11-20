@@ -20,8 +20,8 @@ FunctionType = type(lambda x: x)
 # Constants
 # ---------------------------------------------------------------------------
 
-SCIKIT_NAMESPACES = ['sklearn', 'catboost', 'lightgbm', 'xgboost']
-SKTIME_NAMESPACES = ['sktime']
+SCIKIT_NAMESPACES = ["sklearn", "catboost", "lightgbm", "xgboost", "sklearnx"]
+SKTIME_NAMESPACES = ["sktime", "sktimex"]
 
 FH_TYPES = Union[NoneType, int, list[int], np.ndarray, ForecastingHorizon]
 PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]

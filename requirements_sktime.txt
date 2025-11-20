@@ -5,7 +5,6 @@
 # ---------------------------------------------------------------------------
 # Utilities
 
-
 # https://pypi.org/project/Deprecated/
 deprecated
 
@@ -23,6 +22,9 @@ tabulate
 
 # https://docs.h5py.org/en/stable/quick.html#quick
 #h5py
+
+# https://docs.pydantic.dev/latest/
+pydantic
 
 
 # ---------------------------------------------------------------------------
@@ -83,10 +85,18 @@ statsmodels
 # https://pypi.org/project/statsforecast/
 statsforecast 
 
+# https://pypi.org/project/autots/
 autots
+
+# https://pypi.org/project/tbats/
 tbats
+
+# https://pypi.org/project/arch/
 arch
+
+# https://pypi.org/project/transformers/
 transformers
+
 
 #dacite
 #tirex
@@ -131,9 +141,9 @@ lightning
 
 # https://www.psycopg.org/
 psycopg2
-#psycopg2-binary
+# psycopg2-binary
 # v3.0
-#psycopg[binary]
+# psycopg[binary]
 
 # https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
 mysql-connector-python
@@ -149,7 +159,6 @@ sqlalchemy
 # TS based on NN
 # ---------------------------------------------------------------------------
 
-
 # https://nixtlaverse.nixtla.io/neuralforecast/index.html
 # https://pypi.org/project/neuralforecast/0.0.6/
 # https://github.com/Nixtla/neuralforecast/tree/main/
@@ -163,16 +172,19 @@ neuralforecast
 # https://github.com/Nixtla/hierarchicalforecast/
 #hierarchicalforecast
 
+
 # https://pypi.org/project/xlstm/
 xlstm
 
 
+# https://facebook.github.io/prophet/docs/quick_start.html
 prophet
 
 
-# ---------------------------------------------------------------------------
-# darts
-# ---------------------------------------------------------------------------
+# https://github.com/huggingface/xet-core
+# used by TimeLLM
+hf_xet
+
 
 # https://unit8co.github.io/darts/
 darts

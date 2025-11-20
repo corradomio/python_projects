@@ -45,6 +45,18 @@ def noise_signal(y: np.ndarray, noise: float=0.) -> np.ndarray:
     return y + a*noise*np.random.normal(0, 1, size=k)
 
 
+def set_dt_index(df: pd.DataFrame, use=False):
+    if not use:
+        return df
+
+    n = len(df)
+    dt_index = pd.date_range("2020-01-01", periods=n, freq="MS")
+    dft = df.set_index(dt_index)
+    return dft
+
+
+
+
 def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> pd.DataFrame:
     df_list = []
 
@@ -98,8 +110,14 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
         df["cat"] = f"sinabs{c}"
         df_list.append(df)
 
+    df_list = [
+        set_dt_index(df, False)
+        for df in df_list
+    ]
+
     # -- concat --
-    df = pd.concat(df_list, axis=0, ignore_index=True)
+    # df = pd.concat(df_list, axis=0, ignore_index=True)
+    df = pd.concat(df_list, axis=0, ignore_index=False)
 
     return df
 
