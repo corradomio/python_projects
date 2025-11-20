@@ -58,8 +58,9 @@ def _create_reducer_forecaster(model_name: str, model_config: dict):
     model_config = dict_exclude(model_config, REDUCER_PARAMETERS)
 
     forecaster = ReducerForecaster(
-        estimator=class_name,
-        estimator_args=model_config,
+        estimator={
+            "class": class_name,
+        } | model_config,
         **reducer_config
     )
     return forecaster
@@ -79,8 +80,9 @@ def _create_regressor_forecaster(model_name: str, model_config: dict):
     model_config = dict_exclude(model_config, REGRESSOR_PARAMETERS)
 
     forecaster = RegressorForecaster(
-        estimator=class_name,
-        estimator_args=model_config,
+        estimator={
+            "class": class_name
+        } | model_config,
         **regressor_config
     )
     return forecaster

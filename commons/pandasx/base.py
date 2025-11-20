@@ -1013,14 +1013,20 @@ def set_index(df: pd.DataFrame,
     :param drop: if to drop the columns
     :return: the new dataframe
     """
-    ser = df[columns]
+
+    assert len(columns) == 1
+    col = columns[0]
+
+    if not inplace:
+        df = df.copy()
+
+    df.sort_values(by=col, inplace=True)
+
+    ser = df[col]
     if as_datetime:
         ser = pd.to_datetime(ser)
     if freq is not None:
         ser = ser.dt.to_period(freq)
-
-    if not inplace:
-        df = df.copy()
 
     df.set_index(ser, inplace=True)
     if drop:

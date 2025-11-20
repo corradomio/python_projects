@@ -1,0 +1,31 @@
+{
+    "#ESRNNForecaster": {
+        "class": "sktime.forecasting.es_rnn.ESRNNForecaster",
+        "pred_len": 6,
+        "#warning": "ERROR: ESRNNForecaster cannot handle missing data (nans), but y passed contained missing data."
+    },
+
+    "#MAPAForecaster": {
+        "class": "sktime.forecasting.mapa.MAPAForecaster",
+        "#warning": "ERROR: Series must contain some strictly positive values for multiplicative decomposition."
+    },
+
+    "#ThetaForecaster": {
+        "class": "sktime.forecasting.theta.ThetaForecaster",
+        "sp": 12,
+        "#warning": [
+            "ERROR: Multiplicative seasonality is not appropriate for zero and negative values"
+        ]
+    },
+    "#ARCH": {
+        "class": "sktime.forecasting.arch.ARCH",
+        "lags": 24,
+        "#error": "ARCH requires package 'arch' to be present in the python environment, but 'arch' was not found."
+    },
+    "#StatsForecastARCH": {
+        "class": "sktime.forecasting.arch.StatsForecastARCH"
+    },
+    "#StatsForecastGARCH": {
+        "class": "sktime.forecasting.arch.StatsForecastGARCH"
+    }
+}

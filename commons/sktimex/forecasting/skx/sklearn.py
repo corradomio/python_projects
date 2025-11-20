@@ -4,14 +4,15 @@ __all__ = [
 ]
 
 import logging
-import pandas as pd
 from typing import Union
 
+import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
+
+from stdlib import kwval, kwexclude, qualified_name, ns_of, name_of, class_of, create_from
 from ..base import BaseForecaster
 from ...forecasting.compose import make_reduction
-from ...utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, FH_TYPES, PD_TYPES
-from stdlib import import_from, kwval, kwexclude, qualified_name, ns_of, name_of
+from ...utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, PD_TYPES
 
 
 # ---------------------------------------------------------------------------
@@ -37,18 +38,16 @@ class ScikitLearnForecaster(BaseForecaster):
     #   4) a sklearn instance   -> wrap it with make_reduction
 
     def __init__(self, *,
-                 estimator: Union[str, type] = "sklearn.linear_model.LinearRegression",
-                 estimator_args=None,
+                 estimator: Union[str, type, dict] = "sklearn.linear_model.LinearRegression",
                  window_length=5,
                  prediction_length=1):
 
-        super().__init__(**estimator_args)
+        super().__init__()
 
-        assert isinstance(estimator, Union[str, type])
+        assert isinstance(estimator, (str, type, dict))
 
         # Unmodified parameters [readonly]
-        self.estimator = qualified_name(estimator)
-        self.estimator_args = estimator_args
+        self.estimator = estimator
         self.window_length = window_length
         self.prediction_length = prediction_length
 
@@ -56,16 +55,18 @@ class ScikitLearnForecaster(BaseForecaster):
         self._estimator = None
         # self._kwargs = _replace_lags(kwargs)
 
-        self._create_estimator(estimator_args or {})
+        self._create_estimator()
 
-        name = name_of(self.estimator)
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
         self._log = logging.getLogger(f"sktimex.ScikitLearnForecaster.{name}")
     # end
 
-    def _create_estimator(self, kwargs):
-        estimator = import_from(self.estimator)
+    def _create_estimator(self):
+        estimator_class = class_of(self.estimator)
+        kwargs = {} if isinstance(self.estimator, str) else self.estimator
 
-        ns = ns_of(self.estimator)
+        ns = ns_of(estimator_class)
         if ns in SCIKIT_NAMESPACES:
             window_length = self.window_length
             # window_length = kwval(kwargs, "window_length", 5)
@@ -73,14 +74,14 @@ class ScikitLearnForecaster(BaseForecaster):
             kwargs = kwexclude(kwargs, ["window_length", "strategy"])
 
             # create the scikit-learn regressor
-            regressor = estimator(**kwargs)
+            regressor = create_from(self.estimator)
             # create the forecaster
             self._estimator = make_reduction(regressor, window_length=window_length, strategy=strategy)
         elif ns in SKTIME_NAMESPACES:
             # create a sktime forecaster
-            self._estimator = estimator(**kwargs)
+            self._estimator = create_from(self.estimator)
         else:
-            raise ValueError(f"Unsupported estimator '{estimator}'")
+            raise ValueError(f"Unsupported estimator '{estimator_class}'")
     # end
 
     # -----------------------------------------------------------------------
@@ -184,7 +185,9 @@ class ScikitLearnForecaster(BaseForecaster):
         return state
 
     def __repr__(self):
-        return f"ScikitForecaster[{self.estimator}]"
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
+        return f"ScikitForecaster[{name}]"
 
     # -----------------------------------------------------------------------
     # end

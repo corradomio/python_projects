@@ -1,6 +1,6 @@
 import sktime.forecasting.ltsf as sktf
 from sktime.forecasting.base import ForecastingHorizon
-from .fix_fh import fix_fh_relative
+# from .fix_fh import fix_fh_relative
 from .recpred import RecursivePredict
 
 #
@@ -47,7 +47,7 @@ class LTSFLinearForecaster(sktf.LTSFLinearForecaster, RecursivePredict):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
     def predict(self, fh=None, X=None):
-        fh = fix_fh_relative(fh)
+        # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)
 
 
@@ -91,7 +91,7 @@ class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster, RecursivePredict):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
     def predict(self, fh=None, X=None):
-        fh = fix_fh_relative(fh)
+        # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)
 
 
@@ -135,7 +135,7 @@ class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster, RecursivePredict):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
     def predict(self, fh=None, X=None):
-        fh = fix_fh_relative(fh)
+        # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)
 
 
@@ -206,5 +206,5 @@ class LTSFTransformerForecaster(sktf.LTSFTransformerForecaster, RecursivePredict
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
     def predict(self, fh=None, X=None):
-        fh = fix_fh_relative(fh)
+        # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)

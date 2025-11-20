@@ -13,7 +13,8 @@ from sktime.forecasting.base import ForecastingHorizon
 from ..base import BaseForecaster
 from ...transform.lags import yxu_lags, t_lags
 from ...transform.lint import LinearTrainTransform
-from ...utils import PD_TYPES, import_from, name_of, NoneType
+from ...utils import PD_TYPES, NoneType
+from stdlib import create_from, name_of, class_of
 
 
 # ---------------------------------------------------------------------------
@@ -61,8 +62,7 @@ class RegressorForecaster(BaseForecaster):
         self,
         lags: Union[int, list, tuple] = 10,
         tlags: Union[int, list] = 1,
-        estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
-        estimator_args=None,
+        estimator: Union[str, dict] = "sklearn.linear_model.LinearRegression",
         flatten=True,
         debug=False
     ):
@@ -116,15 +116,13 @@ class RegressorForecaster(BaseForecaster):
 
         assert isinstance(lags, (int, list, tuple)), f"Invalid 'lags' value: {lags}"
         assert isinstance(tlags, (int, list, tuple)), f"Invalid 'tlags' value: {tlags}"
-        assert isinstance(estimator, str), f"Invalid 'estimator' value: {estimator}"
-        assert estimator_args is None or isinstance(estimator_args, dict), f"Invalid 'estimator_args' value: {estimator_args}"
+        assert isinstance(estimator, (str, type, dict)), f"Invalid 'estimator' value: {estimator}"
         assert isinstance(flatten, bool), f"Invalid 'flatten' value: {flatten}"
 
         # Unmodified parameters [readonly]
         self.lags = lags
         self.tlags = tlags
         self.estimator = estimator
-        self.estimator_args = estimator_args
         self.flatten = flatten
         self.debug = debug
 
@@ -137,24 +135,23 @@ class RegressorForecaster(BaseForecaster):
         self._tlags = tlags            # future y lags (tlags)
 
         self._estimators = {}               # one model for each 'tlag'
-        self._create_estimators(estimator_args or {})
+        self._create_estimators()
 
         lt = LinearTrainTransform(xlags=self._xlags, ylags=self._ylags, tlags=self._tlags, ulags=self._ulags)
         self._ft = lt
         self._pt = lt.predict_transform()
 
-        name = name_of(self.estimator)
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
         self._log = logging.getLogger(f"sktimex.LinearForecaster.{name}")
     # end
 
-    def _create_estimators(self, kwargs):
-        estimator = import_from(self.estimator)
-
+    def _create_estimators(self):
         if self.flatten:
-            self._estimators[0] = estimator(**kwargs)
+            self._estimators[0] = create_from(self.estimator)
         else:
             for t in self._tlags:
-                self._estimators[t] = estimator(**kwargs)
+                self._estimators[t] = create_from(self.estimator)
     # end
 
     # -----------------------------------------------------------------------
@@ -315,14 +312,15 @@ class RegressorForecaster(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def __repr__(self, **kwargs):
-        return f"RegressorForecaster[{name_of(self.estimator)}]"
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
+        return f"RegressorForecaster[{name}]"
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
         # lags: Union[int, list, tuple] = 10,
         # tlags: Union[int, list] = 1,
         # estimator: Union[str, Any] = "sklearn.linear_model.LinearRegression",
-        # estimator_args=None,
         # flatten=True
         params_list = [
             {},

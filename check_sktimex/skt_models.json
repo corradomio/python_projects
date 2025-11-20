@@ -1,156 +1,169 @@
 {
-    "#ExponentialSmoothing": {
-        "class": "sktimext.forecasting.exp_smoothing.ExponentialSmoothing",
+    "#-- NO: libraries incompatibility --": { },
+
+    "#skt.BATS": {
+        "class": "sktime.forecasting.bats.BATS",
+        "sp": 12,
+        "#error": "BATS requires package 'numpy<2'"
+    },
+    "#skt.TBATS": {
+        "class": "sktime.forecasting.tbats.TBATS",
+        "sp": 12,
+        "#error": "TBATS requires package 'numpy<2'"
+    },
+
+    "#-- NO: external dependencies --": {},
+
+    "#skt.ChronosForecaster": {
+        "class": "sktime.forecasting.chronos.ChronosForecaster",
+        "model_path": "amazon/chronos-t5-tiny",
+        "#error": "ChronosForecaster requires package 'accelerate'"
+    },
+    "#skt.TiRexForecaster": {
+        "class": "sktime.forecasting.tirex.TiRexForecaster",
+        "model": "NX-AI/TiRex",
+        "#error": "Use of TiRexForecaster is subject to the license terms of TiRex"
+    },
+    "#skt.CINNForecaster": {
+        "class": "sktime.forecasting.conditional_invertible_neural_network.CINNForecaster",
+        "window_size": 24,
+        "batch_size": 4,
+        "#error": "CINNForecaster requires package 'FrEIA'"
+    },
+    "#skt.GreykiteForecaster": {
+        "class": "sktime.forecasting.greykite.GreykiteForecaster",
+        "#error": "GreykiteForecaster requires package 'greykite>=1.0.0'"
+    },
+    "#skt.TinyTimeMixerForecaster": {
+        "class": "sktimext.forecasting.ttm.TinyTimeMixerForecaster",
+        "pred_len": 6,
+        "#error": "TinyTimeMixerForecaster requires package 'accelerate>=0.26.0'"
+    },
+
+    "#-- (G)ARCH models: models incompatibility": {},
+
+    "#skt.ARCH": {
+        "class": "sktime.forecasting.arch.ARCH",
+        "lags": 24,
+        "#warn": "NON MODELLA la TS"
+    },
+    "#skt.StatsForecastARCH": {
+        "class": "sktime.forecasting.arch.StatsForecastARCH",
+        "#warn": "NON MODELLA la TS"
+    },
+    "#skt.StatsForecastGARCH": {
+        "class": "sktime.forecasting.arch.StatsForecastGARCH",
+        "#warn": "NON MODELLA la TS"
+    },
+
+    "#-- supported --": {},
+
+    "skt.ExponentialSmoothing": {
+        "class": "sktime.forecasting.exp_smoothing.ExponentialSmoothing",
         "sp": 12
     },
 
-    "#AutoETS": {
-        "class": "sktimext.forecasting.ets.AutoETS",
+    "skt.AutoETS": {
+        "class": "sktime.forecasting.ets.AutoETS",
         "sp": 12
     },
-    "#ARDL": {
-        "class": "sktimext.forecasting.ardl.ARDL",
+    "skt.ARDL": {
+        "class": "sktime.forecasting.ardl.ARDL",
         "lags": 24
     },
-    "#AutoREG": {
-        "class": "sktimext.forecasting.auto_reg.AutoREG",
+    "skt.AutoREG": {
+        "class": "sktime.forecasting.auto_reg.AutoREG",
         "lags": 24
     },
-    "#AutoTS": {
+    "skt.AutoTS": {
         "class": "sktimext.forecasting.autots.AutoTS",
         "pred_len": 6,
-        "error": "AutoTS requires package 'autots' to be present in the python environment, but 'autots' was not found."
+        "#error": "AutoTS requires package 'autots' to be present in the python environment, but 'autots' was not found."
     },
-    "#BATS": {
-        "class": "sktimext.forecasting.bats.BATS",
-        "sp": 12,
-        "error": "BATS requires package 'numpy<2'"
-    },
-    "#ChronosForecaster": {
-        "class": "sktimext.forecasting.chronos.ChronosForecaster",
-        "model_path": "amazon/chronos-t5-tiny",
-        "error": "ChronosForecaster requires package 'accelerate'"
-    },
-    "#ARCH": {
-        "class": "sktimext.forecasting.arch.ARCH",
-        "lags": 24,
-        "error": "ARCH requires package 'arch' to be present in the python environment, but 'arch' was not found."
-    },
-    "#StatsForecastARCH": {
-        "class": "sktimext.forecasting.arch.StatsForecastARCH"
-    },
-    "#StatsForecastGARCH": {
-        "class": "sktimext.forecasting.arch.StatsForecastGARCH"
-    },
-    "#TiRexForecaster": {
-        "class": "sktimext.forecasting.tirex.TiRexForecaster",
-        "model": "NX-AI/TiRex",
-        "error": "Use of TiRexForecaster is subject to the license terms of TiRex"
-    },
-    "#CINNForecaster": {
-        "class": "sktimext.forecasting.conditional_invertible_neural_network.CINNForecaster",
-        "window_size": 24,
-        "batch_size": 4,
-        "error": "CINNForecaster requires package 'FrEIA'"
-    },
-    "#Croston": {
-        "class": "sktimext.forecasting.croston.Croston",
+    "skt.Croston": {
+        "class": "sktime.forecasting.croston.Croston",
         "smoothing": 0.01
     },
-    "DartsRegressionModel": {
-        "class": "sktimext.forecasting.darts.DartsRegressionModel",
+    "skt.DartsRegressionModel": {
+        "class": "sktime.forecasting.darts.DartsRegressionModel",
         "lags": 24
     },
-    "DartsXGBModel": {
-        "class": "sktimext.forecasting.darts.DartsXGBModel",
+    "skt.DartsXGBModel": {
+        "class": "sktime.forecasting.darts.DartsXGBModel",
         "lags": 24
     },
-    "DartsLinearRegressionModel": {
-        "class": "sktimext.forecasting.darts.DartsLinearRegressionModel",
+    "skt.DartsLinearRegressionModel": {
+        "class": "sktime.forecasting.darts.DartsLinearRegressionModel",
         "lags": 24
     },
-    "#ESRNNForecaster": {
+    "skt.ESRNNForecaster": {
         "class": "sktimext.forecasting.es_rnn.ESRNNForecaster",
         "pred_len": 6,
-        "warning": "ERROR: ESRNNForecaster cannot handle missing data (nans), but y passed contained missing data."
+        "#warning": "ERROR: ESRNNForecaster cannot handle missing data (nans), but y passed contained missing data."
     },
-    "#GreykiteForecaster": {
-        "class": "sktimext.forecasting.greykite.GreykiteForecaster",
-        "error": "GreykiteForecaster requires package 'greykite>=1.0.0'"
-    },
-    "LTSFLinearForecaster": {
+    "skt.LTSFLinearForecaster": {
         "class": "sktimext.forecasting.ltsf.LTSFLinearForecaster",
         "seq_len": 24,
         "pred_len": 6
     },
-    "LTSFDLinearForecaster": {
+    "skt.LTSFDLinearForecaster": {
         "class": "sktimext.forecasting.ltsf.LTSFDLinearForecaster",
         "seq_len": 24,
         "pred_len": 6
     },
-    "LTSFNLinearForecaster": {
+    "skt.LTSFNLinearForecaster": {
         "class": "sktimext.forecasting.ltsf.LTSFNLinearForecaster",
         "seq_len": 24,
         "pred_len": 6
     },
-    "LTSFTransformerForecaster": {
+    "skt.LTSFTransformerForecaster": {
         "class": "sktimext.forecasting.ltsf.LTSFTransformerForecaster",
         "seq_len": 24,
         "pred_len": 6,
         "context_len": 2
     },
-    "MAPAForecaster": {
-        "class": "sktimext.forecasting.mapa.MAPAForecaster",
-        "warning": "ERROR: Series must contain some strictly positive values for multiplicative decomposition."
+    "skt.MAPAForecaster": {
+        "class": "sktime.forecasting.mapa.MAPAForecaster",
+        "#warning": "ERROR: Series must contain some strictly positive values for multiplicative decomposition."
     },
-    "RBFForecaster": {
-        "class": "sktimext.forecasting.rbf_forecaster.RBFForecaster"
+    "skt.RBFForecaster": {
+        "class": "sktime.forecasting.rbf_forecaster.RBFForecaster"
     },
-    "SARIMAX": {
-        "class": "sktimext.forecasting.sarimax.SARIMAX"
+    "skt.SARIMAX": {
+        "class": "sktime.forecasting.sarimax.SARIMAX"
     },
-    "SCINetForecaster": {
+    "skt.SCINetForecaster": {
         "class": "sktimext.forecasting.scinet.SCINetForecaster",
         "seq_len": 32,
         "pred_len": 6
     },
-    "StatsForecastAutoARIMA": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastAutoARIMA"
+    "skt.StatsForecastAutoARIMA": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastAutoARIMA"
     },
-    "StatsForecastAutoCES": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastAutoCES"
+    "skt.StatsForecastAutoCES": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastAutoCES"
     },
-    "StatsForecastAutoETS": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastAutoETS"
+    "skt.StatsForecastAutoETS": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastAutoETS"
     },
-    "StatsForecastAutoTBATS": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastAutoTBATS"
+    "skt.StatsForecastAutoTBATS": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastAutoTBATS"
     },
-    "StatsForecastAutoTheta": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastAutoTheta"
+    "skt.StatsForecastAutoTheta": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastAutoTheta"
     },
-    "StatsForecastMSTL": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastMSTL",
+    "skt.StatsForecastMSTL": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastMSTL",
         "season_length": 12
     },
-    "StatsForecastADIDA": {
-        "class": "sktimext.forecasting.statsforecast.StatsForecastADIDA"
+    "skt.StatsForecastADIDA": {
+        "class": "sktime.forecasting.statsforecast.StatsForecastADIDA"
     },
-    "#TBATS": {
-        "class": "sktimext.forecasting.tbats.TBATS",
+    "skt.ThetaForecaster": {
+        "class": "sktime.forecasting.theta.ThetaForecaster",
         "sp": 12,
-        "error": "TBATS requires package 'numpy<2'"
-    },
-    "ThetaForecaster": {
-        "class": "sktimext.forecasting.theta.ThetaForecaster",
-        "sp": 12,
-        "warning": [
+        "#warning": [
             "ERROR: Multiplicative seasonality is not appropriate for zero and negative values"
         ]
-    },
-    "#TinyTimeMixerForecaster": {
-        "class": "sktimext.forecasting.ttm.TinyTimeMixerForecaster",
-        "pred_len": 6,
-        "error": "TinyTimeMixerForecaster requires package 'accelerate>=0.26.0'"
     }
 }

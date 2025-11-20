@@ -18,6 +18,7 @@ def plot_boxplot_fitness():
 
     # scenario/n_centers/algo
     all_means = defaultdict(lambda : defaultdict(lambda: defaultdict()))
+    scenario_fftitle = {}
 
     for szdir in RESULTS_DIR.dirs():
         scenario_dict = defaultdict(lambda : {})
@@ -36,6 +37,7 @@ def plot_boxplot_fitness():
             algo_name = dict_get(jdata, ["algoParams", "name"], "algo_name" )
             scenario = ffname_of(dict_get(jdata, ["fitnessFunctionParams"], "fitnessFunctionParams"))
             fftitle = fftitle_of(dict_get(jdata, ["fitnessFunctionParams"], "fitnessFunctionParams"))
+            scenario_fftitle[scenario] = fftitle
 
             best_fit_list = dict_get(jdata, ["fitnessValuesHistory", "bestFit"], "best_fit_list")
             best_fit_list = check_consistency(best_fit_list)
@@ -64,6 +66,7 @@ def plot_boxplot_fitness():
         # plt.gca().set_aspect(3.5/6)
 
         for scenario in scenario_dict:
+            fftitle = scenario_fftitle[scenario]
             fname = fdir / f"boxplot-{num_centers}-{item_code}-{scenario}.png"
 
             algo_dict = scenario_dict[scenario]
@@ -90,11 +93,13 @@ def plot_boxplot_fitness():
             plt.gca().set_xticklabels(ALGO_UPRC)
             plt.ylabel("Fitness value")
             # plt.xlabel("algorithms")
-            plt.title(f"Algorithms statistics (n={nw})")
+            plt.title(f"Algorithms statistics ({fftitle}, n={nw})")
             plt.tight_layout()
 
             plt.savefig(fname, dpi=600)
             plt.close()
+
+            print(fname)
     # end
 # end
 

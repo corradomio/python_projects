@@ -81,6 +81,12 @@ def create_from(instance_info: str | dict, aliases=None) -> Any:
     qname: str = ""
     clazz_args = {}|instance_info
 
+    # delete '#name' parameters
+    for k in instance_info:
+        if k.startswith("#"):
+            del clazz_args[k]
+
+    # delete one of the 'class' keywords
     for k in ["class", "class_name", "clazz", "method"]:
         if k in instance_info:
             qname = instance_info[k]
@@ -129,6 +135,14 @@ def name_of(s: str) -> str:
     p = s.rfind('.')
     return s[p+1:] if p >= 0 else s
 
+
+def class_of(info: Union[str, dict]) -> str:
+    if isinstance(info, str):
+        return info
+    for k in ["class", "class_name", "clazz", "method"]:
+        if k in info:
+            return info[k]
+    raise ValueError("Missing mandatory key: ('class', 'class_name', 'clazz', 'method')")
 
 # ---------------------------------------------------------------------------
 # End

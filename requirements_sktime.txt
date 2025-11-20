@@ -32,20 +32,14 @@ tabulate
 # https://numpy.org/
 numpy
 
-# https://xarray.dev/
-# xarray
-
 # https://scipy.org/
-scipy<=1.15.3
+scipy
 
 # https://matplotlib.org/
 matplotlib
 
 # https://seaborn.pydata.org/
 seaborn
-
-# https://networkx.org/
-# networkx
 
 
 # ---------------------------------------------------------------------------
@@ -55,10 +49,6 @@ seaborn
 # https://pandas.pydata.org/
 pandas
 
-# there are incompatibilities between polars and pandas
-# https://pola.rs
-# polars
-
 
 # ---------------------------------------------------------------------------
 # scikit-learn
@@ -66,21 +56,6 @@ pandas
 
 # https://scikit-learn.org
 scikit-learn
-
-# https://scikit-image.org/
-scikit-image
-
-# https://github.com/scikit-learn-contrib/sklearn-pandas
-# sklearn-pandas
-
-# https://scikit-network.readthedocs.io/en/latest/
-# scikit-network
-
-# https://github.com/scikit-learn-contrib/category_encoders
-category_encoders
-
-# https://scikit-optimize.github.io/stable/
-# scikit-optimize
 
 # https://xgboost.readthedocs.io/en/stable/
 xgboost
@@ -90,22 +65,6 @@ catboost
 
 # https://lightgbm.readthedocs.io/en/stable/
 lightgbm
-
-
-# ---------------------------------------------------------------------------
-# dimensional reduction
-# ---------------------------------------------------------------------------
-
-# https://github.com/spotify/annoy
-#annoy==1.17.3
-
-# https://github.com/eamid/trimap
-# trimap isa based on annoy (https://github.com/spotify/annoy)
-# can be downloaded from https://www.cgohlke.com/
-#trimap
-
-# https://umap-learn.readthedocs.io/en/latest/
-#umap-learn
 
 
 # ---------------------------------------------------------------------------
@@ -123,7 +82,6 @@ statsmodels
 
 # https://pypi.org/project/statsforecast/
 statsforecast 
-
 
 autots
 tbats
@@ -146,7 +104,7 @@ transformers
 # pip3 install torch torchvision
 
 
---extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu126
 torch
 torchvision
 #torchaudio
@@ -187,19 +145,6 @@ pymysql
 sqlalchemy
 
 
-
-# ---------------------------------------------------------------------------
-# AFTER torch
-# ---------------------------------------------------------------------------
-
-# https://fastcore.fast.ai/
-#fastcore
-
-
-# https://github.com/fastai/nbdev
-#nbdev
-
-
 # ---------------------------------------------------------------------------
 # TS based on NN
 # ---------------------------------------------------------------------------
@@ -224,12 +169,14 @@ xlstm
 
 prophet
 
+
 # ---------------------------------------------------------------------------
 # darts
 # ---------------------------------------------------------------------------
 
 # https://unit8co.github.io/darts/
 darts
+
 
 # ---------------------------------------------------------------------------
 # tsai
@@ -247,51 +194,6 @@ darts
 
 # https://github.com/sktime/skpro
 #skpro
-
-
-# ---------------------------------------------------------------------------
-# suspended
-# ---------------------------------------------------------------------------
-
-# https://github.com/solegalli/feature_engine
-# feature_engine
-
-# https://docs.xarray.dev/en/stable/getting-started-guide/installing.html
-# xarray
-# https://sklearn-xarray.readthedocs.io/en/latest/
-# sklearn-xarray
-
-
-# https://pynndescent.readthedocs.io/en/latest/
-# pynndescent
-
-# https://github.com/scikit-learn-contrib/hdbscan
-# (https://www.lfd.uci.edu/~gohlke/pythonlibs/#hdbscan)
-# hdbscan
-
-# (https://github.com/spotify/annoy)
-# annoy
-
-# https://igraph.org/python/
-# https://igraph.readthedocs.io/en/stable/
-# igraph
-
-# https://automl.github.io/auto-sklearn/master/
-# auto-sklearn
-
-# SMT: Surrogate Modeling Toolbox
-# https://smt.readthedocs.io/en/latest/index.html
-# https://pypi.org/project/smt/
-# smt
-
-# https://docs.pytest.org/en/8.0.x/
-# pytest
-
-# https://packaging.python.org/en/latest/
-# packaging
-
-# https://pypi.org/project/PyYAML/
-# PyYAML
 
 
 

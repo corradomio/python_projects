@@ -63,10 +63,10 @@ def main():
     # ))
 
     eval(train, test, ScikitLearnForecaster(
-        estimator="lightgbm.LGBMRegressor",
         window_length=36,
         prediction_length=1,
-        estimator_args=dict(
+        estimator=dict(
+            clazz="lightgbm.LGBMRegressor",
             boosting_type='gbdt'
         )
     ))

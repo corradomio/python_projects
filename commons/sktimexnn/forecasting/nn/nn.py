@@ -6,15 +6,13 @@ __all__ = [
     "_BaseNNForecaster"
 ]
 
-from typing import Union, Optional, Any
-
-import torch
 import skorch
+import torch
 
-from torchx import nnlin as nnx, select_optimizer, select_criterion
 from sktimex.forecasting.base import ScaledForecaster
 from sktimex.transform import yx_lags, t_lags, compute_input_output_shapes
 from sktimex.utils import kwval, qualified_name
+from torchx import nnlin as nnx, select_optimizer, select_criterion
 
 # ---------------------------------------------------------------------------
 # NN flavours

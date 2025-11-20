@@ -13,7 +13,7 @@ from sktime.forecasting.compose import make_reduction
 from sktime.forecasting.base import ForecastingHorizon
 from ..base import BaseForecaster
 from ...utils import PD_TYPES, to_index, to_numpy, to_data
-from stdlib import import_from, name_of, is_instance
+from stdlib import class_of, name_of, is_instance, create_from
 
 # ---------------------------------------------------------------------------
 # Utility
@@ -65,7 +65,6 @@ class ReducerForecaster(BaseForecaster):
     def __init__(
         self,
         estimator="sklearn.linear_model.LinearRegression",
-        estimator_args=None,
         strategy: Literal["direct", "recursive", "multioutput", "dirrec"] = "recursive",
         window_length=10,
         prediction_length=1,
@@ -74,7 +73,7 @@ class ReducerForecaster(BaseForecaster):
         pooling="local",
         windows_identical=True
     ):
-        assert isinstance(estimator, str)
+        assert isinstance(estimator, (str, type, dict))
         assert isinstance(window_length, (int, list, tuple))
         assert isinstance(prediction_length, int)
         assert isinstance(windows_identical, bool)
@@ -83,7 +82,6 @@ class ReducerForecaster(BaseForecaster):
         super().__init__()
 
         self.estimator = estimator
-        self.estimator_args = estimator_args
         self.strategy = strategy
         self.window_length = window_length
         self.prediction_length = prediction_length
@@ -97,19 +95,22 @@ class ReducerForecaster(BaseForecaster):
         self._y_past = None
         self._X_past = None
 
-        name = name_of(self.estimator)
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
         self._log = logging.getLogger(f"sktimex.ReducerForecaster.{name}")
 
-        self._create_estimator(estimator_args or {})
+        self._create_estimator()
 
         # self._log.info("__init__")
     # end
 
-    def _create_estimator(self, kwargs):
-        estimator_class = import_from(self.estimator)
-
+    def _create_estimator(self):
+        # estimator_class = import_from(self.estimator)
+        #
         # create the scikit-learn regressor
-        estimator = estimator_class(**kwargs)
+        # estimator = estimator_class(**kwargs)
+
+        estimator = create_from(self.estimator)
 
         if self._is_sktime_make_reduction:
             # estimator,
@@ -250,11 +251,9 @@ class ReducerForecaster(BaseForecaster):
     # -----------------------------------------------------------------------
 
     def __repr__(self):
-        return f"ReducerForecaster[{name_of(self.estimator)}, {self.strategy}]"
-        # if self.estimator_ is None:
-        #     return f"ReducerForecaster[{name_of(self.estimator)}, {self.strategy}]"
-        # else:
-        #     return f"ReducerForecaster[{self.estimator_.__class__.__name__}[{name_of(self.estimator)}, {self.strategy}]]"
+        estimator_class = class_of(self.estimator)
+        name = name_of(estimator_class)
+        return f"ReducerForecaster[{name}, {self.strategy}]"
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):

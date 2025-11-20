@@ -1,236 +1,237 @@
 {
-    "Autoformer": {
+    "nf.Autoformer": {
         "class": "sktimexnn.forecasting.nf.Autoformer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "BiTCN": {
+    "nf.BiTCN": {
         "class": "sktimexnn.forecasting.nf.BiTCN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "DeepAR": {
+    "nf.DeepAR": {
         "class": "sktimexnn.forecasting.nf.DeepAR",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "DeepNPTS": {
+    "nf.DeepNPTS": {
         "class": "sktimexnn.forecasting.nf.DeepNPTS",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "DilatedRNN": {
+    "nf.DilatedRNN": {
         "class": "sktimexnn.forecasting.nf.DilatedRNN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "DLinear": {
+    "nf.DLinear": {
         "class": "sktimexnn.forecasting.nf.DLinear",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "FEDformer": {
+    "nf.FEDformer": {
         "class": "sktimexnn.forecasting.nf.FEDformer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "GRU": {
+    "nf.GRU": {
         "class": "sktimexnn.forecasting.nf.GRU",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "Informer": {
+    "nf.Informer": {
         "class": "sktimexnn.forecasting.nf.Informer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "iTransformer": {
+    "nf.iTransformer": {
         "class": "sktimexnn.forecasting.nf.iTransformer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "KAN": {
+    "nf.KAN": {
         "class": "sktimexnn.forecasting.nf.KAN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "LSTM": {
+    "nf.LSTM": {
         "class": "sktimexnn.forecasting.nf.LSTM",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "MLP": {
+    "nf.MLP": {
         "class": "sktimexnn.forecasting.nf.MLP",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "MLPMultivariate": {
+    "nf.MLPMultivariate": {
         "class": "sktimexnn.forecasting.nf.MLPMultivariate",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "NBEATS": {
+    "nf.NBEATS": {
         "class": "sktimexnn.forecasting.nf.NBEATS",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "NBEATSx": {
+    "nf.NBEATSx": {
         "class": "sktimexnn.forecasting.nf.NBEATSx",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "NHITS": {
+    "nf.NHITS": {
         "class": "sktimexnn.forecasting.nf.NHITS",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "NLinear": {
+    "nf.NLinear": {
         "class": "sktimexnn.forecasting.nf.NLinear",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "PatchTST": {
+    "nf.PatchTST": {
         "class": "sktimexnn.forecasting.nf.PatchTST",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "RMoK": {
+    "nf.RMoK": {
         "class": "sktimexnn.forecasting.nf.RMoK",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "RNN": {
+    "nf.RNN": {
         "class": "sktimexnn.forecasting.nf.RNN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "SOFTS": {
+    "nf.SOFTS": {
         "class": "sktimexnn.forecasting.nf.SOFTS",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "StemGNN": {
+    "nf.StemGNN": {
         "class": "sktimexnn.forecasting.nf.StemGNN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TCN": {
+    "nf.TCN": {
         "class": "sktimexnn.forecasting.nf.TCN",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TFT": {
+    "nf.TFT": {
         "class": "sktimexnn.forecasting.nf.TFT",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TiDE": {
+    "nf.TiDE": {
         "class": "sktimexnn.forecasting.nf.TiDE",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "#TimeLLM": {
+    "#nf.TimeLLM": {
         "class": "sktimexnn.forecasting.nf.TimeLLM",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
-        "enable_progress_bar": true
+        "enable_progress_bar": true,
+        "#error": ""
     },
-    "TimeMixer": {
+    "nf.TimeMixer": {
         "class": "sktimexnn.forecasting.nf.TimeMixer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TimesNet": {
+    "nf.TimesNet": {
         "class": "sktimexnn.forecasting.nf.TimesNet",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TimeXer": {
+    "nf.TimeXer": {
         "class": "sktimexnn.forecasting.nf.TimeXer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TSMixer": {
+    "nf.TSMixer": {
         "class": "sktimexnn.forecasting.nf.TSMixer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "TSMixerx": {
+    "nf.TSMixerx": {
         "class": "sktimexnn.forecasting.nf.TSMixerx",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "VanillaTransformer": {
+    "nf.VanillaTransformer": {
         "class": "sktimexnn.forecasting.nf.VanillaTransformer",
         "input_size": 24,
         "h": 6,
         "max_steps": 100,
         "enable_progress_bar": true
     },
-    "xLSTM": {
+    "nf.xLSTM": {
         "class": "sktimexnn.forecasting.nf.xLSTM",
         "input_size": 24,
         "h": 6,

@@ -106,6 +106,7 @@ torchmetrics
 torchinfo
 transformers_stream_generator
 transformer_lens
+pytorch_model_summary
 
 # pytorch-forecasting
 # pytorch-geometric

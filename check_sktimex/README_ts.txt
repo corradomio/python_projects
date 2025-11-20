@@ -1,3 +1,12 @@
+series.pct_change() ->
+
+    R[i] = (S[i]-S[i-1])/S[i-1]         IF NaN NOT DELETED
+    R[i] = (S[i+1]-S[i])/S[i]           IF NaN IS  DELETED
+
+Questo vuoldire che la serie risultate HA UN ELEMENTO IN MENO!!!!
+
+-----------------------------------
+
     sktime
     tslearn
     tsfresh
@@ -6,7 +15,6 @@
     kats
 
 -----------------------------------
-
 
     [17,9k stars] https://github.com/facebook/prophet
 -   [9,6k stars] https://github.com/statsmodels/statsmodels
@@ -24,14 +32,14 @@
 
 -----------------------------------
 
-[ok] DarTS
+[ok] Darts
     https://unit8co.github.io/darts/
     https://unit8.com/resources/darts-time-series-made-easy-in-python/
 
 [ok] NeuralForecast
     https://nixtlaverse.nixtla.io/neuralforecast/docs/getting-started/introduction.html
 
-Pytorch Forecasting
+Pytorch Forecasting (can be replaced by  Darts and NeuralForecasat
     https://pytorch-forecasting.readthedocs.io/en/stable/
     https://github.com/sktime/pytorch-forecasting
 

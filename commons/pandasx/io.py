@@ -13,6 +13,7 @@ from .base import (
 from .binhot import binhot_encode
 from .datetimes import datetime_encode, datetime_reindex
 from .io_arff import read_arff
+from .io_html import read_html_table
 from .json import from_json, to_json
 from .onehot import onehot_encode
 from .periodic import periodic_encode
@@ -94,8 +95,20 @@ def _parse_datetime(datetime) -> tuple:
 # protocol://host:port/database/table
 
 
-def _read_database(dburl: str, dtype, **kwargs):
+def _read_database(dburl: str, dtype, **kwargs) -> pd.DataFrame:
     return read_sql(dburl, **kwargs)
+
+
+# ---------------------------------------------------------------------------
+# _read_html_table
+# ---------------------------------------------------------------------------
+
+HTABLE = "htable://"
+
+def _read_html_table(url: str, dtype, **kwargs) -> pd.DataFrame:
+    # htable://<file>
+    table_file = url[len(HTABLE):]
+    return read_html_table(table_file)
 
 
 # ---------------------------------------------------------------------------
@@ -305,6 +318,8 @@ def read_data(
 
     if file.endswith(".csv"):
         df = pd.read_csv(file, dtype=dt, **kwargs)
+    elif file.startswith(HTABLE):
+        df = _read_html_table(file, dtype=dt, **kwargs)
     elif file.endswith(".json"):
         # df = pd.read_json(file, dtype=dt, **kwargs)
         df = from_json(file, dtype=dt, **kwargs)

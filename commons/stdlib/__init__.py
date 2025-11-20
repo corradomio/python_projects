@@ -6,6 +6,6 @@ from .dictx import dict_select, dict_exclude, dict_get
 from .is_instance import is_instance, IS_INSTANCE_OF, IsInstance
 from .kwargs import kwexclude, kwparams, kwselect, kwval, kwmerge
 from .language import method_of
-from .qname import module_path, qualified_name, qualified_type, name_of, ns_of
+from .qname import module_path, qualified_name, qualified_type, name_of, ns_of, class_of
 from .qname import import_from, create_from, create_from_collection
 from .types import NoneType, RangeType, CollectionType, LambdaType

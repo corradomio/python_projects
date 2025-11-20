@@ -1,11 +1,14 @@
 import logging.config
 import os
+import sys
+import traceback
 import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
 import pandasx as pdx
 import sktimex as sktx
+import sktimex.utils
 from stdlib import jsonx, create_from
 from synth import create_syntethic_data
 
@@ -15,16 +18,30 @@ warnings.simplefilter("ignore", UserWarning)
 TARGET = "y"
 
 
-def create_fdir(jmodel: dict) -> str:
-    model = create_from(jmodel)
-    s = model.__class__.__module__
-    p1 = s.rfind(".")
-    p2 = s.rfind(".", 0, p1-1)
-    module = s[p2 + 1:].replace(".", "/")
+def replaces(s: str, tlist: list[str], r: str) -> str:
+    for t in tlist:
+        s = s.replace(t, r)
+    return s
 
-    fdir = f"plots/{module}"
+
+
+def create_fdir(name:str, jmodel: dict) -> str:
+    # model = create_from(jmodel)
+    # s = model.__class__.__module__
+    # p1 = s.rfind(".")
+    # p2 = s.rfind(".", 0, p1-1)
+
+    # module = s[p2 + 1:].replace(".", "/")
+    module = replaces(name, ["_", "-", "."], "/")
+
+    fdir = f"plots/{module}/"
     os.makedirs(fdir, exist_ok=True)
     return fdir
+
+
+def has_files(dirpath) -> bool:
+    return len(os.listdir(dirpath)) > 0
+
 
 
 def check_models(df: pd.DataFrame, jmodels: dict[str, dict]):
@@ -37,7 +54,9 @@ def check_models(df: pd.DataFrame, jmodels: dict[str, dict]):
         jmodel = jmodels[name]
 
         print("---", name, "---")
-        fdir = create_fdir(jmodel)
+        fdir = create_fdir(name, jmodel)
+        if has_files(fdir):
+            continue
 
         for g in dfdict:
             print("...", g)
@@ -70,6 +89,7 @@ def check_models(df: pd.DataFrame, jmodels: dict[str, dict]):
                 # break
             except Exception as e:
                 print("ERROR:", e)
+                traceback.print_exception(*sys.exc_info())
         # end
     pass
 # end
@@ -81,17 +101,24 @@ def main():
     print("dataframe")
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
-    # jmodels = jsonx.load("darts_models.json")
-    # check_models(df, jmodels)
-    #
-    # jmodels = jsonx.load("nf_models.json")
-    # check_models(df, jmodels)
-    #
-    # jmodels = jsonx.load("skx_models.json")
-    # check_models(df, jmodels)
+    jmodels = jsonx.load("darts_models.json")
+    check_models(df, jmodels)
+
+    jmodels = jsonx.load("nf_models.json")
+    check_models(df, jmodels)
+
+    jmodels = jsonx.load("skx_models.json")
+    check_models(df, jmodels)
 
     jmodels = jsonx.load("skt_models.json")
     check_models(df, jmodels)
+
+    jmodels = jsonx.load("skl_models.json")
+    check_models(df, jmodels)
+
+    # jmodels = jsonx.load("ext_models.json")
+    # check_models(df, jmodels)
+
     pass
 
 

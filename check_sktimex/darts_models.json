@@ -1,108 +1,108 @@
 {
     "#-- DarTS/NN --": {},
-    "TSMixerModel": {
+    "darts.TSMixerModel": {
         "class": "sktimexnn.forecasting.darts.TSMixerModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "RNNModel": {
+    "darts.RNNModel": {
         "class": "sktimexnn.forecasting.darts.RNNModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "TCNModel": {
+    "darts.TCNModel": {
         "class": "sktimexnn.forecasting.darts.TCNModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "NLinearModel": {
+    "darts.NLinearModel": {
         "class": "sktimexnn.forecasting.darts.NLinearModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "NHiTSModel": {
+    "darts.NHiTSModel": {
         "class": "sktimexnn.forecasting.darts.NHiTSModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "BlockRNNModel": {
+    "darts.BlockRNNModel": {
         "class": "sktimexnn.forecasting.darts.BlockRNNModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "TransformerModel": {
+    "darts.TransformerModel": {
         "class": "sktimexnn.forecasting.darts.TransformerModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "NBEATSModel": {
+    "darts.NBEATSModel": {
         "class": "sktimexnn.forecasting.darts.NBEATSModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "DLinearModel": {
+    "darts.DLinearModel": {
         "class": "sktimexnn.forecasting.darts.DLinearModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "TiDEModel": {
+    "darts.TiDEModel": {
         "class": "sktimexnn.forecasting.darts.TiDEModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "#TFTModel": {
+    "darts.TFTModel": {
         "class": "sktimexnn.forecasting.darts.TFTModel",
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
     "#-- DarTS/Stats --": {},
-    "ARIMA": {
+    "darts.ARIMA": {
         "class": "sktimexnn.forecasting.darts.ARIMA"
     },
-    "FFT": {
+    "darts.FFT": {
         "class": "sktimexnn.forecasting.darts.FFT"
     },
-    "KalmanForecaster": {
+    "darts.KalmanForecaster": {
         "class": "sktimexnn.forecasting.darts.KalmanForecaster"
     },
-    "#Prophet": {
+    "darts.Prophet": {
         "class": "sktimexnn.forecasting.darts.Prophet",
         "force_col_wise": true
     },
-    "Theta": {
+    "darts.Theta": {
         "class": "sktimexnn.forecasting.darts.Theta"
     },
-    "CatBoostModel": {
+    "darts.CatBoostModel": {
         "class": "sktimexnn.forecasting.darts.CatBoostModel",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
     },
-    "ExponentialSmoothing": {
+    "darts.ExponentialSmoothing": {
         "class": "sktimexnn.forecasting.darts.ExponentialSmoothing",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
     },
-    "LightGBMModel": {
+    "darts.LightGBMModel": {
         "class": "sktimexnn.forecasting.darts.LightGBMModel",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
     },
-    "LinearRegressionModel": {
+    "darts.LinearRegressionModel": {
         "class": "sktimexnn.forecasting.darts.LinearRegressionModel",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
     },
-    "RandomForestModel": {
+    "darts.RandomForestModel": {
         "class": "sktimexnn.forecasting.darts.RandomForestModel",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
     },
-    "SKLearnModel": {
+    "darts.SKLearnModel": {
         "class": "sktimexnn.forecasting.darts.SKLearnModel",
         "lags": 24,
         "lags_past_covariates": 24,

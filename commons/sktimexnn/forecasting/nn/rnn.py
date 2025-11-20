@@ -14,7 +14,7 @@ from skorchx.callbacks import PrintLog
 from sktimex.utils import PD_TYPES
 from sktimex.utils import kwval, kwexclude
 from .nn import *
-from ..transform.nnt import NNTrainTransform, NNPredictTransform
+from ...transform.nnt import NNTrainTransform, NNPredictTransform
 
 # ---------------------------------------------------------------------------
 # BaseRNNForecaster

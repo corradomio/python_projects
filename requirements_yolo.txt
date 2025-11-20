@@ -1,24 +1,33 @@
 numpy
 scipy
+pandas
 matplotlib
 seaborn
 
-ultralytics
-albumentations
-gitpython
 pillow
+opencv-python-headless
+cv2-enumerate-cameras
+
 
 tqdm
+joblib
+
+
 
 --extra-index-url https://download.pytorch.org/whl/cu126
 torch
 torchvision
-torchaudio
-torchtext
+#torchaudio
+#torchtext
 
 skorch
 pytorch_lightning
+
+
 scikit-learn
 scikit-image
 
+
+ultralytics
+albumentations
 
