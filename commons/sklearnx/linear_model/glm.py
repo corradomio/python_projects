@@ -33,10 +33,10 @@ class GammaRegressor(sklm.GammaRegressor):
 
     def fit(self, X, y, sample_weight=None):
         if X.min(axis=None) <= 0:
-            self._X_offset = -X.min() + self.EPS
+            self._X_offset = -X.min(axis=None) + self.EPS
             X = X + self._X_offset
         if y.min(axis=None) <= 0:
-            self._y_offset = -y.min() + self.EPS
+            self._y_offset = -y.min(axis=None) + self.EPS
             y = y + self._y_offset
         return super().fit(X, y, sample_weight=sample_weight)
 

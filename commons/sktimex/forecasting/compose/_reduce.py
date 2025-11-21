@@ -1,4 +1,4 @@
-import sktime.forecasting.compose as sfcr
+import sktime.forecasting.compose as sktf
 from sktime.forecasting.compose import RecursiveTimeSeriesRegressionForecaster
 from sktime.forecasting.compose._reduce import _check_strategy, _check_scitype, _infer_scitype
 from sktime.forecasting.compose._reduce import _DirectReducer, _MultioutputReducer, _DirRecReducer
@@ -12,7 +12,7 @@ from ._trf import (FlexibleDirectRegressionForecaster, FlexibleMultioutputRegres
 #
 # ---------------------------------------------------------------------------
 
-class RecursiveTabularRegressionForecaster(sfcr.RecursiveTabularRegressionForecaster):
+class RecursiveTabularRegressionForecaster(sktf.RecursiveTabularRegressionForecaster):
     _tags = {
         "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
     }
@@ -39,7 +39,7 @@ class RecursiveTabularRegressionForecaster(sfcr.RecursiveTabularRegressionForeca
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
-class DirectTabularRegressionForecaster(sfcr.DirectTabularRegressionForecaster):
+class DirectTabularRegressionForecaster(sktf.DirectTabularRegressionForecaster):
     _tags = {
         "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
     }
@@ -68,7 +68,7 @@ class DirectTabularRegressionForecaster(sfcr.DirectTabularRegressionForecaster):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
-class DirRecTabularRegressionForecaster(sfcr.DirRecTabularRegressionForecaster):
+class DirRecTabularRegressionForecaster(sktf.DirRecTabularRegressionForecaster):
     _tags = {
         "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
     }
@@ -95,7 +95,7 @@ class DirRecTabularRegressionForecaster(sfcr.DirRecTabularRegressionForecaster):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)
 
 
-class MultioutputTabularRegressionForecaster(sfcr.MultioutputTabularRegressionForecaster):
+class MultioutputTabularRegressionForecaster(sktf.MultioutputTabularRegressionForecaster):
     _tags = {
         "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
     }

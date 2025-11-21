@@ -1,8 +1,8 @@
-from pandas import Index
-
-import sktime.forecasting.base as skt
-
-
+# from pandas import Index
+#
+# import sktime.forecasting.base as skt
+#
+#
 # class ForecastingHorizonExt(skt.ForecastingHorizon):
 #     """
 #     Extends sktime ForecastingHorizon in the following way:

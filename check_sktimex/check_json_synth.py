@@ -3,6 +3,7 @@ import os
 import sys
 import traceback
 import warnings
+from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -40,19 +41,22 @@ def create_fdir(name:str, jmodel: dict) -> str:
     return fdir
 
 
-def has_files(dirpath) -> bool:
-    return len(os.listdir(dirpath)) > 0
+def selected(name, models: list[str]) -> bool:
+    if len(models) == 0:
+        return True
+    for m in models:
+        if m in name:
+            return True
+    return False
+# end
 
 
-
-def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict):
+def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False):
     if name.startswith("#"):
         return
 
     print("---", name, "---")
     fdir = create_fdir(name, jmodel)
-    # if has_files(fdir):
-    #     return
 
     for g in dfdict:
         print("...", g)
@@ -60,7 +64,7 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict):
             dfg = dfdict[g]
 
             fname = f"{fdir}/{name}-{g[0]}.png"
-            if os.path.exists(fname):
+            if os.path.exists(fname) and not override:
                 continue
 
             X, y = pdx.xy_split(dfg, target=TARGET)
@@ -75,6 +79,7 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict):
             # print("... predict")
             fh = y_test.index
             y_predict = model.predict(fh=fh, X=X_test)
+            # y_predict = y_predict + 0.01
 
             # print("... plot")
             sktx.utils.plot_series(y_train, y_test, y_predict,
@@ -92,44 +97,46 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict):
             traceback.print_exception(*sys.exc_info())
 
 
-def check_models(df: pd.DataFrame, jmodels: dict[str, dict]):
+def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, models=None):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    for name in jmodels:
-        check_model(name, dfdict, jmodels[name])
+    # for name in jmodels:
+    #     if not selected(name, models):
+    #         continue
+    #     check_model(name, dfdict, jmodels[name], override)
 
-    # Parallel(n_jobs=6)(
-    #     delayed(check_model)(name, dfdict, jmodels[name])
-    #     for name in jmodels
-    # )
+    Parallel(n_jobs=6)(
+        delayed(check_model)(name, dfdict, jmodels[name])
+        for name in jmodels if selected(name, models)
+    )
 
     pass
 # end
-
-
 
 
 def main():
     print("dataframe")
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
+    SELECTED = ["BlockRNNModel"]
+
     jmodels = jsonx.load("darts_models.json")
-    check_models(df, jmodels)
+    check_models(df, jmodels, models=SELECTED)
 
     jmodels = jsonx.load("nf_models.json")
-    check_models(df, jmodels)
+    check_models(df, jmodels, models=SELECTED)
 
     jmodels = jsonx.load("skx_models.json")
-    check_models(df, jmodels)
+    check_models(df, jmodels, models=SELECTED)
 
     jmodels = jsonx.load("skt_models.json")
-    check_models(df, jmodels)
+    check_models(df, jmodels, models=SELECTED)
 
     jmodels = jsonx.load("skl_models.json")
-    check_models(df, jmodels)
+    check_models(df, jmodels, models=SELECTED)
 
     # jmodels = jsonx.load("ext_models.json")
-    # check_models(df, jmodels)
+    # check_models(df, jmodels, override=True)
 
     pass
 

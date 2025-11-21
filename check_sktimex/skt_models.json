@@ -63,13 +63,13 @@
         "sp": 12
     },
 
-    "skt.AutoETS": {
-        "class": "sktime.forecasting.ets.AutoETS",
-        "sp": 12
-    },
     "skt.ARDL": {
         "class": "sktime.forecasting.ardl.ARDL",
         "lags": 24
+    },
+    "skt.AutoETS": {
+        "class": "sktime.forecasting.ets.AutoETS",
+        "sp": 12
     },
     "skt.AutoREG": {
         "class": "sktime.forecasting.auto_reg.AutoREG",

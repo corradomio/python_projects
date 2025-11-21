@@ -30,6 +30,27 @@
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
+    "darts.BlockRNNModel.RNN": {
+        "class": "sktimexnn.forecasting.darts.BlockRNNModel",
+        "input_chunk_length": 24,
+        "output_chunk_length": 6,
+        "model": "RNN",
+        "n_epochs": 200
+    },
+    "darts.BlockRNNModel.LSTM": {
+        "class": "sktimexnn.forecasting.darts.BlockRNNModel",
+        "input_chunk_length": 24,
+        "output_chunk_length": 6,
+        "model": "LSTM",
+        "n_epochs": 200
+    },
+    "darts.BlockRNNModel.GRU": {
+        "class": "sktimexnn.forecasting.darts.BlockRNNModel",
+        "input_chunk_length": 24,
+        "output_chunk_length": 6,
+        "model": "GRU",
+        "n_epochs": 200
+    },
     "darts.TransformerModel": {
         "class": "sktimexnn.forecasting.darts.TransformerModel",
         "input_chunk_length": 24,
@@ -77,20 +98,8 @@
     "darts.Theta": {
         "class": "sktimexnn.forecasting.darts.Theta"
     },
-    "darts.CatBoostModel": {
-        "class": "sktimexnn.forecasting.darts.CatBoostModel",
-        "lags": 24,
-        "lags_past_covariates": 24,
-        "output_chunk_length": 6
-    },
     "darts.ExponentialSmoothing": {
         "class": "sktimexnn.forecasting.darts.ExponentialSmoothing",
-        "lags": 24,
-        "lags_past_covariates": 24,
-        "output_chunk_length": 6
-    },
-    "darts.LightGBMModel": {
-        "class": "sktimexnn.forecasting.darts.LightGBMModel",
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
@@ -106,6 +115,27 @@
         "lags": 24,
         "lags_past_covariates": 24,
         "output_chunk_length": 6
+    },
+    "darts.XGBModel": {
+        "class": "sktimexnn.forecasting.darts.XGBModel",
+        "lags": 24,
+        "lags_past_covariates": 24,
+        "output_chunk_length": 6,
+        "show_warnings": false
+    },
+    "darts.CatBoostModel": {
+        "class": "sktimexnn.forecasting.darts.CatBoostModel",
+        "lags": 24,
+        "lags_past_covariates": 24,
+        "output_chunk_length": 6,
+        "show_warnings": false
+    },
+    "darts.LightGBMModel": {
+        "class": "sktimexnn.forecasting.darts.LightGBMModel",
+        "lags": 24,
+        "lags_past_covariates": 24,
+        "output_chunk_length": 6,
+        "verbose": -1
     },
     "darts.SKLearnModel": {
         "class": "sktimexnn.forecasting.darts.SKLearnModel",

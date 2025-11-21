@@ -26,3 +26,4 @@ from .prophet_model import Prophet
 from .random_forest import RandomForestModel
 from .sklearn_model import SKLearnModel
 from .theta import Theta
+from .xgboost import XGBModel

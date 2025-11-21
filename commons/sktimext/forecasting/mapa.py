@@ -1,4 +1,4 @@
-import sktime.forecasting.mapa as sktm
+import sktime.forecasting.mapa as sktf
 from sktime.forecasting.base import ForecastingHorizon
 # from .fix_fh import fix_fh_relative
 from .recpred import RecursivePredict
@@ -7,7 +7,7 @@ from .recpred import RecursivePredict
 # fh_in_fit
 #
 
-class MAPAForecaster(sktm.MAPAForecaster, RecursivePredict):
+class MAPAForecaster(sktf.MAPAForecaster, RecursivePredict):
 
     def __init__(
             self,
