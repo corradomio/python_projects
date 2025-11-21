@@ -50,10 +50,14 @@
         "input_chunk_length": 24,
         "output_chunk_length": 6
     },
-    "darts.TFTModel": {
+    "#darts.TFTModel": {
         "class": "sktimexnn.forecasting.darts.TFTModel",
         "input_chunk_length": 24,
-        "output_chunk_length": 6
+        "output_chunk_length": 6,
+        "#warn": ["ValueError: TFTModel requires future covariates. The model applies multi-head attention queries on",
+        "future inputs. Consider specifying a future encoder with `add_encoders` or setting `add_relative_index` to ",
+        "`True` at model creation (read TFT model docs for more information). These will automatically generate ",
+        "`future_covariates` from indexes."]
     },
     "#-- DarTS/Stats --": {},
     "darts.ARIMA": {
@@ -65,9 +69,10 @@
     "darts.KalmanForecaster": {
         "class": "sktimexnn.forecasting.darts.KalmanForecaster"
     },
-    "darts.Prophet": {
+    "#darts.Prophet": {
         "class": "sktimexnn.forecasting.darts.Prophet",
-        "force_col_wise": true
+        "force_col_wise": true,
+        "#error": "ValueError: Prophet does not support integer range index. The index of the TimeSeries must be of type pandas.DatetimeIndex"
     },
     "darts.Theta": {
         "class": "sktimexnn.forecasting.darts.Theta"

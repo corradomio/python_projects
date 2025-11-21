@@ -123,7 +123,9 @@
         "context_len": 2
     },
     "skt.MAPAForecaster": {
-        "class": "sktime.forecasting.mapa.MAPAForecaster",
+        "class": "sktimex.forecasting.mapa.MAPAForecaster",
+        "sp": 24,
+        "pred_len": 6,
         "#warning": "ERROR: Series must contain some strictly positive values for multiplicative decomposition."
     },
     "skt.RBFForecaster": {

@@ -72,7 +72,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- square --
     # square 1
-    for c in [1,2,4,8]:
+    for c in [1,2,3,4,6,8,12]:
         x = np.linspace(0,c, num=n, dtype=float)
         y, x = square_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -82,7 +82,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- sin --
     # sin 1
-    for c in [1,2,4,8]:
+    for c in [1,2,3,4,6,8,12]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sin_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -92,7 +92,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- triangle --
     # triangle 1
-    for c in [1, 2, 4, 8]:
+    for c in [1,2,3,4,6,8,12]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = triangle_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -102,7 +102,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- sin --
     # sinabs 1
-    for c in [1,2,4,8]:
+    for c in [1,2,3,4,6,8,12]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sinabs_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -122,7 +122,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
     return df
 
 def main():
-    df = create_syntethic_data(12*7, 0.0, 1, 0.33)
+    df = create_syntethic_data(12*10, 0.0, 1, 0.33)
     dfdict = pdx.groups_split(df, groups="cat")
     for g in dfdict:
         dfg = dfdict[g]
