@@ -12,23 +12,19 @@ def const_wave(x: np.ndarray, c: float=0) -> tuple[np.ndarray, np.ndarray]:
 
 
 def sin_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
-    # y = a*np.sin(x*np.pi + phase)
-    y = a*np.sin(x*np.pi + phase) + 1
+    y = a*np.sin(x*np.pi + phase)
     return y, x
 
 
 def sinabs_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
-    # y = a*(2*np.abs(np.sin(x*np.pi + phase))-1)
-    y = a*(2*np.abs(np.sin(x*np.pi + phase)))
+    y = a*(2*np.abs(np.sin(x*np.pi + phase))-1)
     return y, x
 
 
 def square_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
-    # y[t< 0.5] = -a
-    # y[t>=0.5] = +a
-    y[t< 0.5] = 0
+    y[t< 0.5] = -a
     y[t>=0.5] = +a
     return y, t
 

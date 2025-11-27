@@ -118,7 +118,7 @@ def main():
     print("dataframe")
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
-    SELECTED = ["BlockRNNModel"]
+    SELECTED = []
 
     jmodels = jsonx.load("darts_models.json")
     check_models(df, jmodels, models=SELECTED)
