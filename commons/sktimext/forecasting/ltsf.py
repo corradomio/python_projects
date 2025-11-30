@@ -41,7 +41,8 @@ class LTSFLinearForecaster(sktf.LTSFLinearForecaster, RecursivePredict):
             custom_dataset_train=custom_dataset_train,
             custom_dataset_pred=custom_dataset_pred,
         )
-        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
@@ -85,7 +86,8 @@ class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster, RecursivePredict):
             custom_dataset_train=custom_dataset_train,
             custom_dataset_pred=custom_dataset_pred,
         )
-        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
@@ -129,7 +131,8 @@ class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster, RecursivePredict):
             custom_dataset_train=custom_dataset_train,
             custom_dataset_pred=custom_dataset_pred,
         )
-        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
@@ -200,7 +203,8 @@ class LTSFTransformerForecaster(sktf.LTSFTransformerForecaster, RecursivePredict
             activation=activation,
             freq=freq,
         )
-        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
+        self.pred_len = pred_len
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)

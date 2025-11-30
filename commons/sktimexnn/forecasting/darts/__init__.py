@@ -25,5 +25,5 @@ from .linear_regression_model import LinearRegressionModel
 from .prophet_model import Prophet
 from .random_forest import RandomForestModel
 from .sklearn_model import SKLearnModel
-from .theta import Theta
+from .theta import Theta, FourTheta
 from .xgboost import XGBModel

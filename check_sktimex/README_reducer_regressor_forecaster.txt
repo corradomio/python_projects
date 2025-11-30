@@ -1,3 +1,65 @@
+sktimex.forecasting.ReducerForecaster
+-------------------------------------
+        estimator="sklearn.linear_model.LinearRegression",
+        strategy: Literal["direct", "recursive", "multioutput", "dirrec"] = "recursive",
+        window_length=10,
+        prediction_length=1,
+        scitype="infer",
+        transformers=None,
+        pooling="local",
+        windows_identical=True
+
+    based on sktime   'make_reducer'
+
+
+sktimex.forecasting.ScikitLearnForecaster
+-----------------------------------------
+        estimator: Union[str, type, dict] = "sklearn.linear_model.LinearRegression",
+        window_length=10,
+        prediction_length=1
+
+    simple (first implementation) direct/recursive wrapper on scikit-learn models
+
+
+sktimex.forecasting.RegressorForecaster
+---------------------------------------
+        lags: Union[int, list, tuple] = 10,
+        tlags: Union[int, list] = 1,
+        estimator: Union[str, dict] = "sklearn.linear_model.LinearRegression",
+        flatten=True,
+        debug=False
+
+    extended version of 'ScikitLearnForecaster' where it is possible to specify
+    the y-lags, X-lags and future X-lags to use (Sid/EBTIC approach)
+    Note: 'lags' has the form:
+
+        int             == [int, int, 0]        [y-lags, X-lags, 0]
+        [int]           == [int, 0, 0]          [y-lags, X-lags, 0]
+        [int,int]       == [int, int, 0]        [y-lags, X-lags, 0]
+        [int,int,int]                           [y-lags, X-lags, u-lags]
+
+    [X_past  ][y_past]
+    [X_future][y_pred]
+
+    u-lags refers to X_future
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 _Reducer(_BaseWindowForecaster) (sktime.forecasting.compose._reduce)
  (*)_DirectReducer(_Reducer) (sktime.forecasting.compose._reduce)
         DirectTabularRegressionForecaster(_DirectReducer) (sktime.forecasting.compose._reduce)

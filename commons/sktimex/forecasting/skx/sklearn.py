@@ -37,10 +37,12 @@ class ScikitLearnForecaster(BaseForecaster):
     #   3) a sktime  instance   -> as is
     #   4) a sklearn instance   -> wrap it with make_reduction
 
-    def __init__(self, *,
-                 estimator: Union[str, type, dict] = "sklearn.linear_model.LinearRegression",
-                 window_length=5,
-                 prediction_length=1):
+    def __init__(
+        self, *,
+        estimator: Union[str, type, dict] = "sklearn.linear_model.LinearRegression",
+        window_length=10,
+        prediction_length=1
+    ):
 
         super().__init__()
 

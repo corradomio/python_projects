@@ -62,7 +62,7 @@ class DirectTabularRegressionForecaster(sktf.DirectTabularRegressionForecaster):
             windows_identical=windows_identical
         )
         self.prediction_length = prediction_length
-        self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length+1)))
+        self._fh_in_fit = ForecastingHorizon(list(range(1, prediction_length + 1)))
 
     def _fit(self, y, X, fh):
         return super()._fit(y=y, X=X, fh=fh if fh is not None else self._fh_in_fit)

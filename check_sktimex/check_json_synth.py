@@ -1,18 +1,17 @@
-import logging.config
 import os
 import sys
 import traceback
 import warnings
-from typing import Optional
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from joblib import Parallel, delayed
+
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
 from stdlib import jsonx, create_from
 from synth import create_syntethic_data
-from joblib import Parallel, delayed
 
 # Suppress all UserWarning instances
 warnings.simplefilter("ignore", UserWarning)
@@ -24,7 +23,7 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
     for t in tlist:
         s = s.replace(t, r)
     return s
-
+# end
 
 
 def create_fdir(name:str, jmodel: dict) -> str:
@@ -39,15 +38,25 @@ def create_fdir(name:str, jmodel: dict) -> str:
     fdir = f"plots/{module}/"
     os.makedirs(fdir, exist_ok=True)
     return fdir
+# end
 
 
-def selected(name, models: list[str]) -> bool:
-    if len(models) == 0:
+def selected(name, included: list[str], excluded: list[str]) -> bool:
+    if len(included) == 0 and len(excluded) == 0:
         return True
-    for m in models:
+
+    for m in included:
         if m in name:
             return True
-    return False
+    for m in excluded:
+        if m in name:
+            return False
+    if len(included) == 0 and len(excluded) == 0:
+        return True
+    elif len(included) > 0:
+        return False
+    else:
+        return True
 # end
 
 
@@ -59,13 +68,14 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
     fdir = create_fdir(name, jmodel)
 
     for g in dfdict:
-        print("...", g)
         try:
             dfg = dfdict[g]
 
             fname = f"{fdir}/{name}-{g[0]}.png"
             if os.path.exists(fname) and not override:
                 continue
+            else:
+                print("...", g)
 
             X, y = pdx.xy_split(dfg, target=TARGET)
             X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
@@ -95,19 +105,19 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
         except Exception as e:
             print("ERROR:", e)
             traceback.print_exception(*sys.exc_info())
+# end
 
 
-def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, models=None):
+def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=None, excludes=None):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
     # for name in jmodels:
-    #     if not selected(name, models):
-    #         continue
-    #     check_model(name, dfdict, jmodels[name], override)
+    #     if selected(name, includes, excludes):
+    #         check_model(name, dfdict, jmodels[name], override)
 
-    Parallel(n_jobs=6)(
+    Parallel(n_jobs=14)(
         delayed(check_model)(name, dfdict, jmodels[name])
-        for name in jmodels if selected(name, models)
+        for name in jmodels if selected(name, includes, excludes)
     )
 
     pass
@@ -119,29 +129,32 @@ def main():
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
     SELECTED = []
+    EXCLUDED = ["ESRNN", "FED"]
 
     jmodels = jsonx.load("darts_models.json")
-    check_models(df, jmodels, models=SELECTED)
+    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     jmodels = jsonx.load("nf_models.json")
-    check_models(df, jmodels, models=SELECTED)
+    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     jmodels = jsonx.load("skx_models.json")
-    check_models(df, jmodels, models=SELECTED)
+    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     jmodels = jsonx.load("skt_models.json")
-    check_models(df, jmodels, models=SELECTED)
+    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     jmodels = jsonx.load("skl_models.json")
-    check_models(df, jmodels, models=SELECTED)
+    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     # jmodels = jsonx.load("ext_models.json")
     # check_models(df, jmodels, override=True)
 
     pass
+# end
 
 
 if __name__ == "__main__":
     # logging.config.fileConfig('logging_config.ini')
     # logging.getLogger('root').info('Logging initialized')
     main()
+# end

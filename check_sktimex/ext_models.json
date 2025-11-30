@@ -1,12 +1,3 @@
 {
-    "#skt.ARDL": {
-        "class": "sktime.forecasting.ardl.ARDL",
-        "lags": 24
-    },
-    "skt.AutoETS": {
-        "class": "sktime.forecasting.ets.AutoETS",
-        "sp": 12,
-        "auto": true,
-        "allow_multiplicative_trend": true
-    }
+
 }

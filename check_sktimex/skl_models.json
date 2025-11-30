@@ -1,9 +1,23 @@
 {
-    "#-- scikit-learn --": {},
-
-    "skl.LinearRegression": {
+    "skl.CatBoostRegressor": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.LinearRegression",
+        "estimator": {
+            "class": "catboost.core.CatBoostRegressor",
+            "silent": true
+        },
+        "window_length": 24,
+        "prediction_length": 6,
+        "#url": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
+    },
+    "skl.DecisionTreeRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.tree.DecisionTreeRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.ExtraTreeRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.tree.ExtraTreeRegressor",
         "window_length": 24,
         "prediction_length": 6
     },
@@ -15,6 +29,20 @@
         },
         "window_length": 24,
         "prediction_length": 6
+    },
+    "skl.GammaRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearnx.linear_model.GammaRegressor",
+        "window_length": 24,
+        "prediction_length": 6,
+        "#warn": "It works ONLY with y values > 0"
+    },
+    "skl.GaussianProcessRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.gaussian_process.GaussianProcessRegressor",
+        "window_length": 24,
+        "prediction_length": 6,
+        "#url": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html"
     },
     "skl.GradientBoostingRegressor": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
@@ -31,28 +59,6 @@
         "window_length": 24,
         "prediction_length": 6
     },
-    "skl.RandomForestRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": {
-            "class": "sklearn.ensemble.RandomForestRegressor",
-            "n_estimators": 30
-        },
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.GaussianProcessRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.gaussian_process.GaussianProcessRegressor",
-        "window_length": 24,
-        "prediction_length": 6,
-        "#url": "https://scikit-learn.org/stable/modules/generated/sklearn.gaussian_process.GaussianProcessRegressor.html"
-    },
-    "skl.SGDRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.SGDRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
     "skl.HuberRegressor": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
         "estimator": {
@@ -61,92 +67,11 @@
         "window_length": 24,
         "prediction_length": 6
     },
-    "skl.QuantileRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.QuantileRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.TheilSenRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.TheilSenRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.GammaRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearnx.linear_model.GammaRegressor",
-        "window_length": 24,
-        "prediction_length": 6,
-        "#warn": "It works ONLY with y values > 0"
-    },
-    "skl.PoissonRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.PoissonRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.TweedieRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.TweedieRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.PassiveAggressiveRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.linear_model.PassiveAggressiveRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
     "skl.KNeighborsRegressor": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
         "estimator": "sklearn.neighbors.KNeighborsRegressor",
         "window_length": 24,
         "prediction_length": 6
-    },
-    "skl.RadiusNeighborsRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.neighbors.RadiusNeighborsRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.MLPRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.neural_network.MLPRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.DecisionTreeRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.tree.DecisionTreeRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-    "skl.ExtraTreeRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "sklearn.tree.ExtraTreeRegressor",
-        "window_length": 24,
-        "prediction_length": 6
-    },
-
-    "#-- XGBoost, CatBoost, LightGBM models --": {},
-
-    "skl.XGBRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": "xgboost.sklearn.XGBRegressor",
-        "window_length": 24,
-        "prediction_length": 6,
-        "#url": "https://xgboost.readthedocs.io/en/stable/python/python_api.html#module-xgboost.sklearn"
-    },
-    "skl.CatBoostRegressor": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
-        "estimator": {
-            "class": "catboost.core.CatBoostRegressor",
-            "silent": true
-        },
-        "window_length": 24,
-        "prediction_length": 6,
-        "#url": "https://catboost.ai/docs/en/concepts/python-reference_catboostregressor"
     },
     "skl.LGBMRegressor": {
         "class": "sktimex.forecasting.ScikitLearnForecaster",
@@ -157,5 +82,75 @@
         "window_length": 24,
         "prediction_length": 6,
         "#url": "https://lightgbm.readthedocs.io/en/stable/pythonapi/lightgbm.LGBMRegressor.html#lightgbm.LGBMRegressor"
-    }
+    },
+    "skl.LinearRegression": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.LinearRegression",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.MLPRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.neural_network.MLPRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.PassiveAggressiveRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.PassiveAggressiveRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.PoissonRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.PoissonRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.QuantileRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.QuantileRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.RadiusNeighborsRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.neighbors.RadiusNeighborsRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.RandomForestRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": {
+            "class": "sklearn.ensemble.RandomForestRegressor",
+            "n_estimators": 30
+        },
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.SGDRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.SGDRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.TheilSenRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.TheilSenRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.TweedieRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "sklearn.linear_model.TweedieRegressor",
+        "window_length": 24,
+        "prediction_length": 6
+    },
+    "skl.XGBRegressor": {
+        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "estimator": "xgboost.sklearn.XGBRegressor",
+        "window_length": 24,
+        "prediction_length": 6,
+        "#url": "https://xgboost.readthedocs.io/en/stable/python/python_api.html#module-xgboost.sklearn"
+    },
 }

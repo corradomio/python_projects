@@ -6,47 +6,47 @@ import sktime.utils.plotting as skp
 import matplotlib.pyplot as plt
 
 
-def const_wave(x: np.ndarray, c: float=0) -> tuple[np.ndarray, np.ndarray]:
+def const_wave(x: np.ndarray, c: float = 0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float) + c
     return y, x
 
 
-def sin_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
+def sin_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     # y = a*np.sin(x*np.pi + phase)
-    y = a*np.sin(x*np.pi + phase) + 1
+    y = a * np.sin(x * np.pi + phase) + 1
     return y, x
 
 
-def sinabs_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
+def sinabs_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     # y = a*(2*np.abs(np.sin(x*np.pi + phase))-1)
-    y = a*(2*np.abs(np.sin(x*np.pi + phase)))
+    y = a * (2 * np.abs(np.sin(x * np.pi + phase)))
     return y, x
 
 
-def square_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
+def square_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
     # y[t< 0.5] = -a
     # y[t>=0.5] = +a
-    y[t< 0.5] = 0
-    y[t>=0.5] = +a
+    y[t < 0.5] = 0
+    y[t >= 0.5] = +a
     return y, t
 
 
-def triangle_wave(x: np.ndarray, a: float=1, phase: float=0) -> tuple[np.ndarray, np.ndarray]:
+def triangle_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
-    y = a*t
+    y = a * t
     return y, x
 
 
-def noise_signal(y: np.ndarray, noise: float=0.) -> np.ndarray:
+def noise_signal(y: np.ndarray, noise: float = 0.) -> np.ndarray:
     if noise == 0:
         return y
     k = len(y)
-    a = y.max()-y.min()
+    a = y.max() - y.min()
     if a == 0.: a = 1.
-    return y + a*noise*np.random.normal(0, 1, size=k)
+    return y + a * noise * np.random.normal(0, 1, size=k)
 
 
 def set_dt_index(df: pd.DataFrame, use=False):
@@ -59,10 +59,9 @@ def set_dt_index(df: pd.DataFrame, use=False):
     return dft
 
 
-
-
-def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> pd.DataFrame:
+def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float = 0) -> pd.DataFrame:
     df_list = []
+    n += 1
 
     # -- const --
     # const 0
@@ -76,8 +75,8 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- square --
     # square 1
-    for c in [1,2,3,4,6,8,12,24]:
-        x = np.linspace(0,c, num=n, dtype=float)
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
+        x = np.linspace(0, c, num=n, dtype=float)
         y, x = square_wave(x, a, phase)
         y = noise_signal(y, noise)
         df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
@@ -86,7 +85,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- sin --
     # sin 1
-    for c in [1,2,3,4,6,8,12,24]:
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sin_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -96,7 +95,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- triangle --
     # triangle 1
-    for c in [1,2,3,4,6,8,12,24]:
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = triangle_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -106,7 +105,7 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     # -- sin --
     # sinabs 1
-    for c in [1,2,3,4,6,8,12,24]:
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sinabs_wave(x, a, phase)
         y = noise_signal(y, noise)
@@ -125,8 +124,9 @@ def create_syntethic_data(n: int=12*7, noise=0., a:float=1, phase: float=0) -> p
 
     return df
 
+
 def main():
-    df = create_syntethic_data(12*10, 0.0, 1, 0.33)
+    df = create_syntethic_data(12 * 10, 0.0, 1, 0.33)
     dfdict = pdx.groups_split(df, groups="cat")
     for g in dfdict:
         dfg = dfdict[g]
@@ -135,9 +135,7 @@ def main():
         plt.show()
     # end
     pass
-# end
 
 
 if __name__ == "__main__":
     main()
-

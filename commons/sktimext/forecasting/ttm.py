@@ -38,7 +38,7 @@ class TinyTimeMixerForecaster(sktf.TinyTimeMixerForecaster, RecursivePredict):
             fit_strategy=fit_strategy,
         )
         self.pred_len=pred_len
-        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len+1)))
+        self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)

@@ -2,7 +2,7 @@ from typing import Optional, Any
 
 import darts.models.forecasting.exponential_smoothing as dm
 
-from .base import _BaseDartsForecaster, TREND_MODE, SEASONALITY_MODE
+from .base import _BaseDartsForecaster, TREND_MODE, SEASONALITY_MODE, MODEL_MODE
 
 
 class _ExponentialSmoothing(dm.ExponentialSmoothing):
@@ -19,7 +19,7 @@ class _ExponentialSmoothing(dm.ExponentialSmoothing):
             **fit_kwargs,
     ):
         super().__init__(
-            trend=TREND_MODE[trend],
+            trend=MODEL_MODE[trend],
             damped=damped,
             seasonal=SEASONALITY_MODE[seasonal],
             seasonal_periods=seasonal_periods,

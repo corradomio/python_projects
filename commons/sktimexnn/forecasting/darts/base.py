@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from darts import TimeSeries
 from darts.models.forecasting.forecasting_model import GlobalForecastingModel
-from darts.utils.utils import ModelMode, SeasonalityMode
+from darts.utils.utils import ModelMode, SeasonalityMode, TrendMode
 from sktime.forecasting.base import ForecastingHorizon
 
 from pandasx.base import PANDAS_TYPE
@@ -16,14 +16,21 @@ from sktimex.forecasting.base import ScaledForecaster
 # ---------------------------------------------------------------------------
 
 TREND_MODE = {
-    "additive": ModelMode.ADDITIVE,
-    "multiplicative": ModelMode.MULTIPLICATIVE,
+    "linear": TrendMode.LINEAR,
+    "exponential": TrendMode.EXPONENTIAL,
     None: None
 }
 
 SEASONALITY_MODE = {
     "additive": SeasonalityMode.ADDITIVE,
     "multiplicative": SeasonalityMode.MULTIPLICATIVE,
+    None: None
+}
+
+
+MODEL_MODE = {
+    "additive": ModelMode.ADDITIVE,
+    "multiplicative": ModelMode.MULTIPLICATIVE,
     None: None
 }
 
