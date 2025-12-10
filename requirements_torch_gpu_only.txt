@@ -1,0 +1,43 @@
+# ---------------------------------------------------------------------------
+# Standard libraries
+# ---------------------------------------------------------------------------
+numpy
+scipy
+pandas
+
+path
+multimethod
+
+matplotlib
+seaborn
+
+
+# ---------------------------------------------------------------------------
+# Pytorch
+# ---------------------------------------------------------------------------
+# better to use Python=3.12
+# 
+# pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
+#
+# import torch
+# torch.cuda.is_available()
+#
+--extra-index-url https://download.pytorch.org/whl/cu126
+torch
+#torchvision
+#torchaudio
+#torchtext
+
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
+lightning
+
+# https://skorch.readthedocs.io/en/stable/
+# https://github.com/skorch-dev/skorch
+skorch
+
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

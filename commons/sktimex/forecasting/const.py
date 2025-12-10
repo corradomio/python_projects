@@ -8,8 +8,8 @@ from typing import Literal
 
 import numpy as np
 
-from ..base import BaseForecaster
-from ...utils import to_numpy, to_data, is_instance
+from .base import BaseForecaster
+from ..utils import to_numpy, to_data, is_instance
 
 
 # ---------------------------------------------------------------------------

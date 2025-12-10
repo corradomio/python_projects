@@ -49,6 +49,14 @@ def noise_signal(y: np.ndarray, noise: float = 0.) -> np.ndarray:
     return y + a * noise * np.random.normal(0, 1, size=k)
 
 
+def add_trend(y: np.ndarray, b0: float, bn: float) -> np.ndarray:
+    n = len(y)
+    t = np.linspace(b0, bn, num=n, dtype=float)
+    return y + t
+
+
+# ---------------------------------------------------------------------------
+
 def set_dt_index(df: pd.DataFrame, use=False):
     if not use:
         return df
@@ -63,8 +71,7 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
     df_list = []
     n += 1
 
-    # -- const --
-    # const 0
+    # -- const_wave --
     for c in [-1, 0, 1]:
         x = np.linspace(0, 1, num=n, dtype=float)
         y, x = const_wave(x, c)
@@ -73,8 +80,7 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"c={c}"
         df_list.append(df)
 
-    # -- square --
-    # square 1
+    # -- square_wave --
     for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = square_wave(x, a, phase)
@@ -83,8 +89,7 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"sq{c}"
         df_list.append(df)
 
-    # -- sin --
-    # sin 1
+    # -- sin_wave --
     for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sin_wave(x, a, phase)
@@ -93,8 +98,7 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"sin{c}"
         df_list.append(df)
 
-    # -- triangle --
-    # triangle 1
+    # -- triangle_wave --
     for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = triangle_wave(x, a, phase)
@@ -103,8 +107,7 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"tri{c}"
         df_list.append(df)
 
-    # -- sin --
-    # sinabs 1
+    # -- sinabs_wave --
     for c in [1, 2, 3, 4, 6, 8, 12, 24]:
         x = np.linspace(0, c, num=n, dtype=float)
         y, x = sinabs_wave(x, a, phase)
@@ -112,6 +115,30 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
         df["cat"] = f"sinabs{c}"
         df_list.append(df)
+
+    # -----------------------------------------------------------------------
+
+    # -- triangle_wave --
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
+        x = np.linspace(0, c, num=n, dtype=float)
+        y, x = triangle_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"tri{c}-t"
+        df_list.append(df)
+
+    # -- sinabs_wave --
+    for c in [1, 2, 3, 4, 6, 8, 12, 24]:
+        x = np.linspace(0, c, num=n, dtype=float)
+        y, x = sinabs_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"sinabs{c}-t"
+        df_list.append(df)
+
+    # -----------------------------------------------------------------------
 
     df_list = [
         set_dt_index(df, False)
@@ -125,17 +152,17 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
     return df
 
 
-def main():
-    df = create_syntethic_data(12 * 10, 0.0, 1, 0.33)
-    dfdict = pdx.groups_split(df, groups="cat")
-    for g in dfdict:
-        dfg = dfdict[g]
-        skp.plot_series(dfg["y"], title=g)
-        # plt.ylim((-1.2, 1.2))
-        plt.show()
-    # end
-    pass
+# def main():
+#     df = create_syntethic_data(12 * 10, 0.0, 1, 0.33)
+#     dfdict = pdx.groups_split(df, groups="cat")
+#     for g in dfdict:
+#         dfg = dfdict[g]
+#         skp.plot_series(dfg["y"], title=g)
+#         # plt.ylim((-1.2, 1.2))
+#         plt.show()
+#     # end
+#     pass
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()

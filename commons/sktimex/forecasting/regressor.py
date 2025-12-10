@@ -10,10 +10,10 @@ import numpy as np
 import pandas as pd
 
 from sktime.forecasting.base import ForecastingHorizon
-from ..base import BaseForecaster
-from ...transform.lags import yxu_lags, t_lags
-from ...transform.lint import LinearTrainTransform
-from ...utils import PD_TYPES, NoneType
+from .base import BaseForecaster
+from ..transform.lags import yxu_lags, t_lags
+from ..transform.lint import LinearTrainTransform
+from ..utils import PD_TYPES, NoneType
 from stdlib import create_from, name_of, class_of
 
 

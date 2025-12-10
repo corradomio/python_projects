@@ -2,18 +2,18 @@
     "#-- constant --": {},
 
     "skx.MeanForecaster": {
-        "class": "sktimex.forecasting.ConstantForecaster",
+        "class": "sktimex.forecasting.const.ConstantForecaster",
         "mode": "mean"
     },
     "skx.MedianForecaster": {
-        "class": "sktimex.forecasting.ConstantForecaster",
+        "class": "sktimex.forecasting.const.ConstantForecaster",
         "mode": "median"
     },
 
     "#-- reducers --": {},
 
     "skx.reducer.LinearRegression": {
-        "class": "sktimex.forecasting.ReducerForecaster",
+        "class": "sktimex.forecasting.reducer.ReducerForecaster",
         "estimator": {
             "class": "sklearn.linear_model.LinearRegression"
         },
@@ -22,7 +22,7 @@
         "prediction_length": 6
     },
     "skx.regressor.LinearRegression": {
-        "class": "sktimex.forecasting.RegressorForecaster",
+        "class": "sktimex.forecasting.regressor.RegressorForecaster",
         "estimator": {
             "class": "sklearn.linear_model.LinearRegression"
         },
@@ -30,7 +30,7 @@
         "tlags": 6
     },
     "skx.sklearn.LinearRegression": {
-        "class": "sktimex.forecasting.ScikitLearnForecaster",
+        "class": "sktimex.forecasting.sklearn.ScikitLearnForecaster",
         "estimator": {
             "class": "sklearn.linear_model.LinearRegression"
         },

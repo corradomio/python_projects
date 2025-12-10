@@ -9,10 +9,10 @@ from typing import Union
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
-from stdlib import kwval, kwexclude, qualified_name, ns_of, name_of, class_of, create_from
-from ..base import BaseForecaster
-from ...forecasting.compose import make_reduction
-from ...utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, PD_TYPES
+from stdlib import kwval, kwexclude, ns_of, name_of, class_of, create_from
+from .base import BaseForecaster
+from ..forecasting.compose import make_reduction
+from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, PD_TYPES
 
 
 # ---------------------------------------------------------------------------

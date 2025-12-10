@@ -23,6 +23,7 @@
         "sp": 12,
         "#error": "TBATS requires package 'numpy<2'"
     },
+
     "#skt.ChronosForecaster": {
         "class": "sktime.forecasting.chronos.ChronosForecaster",
         "model_path": "amazon/chronos-t5-tiny",
@@ -37,6 +38,14 @@
     "#skt.StatsForecastARCH": {
         "class": "sktime.forecasting.arch.StatsForecastARCH",
         "#warn": "NON MODELLA la TS"
+    },
+    "#skt.StatsForecastGARCH": {
+        "class": "sktime.forecasting.arch.StatsForecastGARCH",
+        "#warn": "NON MODELLA la TS"
+    },
+    "#skt.GreykiteForecaster": {
+        "class": "sktime.forecasting.greykite.GreykiteForecaster",
+        "#error": "GreykiteForecaster requires package 'greykite>=1.0.0'"
     },
     "#skt.TinyTimeMixerForecaster": {
         "class": "sktimext.forecasting.ttm.TinyTimeMixerForecaster",
@@ -121,10 +130,6 @@
         "seasonal": "additive",
         "sp": 24
     },
-    "#skt.GreykiteForecaster": {
-        "class": "sktime.forecasting.greykite.GreykiteForecaster",
-        "#error": "GreykiteForecaster requires package 'greykite>=1.0.0'"
-    },
 
     "skt.LTSFDLinearForecaster": {
         "class": "sktimext.forecasting.ltsf.LTSFDLinearForecaster",
@@ -184,10 +189,6 @@
     },
     "skt.StatsForecastAutoTheta": {
         "class": "sktime.forecasting.statsforecast.StatsForecastAutoTheta"
-    },
-    "#skt.StatsForecastGARCH": {
-        "class": "sktime.forecasting.arch.StatsForecastGARCH",
-        "#warn": "NON MODELLA la TS"
     },
     "skt.StatsForecastMSTL": {
         "class": "sktime.forecasting.statsforecast.StatsForecastMSTL",

@@ -26,16 +26,14 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
 # end
 
 
-def create_fdir(name:str, jmodel: dict) -> str:
-    # model = create_from(jmodel)
-    # s = model.__class__.__module__
-    # p1 = s.rfind(".")
-    # p2 = s.rfind(".", 0, p1-1)
-
-    # module = s[p2 + 1:].replace(".", "/")
+def create_fdir(name:str, cat: str) -> str:
     module = replaces(name, ["_", "-", "."], "/")
 
-    fdir = f"plots/{module}/"
+    if cat.endswith("-t"):
+        fdir = f"plots_trends/{module}/"
+    else:
+        fdir = f"plots/{module}/"
+
     os.makedirs(fdir, exist_ok=True)
     return fdir
 # end
@@ -65,13 +63,15 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
         return
 
     print("---", name, "---")
-    fdir = create_fdir(name, jmodel)
 
     for g in dfdict:
         try:
             dfg = dfdict[g]
 
-            fname = f"{fdir}/{name}-{g[0]}.png"
+            cat = g[0]
+            fdir = create_fdir(name, cat)
+
+            fname = f"{fdir}/{name}-{cat}.png"
             if os.path.exists(fname) and not override:
                 continue
             else:
@@ -129,22 +129,22 @@ def main():
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
     SELECTED = []
-    EXCLUDED = ["ESRNN", "FED"]
+    EXCLUDED = []
 
-    jmodels = jsonx.load("darts_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
-    jmodels = jsonx.load("nf_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
+    # jmodels = jsonx.load("darts_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    #
+    # jmodels = jsonx.load("nf_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    #
     jmodels = jsonx.load("skx_models.json")
     check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    jmodels = jsonx.load("skt_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
-    jmodels = jsonx.load("skl_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # jmodels = jsonx.load("skt_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    #
+    # jmodels = jsonx.load("skl_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
     # jmodels = jsonx.load("ext_models.json")
     # check_models(df, jmodels, override=True)

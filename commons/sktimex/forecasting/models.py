@@ -1,7 +1,16 @@
 from sktime.forecasting.base import BaseForecaster as BaseForecaster
-from ..forecasting.skx.reducer import ReducerForecaster
-from ..forecasting.skx.regressor import RegressorForecaster
-from ..utils import import_from, dict_exclude, dict_select
+from ..forecasting.reducer import ReducerForecaster
+from ..forecasting.regressor import RegressorForecaster
+from ..utils import import_from, dict_exclude, dict_select, create_from
+
+
+
+def _startswith(name: str, prefixes: list[str]) -> bool:
+    for p in prefixes:
+        if name.startswith(p):
+            return True
+    return False
+# end
 
 
 def create_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
@@ -10,9 +19,9 @@ def create_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
     assert "class" in model_config, "Missing mandatory 'class' key in model_config"
 
     class_name: str = model_config["class"]
-    if class_name.startswith("sktime.") or class_name.startswith("sktimex."):
+    if _startswith(class_name, ["sktime.", "sktimex.", "sktimexnn.", "sktimext."]):
         forecaster = _create_sktime_forecaster(model_name, model_config)
-    elif class_name.startswith("sklearn.") or class_name.startswith("sklearnx."):
+    elif _startswith(class_name, ["sklearn.", "sklearnx."]):
         forecaster = _create_sklearn_forecaster(model_name, model_config)
     else:
         forecaster = _create_other_forecaster(model_name, model_config)
@@ -22,12 +31,14 @@ def create_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
 
 
 def _create_sktime_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
-    class_name = model_config["class"]
-    model_config = dict_exclude(model_config, ["class"])
+    # class_name = model_config["class"]
+    # model_config = dict_exclude(model_config, ["class"])
+    #
+    # class_instance = import_from(class_name)
+    # forecaster = class_instance(**model_config)
 
-    class_instance = import_from(class_name)
+    forecaster = create_from(model_config)
 
-    forecaster = class_instance(**model_config)
     return forecaster
 
 
