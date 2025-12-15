@@ -296,7 +296,7 @@ class RegressorForecaster(BaseForecaster):
     # update
     # -----------------------------------------------------------------------
     
-    def update(self, y, X=None, update_params=False):
+    def update(self, y, X=None, update_params=True):
         self._y = None
         self._X = None
         super().update(y=y, X=X, update_params=update_params)

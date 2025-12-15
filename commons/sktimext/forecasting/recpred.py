@@ -89,7 +89,7 @@ class RecursivePredict(BaseForecaster):
             self.update(yo, Xo)
         return yp
 
-    def update(self, y, X=None, update_params=False):
-        super().update(y, X, update_params=False)
+    def update(self, y, X=None, update_params=True):
+        super().update(y, X, update_params=update_params)
         # self._y = y
         # self._X = X

@@ -64,18 +64,10 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 
     print("---", name, "---")
 
-    for g in dfdict:
+    #for g in dfdict:
+    for g in [("sinabs12",)]:
         try:
             dfg = dfdict[g]
-
-            cat = g[0]
-            fdir = create_fdir(name, cat)
-
-            fname = f"{fdir}/{name}-{cat}.png"
-            if os.path.exists(fname) and not override:
-                continue
-            else:
-                print("...", g)
 
             X, y = pdx.xy_split(dfg, target=TARGET)
             X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
@@ -85,27 +77,9 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 
             # print("... fit")
             model.fit(y=y_train, X=X_train)
-
-            # print("... predict")
-            fh = y_test.index
-            y_predict = model.predict(fh=fh, X=X_test)
-            # y_predict = y_predict + 0.01
-
             model.update(y=y_train, X=X_train, update_params=False)
-            y_predict2 = model.predict(fh=fh, X=X_test)
-            y_predict2 = y_predict2 + 0.01
 
-            # print("... plot")
-            sktx.utils.plot_series(y_train, y_test, y_predict, y_predict2,
-                                   labels=["train", "test", "predict", "predict2"],
-                                   title=f"{name}: {g[0]}")
-
-            # save plot
-            # fname = f"{fdir}/{name}-{g[0]}.png"
-            plt.savefig(fname, dpi=300)
-            plt.close()
-
-            # break
+            break
         except Exception as e:
             print(f"ERROR[{name}]:", e)
             traceback.print_exception(*sys.exc_info())
@@ -115,14 +89,14 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=None, excludes=None):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    # for name in jmodels:
-    #     if selected(name, includes, excludes):
-    #         check_model(name, dfdict, jmodels[name], override)
+    for name in jmodels:
+        if selected(name, includes, excludes):
+            check_model(name, dfdict, jmodels[name], override)
 
-    Parallel(n_jobs=14)(
-        delayed(check_model)(name, dfdict, jmodels[name])
-        for name in jmodels if selected(name, includes, excludes)
-    )
+    # Parallel(n_jobs=14)(
+    #     delayed(check_model)(name, dfdict, jmodels[name])
+    #     for name in jmodels if selected(name, includes, excludes)
+    # )
 
     pass
 # end
@@ -133,7 +107,7 @@ def main():
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
     SELECTED = []
-    EXCLUDED = []
+    EXCLUDED = ["AutoTS", "Croston", "AutoREG", "SCINetForecaster"]
 
     # jmodels = jsonx.load("darts_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
