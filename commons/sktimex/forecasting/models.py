@@ -2,15 +2,7 @@ from sktime.forecasting.base import BaseForecaster as BaseForecaster
 from ..forecasting.reducer import ReducerForecaster
 from ..forecasting.regressor import RegressorForecaster
 from ..utils import import_from, dict_exclude, dict_select, create_from
-
-
-
-def _startswith(name: str, prefixes: list[str]) -> bool:
-    for p in prefixes:
-        if name.startswith(p):
-            return True
-    return False
-# end
+from ..utils import SKTIME_NAMESPACES, SKLEARN_NAMESPACES, starts_with
 
 
 def create_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
@@ -19,9 +11,9 @@ def create_forecaster(model_name: str, model_config: dict) -> BaseForecaster:
     assert "class" in model_config, "Missing mandatory 'class' key in model_config"
 
     class_name: str = model_config["class"]
-    if _startswith(class_name, ["sktime.", "sktimex.", "sktimexnn.", "sktimext."]):
+    if starts_with(class_name, SKTIME_NAMESPACES):
         forecaster = _create_sktime_forecaster(model_name, model_config)
-    elif _startswith(class_name, ["sklearn.", "sklearnx."]):
+    elif starts_with(class_name, SKLEARN_NAMESPACES):
         forecaster = _create_sklearn_forecaster(model_name, model_config)
     else:
         forecaster = _create_other_forecaster(model_name, model_config)

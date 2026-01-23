@@ -1,5 +1,23 @@
 from ..base import BaseForecaster
 
+# ForecastingGridSearchCV
+#         forecaster,
+#         cv,
+#         param_grid,
+#         scoring=None,
+#         strategy="refit",
+#         refit=True,
+#         verbose=0,
+#         return_n_best_forecasters=1,
+#         backend="loky",
+#         update_behaviour="full_refit",
+#         error_score=np.nan,
+#         tune_by_instance=False,
+#         tune_by_variable=False,
+#         backend_params=None,
+#         n_jobs="deprecated",
+#
+#
 # ForecastingRandomizedSearchCV
 #         forecaster,
 #         cv,
@@ -35,24 +53,6 @@ from ..base import BaseForecaster
 #         return_n_best_forecasters: int = 1,
 #         backend: str = "loky",
 #         update_behaviour: str = "full_refit",
-#         error_score=np.nan,
-#         tune_by_instance=False,
-#         tune_by_variable=False,
-#         backend_params=None,
-#         n_jobs="deprecated",
-#
-#
-# ForecastingGridSearchCV
-#         forecaster,
-#         cv,
-#         param_grid,
-#         scoring=None,
-#         strategy="refit",
-#         refit=True,
-#         verbose=0,
-#         return_n_best_forecasters=1,
-#         backend="loky",
-#         update_behaviour="full_refit",
 #         error_score=np.nan,
 #         tune_by_instance=False,
 #         tune_by_variable=False,

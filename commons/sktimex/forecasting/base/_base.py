@@ -39,7 +39,8 @@ class BaseForecaster(Sktime_BaseForecaster):
         # "ignores-exogeneous-X": False,
         "capability:exogenous": True,
         "requires-fh-in-fit": False,
-        "capability:missing_values": True
+        # "capability:missing_values": True
+        "capability:missing_values": False
     }
 
     """

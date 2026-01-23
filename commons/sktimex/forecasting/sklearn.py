@@ -9,10 +9,10 @@ from typing import Union
 import pandas as pd
 from sktime.forecasting.base import ForecastingHorizon
 
-from stdlib import kwval, kwexclude, ns_of, name_of, class_of, create_from
+from stdlib import kwval, kwexclude, name_of, class_of, create_from
 from .base import BaseForecaster
 from ..forecasting.compose import make_reduction
-from ..utils import SKTIME_NAMESPACES, SCIKIT_NAMESPACES, PD_TYPES
+from ..utils import SKTIME_NAMESPACES, SKLEARN_NAMESPACES, PD_TYPES, starts_with
 
 
 # ---------------------------------------------------------------------------
@@ -68,8 +68,7 @@ class ScikitLearnForecaster(BaseForecaster):
         estimator_class = class_of(self.estimator)
         kwargs = {} if isinstance(self.estimator, str) else self.estimator
 
-        ns = ns_of(estimator_class)
-        if ns in SCIKIT_NAMESPACES:
+        if starts_with(estimator_class, SKLEARN_NAMESPACES):
             window_length = self.window_length
             # window_length = kwval(kwargs, "window_length", 5)
             strategy = kwval(kwargs, "strategy", "recursive")
@@ -79,7 +78,7 @@ class ScikitLearnForecaster(BaseForecaster):
             regressor = create_from(self.estimator)
             # create the forecaster
             self._estimator = make_reduction(regressor, window_length=window_length, strategy=strategy)
-        elif ns in SKTIME_NAMESPACES:
+        elif starts_with(estimator_class, SKTIME_NAMESPACES):
             # create a sktime forecaster
             self._estimator = create_from(self.estimator)
         else:

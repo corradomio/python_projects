@@ -68,6 +68,8 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
         try:
             dfg = dfdict[g]
 
+            # ---------------------------------------------------------------
+
             cat = g[0]
             fdir = create_fdir(name, cat)
 
@@ -77,8 +79,11 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
             else:
                 print("...", g)
 
+            # ---------------------------------------------------------------
+
             X, y = pdx.xy_split(dfg, target=TARGET)
             X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
+            fh = y_test.index
 
             # print("... create")
             model = create_from(jmodel)
@@ -87,17 +92,12 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
             model.fit(y=y_train, X=X_train)
 
             # print("... predict")
-            fh = y_test.index
             y_predict = model.predict(fh=fh, X=X_test)
             # y_predict = y_predict + 0.01
 
-            model.update(y=y_train, X=X_train, update_params=False)
-            y_predict2 = model.predict(fh=fh, X=X_test)
-            y_predict2 = y_predict2 + 0.01
-
             # print("... plot")
-            sktx.utils.plot_series(y_train, y_test, y_predict, y_predict2,
-                                   labels=["train", "test", "predict", "predict2"],
+            sktx.utils.plot_series(y_train, y_test, y_predict,
+                                   labels=["train", "test", "predict"],
                                    title=f"{name}: {g[0]}")
 
             # save plot
@@ -112,17 +112,17 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 # end
 
 
-def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=None, excludes=None):
+def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=[], excludes=[]):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    # for name in jmodels:
-    #     if selected(name, includes, excludes):
-    #         check_model(name, dfdict, jmodels[name], override)
+    for name in jmodels:
+        if selected(name, includes, excludes):
+            check_model(name, dfdict, jmodels[name], override)
 
-    Parallel(n_jobs=14)(
-        delayed(check_model)(name, dfdict, jmodels[name])
-        for name in jmodels if selected(name, includes, excludes)
-    )
+    # Parallel(n_jobs=14)(
+    #     delayed(check_model)(name, dfdict, jmodels[name])
+    #     for name in jmodels if selected(name, includes, excludes)
+    # )
 
     pass
 # end
@@ -135,23 +135,23 @@ def main():
     SELECTED = []
     EXCLUDED = []
 
-    # jmodels = jsonx.load("darts_models.json")
+    # jmodels = jsonx.load("config/darts_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    # jmodels = jsonx.load("nf_models.json")
+    # jmodels = jsonx.load("config/nf_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    # jmodels = jsonx.load("skt_models.json")
+    # jmodels = jsonx.load("config/skt_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    jmodels = jsonx.load("skl_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # jmodels = jsonx.load("config/skl_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    jmodels = jsonx.load("skx_models.json")
-    check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # jmodels = jsonx.load("config/skx_models.json")
+    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
-    # jmodels = jsonx.load("ext_models.json")
-    # check_models(df, jmodels, override=True)
+    jmodels = jsonx.load("config/ext_models.json")
+    check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
 
     pass
 # end

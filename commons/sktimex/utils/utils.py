@@ -16,16 +16,22 @@ RangeType = type(range(0))
 CollectionType = (list, tuple)
 FunctionType = type(lambda x: x)
 
+PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]
+
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
 
-SCIKIT_NAMESPACES = ["sklearn", "catboost", "lightgbm", "xgboost", "sklearnx"]
-SKTIME_NAMESPACES = ["sktime", "sktimex"]
+SKLEARN_NAMESPACES = ["sklearn.", "sklearnx.", "catboost.", "lightgbm.", "xgboost."]
+SKTIME_NAMESPACES = ["sktime.", "sktimex.", "sktimexnn.", "sktimext."]
 
-FH_TYPES = Union[NoneType, int, list[int], np.ndarray, ForecastingHorizon]
-PD_TYPES = Union[NoneType, pd.Series, pd.DataFrame]
-
+def starts_with(name: str, prefixes: list[str]) -> bool:
+    for p in prefixes:
+        if name.startswith(p):
+            return True
+    return False
+# end
 
 # ---------------------------------------------------------------------------
 # method_of
@@ -48,20 +54,23 @@ def _has_xyfh(model):
     return hasattr(model, "_X") and hasattr(model, "_y") and hasattr(model, "_fh")
 
 
-def clear_yX(model):
+def clear_yX(model, recursive=False):
     if isinstance(model, list):
         estimators_list = model
         for estimator in estimators_list:
-            clear_yX(estimator)
+            clear_yX(estimator, recursive=recursive)
 
     elif isinstance(model, dict):
         estimators_dict = model
         for key in estimators_dict:
-            clear_yX(estimators_dict[key])
+            clear_yX(estimators_dict[key], recursive=recursive)
 
     elif _has_xyfh(model):
         model._X = None
         model._y = None
+
+        if not recursive:
+            return
 
         for attr in [
             "estimators", "_estimators", "estimators_",
@@ -70,7 +79,7 @@ def clear_yX(model):
             "forecaster", "_forecaster", "forecaster_",
         ]:
             if hasattr(model, attr):
-                clear_yX(getattr(model, attr))
+                clear_yX(getattr(model, attr), recursive=recursive)
     return
 # end
 
