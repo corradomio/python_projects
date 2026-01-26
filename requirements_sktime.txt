@@ -220,10 +220,15 @@ scikit-optimize
 hyperactive
 
 
+# https://github.com/SimonBlanke/Gradient-Free-Optimizers
+gradient-free-optimizers
+
+
 # https://pypi.org/project/optuna/#files
 # https://optuna.org/
 # https://optuna.readthedocs.io/en/stable/
 optuna
+
 
 # ---------------------------------------------------------------------------
 # Test

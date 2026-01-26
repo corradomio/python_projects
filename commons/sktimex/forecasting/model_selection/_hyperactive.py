@@ -5,6 +5,28 @@ from stdlib.qname import create_from
 # ---------------------------------------------------------------------------
 # ForecastingHyperactiveSearchCV
 # ---------------------------------------------------------------------------
+# Hyperactive provides 31 optimization algorithms across 3 backends (GFO,
+# Optuna, scikit-learn), accessible through a unified experiment-based interface.
+# The library separates optimization problems from algorithms, enabling you
+# to swap optimizers without changing your experiment code.
+#
+# Designed for hyperparameter tuning, model selection, and black-box optimization.
+# Native integrations with scikit-learn, sktime, skpro, and PyTorch allow tuning
+# ML models with minimal setup. Define your objective, specify a search space,
+# and run.
+#
+# GFO: Gradient Free Optimizers
+#   https://github.com/SimonBlanke/Gradient-Free-Optimizers
+#
+# Optuna
+#   https://optuna.readthedocs.io/en/stable/#
+#
+# scikit-learn
+#   https://scikit-learn.org/stable/
+#
+# Hyperactive
+#   https://github.com/hyperactive-project/Hyperactive
+#
 
 class ForecastingHyperactiveSearchCV(Sktime_ForecastingHyperactiveSearchCV):
 

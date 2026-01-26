@@ -70,17 +70,25 @@ lightgbm
 
 
 # ---------------------------------------------------------------------------
-# Optimizers
+# optimization
 # ---------------------------------------------------------------------------
 
-
-# https://scikit-optimize.github.io/stable/
+# https://scikit-optimize.github.io/stable/modules/generated/skopt.Optimizer.html
 scikit-optimize
 
-# https://github.com/hyperactive-project/Hyperactive
-hyperactive 
 
+# https://pypi.org/project/hyperactive/
+# https://github.com/SimonBlanke/Hyperactive
+hyperactive
+
+
+# https://github.com/SimonBlanke/Gradient-Free-Optimizers
+gradient-free-optimizers
+
+
+# https://pypi.org/project/optuna/#files
 # https://optuna.org/
+# https://optuna.readthedocs.io/en/stable/
 optuna
 
 # ---------------------------------------------------------------------------
