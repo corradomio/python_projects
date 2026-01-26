@@ -1,6 +1,6 @@
 from typing import Optional
 
-from sktime.forecasting.model_selection import ForecastingRandomizedSearchCV as Sktime_ForecastingRandomizedSearchCV
+from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
 from stdlib.qname import create_from
 
 
@@ -8,29 +8,32 @@ from stdlib.qname import create_from
 # ForecastingRandomizedSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
+class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
     def __init__(
             self,
             forecaster: str | dict,
             cv: str | dict,
-            param_grid: Optional[dict] =None,
-            param_distributions: Optional[dict]=None,
+            param_grid: Optional[dict] = None,
+            param_distributions: None | dict | list[dict] = None,
 
             scoring=None,
-            strategy="refit",
-            refit=True,
-            update_behaviour="full_refit",
+            strategy: str | None = "refit",
+            refit: bool = True,
+            update_behaviour: str = "full_refit",
 
-            n_iter=10,
-            return_n_best_forecasters=1,
+            n_iter: int = 10,
+            n_points: int | None = 1,
+            optimizer_kwargs: dict | None = None,
+
+            return_n_best_forecasters: int = 1,
+            random_state: int | None = None,
             error_score="nan",
-            random_state=None,
             tune_by_instance=False,
             tune_by_variable=False,
 
-            backend="loky",
+            backend: str = "loky",
             backend_params=None,
-            verbose=0,
+            verbose: int = 0,
     ):
         assert param_grid is None or param_distributions is None, \
             "Only one of 'param_grid' or 'param_distributions' can be not None"
@@ -40,7 +43,9 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
             cv=create_from(cv),
             param_distributions=param_distributions if param_grid is None else param_grid,
             n_iter=n_iter,
+            n_points=n_points,
             scoring=scoring,
+            optimizer_kwargs=optimizer_kwargs,
             strategy=strategy,
             refit=refit,
             verbose=verbose,

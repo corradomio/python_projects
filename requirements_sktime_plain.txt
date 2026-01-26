@@ -1,0 +1,251 @@
+# ---------------------------------------------------------------------------
+# sklearn environment with support
+#   sktime (time series)
+#   pytorch (NN)
+# ---------------------------------------------------------------------------
+# Utilities
+
+# https://pypi.org/project/Deprecated/
+deprecated
+
+# https://python-future.org/
+future
+
+# https://path.readthedocs.io/en/latest/
+path
+
+# https://pypi.org/project/multimethod/
+multimethod
+
+# https://pypi.org/project/tabulate/
+tabulate
+
+# https://docs.h5py.org/en/stable/quick.html#quick
+#h5py
+
+# https://docs.pydantic.dev/latest/
+pydantic
+
+
+# ---------------------------------------------------------------------------
+# standard libraries
+# ---------------------------------------------------------------------------
+
+# https://numpy.org/
+numpy
+
+# https://scipy.org/
+scipy
+
+# https://matplotlib.org/
+matplotlib
+
+# https://seaborn.pydata.org/
+seaborn
+
+
+# ---------------------------------------------------------------------------
+# pandas-like libraries
+# ---------------------------------------------------------------------------
+
+# https://pandas.pydata.org/
+pandas
+
+
+# ---------------------------------------------------------------------------
+# scikit-learn
+# ---------------------------------------------------------------------------
+
+# https://scikit-learn.org
+scikit-learn
+
+# https://xgboost.readthedocs.io/en/stable/
+xgboost
+
+# https://catboost.ai/
+catboost
+
+# https://lightgbm.readthedocs.io/en/stable/
+lightgbm
+
+
+# ---------------------------------------------------------------------------
+# Optimizers
+# ---------------------------------------------------------------------------
+
+
+# https://scikit-optimize.github.io/stable/
+scikit-optimize
+
+# https://github.com/hyperactive-project/Hyperactive
+hyperactive 
+
+# https://optuna.org/
+optuna
+
+# ---------------------------------------------------------------------------
+# time series
+# ---------------------------------------------------------------------------
+
+# https://sktime.org/
+sktime
+
+# http://alkaline-ml.com/pmdarima/
+pmdarima
+
+# https://www.statsmodels.org/stable/index.html
+statsmodels
+
+# https://pypi.org/project/statsforecast/
+statsforecast 
+
+# https://pypi.org/project/autots/
+#autots
+
+# https://pypi.org/project/tbats/
+#tbats
+
+# https://pypi.org/project/arch/
+#arch
+
+# https://pypi.org/project/transformers/
+#transformers
+
+
+#dacite
+#tirex
+
+# ---------------------------------------------------------------------------
+# extensions
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# NN but ONLY for scikit learn/time series
+# ---------------------------------------------------------------------------
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu126
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+# pip3 install torch torchvision --index-url https://download.pytorch.org/whl/cu130
+# pip3 install torch torchvision
+
+
+#--extra-index-url https://download.pytorch.org/whl/cu126
+#torch
+#torchvision
+#torchaudio
+#torchtext
+#torchmetrics
+
+
+# https://skorch.readthedocs.io/en/stable/
+#skorch
+
+
+# https://lightning.ai/
+# https://lightning.ai/docs/pytorch/stable/
+# https://github.com/Lightning-AI/pytorch-lightning
+#lightning
+
+
+# ---------------------------------------------------------------------------
+# database access
+# sqlalchemy
+#   mysql
+#   postgresql
+# ---------------------------------------------------------------------------
+
+# https://www.psycopg.org/
+psycopg2
+# psycopg2-binary
+# v3.0
+# psycopg[binary]
+
+# https://www.google.com/search?client=firefox-b-d&q=mysql-connector-python
+mysql-connector-python
+pymysql
+
+# https://www.sqlalchemy.org/
+# https://docs.sqlalchemy.org/en/14/dialects/mysql.html
+# https://docs.sqlalchemy.org/en/14/dialects/postgresql.html
+sqlalchemy
+
+
+# ---------------------------------------------------------------------------
+# TS based on NN
+# ---------------------------------------------------------------------------
+
+# https://nixtlaverse.nixtla.io/neuralforecast/index.html
+# https://pypi.org/project/neuralforecast/0.0.6/
+# https://github.com/Nixtla/neuralforecast/tree/main/
+#neuralforecast
+
+# https://pypi.org/project/datasetsforecast/
+# https://github.com/Nixtla/datasetsforecast/tree/main/
+#datasetsforecast
+
+# https://pypi.org/project/hierarchicalforecast/
+# https://github.com/Nixtla/hierarchicalforecast/
+#hierarchicalforecast
+
+
+# https://pypi.org/project/xlstm/
+#xlstm
+
+
+# https://facebook.github.io/prophet/docs/quick_start.html
+prophet
+
+
+# https://github.com/huggingface/xet-core
+# used by TimeLLM
+#hf_xet
+
+
+# https://unit8co.github.io/darts/
+#darts
+
+
+# Incompatible: requires pytorch 2.7 and NOT 2.9
+# https://timeseriesai.github.io/tsai/
+#tsai
+
+
+# ---------------------------------------------------------------------------
+# other
+# ---------------------------------------------------------------------------
+
+# https://pyts.readthedocs.io/en/stable
+#pyts
+
+# https://github.com/sktime/skpro
+#skpro
+
+
+
+# ---------------------------------------------------------------------------
+# optimization
+# ---------------------------------------------------------------------------
+
+# https://scikit-optimize.github.io/stable/modules/generated/skopt.Optimizer.html
+#scikit-optimize
+
+
+# https://pypi.org/project/hyperactive/
+# https://github.com/SimonBlanke/Hyperactive
+#hyperactive
+
+
+# https://pypi.org/project/optuna/#files
+# https://optuna.org/
+# https://optuna.readthedocs.io/en/stable/
+#optuna
+
+# ---------------------------------------------------------------------------
+# Test
+# ---------------------------------------------------------------------------
+
+pytest
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

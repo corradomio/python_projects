@@ -1,59 +1,58 @@
-from sktime.forecasting.model_selection import ForecastingGridSearchCV as Sktime_ForecastingGridSearchCV
+from sktime.forecasting.model_selection import ForecastingOptCV as Sktime_ForecastingHyperactiveSearchCV
 from stdlib.qname import create_from
 
 
 # ---------------------------------------------------------------------------
-# ForecastingGridSearchCV
+# ForecastingHyperactiveSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
+class ForecastingHyperactiveSearchCV(Sktime_ForecastingHyperactiveSearchCV):
+
     def __init__(
             self,
-            forecaster: str | dict,
+            forecaster: str|dict,
             cv: str | dict,
-            param_grid: dict,
+
+            optimizer: str | dict,
+
             scoring=None,
             strategy="refit",
             refit=True,
             update_behaviour="full_refit",
 
-            return_n_best_forecasters=1,
-
             error_score="nan",
-            tune_by_instance=False,
-            tune_by_variable=False,
+            cv_X=None,
 
-            backend="loky",
+            backend=None,
             backend_params=None,
-            verbose=0,
+            verbose=0
     ):
         super().__init__(
             forecaster=create_from(forecaster),
             cv=create_from(cv),
-            param_grid=param_grid,
+            optimizer=create_from(optimizer),
             scoring=scoring,
             strategy=strategy,
             refit=refit,
-            verbose=verbose,
-            return_n_best_forecasters=return_n_best_forecasters,
+
+            cv_X=cv_X,
             update_behaviour=update_behaviour,
             error_score=float(error_score),
+
             backend=backend,
-            backend_params=backend_params,
-            tune_by_instance=tune_by_instance,
-            tune_by_variable=tune_by_variable,
-            n_jobs=n_jobs
+            backend_params=backend_params
         )
-        self._forecaster_override=forecaster
-        self._cv_override=cv
+        self._forecaster_override = forecaster
+        self._optimizer_override = optimizer
+        self._cv_override = cv
         self._error_score_override = error_score
-        return
 
     def get_params(self, deep=True):
         params = super().get_params(deep=deep)
         # OVERRIDE the parameters passed as configuration and NOT as Python objects
-        params['forecaster'] = self._forecaster_override
-        params['cv'] = self._cv_override
+        params["forecaster"] = self._forecaster_override
+        params["optimizer"] = self._optimizer_override
+        params["cv"] = self._cv_override
         params["error_score"] = self._error_score_override
         return params
 

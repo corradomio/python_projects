@@ -1,10 +1,12 @@
 # This is a sample Python script.
 
-import stdlib.loggingx as logging
+import stdlib.logging as logging
+# import logging.config
 
 
 def main():
     logging.config.fileConfig('logging_config.ini')
+    logging.setFileLoggerFile("cicciopasticcio.log")
 
     # logging.info("I'm an informational message.")
     # logging.debug("I'm a message for debugging purposes.")

@@ -22,7 +22,7 @@ def fix_fh_relative(fh: ForecastingHorizon) -> ForecastingHorizon:
         fh._is_relative = False
     return fh
 
-def predict_fix_fh(self, fh: ForecastingHorizon, X):
+def predict_fix_fh(self, fh: ForecastingHorizon, X=None):
     fh = fix_fh_relative(fh)
     y_pred = self.predict_fix(fh, X)
     return y_pred
