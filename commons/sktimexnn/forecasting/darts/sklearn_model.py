@@ -1,5 +1,5 @@
 from typing import Optional
-from stdlib import create_from, create_from_collection
+from stdlib.qname import create_from, create_from_collection
 
 import darts.models.forecasting.sklearn_model as dm
 from darts.models.forecasting.sklearn_model import LAGS_TYPE, FUTURE_LAGS_TYPE

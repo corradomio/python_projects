@@ -6,6 +6,8 @@ from pandasx import groups_split, groups_merge
 
 __all__ = ['concat']
 
+from stdlib import is_instance
+
 
 # ---------------------------------------------------------------------------
 # concat
@@ -57,8 +59,22 @@ def concat(
     df_list: list[DataFrame]|list[Series],
     select:Optional[str]=None,
     groups:Optional[list[str]]=None,
-    reset_index=False
+    reset_index=False,
+    axis=None,
+    ignore_index=False
 ) -> DataFrame:
+    assert is_instance(df_list, list[DataFrame]|list[Series])
+    assert is_instance(select, Optional[str])
+    assert is_instance(groups, Optional[list[str]])
+
+    # 0) remove None or df with length == 0
+    df_list = [df for df in df_list if df is not None and len(df) > 0]
+    if len(df_list) == 0:
+        df_list = [df for df in df_list if df is not None]
+        df_list = df_list[0:1]
+    if len(df_list) == 1:
+        return df_list[0]
+
     # extends concat to concatenate multiple dataframes based on datetime
     if select is None:
         df_cat = pd.concat(df_list, ignore_index=reset_index)

@@ -1,6 +1,6 @@
 import logging
-import numpy as np
 import pandas as pd
+import pandasx as pdx
 
 from numpy import issubdtype, datetime64
 from pandas import DataFrame, Period, PeriodIndex, to_datetime
@@ -193,8 +193,18 @@ class DateTimeToIndexTransformer(BaseEncoder):
         pass
 
     def transform(self, X: pd.DataFrame):
+        # PROBLEM: the datetime column could be inconsistent!!!!
+        #       composed by timestamps NOT correctly distributed based on freq
+        #       We can SUPPOSE the LAST timestamp IS CORRECT,
+        #       then, it is necessary to recreate a sequence of timestamps
+        #       correctlu destributed backward
         datetime = self.columns[0]
         dtser = X[datetime]
+
+        n = len(dtser)
+        last  = dtser.iloc[-1]
+        dtser = pdx.date_range(end=last, periods=n, freq=self.freq)
+
         X.set_index(dtser, inplace=True)
         if self.freq is not None and not isinstance(X.index, pd.PeriodIndex):
             di: pd.DatetimeIndex = X.index

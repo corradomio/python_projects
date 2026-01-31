@@ -2,21 +2,8 @@ from typing import Literal, Union, cast
 from stdlib.is_instance import is_instance
 from datetime import datetime
 from .convert import DT_TYPES, convert
+from .dateutils import to_doy, to_wom, to_woy
 
-#
-# La prima settimana dell'anno
-# inizia il lunedì della settimana che contiene il primo giovedì dell'anno,
-# secondo lo standard ISO 8601.
-# Per il 2025, questo significa che la prima settimana è iniziata il lunedì
-# 30 dicembre 2024 e terminerà il 5 gennaio 2025
-#
-
-#
-# La prima settimana del mese e' qualunque settimana che inizia con il
-# giorno 1 del mese. La settimana inizia lunedi e finisce domenica.
-# Se il primo giorno del mese e' domenica, la settiama e' composa SOLO
-# da domenica
-#
 
 DOW_NAME = [[
     "monday",
@@ -75,48 +62,6 @@ DT_FIELD = Literal[
     "week_of_year", "woy",
     "week_of_month", "wom"
 ]
-
-
-MONTH_DAYS = [
-    [0, 31,28,31,30,31,30,31,31,30,31,30,31,],
-    [0, 31,29,31,30,31,30,31,31,30,31,30,31,],
-]
-
-def is_leap(year: int) -> bool:
-    """is leap year"""
-    if year % 400 == 0:
-        return True
-    if year % 100 == 0:
-        return False
-    else:
-        return year % 4 == 0
-# end
-
-
-def to_doy(dt: datetime) -> int:
-    """day of year"""
-    year = dt.year
-    month = dt.month
-    day = dt.day
-    leap = is_leap(year)
-    doy = 0
-    mdays = MONTH_DAYS[leap]
-    for i in range(month):
-        doy += mdays[i]
-    doy += day
-    return doy
-# end
-
-def to_woy(dt: datetime) ->int:
-    """week of year"""
-    return dt.isocalendar()[1]
-
-
-def to_wom(dt: datetime) -> int:
-    """week of month"""
-    dow = datetime(dt.year, dt.month, 1).weekday()
-    return (dt.day-dow+6)//7 + 1
-
 
 
 DT_EXTRACTORS = {

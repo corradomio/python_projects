@@ -6,7 +6,7 @@ import pandas as pd
 
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.forecasting.base import ScaledForecaster
-from stdlib import import_from, create_from
+from stdlib.qname import import_from, create_from
 
 
 # ---------------------------------------------------------------------------

@@ -53,18 +53,24 @@ def import_from(qname: str) -> Any:
     return clazz
 
 
-def create_from(instance_info: str | dict, aliases=None) -> Any:
+def create_from(instance_info: str | dict, aliases: Optional[dict]=None) -> Any:
     """
     Create and instance of the object.
+    If it is a string, it must be the fully qualified class name.
+    If it is a dictionary, it must have the form:
 
     instance_info: {
         "class": "qname|alias|type",
         "p1": <v1>, ...
     }
 
+    It is possible to use 'alias' names, passed in the extra parameter 'aliases
+
     aliases: {
         "alias": "qname|type"
     }
+    
+    Note: the class can be a Python class object
     
     """
     if instance_info is None:
@@ -104,18 +110,35 @@ def create_from(instance_info: str | dict, aliases=None) -> Any:
 
 
 def create_from_collection(collection: Union[None, list, dict]) -> Union[None, list, dict]:
+    """
+    Create a list of objects or a dictionary of objects.
+    The list must have the form:
+
+        [{"class": ..., ...}, ...]
+
+    The dictionary must have the form:
+
+        {
+            "name": {
+                "class": ...
+                ...
+            },
+            ...
+        }
+
+    """
     if collection is None:
         return None
 
     if isinstance(collection, dict):
         return {
-            k: create_from(collection[k])
-            for k in collection
+            name: create_from(config)
+            for name, config in collection.items()
         }
     elif isinstance(collection, list):
         return [
-            create_from(e)
-            for e in collection
+            create_from(config)
+            for config in collection
         ]
     else:
         raise ValueError(f"Unsupported collection type {type(collection)}")

@@ -1,7 +1,8 @@
 import sys
 import traceback
 from sktimex.forecasting import create_forecaster
-from stdlib import jsonx, create_from, qualified_type
+from stdlib import jsonx
+from stdlib.qname import create_from, qualified_type
 from synth import *
 
 

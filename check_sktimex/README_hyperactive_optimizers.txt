@@ -1,0 +1,37 @@
+RandomSearchSk(BaseOptimizer) (hyperactive.opt.random_search)
+GridSearchSk(BaseOptimizer) (hyperactive.opt.gridsearch._sk)
+
+-- gradient-free-optimizer --
+
+RandomSearch(_BaseGFOadapter) (hyperactive.opt.gfo._random_search)
+HillClimbing(_BaseGFOadapter) (hyperactive.opt.gfo._hillclimbing)
+ParallelTempering(_BaseGFOadapter) (hyperactive.opt.gfo._parallel_tempering)
+DifferentialEvolution(_BaseGFOadapter) (hyperactive.opt.gfo._differential_evolution)
+DirectAlgorithm(_BaseGFOadapter) (hyperactive.opt.gfo._direct_algorithm)
+TreeStructuredParzenEstimators(_BaseGFOadapter) (hyperactive.opt.gfo._tree_structured_parzen_estimators)
+LipschitzOptimizer(_BaseGFOadapter) (hyperactive.opt.gfo._lipschitz_optimization)
+SpiralOptimization(_BaseGFOadapter) (hyperactive.opt.gfo._spiral_optimization)
+ParticleSwarmOptimizer(_BaseGFOadapter) (hyperactive.opt.gfo._particle_swarm_optimization)
+RepulsingHillClimbing(_BaseGFOadapter) (hyperactive.opt.gfo._repulsing_hillclimbing)
+GeneticAlgorithm(_BaseGFOadapter) (hyperactive.opt.gfo._genetic_algorithm)
+DownhillSimplexOptimizer(_BaseGFOadapter) (hyperactive.opt.gfo._downhill_simplex)
+BayesianOptimizer(_BaseGFOadapter) (hyperactive.opt.gfo._bayesian_optimization)
+RandomRestartHillClimbing(_BaseGFOadapter) (hyperactive.opt.gfo._random_restart_hill_climbing)
+EvolutionStrategy(_BaseGFOadapter) (hyperactive.opt.gfo._evolution_strategy)
+SimulatedAnnealing(_BaseGFOadapter) (hyperactive.opt.gfo._simulated_annealing)
+ForestOptimizer(_BaseGFOadapter) (hyperactive.opt.gfo._forest_optimizer)
+PatternSearch(_BaseGFOadapter) (hyperactive.opt.gfo._pattern_search)
+GridSearch(_BaseGFOadapter) (hyperactive.opt.gfo._grid_search)
+PowellsMethod(_BaseGFOadapter) (hyperactive.opt.gfo._powells_method)
+StochasticHillClimbing(_BaseGFOadapter) (hyperactive.opt.gfo._stochastic_hillclimbing)
+
+-- optuna --
+
+GPOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._gp_optimizer)
+GridOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._grid_optimizer)
+QMCOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._qmc_optimizer)
+TPEOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._tpe_optimizer)
+RandomOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._random_optimizer)
+NSGAIIOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._nsga_ii_optimizer)
+NSGAIIIOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._nsga_iii_optimizer)
+CmaEsOptimizer(_BaseOptunaAdapter) (hyperactive.opt.optuna._cmaes_optimizer)

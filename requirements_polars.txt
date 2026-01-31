@@ -64,9 +64,10 @@ seaborn
 # ---------------------------------------------------------------------------
 
 # https://pola.rs/
-#polars
-# This is for CPU
-polars-lts-cpu
+polars
+# This is for OLD CPU, no AVX
+# polars-lts-cpu
+# polars can use RAPIDS cuDF, but ONLY in Linux
 
 
 # https://arrow.apache.org/docs/python/install.html

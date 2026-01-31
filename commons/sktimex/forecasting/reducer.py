@@ -13,7 +13,8 @@ from sktime.forecasting.compose import make_reduction
 from sktime.forecasting.base import ForecastingHorizon
 from .base import BaseForecaster
 from ..utils import PD_TYPES, to_index, to_numpy, to_data
-from stdlib import class_of, name_of, is_instance, create_from
+from stdlib import is_instance
+from stdlib.qname import class_of, name_of, create_from
 
 # ---------------------------------------------------------------------------
 # Utility

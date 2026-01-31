@@ -9,7 +9,8 @@ import pandas as pd
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
-from stdlib import jsonx, create_from
+from stdlib import jsonx
+from stdlib.qname import create_from
 from sktime.forecasting.arch import ARCH
 from synth import create_syntethic_data
 

@@ -1,6 +1,7 @@
 numpy
 scipy
 matplotlib
+psutil
 
 # https://arrayfire.com/
 arrayfire
@@ -10,7 +11,11 @@ cupy-cuda12x
 
 # https://numba.readthedocs.io/en/stable/
 # https://nvidia.github.io/numba-cuda/
-numba-cuda
+# replace numpy 2.4.1 -> 2.3.5 
+numba-cuda[cu12]
+
+# https://nvidia.github.io/cuda-python/latest/
+cuda-python
 
 # https://pypi.org/project/pycuda/
 pycuda
@@ -22,5 +27,9 @@ warp-lang
 # https://triton-lang.org/main/getting-started/installation.html
 # triton
 
-# https://nvidia.github.io/cuda-python/latest/
-cuda-python
+
+# https://www.intel.com/content/www/us/en/developer/tools/oneapi/base-toolkit.html
+intel-cmplr-lib-rt
+
+# win32api
+pywin32

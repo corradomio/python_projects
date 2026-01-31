@@ -14,7 +14,7 @@ from .base import BaseForecaster
 from ..transform.lags import yxu_lags, t_lags
 from ..transform.lint import LinearTrainTransform
 from ..utils import PD_TYPES, NoneType
-from stdlib import create_from, name_of, class_of
+from stdlib.qname import create_from, name_of, class_of
 
 
 # ---------------------------------------------------------------------------

@@ -8,6 +8,7 @@ from sktimex.forecasting.model_selection import ForecastingHyperactiveSearchCV a
 from sktimex.forecasting.model_selection import ForecastingOptunaSearchCV as ForecastingOptunaSearchCVX
 from sktime.split import ExpandingWindowSplitter
 from sktime.forecasting.naive import NaiveForecaster
+from hyperactive.opt import GridSearchSk
 import matplotlib.pyplot as plt
 
 y = load_shampoo_sales()
@@ -114,9 +115,13 @@ def check_fhs():
         forecaster={
             "class": "sktime.forecasting.naive.NaiveForecaster"
         },
-        param_grid={
-            "strategy": ["last", "mean", "drift"]
+        optimizer={
+            "class": "hyperactive.opt.GridSearchSk",
+            "param_grid": {
+                "strategy": ["last", "mean", "drift"]
+            }
         },
+        pred_len=3,
         cv={
             "class": "sktime.split.ExpandingWindowSplitter",
             "fh": fh
@@ -164,8 +169,8 @@ def main():
     # check_fgs()
     # check_frs()
     # check_fss()
-    # check_fhs()
-    check_fos()
+    check_fhs()
+    # check_fos()
     pass
 
 

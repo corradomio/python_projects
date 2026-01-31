@@ -10,7 +10,8 @@ from joblib import Parallel, delayed
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
-from stdlib import jsonx, create_from
+from stdlib import jsonx
+from stdlib.qname import create_from
 from synth import create_syntethic_data
 
 # Suppress all UserWarning instances
