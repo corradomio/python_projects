@@ -9,6 +9,10 @@ from stdlib.qname import create_from
 # ---------------------------------------------------------------------------
 
 class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
+    """
+    Added support to create the class using a dict/JSON object
+    """
+
     def __init__(
             self,
             forecaster: str | dict,
@@ -58,7 +62,6 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
 
             backend=backend,
             backend_params=backend_params,
-            n_jobs=n_jobs
         )
         self._forecaster_override = forecaster
         self._cv_override = cv

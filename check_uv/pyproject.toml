@@ -8,5 +8,5 @@ dependencies = [
     "sktime",
     "polars",
     "joblib",
-    "psutil",
+    "psutil"
 ]

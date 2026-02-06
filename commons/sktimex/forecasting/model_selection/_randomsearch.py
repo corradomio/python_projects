@@ -9,6 +9,19 @@ from stdlib.qname import create_from
 # ---------------------------------------------------------------------------
 
 class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
+    """
+    Extends
+
+        'sktime.forecasting.model_selection.ForecastingRandomizedSearchCV'
+
+    supporting the parameter 'param_grid', converted into 'param_distributions'
+    where each value in the grid is selected randomly with uniform distribution.
+    This permits to configure 'ForecastingRandomizedSearchCV' and 'ForecastingGridSearchCV'
+    without to change the parameters.
+
+    Added support to create the class using a dict/JSON object
+    """
+
     def __init__(
             self,
             forecaster: str | dict,
@@ -53,7 +66,6 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
 
             backend=backend,
             backend_params=backend_params,
-            n_jobs=n_jobs
         )
         self._forecaster_override = forecaster
         self._cv_override = cv

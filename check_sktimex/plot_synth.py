@@ -17,7 +17,7 @@ def main():
 
         plt.plot_series(y, labels=[cat])
 
-        plt.savefig(f"synth/{cat[0]}.png", dpi=300)
+        plt.savefig(f"plot_synth/{cat[0]}.png", dpi=300)
         plt.close()
     # end
     pass

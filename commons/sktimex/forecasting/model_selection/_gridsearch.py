@@ -7,6 +7,10 @@ from stdlib.qname import create_from
 # ---------------------------------------------------------------------------
 
 class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
+    """
+    Added support to create the class using a dict/JSON object
+    """
+
     def __init__(
             self,
             forecaster: str | dict,
@@ -41,8 +45,7 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             backend=backend,
             backend_params=backend_params,
             tune_by_instance=tune_by_instance,
-            tune_by_variable=tune_by_variable,
-            n_jobs=n_jobs
+            tune_by_variable=tune_by_variable
         )
         self._forecaster_override=forecaster
         self._cv_override=cv

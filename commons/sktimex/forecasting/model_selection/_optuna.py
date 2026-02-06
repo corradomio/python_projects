@@ -25,6 +25,9 @@ def to_optuna_distributions(param_grid: dict):
 #   'param_grid' must be a dictionary of 'optuna samplers'
 
 class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
+    """
+    Added support to create the class using a dict/JSON object
+    """
 
     def __init__(
             self,

@@ -1,5 +1,5 @@
 from sktime.forecasting.base import ForecastingHorizon
-from sktime.forecasting.model_selection import ForecastingOptCV as Sktime_ForecastingHyperactiveSearchCV
+from sktime.forecasting.model_selection import ForecastingOptCV as Sktime_ForecastingOptCV
 from stdlib.qname import create_from
 
 
@@ -41,7 +41,10 @@ def _to_optimizer_info(optimizer, param_grid):
 #   https://github.com/hyperactive-project/Hyperactive
 #
 
-class ForecastingHyperactiveSearchCV(Sktime_ForecastingHyperactiveSearchCV):
+class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
+    """
+    Added support to create the class using a dict/JSON object
+    """
 
     def __init__(
             self,

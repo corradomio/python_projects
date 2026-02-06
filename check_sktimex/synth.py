@@ -72,12 +72,16 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
     n += 1
 
     # -- const_wave --
-    for c in [-1, 0, 1]:
+    for c in [1]:
         x = np.linspace(0, 1, num=n, dtype=float)
         y, x = const_wave(x, c)
         y = noise_signal(y, noise)
         df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
-        df["cat"] = f"c={c}"
+        if c == 0: name="zero"
+        elif c > 0: name="pos"
+        elif c < 0: name="neg"
+        else: name="unk"
+        df["cat"] = f"{name}"
         df_list.append(df)
 
     # -- square_wave --
@@ -117,6 +121,21 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df_list.append(df)
 
     # -----------------------------------------------------------------------
+    # With trend
+
+    # -- const_wave --
+    for c in [1]:
+        x = np.linspace(0, 1, num=n, dtype=float)
+        y, x = const_wave(x, c)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        if c == 0: name="zero"
+        elif c > 0: name="pos"
+        elif c < 0: name="neg"
+        else: name="unk"
+        df["cat"] = f"{name}-t"
+        df_list.append(df)
 
     # -- triangle_wave --
     for c in [1, 2, 3, 4, 6, 8, 12, 24]:

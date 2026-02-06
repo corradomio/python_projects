@@ -1,6 +1,7 @@
 import sktime.utils.plotting
 from sktime.datasets import load_shampoo_sales
 from sktime.forecasting.model_selection import ForecastingGridSearchCV, ForecastingRandomizedSearchCV
+from sktime.forecasting.model_selection import ForecastingSkoptSearchCV, ForecastingOptCV
 from sktimex.forecasting.model_selection import ForecastingGridSearchCV as ForecastingGridSearchCVX
 from sktimex.forecasting.model_selection import ForecastingRandomizedSearchCV as ForecastingRandomizedSearchCVX
 from sktimex.forecasting.model_selection import ForecastingSkoptSearchCV as ForecastingSkoptSearchCVX
@@ -10,6 +11,15 @@ from sktime.split import ExpandingWindowSplitter
 from sktime.forecasting.naive import NaiveForecaster
 from hyperactive.opt import GridSearchSk
 import matplotlib.pyplot as plt
+
+# Name of sktimex hyperparameters serach classes
+#
+# ForecastingGridSearchCV       -> same
+# ForecastingRandomizedSearchCV -> same
+# ForecastingSkoptSearchCV      -> same                             (scikit-optimize)
+# ForecastingOptunaSearchCV     -> same                             (optuna)
+# ForecastingOptCV              -> ForecastingHyperactiveSearchCV   (hyperactive)
+#
 
 y = load_shampoo_sales()
 

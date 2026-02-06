@@ -1,6 +1,6 @@
 BaseForecaster(BaseEstimator) (sktime.forecasting.base._base)
     ExtendedBaseForecaster(BaseForecaster) (sktimex.forecasting.base)
-        ScikitForecaster(ExtendedBaseForecaster) (sktimex.forecasting.scikit)
+        ScikitLearnForecaster(ExtendedBaseForecaster) (sktimex.forecasting.scikit)
         LinearForecaster(ExtendedBaseForecaster) (sktimex.forecasting.linear)
         TransformForecaster(ExtendedBaseForecaster) (sktimex.forecasting.base)
             BaseNNForecaster(TransformForecaster) (sktimex.forecasting.nn)
@@ -87,12 +87,12 @@ Base class for NN models
     'input_shape' and 'output_shape' are inferred automatically.
 
 
-ScikitForecaster
-----------------
+ScikitLearnForecaster
+---------------------
 
     if used with scikit-learn models ('sklearn', 'catboost', 'lightgbm', 'xgboost')
             
-            ScikitForecaster(
+            ScikitLearnForecaster(
                 window_length                   past window
                 prediction_length               prediction window
                 estimator                       estimator qualified name | type | instance
@@ -100,7 +100,7 @@ ScikitForecaster
 
     if used with sktime models ('sktime')
         
-            ScikitForecaster(
+            ScikitLearnForecaster(
                 estimator                       estimator qualified name | type | instance
                 **kwargs                        model's specific parameters
             )

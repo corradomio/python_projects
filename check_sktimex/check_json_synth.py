@@ -10,7 +10,9 @@ from joblib import Parallel, delayed
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
+from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
+from stdlib.tprint import tprint
 from stdlib.qname import create_from
 from synth import create_syntethic_data
 
@@ -33,7 +35,7 @@ def create_fdir(name:str, cat: str) -> str:
     if cat.endswith("-t"):
         fdir = f"plots_trends/{module}/"
     else:
-        fdir = f"plots/{module}/"
+        fdir = f"plots_plain/{module}/"
 
     os.makedirs(fdir, exist_ok=True)
     return fdir
@@ -87,7 +89,8 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
             fh = y_test.index
 
             # print("... create")
-            model = create_from(jmodel)
+            # model = create_from(jmodel)
+            model = create_forecaster(name, jmodel)
 
             # print("... fit")
             model.fit(y=y_train, X=X_train)
@@ -116,10 +119,12 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=[], excludes=[]):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
+    # -- sequential
     for name in jmodels:
         if selected(name, includes, excludes):
             check_model(name, dfdict, jmodels[name], override)
 
+    # -- parallel
     # Parallel(n_jobs=14)(
     #     delayed(check_model)(name, dfdict, jmodels[name])
     #     for name in jmodels if selected(name, includes, excludes)
@@ -130,27 +135,33 @@ def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, inc
 
 
 def main():
-    print("dataframe")
+    tprint("dataframe")
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
     SELECTED = []
     EXCLUDED = []
 
+    # tprint("config/darts_models.json")
     # jmodels = jsonx.load("config/darts_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
+    #
+    # tprint("config/nf_models.json")
     # jmodels = jsonx.load("config/nf_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
+    #
+    # tprint("config/skt_models.json")
     # jmodels = jsonx.load("config/skt_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
+    #
+    # tprint("config/skl_models.json")
     # jmodels = jsonx.load("config/skl_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
-
+    #
+    # tprint("config/skx_models.json")
     # jmodels = jsonx.load("config/skx_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
 
+    tprint("config/ext_models.json")
     jmodels = jsonx.load("config/ext_models.json")
     check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
 

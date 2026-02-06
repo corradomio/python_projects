@@ -83,6 +83,50 @@ ACTIVATION_FUNCTIONS = {
 }
 
 
+PL_TRAINER_KEYS = [
+    "accelerator",
+    "strategy",
+    "devices",
+    "num_nodes",
+    "precision",
+    "logger",
+    "callbacks",
+    "fast_dev_run",
+    "max_epochs",
+    "min_epochs",
+    "max_steps",
+    "min_steps",
+    "max_time",
+    "limit_train_batches",
+    "limit_val_batches",
+    "limit_test_batches",
+    "limit_predict_batches",
+    "overfit_batches",
+    "val_check_interval",
+    "check_val_every_n_epoch",
+    "num_sanity_val_steps",
+    "log_every_n_steps",
+    "enable_checkpointing",
+    "enable_progress_bar",
+    "enable_model_summary",
+    "accumulate_grad_batches",
+    "gradient_clip_val",
+    "gradient_clip_algorithm",
+    "deterministic",
+    "benchmark",
+    "inference_mode",
+    "use_distributed_sampler",
+    "profiler",
+    "detect_anomaly",
+    "barebones",
+    "plugins",
+    "sync_batchnorm",
+    "reload_dataloaders_every_n_epochs",
+    "default_root_dir",
+    "enable_autolog_hparams",
+    "model_registry"
+]
+
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
@@ -228,6 +272,13 @@ class _BaseDartsForecaster(ScaledForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self, darts_class: type, locals: dict):
+        """
+        Darts uses 'pl_trainer_kwargs' to pass the parameters to 'lightning.Trainer'.
+        Instead 'Neuralforecast' pass to
+
+        :param darts_class:
+        :param locals:
+        """
         super().__init__(scaler=locals.get("scaler", None))
 
         self._darts_class = darts_class
@@ -244,8 +295,15 @@ class _BaseDartsForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
+        self._kwargs["pl_trainer_kwargs"] = {}
         for k in locals:
             if k in ["self", "__class__", "scaler"]:
+                continue
+            elif k in ["pl_trainer_kwargs", "trainer_kwargs"]:
+                self._kwargs["pl_trainer_kwargs"] |= locals[k]
+                continue
+            elif k in PL_TRAINER_KEYS:
+                self._kwargs["pl_trainer_kwargs"][k] = locals[k]
                 continue
             # elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
             #     self._init_kwargs["input_chunk_length"] = locals[k]

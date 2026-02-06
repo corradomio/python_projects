@@ -17,7 +17,7 @@ from ..utils import SKTIME_NAMESPACES, SKLEARN_NAMESPACES, PD_TYPES, starts_with
 
 
 # ---------------------------------------------------------------------------
-# ScikitForecaster
+# ScikitLearnForecaster
 # ---------------------------------------------------------------------------
 
 class ScikitLearnForecaster(BaseForecaster):
@@ -189,7 +189,7 @@ class ScikitLearnForecaster(BaseForecaster):
     def __repr__(self):
         estimator_class = class_of(self.estimator)
         name = name_of(estimator_class)
-        return f"ScikitForecaster[{name}]"
+        return f"ScikitLearnForecaster[{name}]"
 
     # -----------------------------------------------------------------------
     # end
