@@ -22,7 +22,7 @@ class DLinearModel(_BaseDartsForecaster):
             kernel_size=25,
             const_init=True,
             use_static_covariates=False,
-
+            # --
             **kwargs
             # loss_fn="mse"",
             # likelihood=None,

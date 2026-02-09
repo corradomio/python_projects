@@ -170,24 +170,7 @@ Model search
     -----------------------------------------------------------------------------
     cv: Cross Validatione
 
-    BaseSplitter
-        CutoffSplitter(BaseSplitter) (sktime.split.cutoff)
-        CutoffFhSplitter(BaseSplitter) (sktime.split.cutoff)
-        ExpandingGreedySplitter(BaseSplitter) (sktime.split.expandinggreedy)
-        ExpandingCutoffSplitter(BaseSplitter) (sktime.split.expandingcutoff)
-        SlidingGreedySplitter(BaseSplitter) (sktime.split.slidinggreedy)
-        SameLocSplitter(BaseSplitter) (sktime.split.sameloc)
-        TemporalTrainTestSplitter(BaseSplitter) (sktime.split.temporal_train_test_split)
-        SingleWindowSplitter(BaseSplitter) (sktime.split.singlewindow)
-        InstanceSplitter(BaseSplitter) (sktime.split.instance)
-        TestPlusTrainSplitter(BaseSplitter) (sktime.split.testplustrain)
-        ForecastingHorizonSplitter(BaseSplitter) (sktime.split.fh)
-        BaseWindowSplitter(BaseSplitter) (sktime.split.base._base_windowsplitter)
-            ExpandingWindowSplitter(BaseWindowSplitter) (sktime.split.expandingwindow)
-            SlidingWindowSplitter(BaseWindowSplitter) (sktime.split.slidingwindow)
-            ExpandingSlidingWindowSplitter(BaseWindowSplitter) (sktime.split.expandingslidingwindow)
-        Repeat(BaseSplitter) (sktime.split.compose._repeat)
-        MySplitter(BaseSplitter) (extension_templates.split)
+    to see 'README_cv.txt'
 
 
 

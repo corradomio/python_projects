@@ -258,62 +258,103 @@ class _BaseNFForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
+        if "kwargs" in locals.keys():
+            locals = locals | locals["kwargs"]
 
-        fast_activation = self.get_tag("fast-activation", False, False)
-
-        for k in locals:
-            if k in ["self", "__class__", "scaler"]:
-                continue
-            # elif k in ["input_size", "input_length", "window_length"]:
-            #     self._init_kwargs["input_size"] = locals[k]
-            # elif k in ["h", "output_size", "output_length", "prediction_length"]:
-            #     self._init_kwargs["h"] = locals[k]
-            elif k in ["input_size"]:
-                self._init_kwargs["input_size"] = locals[k]
-            elif k in ["h"]:
-                self._init_kwargs["h"] = locals[k]
-            elif k in ["activation"]:
-                self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-            elif k in ["encoder_activation"]:
-                if not fast_activation:
-                    self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-            elif k == "val_size":
-                self._val_size = locals[k]
-                continue
-            elif k == "loss":
-                loss_fun = locals[k]
-                # loss = loss_from(loss_fun)
-                loss = create_from(loss_fun, NF_LOSSES)
-                self._init_kwargs[k] = loss
-            elif k == "valid_loss":
-                loss_fun = locals[k]
-                # loss = loss_from(loss_fun)
-                loss = create_from(loss_fun, NF_LOSSES)
-                self._init_kwargs[k] = loss
-            elif k == "trainer_kwargs":
-                trainer_kwargs = locals[k]
-                self._trainer_kwargs |= trainer_kwargs
-                for h in trainer_kwargs:
-                    _setattr(self, h, trainer_kwargs[h])
-                continue
-            elif k == "data_kwargs":
-                self._data_kwargs = locals[k] or {}
-                continue
-            elif k == "kwargs":
-                kwargs = locals[k]
-                self._kwargs |= kwargs
-                for h in kwargs:
-                    _setattr(self, h, kwargs[h])
-                continue
+        keys = list(locals.keys())
+        for k in keys:
+            if k in ["self", "__class__", "kwargs"]:
+                del locals[k]
             else:
-                self._init_kwargs[k] = locals[k]
-            _setattr(self, k, locals[k])
-        return
+                _setattr(self, k, locals[k])
+
+        self._kwargs = locals
     # end
 
-    @property
-    def model(self):
-        return self._model
+    # def _analyze_locals_old(self, locals):
+    #
+    #     fast_activation = self.get_tag("fast-activation", False, False)
+    #
+    #     for k in locals:
+    #         if k in ["self", "__class__", "scaler"]:
+    #             continue
+    #         # elif k in ["input_size", "input_length", "window_length"]:
+    #         #     self._init_kwargs["input_size"] = locals[k]
+    #         # elif k in ["h", "output_size", "output_length", "prediction_length"]:
+    #         #     self._init_kwargs["h"] = locals[k]
+    #         elif k in ["input_size"]:
+    #             self._init_kwargs["input_size"] = locals[k]
+    #         elif k in ["h"]:
+    #             self._init_kwargs["h"] = locals[k]
+    #         elif k in ["activation"]:
+    #             self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+    #         elif k in ["encoder_activation"]:
+    #             if not fast_activation:
+    #                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+    #         elif k == "val_size":
+    #             self._val_size = locals[k]
+    #             continue
+    #         elif k == "loss":
+    #             loss_fun = locals[k]
+    #             # loss = loss_from(loss_fun)
+    #             loss = create_from(loss_fun, NF_LOSSES)
+    #             self._init_kwargs[k] = loss
+    #         elif k == "valid_loss":
+    #             loss_fun = locals[k]
+    #             # loss = loss_from(loss_fun)
+    #             loss = create_from(loss_fun, NF_LOSSES)
+    #             self._init_kwargs[k] = loss
+    #         elif k == "trainer_kwargs":
+    #             trainer_kwargs = locals[k]
+    #             self._trainer_kwargs |= trainer_kwargs
+    #             for h in trainer_kwargs:
+    #                 _setattr(self, h, trainer_kwargs[h])
+    #             continue
+    #         elif k == "data_kwargs":
+    #             self._data_kwargs = locals[k] or {}
+    #             continue
+    #         elif k == "kwargs":
+    #             kwargs = locals[k]
+    #             self._kwargs |= kwargs
+    #             for h in kwargs:
+    #                 _setattr(self, h, kwargs[h])
+    #             continue
+    #         else:
+    #             self._init_kwargs[k] = locals[k]
+    #         _setattr(self, k, locals[k])
+    #     return
+    # # end
+
+    # -----------------------------------------------------------------------
+    # Parameters
+    # -----------------------------------------------------------------------
+
+    def get_param_names(self, sort=True):
+        param_names = list(self._kwargs.keys())
+        if sort:
+            param_names = sorted(param_names)
+        return param_names
+
+    # def get_params(self, deep=True):
+    #     return super().get_params(deep=deep)
+    def get_params(self, deep=True):
+        params = {}
+        params |= super().get_params(deep=deep)
+        params |= self._kwargs
+        return params
+
+    def set_params(self, **params):
+        super_params = {}
+        for k in params:
+            if k == "scaler":
+                super_params[k] = params[k]
+            else:
+                self._kwargs[k] = params[k]
+        return super().set_params(**super_params)
+
+    # -----------------------------------------------------------------------
+    # Operations
+    # -----------------------------------------------------------------------
 
     def _compile_model(self, y, X):
         self._freq = _freqstr(y.index)

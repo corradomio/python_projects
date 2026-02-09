@@ -31,9 +31,11 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             backend_params=None,
             verbose=0,
     ):
+        forecaster_instance = create_from(forecaster)
+        cv_instance = create_from(cv)
         super().__init__(
-            forecaster=create_from(forecaster),
-            cv=create_from(cv),
+            forecaster=forecaster_instance,
+            cv=cv_instance,
             param_grid=param_grid,
             scoring=scoring,
             strategy=strategy,
@@ -61,5 +63,15 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
         return params
 
     def set_params(self, **params):
-        super().set_params(**params)
+        super_params = {}
+        for k in params:
+            if k == "forecaster":
+                super_params[k] = create_from(params[k])
+            elif k == "cv":
+                super_params[k] = create_from(params[k])
+            elif k == "error_score":
+                super_params[k] = float(params[k])
+            else:
+                super_params[k] = params[k]
+        super().set_params(**super_params)
         return self

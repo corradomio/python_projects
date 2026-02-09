@@ -48,9 +48,11 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
         assert param_grid is None or param_distributions is None, \
             "Only one of 'param_grid' or 'param_distributions' can be not None"
 
+        forecaster_instance = create_from(forecaster)
+        cv_instance = create_from(cv)
         super().__init__(
-            forecaster=create_from(forecaster),
-            cv=create_from(cv),
+            forecaster=forecaster_instance,
+            cv=cv_instance,
             param_distributions=param_distributions if param_grid is None else param_grid,
             n_iter=n_iter,
             scoring=scoring,

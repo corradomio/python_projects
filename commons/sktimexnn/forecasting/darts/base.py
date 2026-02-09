@@ -286,6 +286,7 @@ class _BaseDartsForecaster(ScaledForecaster):
         self._model = None
         self._init_kwargs = {}
         self._kwargs = {}
+        self._fit_kwargs = {}
 
         self._ignores_exogenous_X = not self.get_tag("capability:exogenous", False)
         self._future_exogenous_X = self.get_tag("capability:future-exogenous", False, False)
@@ -295,47 +296,92 @@ class _BaseDartsForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
-        self._kwargs["pl_trainer_kwargs"] = {}
-        for k in locals:
-            if k in ["self", "__class__", "scaler"]:
-                continue
-            elif k in ["pl_trainer_kwargs", "trainer_kwargs"]:
-                self._kwargs["pl_trainer_kwargs"] |= locals[k]
-                continue
-            elif k in PL_TRAINER_KEYS:
-                self._kwargs["pl_trainer_kwargs"][k] = locals[k]
-                continue
-            # elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
-            #     self._init_kwargs["input_chunk_length"] = locals[k]
-            # elif k in ["output_chunk_length", "output_size", "output_length", "prediction_length"]:
-            #     self._init_kwargs["output_chunk_length"] = locals[k]
-            elif k in ["input_chunk_length"]:
-                self._init_kwargs["input_chunk_length"] = locals[k]
-            elif k in ["output_chunk_length"]:
-                self._init_kwargs["output_chunk_length"] = locals[k]
-            elif k == "activation":
-                self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-            elif k == "kwargs":
-                kwargs = locals[k]
-                if "fit_kwargs" not in locals:
-                    self._kwargs |= kwargs
-                    for h in kwargs:
-                        _setattr(self, h, kwargs[h])
-                    continue
-                else:
-                    self._init_kwargs[k] = kwargs
-            elif k == "fit_kwargs":
-                kwargs = locals[k]
-                self._kwargs |= kwargs
-                for h in kwargs:
-                    _setattr(self, h, kwargs[h])
-                continue
-            else:
-                self._init_kwargs[k] = locals[k]
+        if "kwargs" in locals.keys():
+            locals = locals | locals["kwargs"]
 
-            _setattr(self, k, locals[k])
-        return
-    #end
+        keys = list(locals.keys())
+        for k in keys:
+            if k in ["self", "__class__", "kwargs"]:
+                del locals[k]
+            else:
+                _setattr(self, k, locals[k])
+
+        self._kwargs = locals
+    # end
+
+    # def _analyze_locals_old(self, locals):
+    #     self._kwargs["pl_trainer_kwargs"] = {}
+    #     for k in locals:
+    #         if k in ["self", "__class__", "scaler"]:
+    #             continue
+    #         elif k in ["pl_trainer_kwargs", "trainer_kwargs"]:
+    #             self._kwargs["pl_trainer_kwargs"] |= locals[k]
+    #             continue
+    #         elif k in PL_TRAINER_KEYS:
+    #             self._kwargs["pl_trainer_kwargs"][k] = locals[k]
+    #             continue
+    #         # elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
+    #         #     self._init_kwargs["input_chunk_length"] = locals[k]
+    #         # elif k in ["output_chunk_length", "output_size", "output_length", "prediction_length"]:
+    #         #     self._init_kwargs["output_chunk_length"] = locals[k]
+    #         elif k in ["input_chunk_length"]:
+    #             self._init_kwargs["input_chunk_length"] = locals[k]
+    #         elif k in ["output_chunk_length"]:
+    #             self._init_kwargs["output_chunk_length"] = locals[k]
+    #         elif k == "activation":
+    #             self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
+    #         elif k == "kwargs":
+    #             kwargs = locals[k]
+    #             if "fit_kwargs" not in locals:
+    #                 self._kwargs |= kwargs
+    #                 for h in kwargs:
+    #                     _setattr(self, h, kwargs[h])
+    #                 continue
+    #             else:
+    #                 self._init_kwargs[k] = kwargs
+    #         elif k == "fit_kwargs":
+    #             kwargs = locals[k]
+    #             self._kwargs |= kwargs
+    #             for h in kwargs:
+    #                 _setattr(self, h, kwargs[h])
+    #             continue
+    #         else:
+    #             self._init_kwargs[k] = locals[k]
+    #
+    #         _setattr(self, k, locals[k])
+    #     return
+    # # end
+
+    # -----------------------------------------------------------------------
+    # Parameters
+    # -----------------------------------------------------------------------
+
+    def get_param_names(self, sort=True):
+        param_names = list(self._kwargs.keys())
+        if sort:
+            param_names = sorted(param_names)
+        return param_names
+
+    # def get_params(self, deep=True):
+    #     return super().get_params(deep=deep)
+    def get_params(self, deep=True):
+        params = {}
+        params |= super().get_params(deep=deep)
+        params |= self._kwargs
+        return params
+
+    def set_params(self, **params):
+        super_params = {}
+        for k in params:
+            if k == "scaler":
+                super_params[k] = params[k]
+            else:
+                self._kwargs[k] = params[k]
+        return super().set_params(**super_params)
+
+    # -----------------------------------------------------------------------
+    # Operations
+    # -----------------------------------------------------------------------
 
     def _compile_model(self, y, X=None):
 
@@ -345,10 +391,6 @@ class _BaseDartsForecaster(ScaledForecaster):
 
         return model
     # end
-
-    # -----------------------------------------------------------------------
-    # Properties
-    # -----------------------------------------------------------------------
 
     def _fit(self, y, X, fh):
 

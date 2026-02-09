@@ -160,9 +160,13 @@ def main():
     # tprint("config/skx_models.json")
     # jmodels = jsonx.load("config/skx_models.json")
     # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    #
+    # tprint("config/ext_models.json")
+    # jmodels = jsonx.load("config/ext_models.json")
+    # check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
 
-    tprint("config/ext_models.json")
-    jmodels = jsonx.load("config/ext_models.json")
+    tprint("config/auto_models.json")
+    jmodels = jsonx.load("config/auto_models.json")
     check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
 
     pass

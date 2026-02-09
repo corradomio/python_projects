@@ -67,10 +67,13 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
             backend_params=None,
             verbose=0               # for compatibility
     ):
+        forecaster_instance = create_from(forecaster)
+        cv_instance = create_from(cv)
+        optimizer_instance = create_from(optimizer)
         super().__init__(
-            forecaster=create_from(forecaster),
-            cv=create_from(cv),
-            optimizer=create_from(optimizer),
+            forecaster=forecaster_instance,
+            cv=cv_instance,
+            optimizer=optimizer_instance,
             scoring=scoring,
             strategy=strategy,
             refit=refit,

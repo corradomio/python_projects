@@ -1,7 +1,6 @@
 # import numpy as np
 import pandas as pd
 
-from genetic_algorithm.EnumGene import EnumGene
 from genetic_algorithm.FloatGene import FloatGene
 from genetic_algorithm.IntGene import IntGene
 from genetic_algorithm.ObjectGene import ObjectGene
@@ -37,25 +36,22 @@ class GeneticAlgorithm(object):
             gene_set = {}
             for key, value in self.param_space.items():
                 current_gene = None
-                value_type = value["type"]
-                if value_type == "int":
+                if value["type"] == "int":
                     current_gene = IntGene()
                     current_gene.set_boundary(value['range'][0], value['range'][1])
                     current_gene.init_value()
-                elif value_type == "float":
+                elif value["type"] == "float":
                     current_gene = FloatGene()
                     current_gene.set_boundary(value['range'][0], value['range'][1])
+                    current_gene.init_value()
+                elif value["type"] == "enum":
+                    current_gene = ObjectGene()
+                    current_gene.set_choices(value['range'])
                     current_gene.init_value()
                 elif value["type"] == "object":
                     current_gene = ObjectGene()
                     current_gene.set_choices(value['range'])
                     current_gene.init_value()
-                elif value["type"] == "enum":
-                    current_gene = EnumGene()
-                    current_gene.set_choices(value['range'])
-                    current_gene.init_value()
-                else:
-                    raise ValueError("Unknown gene type {}".format(value["type"]))
                 gene_set[key] = current_gene
             current_individual = Individual(gene_set=gene_set)
             inds.append(current_individual)

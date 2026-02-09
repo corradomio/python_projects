@@ -49,10 +49,11 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
             backend_params=None,    # for compatibility
             verbose=0,
     ):
-
+        forecaster_instance = create_from(forecaster)
+        cv_instance = create_from(cv)
         super().__init__(
-            forecaster=create_from(forecaster),
-            cv=create_from(cv),
+            forecaster=forecaster_instance,
+            cv=cv_instance,
             param_grid=to_optuna_distributions(param_grid),
             scoring=scoring,
             strategy=strategy,

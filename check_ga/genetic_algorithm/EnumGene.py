@@ -1,12 +1,12 @@
-from genetic_algorithm.GeneInterface import GeneInterface
 import random
+from genetic_algorithm.GeneInterface import GeneInterface
 
 
 class EnumGene(GeneInterface):
-    def __init__(self, enum_values: list=None, gene_type=None):
+    def __init__(self, choices=None, gene_type=None):
         self.type = gene_type
         self.value = None
-        self.enum_values = enum_values
+        self.choices = choices
 
     def init_value(self):
         self.mutate()
@@ -14,8 +14,8 @@ class EnumGene(GeneInterface):
     def set_value(self, value):
         self.value = value
 
-    def set_choices(self, enum_values):
-        self.enum_values = enum_values
+    def set_choices(self, choices):
+        self.choices = choices
 
     def get_value(self):
         return self.value
@@ -24,9 +24,7 @@ class EnumGene(GeneInterface):
         return self.type
 
     def mutate(self):
-        pos = random.randint(0, len(self.enum_values) - 1)
-        new_value = self.enum_values[pos]
-
+        new_value = random.choice(self.choices)
         if new_value == self.value:
             self.mutate()
         else:
@@ -37,3 +35,5 @@ class EnumGene(GeneInterface):
         result = cls.__new__(cls)
         result.__dict__.update(self.__dict__)
         return result
+
+

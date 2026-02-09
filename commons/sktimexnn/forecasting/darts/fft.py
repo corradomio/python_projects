@@ -54,5 +54,6 @@ class FFT(_BaseDartsForecaster):
             # --
             scaler=None,
             # --
+            **kwargs
     ):
         super().__init__(_FFT, locals())

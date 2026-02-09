@@ -32,6 +32,7 @@ class ARIMA(_BaseDartsForecaster):
             # --
             scaler=None,
             # --
+            **kwargs
         ):
         super().__init__(dm.ARIMA, locals())
         return

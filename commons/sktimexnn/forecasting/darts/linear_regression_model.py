@@ -20,6 +20,7 @@ class LinearRegressionModel(_BaseDartsForecaster):
             random_state: Optional[int] = None,
             multi_models: Optional[bool] = True,
             use_static_covariates: bool = True,
+            # --
             **kwargs,
     ):
         super().__init__(dm.LinearRegressionModel, locals())

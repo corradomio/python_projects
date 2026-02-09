@@ -22,5 +22,6 @@ class KalmanForecaster(_BaseDartsForecaster):
             # --
             scaler=None,
             # --
+            **kwargs
     ):
         super().__init__(dm.KalmanForecaster, locals())

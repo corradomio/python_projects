@@ -13,7 +13,6 @@ import sktimex as sktx
 from sktimex.forecasting import create_forecaster
 from sktimex.utils import clear_yX
 from stdlib import jsonx
-from stdlib.qname import create_from
 from synth import create_syntethic_data
 
 # Suppress all UserWarning instances

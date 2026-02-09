@@ -58,6 +58,7 @@ class Theta(_BaseDartsForecaster):
             # --
             scaler=None,
             # --
+            **kwargs
     ):
         super().__init__(_Theta, locals())
 
@@ -117,5 +118,6 @@ class FourTheta(_BaseDartsForecaster):
             # --
             scaler=None,
             # --
+            **kwargs
     ):
         super().__init__(_FourTheta, locals())
