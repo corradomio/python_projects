@@ -1,0 +1,13 @@
+[project]
+name = "check-ga"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = "==3.12.*"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "matplotlib",
+    "pandas-stubs~=3.0.0",
+    "scipy-stubs~=1.17.0",
+]
