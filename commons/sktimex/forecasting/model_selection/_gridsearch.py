@@ -26,13 +26,14 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             forecaster: str | dict,
             cv: str | dict,
             param_grid: dict,
+
             scoring=None,
             strategy="refit",
             refit=True,
             update_behaviour="full_refit",
 
+            n_iter: int = -1,               # compatibility/ignored
             return_n_best_forecasters=1,
-
             error_score="nan",
             tune_by_instance=False,
             tune_by_variable=False,
@@ -59,6 +60,7 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             tune_by_instance=tune_by_instance,
             tune_by_variable=tune_by_variable
         )
+        self.n_iter = n_iter
         self._forecaster_override=forecaster
         self._cv_override=cv
         self._error_score_override = error_score

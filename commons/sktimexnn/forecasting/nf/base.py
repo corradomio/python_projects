@@ -7,7 +7,7 @@ import numpy as np
 
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.forecasting.base import ScaledForecaster
-from stdlib.qname import import_from, create_from
+from stdlib.qname import create_from
 
 
 # ---------------------------------------------------------------------------
@@ -71,61 +71,36 @@ NF_LOSSES = {
 }
 
 
-def loss_from(loss):
-    def select_loss(loss):
-        if loss in NF_LOSSES:
-            return NF_LOSSES[loss]
-        elif isinstance(loss, type):
-            return loss
-        elif isinstance(loss, str):
-            return import_from(loss)
-        else:
-            raise ValueError(f"Loss type {loss} not supported")
-    # end
-
-    if isinstance(loss, str):
-        loss_class = select_loss(loss)
-        return loss_class()
-    elif isinstance(loss, dict):
-        loss_class = select_loss(loss["method"])
-        loss_args = {} | loss
-        del loss_args["method"]
-        return loss_class(**loss_args)
-
-# end
+# def loss_from(loss):
+#     def select_loss(loss):
+#         if loss in NF_LOSSES:
+#             return NF_LOSSES[loss]
+#         elif isinstance(loss, type):
+#             return loss
+#         elif isinstance(loss, str):
+#             return import_from(loss)
+#         else:
+#             raise ValueError(f"Loss type {loss} not supported")
+#     #
+#
+#     if loss is None:
+#         return None
+#     elif isinstance(loss, str):
+#         loss_class = select_loss(loss)
+#         return loss_class()
+#     elif isinstance(loss, dict):
+#         loss_class = select_loss(loss["method"])
+#         loss_args = {} | loss
+#         del loss_args["method"]
+#         return loss_class(**loss_args)
+#
+# # end
 
 
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
 # unique_id, ds, y
-
-def to_py_types(v: dict) -> dict:
-
-    def repl(v):
-        if isinstance(v, dict):
-            return drepl(v)
-        if isinstance(v, list):
-            return lrepl(v)
-        if isinstance(v, np.integer):
-            return int(v)
-        if isinstance(v, np.inexact):
-            return float(v)
-        return v
-
-    def drepl(d: dict) -> dict:
-        return {
-            k: repl(d[k])
-            for k in d
-        }
-
-    def lrepl(l: list) -> list:
-        return [
-            repl(v) for v in l
-        ]
-
-    return repl(v)
-
 
 def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
     assert isinstance(y, pd.Series)
@@ -240,6 +215,27 @@ def _setattr(obj, a, v):
     setattr(obj, a, v)
 
 
+def _parse_kwargs(kwargs: dict) -> dict:
+    # nf_kwargs = to_py_types(kwargs)
+    nf_kwargs = {}|kwargs
+    nf_keys = list(nf_kwargs.keys())
+
+    for k in nf_keys:
+        if k == "scaler":
+            del nf_kwargs["scaler"]
+        elif k == "pl_trainer_kwargs":
+            nf_kwargs |= nf_kwargs["pl_trainer_kwargs"]
+            del nf_kwargs["pl_trainer_kwargs"]
+        elif k in ["loss", "valid_loss"]:
+            # nf_kwargs[k] = loss_from(nf_kwargs[k])
+            nf_kwargs[k] = create_from(kwargs[k], aliases=NF_LOSSES)
+            del kwargs[k]
+
+    return nf_kwargs
+
+
+# ---------------------------------------------------------------------------
+
 class _BaseNFForecaster(ScaledForecaster):
     # default tag values - these typically make the "safest" assumption
     # for more extensive documentation, see extension_templates/forecasting.py
@@ -265,12 +261,10 @@ class _BaseNFForecaster(ScaledForecaster):
 
     def __init__(self, nf_class, locals):
         super().__init__()
-        locals = to_py_types(locals)
 
         self._nf_class = nf_class
 
         self.h = 1
-        self._trainer_kwargs = {}
         self._val_size = 0
         self._data_kwargs = {}
 
@@ -287,12 +281,14 @@ class _BaseNFForecaster(ScaledForecaster):
 
     def _analyze_locals(self, locals):
 
-        if "kwargs" in locals.keys():
-            locals = locals | locals["kwargs"]
+        assert "kwargs" not in locals
+
+        if "trainer_kwargs" in locals.keys():
+            locals = locals | locals["trainer_kwargs"]
 
         keys = list(locals.keys())
         for k in keys:
-            if k in ["self", "__class__", "kwargs"]:
+            if k in ["self", "__class__", "trainer_kwargs"]:
                 del locals[k]
             else:
                 _setattr(self, k, locals[k])
@@ -330,24 +326,31 @@ class _BaseNFForecaster(ScaledForecaster):
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
+    # Compatibility with neuraforecast:
+    # darts: the parameters for pl.Trainer are saved in 'pl_trainer_kwargs'
+    #    nf: the parameters for pl.Trainer are flat
 
     def _compile_model(self, y, X):
         self._freq = _freqstr(y.index)
 
         hist_exog_list = None if X is None or self._ignores_exogenous_X else list(X.columns)
 
-        nf_kwargs = to_py_types(self._kwargs)
-        if "scaler" in nf_kwargs:
-            del nf_kwargs["scaler"]
+        # create the Neuralforecast parameters
+        nf_kwargs = _parse_kwargs(self._kwargs)
 
-        self._model = self._nf_class(
-            hist_exog_list=hist_exog_list,
-            # stat_exog_list=None,
-            # futr_exog_list=None,
-            **nf_kwargs
-        )
+        # model = self._nf_class(
+        #     hist_exog_list=hist_exog_list,
+        #     # stat_exog_list=None,
+        #     # futr_exog_list=None,
+        #     **nf_kwargs
+        # )
 
-        return self._model
+        nf_kwargs["class"] = self._nf_class
+        nf_kwargs["hist_exog_list"] = hist_exog_list
+
+        model = create_from(nf_kwargs)
+
+        return model
     # end
 
     def _fit(self, y, X, fh):
@@ -355,11 +358,11 @@ class _BaseNFForecaster(ScaledForecaster):
         # y, X = self.transform(y, X)
 
         # create the model
-        model = self._compile_model(y, X)
+        self._model = self._compile_model(y, X)
 
         # create the NF wrapper
         self._nf = nf.NeuralForecast(
-            models=[model],
+            models=[self._model],
             freq=self._freq
         )
 

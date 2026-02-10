@@ -10,6 +10,7 @@ from sktime.forecasting.base import ForecastingHorizon
 
 from pandasx.base import PANDAS_TYPE
 from sktimex.forecasting.base import ScaledForecaster
+from stdlib.qname import create_from
 
 # ---------------------------------------------------------------------------
 #
@@ -37,33 +38,6 @@ MODEL_MODE = {
 # ---------------------------------------------------------------------------
 #
 # ---------------------------------------------------------------------------
-
-def to_py_types(v: dict) -> dict:
-
-    def repl(v):
-        if isinstance(v, dict):
-            return drepl(v)
-        if isinstance(v, list):
-            return lrepl(v)
-        if isinstance(v, np.integer):
-            return int(v)
-        if isinstance(v, np.inexact):
-            return float(v)
-        return v
-
-    def drepl(d: dict) -> dict:
-        return {
-            k: repl(d[k])
-            for k in d
-        }
-
-    def lrepl(l: list) -> list:
-        return [
-            repl(v) for v in l
-        ]
-
-    return repl(v)
-
 
 def to_series(S: TimeSeries) -> pd.Series:
     try:
@@ -110,7 +84,7 @@ ACTIVATION_FUNCTIONS = {
 }
 
 
-PL_TRAINER_KEYS = [
+PL_TRAINER_KWARGS = [
     "accelerator",
     "strategy",
     "devices",
@@ -208,11 +182,11 @@ def from_timeseries(ts: TimeSeries, y_template, X, cutoff) -> Any:
 
         if len(y_index) > len(y):
             y_index = y_index[-len(y):]
-        y = y.set_axis(y_index)
-        # if isinstance(y, pd.Series):
-        #     y = y.set_axis(y_index)
-        # else:
-        #     y = y.set_index(y_index)
+        # y = y.set_axis(y_index)
+        if isinstance(y, pd.Series):
+            y = y.set_axis(y_index)
+        else:
+            y = y.set_index(y_index)
         return y
     # end
 
@@ -252,6 +226,28 @@ def _setattr(obj, a, v):
         assert not hasattr(obj, a)
     setattr(obj, a, v)
 
+def _parse_kwargs(kwargs: dict) -> dict:
+    # darts_kwargs = to_py_types(kwargs)
+    darts_kwargs = {}|kwargs
+
+    # remove 'scaler', not used in DarTS
+    if "scaler" in darts_kwargs:
+        del darts_kwargs["scaler"]
+
+    # Compatibility with Neuralforecast
+    if "pl_trainer_kwargs" not in darts_kwargs:
+        darts_kwargs["pl_trainer_kwargs"] = {}
+
+    pl_trainer_kwargs = darts_kwargs["pl_trainer_kwargs"]
+    for k in kwargs:
+        if k in PL_TRAINER_KWARGS:
+            pl_trainer_kwargs[k] = darts_kwargs[k]
+            del darts_kwargs[k]
+
+    return darts_kwargs
+
+
+# ---------------------------------------------------------------------------
 
 class _BaseDartsForecaster(ScaledForecaster):
 
@@ -308,6 +304,7 @@ class _BaseDartsForecaster(ScaledForecaster):
 
         self._model = None
         self._kwargs = {}
+        self._pl_trainer_params = {}
 
         self._ignores_exogenous_X = not self.get_tag("capability:exogenous", False)
         self._future_exogenous_X = self.get_tag("capability:future-exogenous", False, False)
@@ -317,6 +314,7 @@ class _BaseDartsForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
+
         if "kwargs" in locals.keys():
             locals = locals | locals["kwargs"]
 
@@ -360,16 +358,22 @@ class _BaseDartsForecaster(ScaledForecaster):
     # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
+    # Compatibility with neuraforecast:
+    # darts: the parameters for pl.Trainer are saved in 'pl_trainer_kwargs'
+    #    nf: the parameters for pl.Trainer are flat
 
     def _compile_model(self, y, X=None):
+        # create the DarTS parameters
+        darts_kwargs = _parse_kwargs(self._kwargs)
 
-        darts_kwargs = to_py_types(self._kwargs)
-        if "scaler" in darts_kwargs:
-            del darts_kwargs["scaler"]
+        # create the model
+        # model: GlobalForecastingModel = self._darts_class(
+        #     **darts_kwargs
+        # )
 
-        model: GlobalForecastingModel = self._darts_class(
-            **darts_kwargs
-        )
+        darts_kwargs["class"] = self._darts_class
+
+        model = create_from(darts_kwargs)
 
         return model
     # end

@@ -32,7 +32,7 @@ pydantic
 # ---------------------------------------------------------------------------
 
 # https://numpy.org/
-numpy
+numpy<2.3.4
 
 # https://scipy.org/
 scipy

@@ -1,19 +1,25 @@
 from typing import Any, Optional, Union, cast
-from path import Path as path
+
+import numpy as np
 
 
 # ---------------------------------------------------------------------------
-# Class names
+# module_path
+# qualified_type
+# qualified_name
 # ---------------------------------------------------------------------------
 
-def module_path(name=None) -> path:
+def module_path(name=None) -> str:
     """
     Pyhon module of the current class
     """
     name = __name__ if name is None else name
     import sys
-    this_path = path(sys.modules[name].__file__)
-    return this_path.parent
+    this_path = sys.modules[name].__file__
+    slash = this_path.rfind('/')
+    if slash == -1:
+        slash = this_path.rfind('\\')
+    return this_path[:slash]
 
 
 def qualified_type(value: Any) -> str:
@@ -33,8 +39,13 @@ def qualified_name(klass: type) -> str:
     module = klass.__module__
     if module == 'builtins':
         return klass.__qualname__   # avoid outputs like 'builtins.str'
-    return f'{module}.{klass.__qualname__}'
+    else:
+        return f'{module}.{klass.__qualname__}'
 
+
+# ---------------------------------------------------------------------------
+# import_from
+# ---------------------------------------------------------------------------
 
 def import_from(qname: str) -> Any:
     """
@@ -53,7 +64,68 @@ def import_from(qname: str) -> Any:
     return clazz
 
 
-def create_from(instance_info: str | dict, aliases: Optional[dict]=None, params: Optional[dict]=None) -> Any:
+# ---------------------------------------------------------------------------
+# create_from
+# ---------------------------------------------------------------------------
+
+def resolve(config: dict, params: dict={}) -> dict:
+    assert isinstance(config, dict)
+    assert isinstance(params, dict)
+
+    # if len(params) == 0:
+    #     return config
+
+    def is_param(v):
+        return isinstance(v, str) and v.startswith("{") and v.endswith("}")
+
+    def has_param(v):
+        return isinstance(v, str) and "{" in v and "}" in v
+
+    def value_of(v: str):
+        p = v[1:-1]
+        return params[p]
+
+    def insert_into(v: str):
+        while("{" in v):
+            bgn = v.find("{")
+            end = v.find("}", bgn + 1)
+            p = v[bgn+1:end]
+            v = v[:bgn] + params[p] + v[end + 1:]
+        return v
+
+    def repl(v):
+        if isinstance(v, dict):
+            return drepl(v)
+        if isinstance(v, list):
+            return lrepl(v)
+        if isinstance(v, str):
+            if is_param(v):
+                return value_of(v)
+            elif has_param(v):
+                return insert_into(v)
+        if isinstance(v, np.integer):
+            return int(v)
+        if isinstance(v, np.inexact):
+            return float(v)
+        return v
+
+    def drepl(d: dict) -> dict:
+        # skip the keys starting with '#...'
+        return {
+            k: repl(d[k])
+            for k in d if not k.startswith("#")
+        }
+
+    def lrepl(l: list) -> list:
+        return [
+            repl(v)
+            for v in l
+        ]
+
+    return repl(config)
+
+
+def create_from(config: str | dict, params: dict={}, aliases: dict={}) -> Any:
     """
     Create and instance of the object.
     If it is a string, it must be the fully qualified class name.
@@ -73,38 +145,37 @@ def create_from(instance_info: str | dict, aliases: Optional[dict]=None, params:
     Note: the class can be a Python class object
     
     """
-    if instance_info is None:
+    if config is None:
         return None
 
-    if aliases is None:
-        aliases = {}
-    if params is None:
-        params = {}
+    if isinstance(config, (str, type)):
+        config = {"class": config}
 
-    if isinstance(instance_info, (str, type)):
-        instance_info = {"class": instance_info}
-
-    assert isinstance(instance_info, dict)
+    assert isinstance(config, dict)
     assert isinstance(aliases, dict)
+    assert isinstance(params, dict)
+
+    config = resolve(config, params)
 
     qname: str = ""
-    clazz_args = {}|instance_info
+    clazz_args = {} | config
 
     # delete '#name' parameters
-    for k in instance_info:
-        if k.startswith("#"):
-            del clazz_args[k]
+    # for k in config:
+    #     if k.startswith("#"):
+    #         del clazz_args[k]
 
     # delete one of the 'class' keywords
     for k in ["class", "class_name", "clazz", "method"]:
-        if k in instance_info:
-            qname = instance_info[k]
+        if k in config:
+            qname = config[k]
             if qname in aliases:
                 qname = aliases[qname]
             del clazz_args[k]
             break
 
-    assert isinstance(qname, str) and len(qname) > 0 or isinstance(qname, type), "Missing mandatory key: ('class', 'class_name', 'clazz', 'method')"
+    assert isinstance(qname, str) and len(qname) > 0 or isinstance(qname, type), \
+        "Missing mandatory key: ('class', 'class_name', 'clazz', 'method')"
     if isinstance(qname, type):
         clazz = qname
     else:
@@ -146,14 +217,19 @@ def create_from_collection(collection: Union[None, list, dict]) -> Union[None, l
     else:
         raise ValueError(f"Unsupported collection type {type(collection)}")
 
+
 # ---------------------------------------------------------------------------
 # Name handling
 # ---------------------------------------------------------------------------
 
-def ns_of(s: str) -> str:
+def namespace_of(s: str) -> str:
     """First component of a fully qualified name"""
     p = s.find('.')
     return s[:p]
+
+
+# compatibility
+ns_of=namespace_of
 
 
 def name_of(s: str) -> str:

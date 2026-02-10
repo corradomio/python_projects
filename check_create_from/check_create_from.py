@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Optional
 
-from stdlib import jsonx
+from stdlib import jsonx, qname
 
 # def to_py_types(v: dict) -> dict:
 #
@@ -110,25 +110,26 @@ def dict_repl(d: dict, r: Optional[dict]=None) -> dict:
 
 
 def main():
-    # config = jsonx.load("auto_models.json")
-    #
-    # config = dict_repl(config, {
-    #     "p11":11,
-    #     "p123": 123
-    # })
-    #
-    # print(jsonx.dumps(config))
+    print(qname.module_path())
 
-    data = to_py_types({
-        "p1": np.int32(1),
-        "p2": [
-            np.int64(21),
-            22
-        ]
+    config = jsonx.load("auto_models.json")
+
+    config = qname.resolve(config, {
+        "p11": 11,
+        "p123": 123,
+        "p2": "pistacchio"
     })
+
+    print(jsonx.dumps(config))
+
+    # data = to_py_types({
+    #     "p1": np.int32(1),
+    #     "p2": [
+    #         np.int64(21),
+    #         22
+    #     ],
+    # })
     pass
-
-
 
 
 if __name__ == "__main__":

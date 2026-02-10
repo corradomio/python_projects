@@ -1,11 +1,11 @@
+import logging
 import os
 import sys
 import traceback
 import warnings
-import logging
+
 import matplotlib.pyplot as plt
 import pandas as pd
-from joblib import Parallel, delayed
 
 import pandasx as pdx
 import sktimex as sktx
@@ -13,11 +13,11 @@ import sktimex.utils
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
 from stdlib.tprint import tprint
-from stdlib.qname import create_from
 from synth import create_syntethic_data
 
 # Suppress all UserWarning instances
 warnings.simplefilter("ignore", UserWarning)
+warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
 
@@ -44,17 +44,32 @@ def create_fdir(name:str, cat: str) -> str:
 
 def included(name, includes: list[str], excludes: list[str]) -> bool:
     assert isinstance(name, str)
-    if includes is None:
-        includes = []
-    if excludes is None:
-        excludes = []
-    if len(includes) > 0:
+    if includes is not None and len(includes) > 0:
         return name in includes
-    if len(excludes) > 0:
-        return not name in excludes
+    if excludes is not None and len(excludes) > 0:
+        return name not in excludes
     else:
         return True
 # end
+
+
+def save_params(name, cat, model):
+    try:
+        best_params = model.best_params_
+
+        module = replaces(name, ["_", "-", "."], "/")
+        if cat.endswith("-t"):
+            fdir = f"best_params/{module}/"
+        else:
+            fdir = f"best_params/{module}/"
+
+        os.makedirs(fdir, exist_ok=True)
+
+        fname = f"{fdir}/{name}-{cat}.json"
+        jsonx.dump(best_params, fname)
+    except Exception as e:
+        pass
+
 
 
 def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False,
@@ -75,7 +90,6 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
             # ---------------------------------------------------------------
 
             fdir = create_fdir(name, cat)
-
             fname = f"{fdir}/{name}-{cat}.png"
             if os.path.exists(fname) and not override:
                 continue
@@ -108,6 +122,9 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
             # fname = f"{fdir}/{name}-{g[0]}.png"
             plt.savefig(fname, dpi=300)
             plt.close()
+
+            # save params
+            save_params(name, cat, model)
 
             # break
         except Exception as e:
@@ -142,7 +159,7 @@ def main():
 
     MODEL_INCLUDES = []
     MODEL_EXCLUDES = []
-    DATA_INCLUDES = ["sin1","sin2","sin4","sin12"]
+    DATA_INCLUDES = ["sin1","sin2","sin3","sin4","sin12"]
     DATA_EXCLUDES = []
 
     # tprint("config/darts_models.json")

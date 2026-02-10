@@ -31,7 +31,7 @@ class DeepAR(_BaseNFForecaster):
             #     distribution="StudentT", level=[80, 90], return_params=False
             # ),
             loss=dict(
-                method="distributionloss",
+                clazz="distributionloss",
                 distribution="StudentT", level=[80, 90], return_params=False
             ),
             valid_loss="mae",

@@ -47,8 +47,10 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
             refit=True,
             update_behaviour="full_refit",
 
+            n_iter=-1,              # alternative to n_evals
             return_n_best_forecasters=1,
             error_score="nan",
+
             n_evals=100,
             sampler=None,
 
@@ -70,9 +72,11 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
             backend=backend,
             update_behaviour=update_behaviour,
             error_score=safe_float(error_score),
-            n_evals=n_evals,
+            n_evals=n_iter if n_iter > 0 else n_evals,
             sampler=sampler
         )
+        self.n_iter = n_iter
+        self.backend_params = backend_params
         self._forecaster_override=forecaster
         self._cv_override=cv
         self._param_grid_override=param_grid

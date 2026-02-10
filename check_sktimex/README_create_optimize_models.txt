@@ -75,97 +75,208 @@ Model search
     -----------------------------------------------------------------------------
 
     ForecastingGridSearchCV(BaseGridSearch) (sktime.forecasting.model_selection._gridsearch)
-            self,
-            forecaster,
-            cv,
-            param_grid,
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            verbose=0,
-            return_n_best_forecasters=1,
-            backend="loky",
-            update_behaviour="full_refit",
-            error_score=np.nan,
-            tune_by_instance=False,
-            tune_by_variable=False,
-            backend_params=None,
-            n_jobs="deprecated",
+        Parameters
+        ----------
+        self,
+        forecaster,
+        cv,
+        param_grid,
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        verbose=0,
+        return_n_best_forecasters=1,
+        backend="loky",
+        update_behaviour="full_refit",
+        error_score=np.nan,
+        tune_by_instance=False,
+        tune_by_variable=False,
+        backend_params=None,
+        n_jobs="deprecated",
+
+        Attributes
+        ----------
+        best_index_ : int
+        best_score_: float
+            Score of the best model
+        best_params_ : dict
+            Best parameter values across the parameter grid
+        best_forecaster_ : estimator
+            Fitted estimator with the best parameters
+        cv_results_ : dict
+            Results from grid search cross validation
+        n_splits_: int
+            Number of splits in the data for cross validation
+        refit_time_ : float
+            Time (seconds) to refit the best forecaster
+        scorer_ : function
+            Function used to score model
+        n_best_forecasters_: list of tuples ("rank", <forecaster>)
+            The "rank" is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst
+            score of forecasters
+        forecasters_ : pd.DataFramee
+            DataFrame with all fitted forecasters and their parameters.
+            Only present if tune_by_instance=True or tune_by_variable=True,
+            and at least one of the two is applicable.
+            In this case, the other attributes are not present in self,
+            only in the fields of forecasters_.
 
 
     ForecastingRandomizedSearchCV(BaseGridSearch) (sktime.forecasting.model_selection._randomsearch)
-            self,
-            forecaster,
-            cv,
-            param_distributions,
-            n_iter=10,
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            verbose=0,
-            return_n_best_forecasters=1,
-            random_state=None,
-            backend="loky",
-            update_behaviour="full_refit",
-            error_score=np.nan,
-            tune_by_instance=False,
-            tune_by_variable=False,
-            backend_params=None,
-            n_jobs="deprecated",
+        Parameters
+        ----------
+        self,
+        forecaster,
+        cv,
+        param_distributions,
+        n_iter=10,
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        verbose=0,
+        return_n_best_forecasters=1,
+        random_state=None,
+        backend="loky",
+        update_behaviour="full_refit",
+        error_score=np.nan,
+        tune_by_instance=False,
+        tune_by_variable=False,
+        backend_params=None,
+        n_jobs="deprecated",
 
-
-    ForecastingOptCV
-            self,
-            forecaster,
-            optimizer,
-            cv,
-            strategy="refit",
-            update_behaviour="full_refit",
-            scoring=None,
-            refit=True,
-            error_score=np.nan,
-            cv_X=None,
-            backend=None,
-            backend_params=None,
-
+        Attributes
+        ----------
+        best_index_ : int
+        best_score_: float
+            Score of the best model
+        best_params_ : dict
+            Best parameter values across the parameter grid
+        best_forecaster_ : estimator
+            Fitted estimator with the best parameters
+        cv_results_ : dict
+            Results from grid search cross validation
+        n_best_forecasters_: list of tuples ("rank", <forecaster>)
+            The "rank" is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst
+            score of forecasters
+        forecasters_ : pd.DataFramee
+            DataFrame with all fitted forecasters and their parameters.
+            Only present if tune_by_instance=True or tune_by_variable=True,
+            and at least one of the two is applicable.
+            In this case, the other attributes are not present in self,
+            only in the fields of forecasters_.
+        """
 
     ForecastingSkoptSearchCV(BaseGridSearch) (sktime.forecasting.model_selection._skopt)
-            self,
-            forecaster,
-            cv: BaseSplitter,
-            param_distributions: dict | list[dict],
-            n_iter: int = 10,
-            n_points: int | None = 1,
-            random_state: int | None = None,
-            scoring: list[BaseMetric] | None = None,
-            optimizer_kwargs: dict | None = None,
-            strategy: str | None = "refit",
-            refit: bool = True,
-            verbose: int = 0,
-            return_n_best_forecasters: int = 1,
-            backend: str = "loky",
-            update_behaviour: str = "full_refit",
-            error_score=np.nan,
-            tune_by_instance=False,
-            tune_by_variable=False,
-            backend_params=None,
-            n_jobs="deprecated",
+        Parameters
+        ----------
+        self,
+        forecaster,
+        cv: BaseSplitter,
+        param_distributions: dict | list[dict],
+        n_iter: int = 10,
+        n_points: int | None = 1,
+        random_state: int | None = None,
+        scoring: list[BaseMetric] | None = None,
+        optimizer_kwargs: dict | None = None,
+        strategy: str | None = "refit",
+        refit: bool = True,
+        verbose: int = 0,
+        return_n_best_forecasters: int = 1,
+        backend: str = "loky",
+        update_behaviour: str = "full_refit",
+        error_score=np.nan,
+        tune_by_instance=False,
+        tune_by_variable=False,
+        backend_params=None,
+        n_jobs="deprecated",
+
+        Attributes
+        ----------
+        best_index_ : int
+        best_score_: float
+            Score of the best model
+        best_params_ : dict
+            Best parameter values across the parameter grid
+        best_forecaster_ : estimator
+            Fitted estimator with the best parameters
+        cv_results_ : dict
+            Results from grid search cross validation
+        n_best_forecasters_: list of tuples ("rank", <forecaster>)
+            The "rank" is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst
+            score of forecasters
+        forecasters_ : pd.DataFramee
+            DataFrame with all fitted forecasters and their parameters.
+            Only present if tune_by_instance=True or tune_by_variable=True,
+            and at least one of the two is applicable.
+            In this case, the other attributes are not present in self,
+            only in the fields of forecasters_.
 
     ForecastingOptunaSearchCV(BaseGridSearch) (sktime.forecasting.model_selection._optuna)
-            self,
-            forecaster,
-            cv,
-            param_grid,
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            verbose=0,
-            return_n_best_forecasters=1,
-            backend="loky",
-            update_behaviour="full_refit",
-            error_score=np.nan,
-            n_evals=100,
-            sampler=None,
+        Parameters
+        ----------
+        self,
+        forecaster,
+        cv,
+        param_grid,
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        verbose=0,
+        return_n_best_forecasters=1,
+        backend="loky",
+        update_behaviour="full_refit",
+        error_score=np.nan,
+        n_evals=100,
+        sampler=None,
+
+        Attributes
+        ----------
+        best_index_ : int
+        best_score_: float
+            Score of the best model
+        best_params_ : dict
+            Best parameter values across the parameter grid
+        best_forecaster_ : estimator
+            Fitted estimator with the best parameters
+        cv_results_ : dict
+            Results from grid search cross validation
+        n_best_forecasters_: list of tuples ("rank", <forecaster>)
+            The "rank" is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst
+            score of forecasters
+
+
+    ForecastingHyperactiveSearchCV
+        Parameters
+        ----------
+        self,
+        forecaster,
+        optimizer,
+        cv,
+        strategy="refit",
+        update_behaviour="full_refit",
+        scoring=None,
+        refit=True,
+        error_score=np.nan,
+        cv_X=None,
+        backend=None,
+        backend_params=None,
+
+        Attributes
+        ----------
+        best_params_ : dict
+            Best parameter values across the parameter grid
+        best_forecaster_ : estimator
+            Fitted estimator with the best parameters
+
+        (at minimum)
 
     -----------------------------------------------------------------------------
     cv: Cross Validatione

@@ -40,10 +40,11 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
             optimizer_kwargs: dict | None = None,
 
             return_n_best_forecasters: int = 1,
-            random_state: int | None = None,
+
             error_score="nan",
             tune_by_instance=False,
             tune_by_variable=False,
+            random_state: int | None = None,
 
             backend: str = "loky",
             backend_params=None,

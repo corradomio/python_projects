@@ -3,18 +3,6 @@ from sktime.forecasting.model_selection import ForecastingOptCV as Sktime_Foreca
 from stdlib.qname import create_from
 
 
-def _to_optimizer_info(optimizer, param_grid):
-    if param_grid is None:
-        param_grid = {}
-    if isinstance(optimizer, str):
-        optimizer = {"class": optimizer, "param_grid": param_grid}
-    elif "param_grid" in optimizer:
-        optimizer["param_grid"] = optimizer["param_grid"] | param_grid
-    else:
-        optimizer["param_grid"] = param_grid
-    return optimizer
-
-
 # ---------------------------------------------------------------------------
 # ForecastingHyperactiveSearchCV
 # ---------------------------------------------------------------------------
@@ -72,12 +60,14 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
             refit=True,
             update_behaviour="full_refit",
 
+            n_iter=-1,              # for compatibility/ignored
+
             error_score="nan",
             cv_X=None,
 
             backend=None,
             backend_params=None,
-            verbose=0               # for compatibility
+            verbose=0               # for compatibility/ignored
     ):
         forecaster_instance = create_from(forecaster)
         cv_instance = create_from(cv)
@@ -97,6 +87,7 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
             backend=backend,
             backend_params=backend_params,
         )
+        self.n_iter = n_iter
         self.pred_len = pred_len
         self.verbose = verbose
         self._forecaster_override = forecaster
