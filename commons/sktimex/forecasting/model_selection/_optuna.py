@@ -10,6 +10,13 @@ from stdlib.qname import create_from
 # https://optuna.readthedocs.io/en/stable/reference/samplers/index.html
 
 
+def safe_float(x):
+    try:
+        return float(x)
+    except ValueError:
+        return x
+
+
 def to_optuna_distributions(param_grid: dict):
     return {
         name: CategoricalDistribution(choices)
@@ -62,7 +69,7 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
             return_n_best_forecasters=return_n_best_forecasters,
             backend=backend,
             update_behaviour=update_behaviour,
-            error_score=float(error_score),
+            error_score=safe_float(error_score),
             n_evals=n_evals,
             sampler=sampler
         )

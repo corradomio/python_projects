@@ -41,6 +41,18 @@ def _to_optimizer_info(optimizer, param_grid):
 #   https://github.com/hyperactive-project/Hyperactive
 #
 
+
+def safe_float(x):
+    try:
+        return float(x)
+    except ValueError:
+        return x
+
+
+# ---------------------------------------------------------------------------
+# ForecastingHyperactiveSearchCV
+# ---------------------------------------------------------------------------
+
 class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
     """
     Added support to create the class using a dict/JSON object
@@ -80,7 +92,7 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
 
             cv_X=cv_X,
             update_behaviour=update_behaviour,
-            error_score=float(error_score),
+            error_score=safe_float(error_score),
 
             backend=backend,
             backend_params=backend_params,

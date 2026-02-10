@@ -15,6 +15,10 @@ from sktime.utils.validation import (
 
 
 class SlidingWindowSplitter(Sktime_SlidingWindowSplitter):
+    """
+    Extends 'sktime.split.SlidingWindowSplitter' adding support for
+    'window_length' and 'step_length' specified as ratio values in range (0,1)
+    """
     def __init__(
             self,
             fh: FORECASTING_HORIZON_TYPES = DEFAULT_FH,
@@ -24,15 +28,12 @@ class SlidingWindowSplitter(Sktime_SlidingWindowSplitter):
             start_with_window: bool = True,
     ):
         super().__init__(
-            fh=fh,
-            window_length=window_length if window_length >= 1 else int(100*window_length),
-            step_length=step_length if step_length >= 1 else int(100*step_length),
+            fh=list(range(1,fh+1)) if isinstance(fh, int) else fh,
+            window_length=window_length,
+            step_length=step_length,
             initial_window=initial_window,
             start_with_window=start_with_window
         )
-        self._window_length_override = window_length
-        self._step_length_override = step_length
-        self._is_ratio = (0 < window_length < 1) or (0 < step_length < 1)
         pass
     # end
 
@@ -42,9 +43,6 @@ class SlidingWindowSplitter(Sktime_SlidingWindowSplitter):
             y: pd.Index,
             fh: ForecastingHorizon,
     ) -> SPLIT_GENERATOR_TYPE:
-        if self._is_ratio:
-            window_length = int(len(y)*self._window_length_override)
-
         return self._split_windows_generic(
             window_length=window_length,
             y=y,

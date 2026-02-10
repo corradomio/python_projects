@@ -3,6 +3,7 @@ from typing import Optional
 import neuralforecast as nf
 import neuralforecast.losses.pytorch as nflp
 import pandas as pd
+import numpy as np
 
 from sktime.forecasting.base import ForecastingHorizon
 from sktimex.forecasting.base import ScaledForecaster
@@ -98,6 +99,33 @@ def loss_from(loss):
 # Utilities
 # ---------------------------------------------------------------------------
 # unique_id, ds, y
+
+def to_py_types(v: dict) -> dict:
+
+    def repl(v):
+        if isinstance(v, dict):
+            return drepl(v)
+        if isinstance(v, list):
+            return lrepl(v)
+        if isinstance(v, np.integer):
+            return int(v)
+        if isinstance(v, np.inexact):
+            return float(v)
+        return v
+
+    def drepl(d: dict) -> dict:
+        return {
+            k: repl(d[k])
+            for k in d
+        }
+
+    def lrepl(l: list) -> list:
+        return [
+            repl(v) for v in l
+        ]
+
+    return repl(v)
+
 
 def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
     assert isinstance(y, pd.Series)
@@ -237,6 +265,7 @@ class _BaseNFForecaster(ScaledForecaster):
 
     def __init__(self, nf_class, locals):
         super().__init__()
+        locals = to_py_types(locals)
 
         self._nf_class = nf_class
 
@@ -248,7 +277,6 @@ class _BaseNFForecaster(ScaledForecaster):
         self._model = None  # TS model
         self._nf = None     # NeuralForecast wrapper
         self._freq = None
-        self._init_kwargs = {}
         self._kwargs = {}
         self._nfdf = None
 
@@ -258,6 +286,7 @@ class _BaseNFForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
+
         if "kwargs" in locals.keys():
             locals = locals | locals["kwargs"]
 
@@ -270,60 +299,6 @@ class _BaseNFForecaster(ScaledForecaster):
 
         self._kwargs = locals
     # end
-
-    # def _analyze_locals_old(self, locals):
-    #
-    #     fast_activation = self.get_tag("fast-activation", False, False)
-    #
-    #     for k in locals:
-    #         if k in ["self", "__class__", "scaler"]:
-    #             continue
-    #         # elif k in ["input_size", "input_length", "window_length"]:
-    #         #     self._init_kwargs["input_size"] = locals[k]
-    #         # elif k in ["h", "output_size", "output_length", "prediction_length"]:
-    #         #     self._init_kwargs["h"] = locals[k]
-    #         elif k in ["input_size"]:
-    #             self._init_kwargs["input_size"] = locals[k]
-    #         elif k in ["h"]:
-    #             self._init_kwargs["h"] = locals[k]
-    #         elif k in ["activation"]:
-    #             self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-    #         elif k in ["encoder_activation"]:
-    #             if not fast_activation:
-    #                 self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-    #         elif k == "val_size":
-    #             self._val_size = locals[k]
-    #             continue
-    #         elif k == "loss":
-    #             loss_fun = locals[k]
-    #             # loss = loss_from(loss_fun)
-    #             loss = create_from(loss_fun, NF_LOSSES)
-    #             self._init_kwargs[k] = loss
-    #         elif k == "valid_loss":
-    #             loss_fun = locals[k]
-    #             # loss = loss_from(loss_fun)
-    #             loss = create_from(loss_fun, NF_LOSSES)
-    #             self._init_kwargs[k] = loss
-    #         elif k == "trainer_kwargs":
-    #             trainer_kwargs = locals[k]
-    #             self._trainer_kwargs |= trainer_kwargs
-    #             for h in trainer_kwargs:
-    #                 _setattr(self, h, trainer_kwargs[h])
-    #             continue
-    #         elif k == "data_kwargs":
-    #             self._data_kwargs = locals[k] or {}
-    #             continue
-    #         elif k == "kwargs":
-    #             kwargs = locals[k]
-    #             self._kwargs |= kwargs
-    #             for h in kwargs:
-    #                 _setattr(self, h, kwargs[h])
-    #             continue
-    #         else:
-    #             self._init_kwargs[k] = locals[k]
-    #         _setattr(self, k, locals[k])
-    #     return
-    # # end
 
     # -----------------------------------------------------------------------
     # Parameters
@@ -361,11 +336,15 @@ class _BaseNFForecaster(ScaledForecaster):
 
         hist_exog_list = None if X is None or self._ignores_exogenous_X else list(X.columns)
 
+        nf_kwargs = to_py_types(self._kwargs)
+        if "scaler" in nf_kwargs:
+            del nf_kwargs["scaler"]
+
         self._model = self._nf_class(
             hist_exog_list=hist_exog_list,
             # stat_exog_list=None,
             # futr_exog_list=None,
-            **(self._init_kwargs | self._trainer_kwargs)
+            **nf_kwargs
         )
 
         return self._model

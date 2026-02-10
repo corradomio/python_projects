@@ -38,6 +38,33 @@ MODEL_MODE = {
 #
 # ---------------------------------------------------------------------------
 
+def to_py_types(v: dict) -> dict:
+
+    def repl(v):
+        if isinstance(v, dict):
+            return drepl(v)
+        if isinstance(v, list):
+            return lrepl(v)
+        if isinstance(v, np.integer):
+            return int(v)
+        if isinstance(v, np.inexact):
+            return float(v)
+        return v
+
+    def drepl(d: dict) -> dict:
+        return {
+            k: repl(d[k])
+            for k in d
+        }
+
+    def lrepl(l: list) -> list:
+        return [
+            repl(v) for v in l
+        ]
+
+    return repl(v)
+
+
 def to_series(S: TimeSeries) -> pd.Series:
     try:
         # Python 3.10 !!!
@@ -179,10 +206,13 @@ def from_timeseries(ts: TimeSeries, y_template, X, cutoff) -> Any:
         else:
             raise ValueError(f"Unsupported index type {type(y_template.index)}")
 
-        if isinstance(y, pd.Series):
-            y = y.set_axis(y_index)
-        else:
-            y = y.set_index(y_index)
+        if len(y_index) > len(y):
+            y_index = y_index[-len(y):]
+        y = y.set_axis(y_index)
+        # if isinstance(y, pd.Series):
+        #     y = y.set_axis(y_index)
+        # else:
+        #     y = y.set_index(y_index)
         return y
     # end
 
@@ -272,21 +302,12 @@ class _BaseDartsForecaster(ScaledForecaster):
     # -----------------------------------------------------------------------
 
     def __init__(self, darts_class: type, locals: dict):
-        """
-        Darts uses 'pl_trainer_kwargs' to pass the parameters to 'lightning.Trainer'.
-        Instead 'Neuralforecast' pass to
-
-        :param darts_class:
-        :param locals:
-        """
         super().__init__(scaler=locals.get("scaler", None))
 
         self._darts_class = darts_class
 
         self._model = None
-        self._init_kwargs = {}
         self._kwargs = {}
-        self._fit_kwargs = {}
 
         self._ignores_exogenous_X = not self.get_tag("capability:exogenous", False)
         self._future_exogenous_X = self.get_tag("capability:future-exogenous", False, False)
@@ -308,49 +329,6 @@ class _BaseDartsForecaster(ScaledForecaster):
 
         self._kwargs = locals
     # end
-
-    # def _analyze_locals_old(self, locals):
-    #     self._kwargs["pl_trainer_kwargs"] = {}
-    #     for k in locals:
-    #         if k in ["self", "__class__", "scaler"]:
-    #             continue
-    #         elif k in ["pl_trainer_kwargs", "trainer_kwargs"]:
-    #             self._kwargs["pl_trainer_kwargs"] |= locals[k]
-    #             continue
-    #         elif k in PL_TRAINER_KEYS:
-    #             self._kwargs["pl_trainer_kwargs"][k] = locals[k]
-    #             continue
-    #         # elif k in ["input_chunk_length", "input_size", "input_length", "window_length"]:
-    #         #     self._init_kwargs["input_chunk_length"] = locals[k]
-    #         # elif k in ["output_chunk_length", "output_size", "output_length", "prediction_length"]:
-    #         #     self._init_kwargs["output_chunk_length"] = locals[k]
-    #         elif k in ["input_chunk_length"]:
-    #             self._init_kwargs["input_chunk_length"] = locals[k]
-    #         elif k in ["output_chunk_length"]:
-    #             self._init_kwargs["output_chunk_length"] = locals[k]
-    #         elif k == "activation":
-    #             self._init_kwargs[k] = ACTIVATION_FUNCTIONS[locals[k]]
-    #         elif k == "kwargs":
-    #             kwargs = locals[k]
-    #             if "fit_kwargs" not in locals:
-    #                 self._kwargs |= kwargs
-    #                 for h in kwargs:
-    #                     _setattr(self, h, kwargs[h])
-    #                 continue
-    #             else:
-    #                 self._init_kwargs[k] = kwargs
-    #         elif k == "fit_kwargs":
-    #             kwargs = locals[k]
-    #             self._kwargs |= kwargs
-    #             for h in kwargs:
-    #                 _setattr(self, h, kwargs[h])
-    #             continue
-    #         else:
-    #             self._init_kwargs[k] = locals[k]
-    #
-    #         _setattr(self, k, locals[k])
-    #     return
-    # # end
 
     # -----------------------------------------------------------------------
     # Parameters
@@ -385,8 +363,12 @@ class _BaseDartsForecaster(ScaledForecaster):
 
     def _compile_model(self, y, X=None):
 
+        darts_kwargs = to_py_types(self._kwargs)
+        if "scaler" in darts_kwargs:
+            del darts_kwargs["scaler"]
+
         model: GlobalForecastingModel = self._darts_class(
-            **(self._init_kwargs | self._kwargs)
+            **darts_kwargs
         )
 
         return model
@@ -422,7 +404,10 @@ class _BaseDartsForecaster(ScaledForecaster):
         if self._ignores_exogenous_X:
             Xts = None
         elif self._X is not None and X is not None:
-            X_all = pd.concat([self._X, X], axis="rows")
+            if len(X) > len(self._X):
+                X_all = X
+            else:
+                X_all = pd.concat([self._X, X], axis="rows", )
             Xts = to_timeseries(X_all)
         else:
             Xts = None
@@ -447,8 +432,8 @@ class _BaseDartsForecaster(ScaledForecaster):
 
         y_pred = from_timeseries(ts_pred, self._y, X, self._cutoff)
 
-        y_pred = self.inverse_transform(y_pred)
-        return y_pred
+        y_pred_transformed = self.inverse_transform(y_pred)
+        return y_pred_transformed
 
     # -----------------------------------------------------------------------
     #

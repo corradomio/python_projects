@@ -2,7 +2,7 @@ import os
 import sys
 import traceback
 import warnings
-
+import logging
 import matplotlib.pyplot as plt
 import pandas as pd
 from joblib import Parallel, delayed
@@ -42,38 +42,38 @@ def create_fdir(name:str, cat: str) -> str:
 # end
 
 
-def selected(name, included: list[str], excluded: list[str]) -> bool:
-    if len(included) == 0 and len(excluded) == 0:
-        return True
-
-    for m in included:
-        if m in name:
-            return True
-    for m in excluded:
-        if m in name:
-            return False
-    if len(included) == 0 and len(excluded) == 0:
-        return True
-    elif len(included) > 0:
-        return False
+def included(name, includes: list[str], excludes: list[str]) -> bool:
+    assert isinstance(name, str)
+    if includes is None:
+        includes = []
+    if excludes is None:
+        excludes = []
+    if len(includes) > 0:
+        return name in includes
+    if len(excludes) > 0:
+        return not name in excludes
     else:
         return True
 # end
 
 
-def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False):
+def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False,
+                data_includes=None, data_excludes=None):
     if name.startswith("#"):
         return
 
     print("---", name, "---")
 
     for g in dfdict:
+        cat = g[0]
+        if not included(cat, data_includes, data_excludes):
+            continue
+
         try:
             dfg = dfdict[g]
 
             # ---------------------------------------------------------------
 
-            cat = g[0]
             fdir = create_fdir(name, cat)
 
             fname = f"{fdir}/{name}-{cat}.png"
@@ -116,18 +116,20 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 # end
 
 
-def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False, includes=[], excludes=[]):
+def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False,
+                 model_includes=None, model_excludes=None,
+                 data_includes=None, data_excludes=None,):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
     # -- sequential
     for name in jmodels:
-        if selected(name, includes, excludes):
-            check_model(name, dfdict, jmodels[name], override)
+        if included(name, model_includes, model_excludes):
+            check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
 
     # -- parallel
     # Parallel(n_jobs=14)(
     #     delayed(check_model)(name, dfdict, jmodels[name])
-    #     for name in jmodels if selected(name, includes, excludes)
+    #     for name in jmodels if INCLUDED(name, includes, excludes)
     # )
 
     pass
@@ -138,43 +140,49 @@ def main():
     tprint("dataframe")
     df = create_syntethic_data(12*8, 0.0, 1, 0.33)
 
-    SELECTED = []
-    EXCLUDED = []
+    MODEL_INCLUDES = []
+    MODEL_EXCLUDES = []
+    DATA_INCLUDES = ["sin1","sin2","sin4","sin12"]
+    DATA_EXCLUDES = []
 
     # tprint("config/darts_models.json")
     # jmodels = jsonx.load("config/darts_models.json")
-    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
     #
     # tprint("config/nf_models.json")
     # jmodels = jsonx.load("config/nf_models.json")
-    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
     #
     # tprint("config/skt_models.json")
     # jmodels = jsonx.load("config/skt_models.json")
-    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
     #
     # tprint("config/skl_models.json")
     # jmodels = jsonx.load("config/skl_models.json")
-    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
     #
     # tprint("config/skx_models.json")
     # jmodels = jsonx.load("config/skx_models.json")
-    # check_models(df, jmodels, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
     #
     # tprint("config/ext_models.json")
     # jmodels = jsonx.load("config/ext_models.json")
-    # check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
+    # check_models(df, jmodels, override=True, includes=INCLUDES, excludes=EXCLUDES)
 
     tprint("config/auto_models.json")
     jmodels = jsonx.load("config/auto_models.json")
-    check_models(df, jmodels, override=True, includes=SELECTED, excludes=EXCLUDED)
+    check_models(df, jmodels,
+                 model_includes=MODEL_INCLUDES, model_excludes=MODEL_EXCLUDES,
+                 data_includes=DATA_INCLUDES, data_excludes=DATA_EXCLUDES,
+                 override=False,
+    )
 
     pass
 # end
 
 
 if __name__ == "__main__":
-    # logging.config.fileConfig('logging_config.ini')
-    # logging.getLogger('root').info('Logging initialized')
+    logging.config.fileConfig('logging_config.ini')
+    logging.getLogger('root').info('Logging initialized')
     main()
 # end

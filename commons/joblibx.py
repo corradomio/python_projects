@@ -229,7 +229,7 @@ def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
     csplits = [[calls[i] for i in isplit] for isplit in isplits]
 
     # execute each split in parallel
-    print("... parallel")
+    # print("... parallel")
     collected = joblib.Parallel(n_jobs=n_jobs)(delayed(_call_sequential)(csplit) for csplit in csplits)
 
     # collect the results in the correct order

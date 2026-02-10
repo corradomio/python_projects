@@ -5,6 +5,18 @@ from stdlib.qname import create_from
 
 
 # ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+
+def safe_float(x):
+    try:
+        return float(x)
+    except ValueError:
+        return x
+
+
+# ---------------------------------------------------------------------------
 # ForecastingRandomizedSearchCV
 # ---------------------------------------------------------------------------
 
@@ -62,7 +74,7 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
             return_n_best_forecasters=return_n_best_forecasters,
             random_state=random_state,
             update_behaviour=update_behaviour,
-            error_score=error_score,
+            error_score=safe_float(error_score),
             tune_by_instance=tune_by_instance,
             tune_by_variable=tune_by_variable,
 

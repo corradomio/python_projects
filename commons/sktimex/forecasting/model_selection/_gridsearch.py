@@ -1,6 +1,16 @@
 from sktime.forecasting.model_selection import ForecastingGridSearchCV as Sktime_ForecastingGridSearchCV
 from stdlib.qname import create_from
 
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def safe_float(x):
+    try:
+        return float(x)
+    except ValueError:
+        return x
+
 
 # ---------------------------------------------------------------------------
 # ForecastingGridSearchCV
@@ -43,7 +53,7 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             verbose=verbose,
             return_n_best_forecasters=return_n_best_forecasters,
             update_behaviour=update_behaviour,
-            error_score=float(error_score),
+            error_score=safe_float(error_score),
             backend=backend,
             backend_params=backend_params,
             tune_by_instance=tune_by_instance,
@@ -63,15 +73,5 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
         return params
 
     def set_params(self, **params):
-        super_params = {}
-        for k in params:
-            if k == "forecaster":
-                super_params[k] = create_from(params[k])
-            elif k == "cv":
-                super_params[k] = create_from(params[k])
-            elif k == "error_score":
-                super_params[k] = float(params[k])
-            else:
-                super_params[k] = params[k]
-        super().set_params(**super_params)
+        super().set_params(**params)
         return self

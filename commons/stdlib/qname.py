@@ -53,7 +53,7 @@ def import_from(qname: str) -> Any:
     return clazz
 
 
-def create_from(instance_info: str | dict, aliases: Optional[dict]=None) -> Any:
+def create_from(instance_info: str | dict, aliases: Optional[dict]=None, params: Optional[dict]=None) -> Any:
     """
     Create and instance of the object.
     If it is a string, it must be the fully qualified class name.
@@ -78,6 +78,9 @@ def create_from(instance_info: str | dict, aliases: Optional[dict]=None) -> Any:
 
     if aliases is None:
         aliases = {}
+    if params is None:
+        params = {}
+
     if isinstance(instance_info, (str, type)):
         instance_info = {"class": instance_info}
 

@@ -1,8 +1,7 @@
-check_openai_
 check_causal_inference
 check_pinn_
 check_pinn_torch_
-
+check_openai_
 
 *.bin
 *.csv
@@ -33,12 +32,14 @@ check_pinn_torch_
 Hands*
 __modules
 __pycache__
+build
 d2l
 intro_dgm-main
 lightning_logs
-catboost_info
+out
 removed
 req_*
+target
 *.safetensors
 *.pth
 *.jinja
