@@ -1,5 +1,7 @@
+import warnings
 from typing import Optional
 
+import skopt.space
 from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
 from stdlib.qname import create_from
 
@@ -50,6 +52,10 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
             backend_params=None,
             verbose: int = 0,
     ):
+        # TRICK: force [1,2] to be converted into Categorical([1,2])
+        import skopt.space.space as skopt_space
+        skopt_space._check_dimension_old = skopt_space._check_dimension
+
         assert param_grid is None or param_distributions is None, \
             "Only one of 'param_grid' or 'param_distributions' can be not None"
 
@@ -83,31 +89,31 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
         self._error_score_override = error_score
         return
 
-    def _create_optimizer(self, params_space: dict):
-        # reimplement the method to convert 'param_grid' in a dictionary
-        # of Categorical dimensions
-        from skopt.optimizer import Optimizer
-        from skopt.utils import dimensions_aslist
-        from skopt.space import Categorical
-
-        if self.param_grid is not None:
-            params_space =  {
-                k: Categorical(params_space[k], name=k)
-                for k in params_space
-            }
-
-        kwargs = self.optimizer_kwargs_.copy()
-        # convert params space to a list ordered by the key name
-        kwargs["dimensions"] = dimensions_aslist(params_space)
-        dimensions_name = sorted(params_space.keys())
-        optimizer = Optimizer(**kwargs)
-        # set the name of the dimensions if not set
-        for i in range(len(optimizer.space.dimensions)):
-            if optimizer.space.dimensions[i].name is not None:
-                continue
-            optimizer.space.dimensions[i].name = dimensions_name[i]
-
-        return optimizer
+    # def _create_optimizer(self, params_space: dict):
+    #     # reimplement the method to convert 'param_grid' in a dictionary
+    #     # of Categorical dimensions
+    #     from skopt.optimizer import Optimizer
+    #     from skopt.utils import dimensions_aslist
+    #     from skopt.space import Categorical
+    #
+    #     if self.param_grid is not None:
+    #         params_space =  {
+    #             k: Categorical(params_space[k], name=k)
+    #             for k in params_space
+    #         }
+    #
+    #     kwargs = self.optimizer_kwargs_.copy()
+    #     # convert params space to a list ordered by the key name
+    #     kwargs["dimensions"] = dimensions_aslist(params_space)
+    #     dimensions_name = sorted(params_space.keys())
+    #     optimizer = Optimizer(**kwargs)
+    #     # set the name of the dimensions if not set
+    #     for i in range(len(optimizer.space.dimensions)):
+    #         if optimizer.space.dimensions[i].name is not None:
+    #             continue
+    #         optimizer.space.dimensions[i].name = dimensions_name[i]
+    #
+    #     return optimizer
 
     def get_params(self, deep=True):
         params = super().get_params(deep=deep)

@@ -16,6 +16,9 @@ from stdlib.qname import create_from
 # ML models with minimal setup. Define your objective, specify a search space,
 # and run.
 #
+# Hyperactive
+#   https://github.com/hyperactive-project/Hyperactive
+#
 # GFO: Gradient Free Optimizers
 #   https://github.com/SimonBlanke/Gradient-Free-Optimizers
 #
@@ -24,9 +27,6 @@ from stdlib.qname import create_from
 #
 # scikit-learn
 #   https://scikit-learn.org/stable/
-#
-# Hyperactive
-#   https://github.com/hyperactive-project/Hyperactive
 #
 
 

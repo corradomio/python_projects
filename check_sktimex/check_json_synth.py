@@ -10,6 +10,7 @@ import pandas as pd
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
+from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
 from stdlib.tprint import tprint
@@ -74,6 +75,11 @@ def save_params(name, cat, model):
 
 def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False,
                 data_includes=None, data_excludes=None):
+
+    # it is necessary to configure the logging system inside each
+    # python process, when it is used the joblib
+    logging.config.fileConfig('logging_config.ini')
+
     if name.startswith("#"):
         return
 
@@ -145,8 +151,8 @@ def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False,
 
     # -- parallel
     # Parallel(n_jobs=14)(
-    #     delayed(check_model)(name, dfdict, jmodels[name])
-    #     for name in jmodels if INCLUDED(name, includes, excludes)
+    #     delayed(check_model)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+    #     for name in jmodels if included(name, model_includes, model_excludes)
     # )
 
     pass
@@ -159,7 +165,8 @@ def main():
 
     MODEL_INCLUDES = []
     MODEL_EXCLUDES = []
-    DATA_INCLUDES = ["sin1","sin2","sin3","sin4","sin12"]
+    # DATA_INCLUDES = ["sin1","sin2","sin3","sin4","sin12"]
+    DATA_INCLUDES = []
     DATA_EXCLUDES = []
 
     # tprint("config/darts_models.json")

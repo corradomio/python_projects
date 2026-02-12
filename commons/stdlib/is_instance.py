@@ -14,6 +14,11 @@
 #       https://peps.python.org/pep-0484/
 #
 # ---------------------------------------------------------------------------
+# Extended annotations:
+#
+#   Immutable       immutable object composed by immutable sub-objects
+#   All[T1,T2,...]  the object must be of ALL types
+#
 
 # ---------------------------------------------------------------------------
 # Parametrized types:
@@ -44,19 +49,29 @@
 __all__ = [
     'is_instance',
     'All',
-    'Const',            # equivalent to 'Final'
+    # 'Const',            # equivalent to 'Final'
     'Immutable',
+    "Literals",
+    "Supertype",
 
-    'IS_INSTANCE_OF',   # used for extensions
-    'IsInstance'
+    # support for extensions
+    'IS_INSTANCE_OF',   # dictionary
+    'IsInstance'        # base class
 ]
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'
 
-from typing import _type_check, _remove_dups_flatten
+from typing import _type_check, _tp_cache
 from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
-from typing import _LiteralSpecialForm, _tp_cache, _flatten_literal_params, _deduplicate, _value_and_type_iter
-from numbers import Number, Integral, Real
+# from typing import _flatten_literal_params, _deduplicate, _value_and_type_iter
+# from numbers import Number, Integral, Real
+try:
+    # Python 3.12
+    from typing import _LiteralSpecialForm
+except:
+    # Python 3.14
+    from typing import _TypedCacheSpecialForm
+    _LiteralSpecialForm = _TypedCacheSpecialForm
 
 # ---------------------------------------------------------------------------
 # Typing types supported/unsupported
@@ -233,6 +248,38 @@ from collections import *
 #     'namedtuple',
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def get_name(tp):
+    if hasattr(tp, '_name'):
+        name = tp._name
+    elif hasattr(tp, '__name__'):
+        name = tp.__name__
+    elif hasattr(tp, '__class__'):
+        # name = f"{a_type.__class__.__module__}.{a_type.__class__.__name__}"
+        name = tp.__class__.__name__
+    else:
+        name = str(tp)
+
+    if name is None and hasattr(tp, '__origin__'):
+        name = str(tp.__origin__)
+    else:
+        name = f'{tp.__module__}.{name}'
+
+    return name
+
+
+def set_name(obj, name):
+    if hasattr(obj, '_name'):
+        obj._name = name
+    elif hasattr(obj, '__name__'):
+        setattr(obj, '__name__', name)
+    else:
+        setattr(obj, '_name', name)
+
+
 
 # ---------------------------------------------------------------------------
 # Special forms
@@ -241,31 +288,41 @@ from collections import *
 @_LiteralSpecialForm
 @_tp_cache(typed=True)
 def Literals(self, *parameters):
-    parameters = _flatten_literal_params(parameters[0])
+    # parameters = _flatten_literal_params(parameters[0])
 
     try:
-        parameters = tuple(p for p, _ in _deduplicate(list(_value_and_type_iter(parameters))))
+        # parameters = tuple(p for p, _ in _deduplicate(list(_value_and_type_iter(parameters))))
+        parameters = tuple(p for p in parameters)
     except TypeError:  # unhashable parameters
         pass
 
     return _LiteralGenericAlias(self, parameters)
 
 
+class AllType:
+    pass
+
+
 @_SpecialForm
 def All(self, parameters):
-    """Intersection type; All[X, Y] means X and Y.
+    """
+    Intersection type; All[X, Y, ...] means X and Y.
+    Possible syntax:
+
+        X & Y & ...
+
+    as Union[X, Y, ...] is equivalent to
+
+        X | Y | ...
+
     """
     if parameters == ():
         raise TypeError("Cannot take a All of no types.")
     if not isinstance(parameters, tuple):
         parameters = (parameters,)
-    msg = "All[arg, ...]: each arg must be a type."
+    msg = "All[T, ...]: each T must be a type."
     parameters = tuple(_type_check(p, msg) for p in parameters)
-    parameters = _remove_dups_flatten(parameters)
-    if len(parameters) == 1:
-        return parameters[0]
-    uga = _UnionGenericAlias(self, parameters)
-    uga._name = "All"
+    uga = _GenericAlias(self, parameters, name="All")
     return uga
 
 
@@ -280,18 +337,29 @@ def Immutable(self, parameters=()):
 
 
 @_SpecialForm
-def Const(self, parameters):
-    """Special typing construct to indicate const names to type checkers.
+def Supertype(self, parameters):
+    """An object is of type a supertype of some specified type.
+    """
+    msg = "Supertype[T, ...]: each T must be a type."
+    if not isinstance(parameters, tuple):
+        parameters = (parameters,)
+    parameters = tuple(_type_check(p, msg) for p in parameters)
+    return _GenericAlias(self, parameters)
 
-        A const name cannot be re-assigned.
-        For example:
 
-          MAX_SIZE: Const[int] = 9000
-          MAX_SIZE += 1  # Error reported by type checker
-
-        """
-    item = _type_check(parameters, f'{self} accepts only single type.')
-    return _GenericAlias(self, (item,))
+# @_SpecialForm
+# def Const(self, parameters):
+#     """Special typing construct to indicate const names to type checkers.
+#
+#         A const name cannot be re-assigned.
+#         For example:
+#
+#           MAX_SIZE: Const[int] = 9000
+#           MAX_SIZE += 1  # Error reported by type checker
+#
+#         """
+#     item = _type_check(parameters, f'{self} accepts only single type.')
+#     return _GenericAlias(self, (item,))
 
 
 # ---------------------------------------------------------------------------
@@ -317,7 +385,7 @@ class IsInstance:
         self.type = tp
         self.origin = get_origin(tp)
         self.args = get_args(tp)
-        self.n = len(self.args)
+        self.nargs = len(self.args)
 
     def is_instance(self, obj) -> bool:
         ...
@@ -344,49 +412,36 @@ class IsNone(IsInstance):
 class IsLiteral(IsInstance):
     def __init__(self, tp):
         super().__init__(tp)
-        self.targs = [type(arg) for arg in self.args]
-        self.nargs = len(self.args)
-        self.values = tp.__args__
 
     def is_instance(self, obj) -> bool:
         # Problem:  1 == True and 0 == False
         # BUT, for type consistency, this is not a good idea
         # both values must have the same type
-        # tobj = type(obj)
-        # for i in range(self.nargs):
-        #     if obj == self.args[i] and tobj == self.targs[i]:
-        #         return True
-        # return False
-        return obj in self.values
+        return obj in self.args
 
 
-class IsLiterals(IsInstance):
+class IsType(IsInstance):
     def __init__(self, tp):
         super().__init__(tp)
-        self.targs = [type(arg) for arg in self.args]
-        self.nargs = len(self.args)
-        self.values = tp.__args__
+        assert self.nargs == 1
 
     def is_instance(self, obj) -> bool:
-        # Problem:  1 == True and 0 == False
-        # BUT, for type consistency, this is not a good idea
-        # both values must have the same type
-        # tobj = type(obj)
-        # for i in range(self.nargs):
-        #     if obj == self.args[i] and tobj == self.targs[i]:
-        #         return True
-        # return False
-        return obj in self.values
+        return is_instance(obj, self.args[0])
+
+
+class IsSupertype(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        ot = type(obj)
+        for st in self.args:
+            if issubclass(st, ot):
+                return True
+        return False
 
 
 # ---------------------------------------------------------------------------
-
-def _len(obj):
-    try:
-        return len(obj)
-    except TypeError as e:
-        return 0
-
 
 class IsCollection(IsInstance):
     # supported:  collection[T], collection[T1,T2,...]
@@ -410,13 +465,13 @@ class IsCollection(IsInstance):
         #     return False
 
         # is_instance(x, collection)
-        if len(self.args) == 0:
+        if self.nargs == 0:
             return True
 
         # is_instance(x, collection[T1, T2, ...])
         #   check if x contains 0+ items of type T
-        if len(self.args) > 0 and self.args[-1] == ...:
-            ntypes = len(self.args)-1
+        if self.nargs > 0 and self.args[-1] == ...:
+            ntypes = self.nargs-1
             for i, item in enumerate(obj):
                 element_type = self.args[i] if i < ntypes else self.args[ntypes-1]
                 if not is_instance(item, element_type):
@@ -430,13 +485,13 @@ class IsCollection(IsInstance):
 
         # length of collection is different than the number of parameters
         n = len(obj)
-        if len(self.args) > 1 and len(self.args) != n:
+        if self.nargs > 1 and self.nargs != n:
             return False
 
         # a collection of a single element is not very useful.
         # the, if specified 'collection[T]', it will check for
         # collection with 0+ elements of type T
-        elif len(self.args) == 1:
+        elif self.nargs == 1:
             element_type = self.args[0]
             for item in obj:
                 if not is_instance(item, element_type):
@@ -507,7 +562,7 @@ class IsMapping(IsInstance):
             return False
         
         # no type parameters passed: true for ALL types
-        if len(self.args) == 0:
+        if self.nargs == 0:
             return True
 
         key_type = self.args[0]
@@ -603,7 +658,18 @@ class IsConst(IsInstance):
         super().__init__(tp)
 
     def is_instance(self, obj) -> bool:
-        if len(self.args) == 0:
+        if self.nargs == 0:
+            return True
+        else:
+            return is_instance(obj, self.args[0])
+
+
+class IsFinal(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        if self.nargs == 0:
             return True
         else:
             return is_instance(obj, self.args[0])
@@ -665,6 +731,7 @@ IS_INSTANCE_OF = {
     'builtins.set': IsSet,
     'builtins.dict': IsDict,
     'builtins.frozenset': IsFrozenSet,
+    'builtins.type': IsType,
 
     'collections.deque': IsDeque,
     'collections.defaultdict': IsDefaultDict,
@@ -679,6 +746,8 @@ IS_INSTANCE_OF = {
     'typing.Any': IsAny,
     'typing.Optional': IsOptional,
     'typing.Literal': IsLiteral,
+    'typing.Type': IsType,
+    'typing.Supertype': IsSupertype,
 
     'typing.List': IsList,
     'typing.Tuple': IsTuple,
@@ -697,6 +766,7 @@ IS_INSTANCE_OF = {
     'typing.All': IsAll,
     'typing.Immutable': IsImmutable,
     'typing.Const': IsConst,
+    'typing.Final': IsFinal,
 
     'types.UnionType': IsUnion,
 
@@ -725,24 +795,12 @@ def type_name(a_type: type) -> str:
     elif isinstance(a_type, _LiteralGenericAlias):
         return 'typing.Literal'
     elif isinstance(a_type, _GenericAlias):
-        a_type = a_type.__origin__
+        # a_type = a_type.__origin__
+        a_type = get_origin(a_type)
     elif hasattr(a_type, '__supertype__'):
         return f'typing.NewType'
 
-    if hasattr(a_type, '_name'):
-        name = a_type._name
-    elif hasattr(a_type, '__name__'):
-        name = a_type.__name__
-    elif hasattr(a_type, '__class__'):
-        # name = f"{a_type.__class__.__module__}.{a_type.__class__.__name__}"
-        name = a_type.__class__.__name__
-    else:
-        name = str(a_type)
-
-    if name is None and hasattr(a_type, '__origin__'):
-        t_name = str(a_type.__origin__)
-    else:
-        t_name = f'{a_type.__module__}.{name}'
+    t_name = get_name(a_type)
 
     return t_name
 

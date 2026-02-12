@@ -1,5 +1,8 @@
 from typing import *
-from stdlib.is_instance import Const
+from collections import *
+from collections.abc import *
+from types import *
+from stdlib.is_instance import Final
 
 # This is a sample Python script.
 
@@ -7,7 +10,7 @@ from stdlib.is_instance import Const
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 
-def print_hi(name: Const[str]) -> NoReturn:
+def print_hi(name: Final[str]) -> NoReturn:
     # Use a breakpoint in the code line below to debug your script.
     print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
 

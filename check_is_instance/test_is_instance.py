@@ -1,7 +1,9 @@
 from typing import *
 from types import *
 from collections import *
-from stdlib.is_instance import is_instance, All, Immutable, Const, Literals, has_methods, Mapping
+from stdlib.is_instance import is_instance,has_methods
+from stdlib.is_instance import All, Literals, Mapping, Immutable
+# from stdlib.is_instance import Const
 
 
 class C:
@@ -51,14 +53,14 @@ def test_immutable():
     assert (is_instance(frozenset([1, 2, 3]), Immutable))
 
 
-# def test_final():
-#     assert (is_instance(1, Final))
-#     assert (is_instance(1, Final[int]))
+def test_final():
+    assert (is_instance(1, Final))
+    assert (is_instance(1, Final[int]))
 
 
-def test_const():
-    assert (is_instance(1, Const))
-    assert (is_instance(1, Const[int]))
+# def test_const():
+#     assert (is_instance(1, Const))
+#     assert (is_instance(1, Const[int]))
 
 
 def test_function():
@@ -250,3 +252,20 @@ def test_optional_list_int():
 def test_optional_str():
     assert is_instance(None, Optional[str])
     assert is_instance('a', Optional[str])
+
+
+
+class Base:
+    pass
+
+class Derived(Base):
+    pass
+
+class Child(Derived):
+    pass
+
+
+def test_is_of_type():
+    c = Child()
+    assert is_instance(c, Child)
+    assert is_instance(c, Type[Child])
