@@ -1,11 +1,23 @@
 #
 # Extensions to 'json' standard package:
 #
-#   1) to use 'load' and 'dump' directly with a file path
+#   1)  use 'load' and 'dump' directly with a file path
 #
-#   NO! It introduces a lot of problems
-#   2) returning an 'stdlib.dict', a dictionary with a lot
-#      of improvements useful for configurations
+#   2)  returning an 'stdlib.dict', a dictionary with a lot
+#       of improvements useful for configurations
+#       [REMOVED] It introduces a lot of problems
+#
+#   3)  removes automatically all dictionary keys starting with "#"
+#       in this way it is possible to add comments or disable
+#       parts of the file
+#
+#   4)  [2025/09/13] support for parameters, passed on the load.
+#       The parameter can be written as:
+#
+#           "${<name>}"       -> value replacement
+#           "$<name>"         -> value replacement
+#           "...${<name>}..." -> string replacement
+#
 #
 # Added support for Pandas dataframes
 #   https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.to_json.html
@@ -20,28 +32,24 @@
 #
 #
 
-# [2025/09/13] add parameters
-#   $<varname>
-#   ${<varname>}
-#
-
 #
 # json.dumps(obj) -> str
-# json.dump(ooj, fp)
+# json.dump(obj, fp)
 # jsonx.dump(obj, file_path)
 #
 
 from __future__ import annotations
 
-import datetime as dt
 import json
 import os
-from datetime import datetime
-from typing import Optional, Union, cast
 
 import numpy as np
 import numpy.dtypes as npdt
 import pandas as pd
+import datetime as dt
+
+from typing import Optional, Union, cast
+from datetime import datetime
 
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']
@@ -259,35 +267,69 @@ def _normalize(obj):
     return ndict
 
 
+# ---------------------------------------------------------------------------
+# resolve
+# ---------------------------------------------------------------------------
 
-def _fill_params(jdata: dict, params: dict):
+def resolve(config: dict, params: dict={}) -> dict:
+    assert isinstance(config, dict)
+    assert isinstance(params, dict)
+
     def _check(name):
         if name not in params:
             raise KeyError(f"Parameter '{name}' not specified")
-    def _replace(v: str):
+
+    def vrepl(v):
+        if isinstance(v, np.integer):
+            return int(v)
+        if isinstance(v, np.inexact):
+            return float(v)
+        if isinstance(v, np.bool_):
+            return bool(v)
+        if not isinstance(v, str):
+            return v
+        # "${<name>}"
         if v.startswith("${") and v.endswith("}"):
             name = v[2:-1]
             _check(name)
-            v = params[name]
-        elif "${" in v:
+            return params[name]
+        # "...${<name>..."
+        while "${" in v:
             s = v.find("${")
             e = v.find("}", s)
-            name = v[s+2:e]
+            name = v[s + 2:e]
             _check(name)
-            v = v[:s] + str(params[name]) + v[e+1:]
-        elif v.startswith("$"):
+            v = v[:s] + str(params[name]) + v[e + 1:]
+        # "$<name>"
+        if v.startswith("$"):
             name = v[1:]
             _check(name)
-            v = params[name]
-        return v
+            return params[name]
+        else:
+            return v
 
-    for k in jdata:
-        v = jdata[k]
-        if isinstance(v, str):
-            jdata[k] = _replace(v)
-        elif isinstance(v, dict):
-            _fill_params(v, params)
-    return jdata
+    def drepl(d: dict) -> dict:
+        # skip the keys starting with '#...'
+        return {
+            k: repl(d[k])
+            for k in d if not k.startswith("#")
+        }
+
+    def lrepl(l: list) -> list:
+        return [
+            repl(v)
+            for v in l
+        ]
+
+    def repl(v):
+        if isinstance(v, dict):
+            return drepl(v)
+        if isinstance(v, list):
+            return lrepl(v)
+        else:
+            return vrepl(v)
+
+    return repl(config)
 
 
 # ---------------------------------------------------------------------------
@@ -312,13 +354,15 @@ def load(file: str, **kwargs) -> dict:
     open_kwargs = _dict_select(kwargs, OPEN_KWARGS)
     with open(file, mode="r", **open_kwargs) as fp:
         jdata = dict(json.load(fp))
-    return _fill_params(jdata, kwargs)
+    return resolve(jdata, kwargs)
 
 
 def loads(s, **kwargs) -> dict:
     jdata = dict(json.loads(s, **kwargs))
-    return _fill_params(jdata, kwargs)
+    return resolve(jdata, kwargs)
 
+
+# ---------------------------------------------------------------------------
 
 def dump(obj, file: str, **kwargs):
     if 'indent' not in kwargs:
@@ -332,7 +376,6 @@ def dump(obj, file: str, **kwargs):
             json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
     else:
         json.dump(obj, file, cls=JSONxEncoder, **kwargs)
-# end
 
 
 def dumps(obj, *, skipkeys=False, ensure_ascii=True, check_circular=True,
@@ -342,7 +385,7 @@ def dumps(obj, *, skipkeys=False, ensure_ascii=True, check_circular=True,
                       check_circular=check_circular, allow_nan=allow_nan,
                       cls=cls, indent=indent, separators=separators,
                       default=default, sort_keys=sort_keys, **kw)
-# end
+
 
 # ---------------------------------------------------------------------------
 # End

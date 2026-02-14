@@ -100,3 +100,8 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
     def set_params(self, **params):
         super().set_params(**params)
         return self
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

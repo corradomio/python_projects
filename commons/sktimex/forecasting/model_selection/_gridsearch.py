@@ -77,3 +77,8 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
     def set_params(self, **params):
         super().set_params(**params)
         return self
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

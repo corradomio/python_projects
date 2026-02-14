@@ -26,6 +26,9 @@ tabulate
 # https://docs.pydantic.dev/latest/
 pydantic
 
+# https://py-filelock.readthedocs.io/en/latest/
+filelock
+
 
 # ---------------------------------------------------------------------------
 # standard libraries

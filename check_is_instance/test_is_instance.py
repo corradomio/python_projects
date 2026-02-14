@@ -1,9 +1,8 @@
 from typing import *
 from types import *
 from collections import *
-from stdlib.is_instance import is_instance,has_methods
-from stdlib.is_instance import All, Literals, Mapping, Immutable
-# from stdlib.is_instance import Const
+from stdlib.is_instance import is_instance, has_methods, Supertype, Not
+from stdlib.is_instance import Intersection, Literals, Mapping, Immutable
 
 
 class C:
@@ -56,11 +55,6 @@ def test_immutable():
 def test_final():
     assert (is_instance(1, Final))
     assert (is_instance(1, Final[int]))
-
-
-# def test_const():
-#     assert (is_instance(1, Const))
-#     assert (is_instance(1, Const[int]))
 
 
 def test_function():
@@ -139,14 +133,17 @@ def test_callable():
     assert (is_instance(1, (type(None), str, float, bytes, int)))
 
 
-def test_vector_alais():
+def test_type_alias():
+    assert (is_instance([1., 2., 3.], Sequence))
+
+    type Vector = list[float]
+    assert (is_instance([1.,2.], Vector))
+
     Vector = list[float]
     assert (is_instance([1., 2., 3.], Vector))
-    assert (is_instance([1., 2., 3.], Sequence))
 
 
 def test_vector_seq():
-    Vector = list[float]
     Vector = NewType('Vector', list[float])
     assert (is_instance([1., 2., 3.], Vector))
     assert (is_instance([1., 2., 3.], Sequence))
@@ -162,7 +159,7 @@ def test_container():
     assert (is_instance([1., 2., 3.], Reversible))
 
 
-def test_collection():
+def test_collection_2():
     assert (is_instance([1, 2., 'tre'], Collection))
     assert (is_instance([1, 2., 'tre'], Collection[Union[int, float, str]]))
     assert (is_instance([1, 2., 'tre'], List[Union[int, float, str]]))
@@ -198,8 +195,8 @@ def test_class():
     assert (is_instance(c, Iterator))
     assert (is_instance(c, Reversible))
     assert (is_instance(c, Callable))
-    assert (not is_instance(d, All[Iterable, Sized]))
-    assert (is_instance(d, All[Iterable, Container]))
+    assert (not is_instance(d, Intersection[Iterable, Sized]))
+    assert (is_instance(d, Intersection[Iterable, Container]))
 
 
 def test_frozenset():
@@ -215,43 +212,30 @@ def test_literals():
 
 
 def test_literal_extended():
-    assert is_instance("a", (0, "a"))
-    assert is_instance(0, (0, "a"))
-    assert not is_instance(1, (0, "a"))
-    assert is_instance("a", [0, "a"])
-    assert is_instance(0, [0, "a"])
-    assert not is_instance(1, [0, "a"])
-
-
-def test_has_methods():
-    class C:
-        def fit(self,X, y):
-            pass
-        def predict(self, X):
-            pass
-        def score(self, X,y):
-            pass
-
-    assert has_methods(C, ['fit', 'predict', 'score'])
-    assert is_instance(C, has_methods(['fit', 'predict', 'score']))
+    assert (is_instance("a", (0, "a")))
+    assert (is_instance(0, (0, "a")))
+    assert (not is_instance(1, (0, "a")))
+    assert (is_instance("a", [0, "a"]))
+    assert (is_instance(0, [0, "a"]))
+    assert (not is_instance(1, [0, "a"]))
 
 
 def test_optional_int():
-    assert is_instance(None, Optional[int])
-    assert is_instance(1, Optional[int])
-    assert not is_instance("a", Optional[int])
-    assert is_instance(None, Optional[list[int]])
+    assert (is_instance(None, Optional[int]))
+    assert (is_instance(1, Optional[int]))
+    assert (not is_instance("a", Optional[int]))
+    assert (is_instance(None, Optional[list[int]]))
 
 
 def test_optional_list_int():
-    assert is_instance(None, Optional[list[int]])
-    assert is_instance([], Optional[list[int]])
-    assert is_instance([1,2,3], Optional[list[int]])
+    assert (is_instance(None, Optional[list[int]]))
+    assert (is_instance([], Optional[list[int]]))
+    assert (is_instance([1,2,3], Optional[list[int]]))
 
 
 def test_optional_str():
-    assert is_instance(None, Optional[str])
-    assert is_instance('a', Optional[str])
+    assert (is_instance(None, Optional[str]))
+    assert (is_instance('a', Optional[str]))
 
 
 
@@ -267,5 +251,66 @@ class Child(Derived):
 
 def test_is_of_type():
     c = Child()
-    assert is_instance(c, Child)
-    assert is_instance(c, Type[Child])
+    assert (is_instance(c, Child))
+    assert (is_instance(c, Type[Child]))
+
+
+def test_is_supertype_of():
+    b = Base()
+    assert (is_instance(b, Supertype[Child]))
+
+
+def test_is_not_type():
+    d = Derived()
+    assert (is_instance(d, Not[Child]))
+    assert (is_instance(d, Not[Type[Child]]))
+
+
+# ---------------------------------------------------------------------------
+# Protocols
+# ---------------------------------------------------------------------------
+#   Protocol(Generic, metaclass=_ProtocolMeta) (typing)
+#       SupportsInt(Protocol) (typing)
+#       SupportsFloat(Protocol) (typing)
+#       SupportsComplex(Protocol) (typing)
+#       SupportsBytes(Protocol) (typing)
+#       SupportsIndex(Protocol) (typing)
+#       SupportsAbs(Protocol) (typing)
+#       SupportsRound(Protocol) (typing)
+#       _IdentityCallable(Protocol) (typing)
+#
+#
+
+
+def test_has_methods():
+    class C:
+        def fit(self,X, y):
+            pass
+        def predict(self, X):
+            pass
+        def score(self, X,y):
+            pass
+
+    assert (has_methods(C, ['fit', 'predict', 'score']))
+    assert (is_instance(C, has_methods(['fit', 'predict', 'score'])))
+
+
+def test_is_protocol():
+    class P(Protocol):
+        def fit(self,X, y):
+            pass
+        def predict(self, X):
+            pass
+        def score(self, X, y):
+            pass
+
+    class F:
+        def fit(self,X, y):
+            pass
+        def predict(self, X):
+            pass
+        def score(self, X, y):
+            pass
+
+    assert (is_instance(F(), P))
+

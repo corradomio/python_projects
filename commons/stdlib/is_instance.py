@@ -13,11 +13,12 @@
 #       https://docs.python.org/3/library/typing.html
 #       https://peps.python.org/pep-0484/
 #
+
 # ---------------------------------------------------------------------------
 # Extended annotations:
 #
 #   Immutable       immutable object composed by immutable sub-objects
-#   All[T1,T2,...]  the object must be of ALL types
+#   Intersection[T1,T2,...]  the object must be of ALL types
 #
 
 # ---------------------------------------------------------------------------
@@ -27,8 +28,18 @@
 #       __class_getitem__(cls, item) -> GenericAlias
 #
 # ref: https://docs.python.org/3/reference/datamodel.html#object.__class_getitem__
-# ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# Interresting imports
+#
+# abc
+# typing
+# types
+# collections
+# collections.abc
+#
+
+# ---------------------------------------------------------------------------
 #
 #   _Final (typing)
 #       _SpecialForm(_Final, _root=True) (typing)
@@ -41,18 +52,32 @@
 #               _UnionGenericAlias(_GenericAlias, _root=True) (typing)
 #               _LiteralGenericAlias(_GenericAlias, _root=True) (typing)
 #               _AnnotatedAlias(_GenericAlias, _root=True) (typing)
+#               _ConcatenateGenericAlias(_GenericAlias, _root=True)
+#               _UnpackGenericAlias(_GenericAlias, _root=True)
 #       _SpecialGenericAlias(_BaseGenericAlias, _root=True) (typing)
 #               _CallableType(_SpecialGenericAlias, _root=True) (typing)
 #               _TupleType(_SpecialGenericAlias, _root=True) (typing)
-# .
+#               _DeprecatedGenericAlias(_SpecialGenericAlias, _root=True)
+#
+#   _NotIterable (typing)
+#       _SpecialForm(_Final, _NotIterable, _root=True) (typing)
+#           _LiteralSpecialForm(_SpecialForm, _root=True) (typing)
+#       _SpecialGenericAlias(_NotIterable, _BaseGenericAlias, _root=True) (typing)
+#           _DeprecatedGenericAlias(_SpecialGenericAlias, _root=True) (typing)
+#           _CallableType(_SpecialGenericAlias, _root=True) (typing)
+#           _TupleType(_SpecialGenericAlias, _root=True) (typing)
+#       _CallableGenericAlias(_NotIterable, _GenericAlias, _root=True) (typing)
+#       _UnionGenericAlias(_NotIterable, _GenericAlias, _root=True) (typing)
+#       _AnnotatedAlias(_NotIterable, _GenericAlias, _root=True) (typing).
 
 __all__ = [
     'is_instance',
-    'All',
-    # 'Const',            # equivalent to 'Final'
-    'Immutable',
-    "Literals",
-    "Supertype",
+
+    'Intersection',     # Intersection[T1,...]
+    'Immutable',        # Immutable | Immutable[T]
+    "Literals",         # Literals[[l1, ...]]   as alternative to Literal[l1, ...]
+    "Supertype",        # Supertype[T1, ...]
+    "Not",              # Not[T]
 
     # support for extensions
     'IS_INSTANCE_OF',   # dictionary
@@ -61,10 +86,11 @@ __all__ = [
 
 __version__ = '1.0.2'
 
+from abc import ABCMeta
 from typing import _type_check, _tp_cache
-from typing import _GenericAlias, _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
-# from typing import _flatten_literal_params, _deduplicate, _value_and_type_iter
-# from numbers import Number, Integral, Real
+from typing import _GenericAlias, _SpecialGenericAlias
+from typing import _UnionGenericAlias, _SpecialForm, _LiteralGenericAlias
+
 try:
     # Python 3.12
     from typing import _LiteralSpecialForm
@@ -72,6 +98,46 @@ except:
     # Python 3.14
     from typing import _TypedCacheSpecialForm
     _LiteralSpecialForm = _TypedCacheSpecialForm
+
+try:
+    # Python 3.12
+    from typing import TypeAliasType
+except:
+    # Python 3.10
+    from typing import TypeAlias
+    TypeAliasType = TypeAlias
+
+try:
+    # Python 3.13
+    from typing import is_protocol, get_protocol_members
+except:
+    # Python 3.12
+    from typing import Protocol
+    def is_protocol(tp):
+        try:
+            return Protocol in tp.__mro__
+        except:
+            return False
+
+    def get_protocol_members(tp):
+        protocol_members = set(Protocol.__dict__.keys())
+        tp_members = set(tp.__dict__.keys())
+        unused_members = {'__annotations__', '__init__', '__subclasshook__'}
+        useful_members = tp_members - protocol_members - unused_members
+        return frozenset(useful_members)
+
+
+def get_metaclass_members(tp, metaclass=ABCMeta):
+    metaclass_members = set(metaclass.__dict__.keys())
+    tp_members = set(tp.__dict__.keys())
+    unused_members = {
+        '__annotations__', '__init__', '__subclasshook__',                      # Protocol
+        '__abstractmethods__', '__slots__', '__subclasshook__', '_abc_impl',    # ABCMeta
+        '__class_getitem__'
+    }
+    useful_members = tp_members - metaclass_members - unused_members
+    return frozenset(useful_members)
+
 
 # ---------------------------------------------------------------------------
 # Typing types supported/unsupported
@@ -96,9 +162,25 @@ except:
 
 
 # ---------------------------------------------------------------------------
-# from collections.abc, and available in typing
+# from 'collections'
 # ---------------------------------------------------------------------------
 from collections import *
+#     'ChainMap',
+#     'Counter',
+#     'OrderedDict',
+#     'UserDict',
+#     'UserList',
+#     'UserString',
+#     'defaultdict',
+#     'deque',
+#     'namedtuple',
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# from collections.abc, and available in typing
+# ---------------------------------------------------------------------------
+from collections.abc import *
 #   Container   __contains__(
 #   Iterable    __iter__
 #   Hashable    __hash__
@@ -232,25 +314,15 @@ from typing import *
 #     'TYPE_CHECKING',
 # ---------------------------------------------------------------------------
 
-
-# ---------------------------------------------------------------------------
-# from 'collections'
-# ---------------------------------------------------------------------------
-from collections import *
-#     'ChainMap',
-#     'Counter',
-#     'OrderedDict',
-#     'UserDict',
-#     'UserList',
-#     'UserString',
-#     'defaultdict',
-#     'deque',
-#     'namedtuple',
-# ---------------------------------------------------------------------------
-
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
+
+def has_metaclass(tp, metaclass=ABCMeta):
+    if isinstance(tp, _SpecialGenericAlias):
+        tp = get_origin(tp)
+    return issubclass(type(tp), metaclass)
+
 
 def get_name(tp):
     if hasattr(tp, '_name'):
@@ -280,7 +352,6 @@ def set_name(obj, name):
         setattr(obj, '_name', name)
 
 
-
 # ---------------------------------------------------------------------------
 # Special forms
 # ---------------------------------------------------------------------------
@@ -299,14 +370,10 @@ def Literals(self, *parameters):
     return _LiteralGenericAlias(self, parameters)
 
 
-class AllType:
-    pass
-
-
 @_SpecialForm
-def All(self, parameters):
+def Intersection(self, parameters):
     """
-    Intersection type; All[X, Y, ...] means X and Y.
+    Intersection type; Intersection[X, Y, ...] means X and Y.
     Possible syntax:
 
         X & Y & ...
@@ -317,20 +384,21 @@ def All(self, parameters):
 
     """
     if parameters == ():
-        raise TypeError("Cannot take a All of no types.")
+        raise TypeError("Cannot take a Intersection of no types.")
     if not isinstance(parameters, tuple):
         parameters = (parameters,)
-    msg = "All[T, ...]: each T must be a type."
+    msg = "Intersection[T, ...]: each T must be a type."
     parameters = tuple(_type_check(p, msg) for p in parameters)
-    uga = _GenericAlias(self, parameters, name="All")
+    uga = _GenericAlias(self, parameters, name="Intersection")
     return uga
 
 
 @_SpecialForm
 def Immutable(self, parameters=()):
-    """Special typing construct to indicate  immutable to type checkers.
-
-        A immutable object must be composed by only immutable objects
+    """
+    Immutable | Immutable[T]
+    Special typing construct to indicate  immutable to type checkers.
+    A immutable object must be composed by only immutable objects
     """
     item = _type_check(parameters, f'{self} accepts only single type.')
     return _GenericAlias(self, (item,))
@@ -338,7 +406,9 @@ def Immutable(self, parameters=()):
 
 @_SpecialForm
 def Supertype(self, parameters):
-    """An object is of type a supertype of some specified type.
+    """
+    Supertype[T1,...]
+    An object is of type a supertype of some specified type.
     """
     msg = "Supertype[T, ...]: each T must be a type."
     if not isinstance(parameters, tuple):
@@ -347,19 +417,17 @@ def Supertype(self, parameters):
     return _GenericAlias(self, parameters)
 
 
-# @_SpecialForm
-# def Const(self, parameters):
-#     """Special typing construct to indicate const names to type checkers.
-#
-#         A const name cannot be re-assigned.
-#         For example:
-#
-#           MAX_SIZE: Const[int] = 9000
-#           MAX_SIZE += 1  # Error reported by type checker
-#
-#         """
-#     item = _type_check(parameters, f'{self} accepts only single type.')
-#     return _GenericAlias(self, (item,))
+
+@_SpecialForm
+def Not(self, parameter):
+    """
+    Not[T]
+    An object is NOT of the specified type
+    """
+    msg = "Not[T]: each T must be a type."
+    parameter = _type_check(parameter, msg)
+    return _GenericAlias(self, parameter)
+
 
 
 # ---------------------------------------------------------------------------
@@ -448,7 +516,8 @@ class IsCollection(IsInstance):
     def __init__(self, tp, collection_type=None):
         super().__init__(tp)
         if collection_type is None:
-            collection_type = (list, tuple, namedtuple, set, frozenset, deque)
+            collection_type = (list, tuple, set, frozenset, deque)
+            # collection_type += (namedtuple)
         self.collection_type = collection_type
 
     def is_instance(self, obj) -> bool:
@@ -601,7 +670,31 @@ class IsUnion(IsInstance):
             if is_instance(obj, a_type):
                 return True
         return False
-    
+
+
+class IsOfType(IsInstance):
+    def __init__(self, tp_list):
+        super().__init__(type(None))
+        self.args = tp_list
+        self.nargs = len(tp_list)
+
+    def is_instance(self, obj) -> bool:
+        for a_type in self.args:
+            if is_instance(obj, a_type):
+                return True
+        return False
+
+
+class IsIntersection(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+
+    def is_instance(self, obj) -> bool:
+        for a_type in self.args:
+            if not is_instance(obj, a_type):
+                return False
+        return True
+
 
 class IsOptional(IsInstance):
     def __init__(self, tp):
@@ -625,17 +718,6 @@ class IsNewType(IsInstance):
 
 
 # ---------------------------------------------------------------------------
-
-class IsAll(IsInstance):
-    def __init__(self, tp):
-        super().__init__(tp)
-
-    def is_instance(self, obj) -> bool:
-        for a_type in self.args:
-            if not is_instance(obj, a_type):
-                return False
-        return True
-
 
 class IsImmutable(IsInstance):
     def __init__(self, tp):
@@ -681,13 +763,14 @@ class HasAttribute(IsInstance):
 
     def __init__(self, *attrs):
         super().__init__(type(None))
-        self.attrs = attrs
+        self.args = attrs
+        self.nargs = len(attrs)
         
     def __call__(self, *args, **kwargs):
         return self
         
     def is_instance(self, obj) -> bool:
-        for attr in self.attrs:
+        for attr in self.args:
             if not hasattr(obj, attr):
                 return False
             av = getattr(obj, attr)
@@ -696,15 +779,51 @@ class HasAttribute(IsInstance):
         return True
 
 
-class HasMethods(IsInstance):
+class HasMethod(IsInstance):
 
     def __init__(self, methods):
         super().__init__(type(None))
-        self.methods = methods
+        self.args = methods
+        self.nargs = len(methods)
 
     def is_instance(self, obj) -> bool:
-        for method in self.methods:
+        return self.validate(obj, None)
+
+    def validate(self, obj, msg):
+        missing = []
+        for m in self.args:
+            if not hasattr(obj, m):
+                missing.append(m)
+        if len(missing) > 0 and msg is not None:
+            raise AssertionError(msg + " " + missing)
+        else:
+            return len(missing) == 0
+
+
+class IsProtocol(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        self.args = get_protocol_members(self.type)
+        self.nargs = len(self.args)
+
+    def is_instance(self, obj) -> bool:
+        for method in self.args:
             if not hasattr(obj, method):
+                return False
+        return True
+
+
+class IsProtocolMetaclass(IsInstance):
+    def __init__(self, tp):
+        super().__init__(get_origin(tp))
+        self.args = get_metaclass_members(self.type)
+        self.nargs = len(self.args)
+
+    def is_instance(self, obj) -> bool:
+        for method in self.args:
+            if not hasattr(obj, method):
+                return False
+            if getattr(obj, method) is None:
                 return False
         return True
 
@@ -719,6 +838,14 @@ class IsLiteralExtend(IsInstance):
     def is_instance(self, obj) -> bool:
         return obj == self.value
 
+
+class IsNot(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        assert self.nargs == 1
+
+    def is_instance(self, obj) -> bool:
+        return not is_instance(obj, self.args[0])
 
 # ---------------------------------------------------------------------------
 # is_instance
@@ -738,7 +865,6 @@ IS_INSTANCE_OF = {
     'collections.namedtuple': IsNamedTuple,
     'collections.OrderedDict': IsOrderedDict,
 
-    'collections.abc.Collection': IsCollection,
     'collections.abc.Mapping': IsMapping,
 
     'typing.None': IsNone,
@@ -761,27 +887,30 @@ IS_INSTANCE_OF = {
     'typing.NewType': IsNewType,
     'typing.Collection': IsCollection,
     'typing.Mapping': IsMapping,
-    'typing.Sequence': IsSequence,
 
-    'typing.All': IsAll,
+    'typing.Intersection': IsIntersection,
     'typing.Immutable': IsImmutable,
     'typing.Const': IsConst,
     'typing.Final': IsFinal,
 
     'types.UnionType': IsUnion,
 
-    'typing.Container': HasAttribute('__contains__'),
-    'typing.Iterable': HasAttribute('__iter__'),
-    'typing.Hashable': HasAttribute('__hash__'),
-    'typing.Sized': HasAttribute('__len__'),
-    'typing.Callable': HasAttribute('__call__'),
-    'typing.Iterator': HasAttribute('__iter__', '__next__'),
-    'typing.Reversible': HasAttribute('__reversed__'),
+    'collections.abc.Collection': IsCollection,
+    # 'typing.Sequence': IsSequence,
+
+    # 'typing.Container': HasAttribute('__contains__'),
+    # 'typing.Iterable': HasAttribute('__iter__'),
+    # 'typing.Hashable': HasAttribute('__hash__'),
+    # 'typing.Sized': HasAttribute('__len__'),
+    # 'typing.Callable': HasAttribute('__call__'),
+    # 'typing.Iterator': HasAttribute('__iter__', '__next__'),
+    # 'typing.Reversible': HasAttribute('__reversed__'),
     'typing.Awaitable': HasAttribute('__await__'),
     'typing.AsyncIterable': HasAttribute('__aiter__'),
     'typing.AsyncIterator': HasAttribute('__aiter__', '__anext__'),
 
-    'extend.Literal': IsLiteralExtend,
+    'typing.LiteralExtended': IsLiteralExtend,
+    'typing.Not': IsNot,
 }
 
 
@@ -791,7 +920,7 @@ def type_name(a_type: type) -> str:
     if a_type is None:
         return 'builtins.NoneType'
     elif isinstance(a_type, (int, str)):
-        return 'extend.Literal'
+        return 'typing.LiteralExtended'
     elif isinstance(a_type, _LiteralGenericAlias):
         return 'typing.Literal'
     elif isinstance(a_type, _GenericAlias):
@@ -807,16 +936,32 @@ def type_name(a_type: type) -> str:
 
 def is_instance(obj, a_type, msg=None) -> bool:
 
-    # if hasattr(a_type, '__supertype__'):
-    #     return is_instance(obj, a_type.__supertype__)
-
     # is_instance(obj, (T1, T2, ...))
     if isinstance(a_type, (tuple, list)):
-        a_types: tuple[type] = a_type
-        for a_type in a_types:
-            if is_instance(obj, a_type):
-                return True
-        return False
+        return IsOfType(a_type).is_instance(obj)
+
+    if is_protocol(a_type):
+        return IsProtocol(a_type).is_instance(obj)
+
+    if has_metaclass(a_type):
+        # t_name = get_name(a_type)
+        # if t_name in IS_INSTANCE_OF:
+        #     print(f"WARN: {t_name} is already a (ABCMeta)Protocol")
+        return IsProtocolMetaclass(a_type).is_instance(obj)
+
+    try:
+        # Python 3.14
+        alias_type = None
+        alias_params = ()
+        if isinstance(a_type, TypeAliasType):
+            alias_type = a_type.__value__
+            alias_params = a_type.__type_params__
+            if len(alias_params) == 0:
+                a_type = alias_type
+            else:
+                a_type = alias_type[alias_params]
+    except:
+        pass
 
     # is_instance(obj, Union[...])
     t_name = type_name(a_type)
@@ -836,20 +981,40 @@ def is_instance(obj, a_type, msg=None) -> bool:
 
 
 def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str] = None, msg=None) \
-        -> Union[bool, HasMethods]:
-    if isinstance(obj_or_methods, (list, tuple)):
-        methods: list[str] = list(obj_or_methods)
-        return HasMethods(methods)
-    missing = []
-    obj = obj_or_methods
-    for m in methods:
-        if not hasattr(obj, m):
-            missing.append(m)
-    valid = len(missing) == 0
-    if not valid and msg is not None:
-        raise AssertionError(msg + " " + missing)
-    return valid
+        -> Union[bool, HasMethod]:
+    """
+    Check if the obj has the specified list of methods.
+    If used as
 
+        has_methods(['fit', 'predict'])
+
+    return an instance of the class HasMethods(methods).
+    If used as
+
+        has_methods(obj, ['fit', 'predict'])
+
+    it returns True or False.
+    If used as
+
+        has_methods(obj, ['fit', 'predict'], "Invalid object)
+
+    if raises an
+
+    :param obj_or_methods: object instance or a list of methods
+    :param methods: None or list of methods
+    :param msg: None or message to use in AssertionError
+    :return:
+    """
+    if isinstance(obj_or_methods, (list, tuple, frozenset, set)):
+        methods: list[str] = list(obj_or_methods)
+        return HasMethod(methods)
+    else:
+        return HasMethod(methods).validate(obj_or_methods, msg)
+
+
+def cast(obj, a_type) -> object:
+    assert is_instance(obj, a_type)
+    return obj
 
 # ---------------------------------------------------------------------------
 # End

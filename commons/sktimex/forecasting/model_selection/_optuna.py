@@ -98,3 +98,8 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
     def set_params(self, **params):
         super().set_params(**params)
         return self
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

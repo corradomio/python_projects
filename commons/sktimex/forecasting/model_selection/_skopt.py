@@ -1,9 +1,9 @@
-import warnings
 from typing import Optional
 
-import skopt.space
 from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
+
 from stdlib.qname import create_from
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -89,32 +89,6 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
         self._error_score_override = error_score
         return
 
-    # def _create_optimizer(self, params_space: dict):
-    #     # reimplement the method to convert 'param_grid' in a dictionary
-    #     # of Categorical dimensions
-    #     from skopt.optimizer import Optimizer
-    #     from skopt.utils import dimensions_aslist
-    #     from skopt.space import Categorical
-    #
-    #     if self.param_grid is not None:
-    #         params_space =  {
-    #             k: Categorical(params_space[k], name=k)
-    #             for k in params_space
-    #         }
-    #
-    #     kwargs = self.optimizer_kwargs_.copy()
-    #     # convert params space to a list ordered by the key name
-    #     kwargs["dimensions"] = dimensions_aslist(params_space)
-    #     dimensions_name = sorted(params_space.keys())
-    #     optimizer = Optimizer(**kwargs)
-    #     # set the name of the dimensions if not set
-    #     for i in range(len(optimizer.space.dimensions)):
-    #         if optimizer.space.dimensions[i].name is not None:
-    #             continue
-    #         optimizer.space.dimensions[i].name = dimensions_name[i]
-    #
-    #     return optimizer
-
     def get_params(self, deep=True):
         params = super().get_params(deep=deep)
         # OVERRIDE the parameters passed as configuration and NOT as Python objects
@@ -127,3 +101,8 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
     def set_params(self, **params):
         super().set_params(**params)
         return self
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

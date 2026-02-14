@@ -22,6 +22,9 @@ warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
 
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
 
 def replaces(s: str, tlist: list[str], r: str) -> str:
     for t in tlist:
@@ -72,35 +75,55 @@ def save_params(name, cat, model):
         pass
 
 
+# ---------------------------------------------------------------------------
+# check_model
+# ---------------------------------------------------------------------------
 
-def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=False,
-                data_includes=None, data_excludes=None):
+def check_model_par(*args, **kwargs):
 
     # it is necessary to configure the logging system inside each
     # python process, when it is used the joblib
     logging.config.fileConfig('logging_config.ini')
 
+    check_model(*args, **kwargs)
+# end
+
+
+def check_model(
+        name, dfdict: dict[tuple, pd.DataFrame],
+        jmodel: dict,
+        data_includes=None, data_excludes=None,
+        override=False,
+):
+    if data_excludes is False:
+        data_excludes = []
+    if data_includes is False:
+        data_includes = []
+
     if name.startswith("#"):
         return
 
-    print("---", name, "---")
+    if "data_includes" in jmodel:
+        data_includes += jmodel["data_includes"]
+        del jmodel["data_includes"]
+    if "data_excludes" in jmodel:
+        data_excludes += jmodel["data_excludes"]
+        del jmodel["data_excludes"]
 
     for g in dfdict:
         cat = g[0]
         if not included(cat, data_includes, data_excludes):
             continue
 
+        fdir = create_fdir(name, cat)
+        fname = f"{fdir}/{name}-{cat}.png"
+        if os.path.exists(fname) and not override:
+            continue
+
+        print("---", name, "/", cat, "---")
+
         try:
             dfg = dfdict[g]
-
-            # ---------------------------------------------------------------
-
-            fdir = create_fdir(name, cat)
-            fname = f"{fdir}/{name}-{cat}.png"
-            if os.path.exists(fname) and not override:
-                continue
-            else:
-                print("...", g)
 
             # ---------------------------------------------------------------
 
@@ -139,68 +162,69 @@ def check_model(name, dfdict: dict[tuple, pd.DataFrame], jmodel: dict, override=
 # end
 
 
-def check_models(df: pd.DataFrame, jmodels: dict[str, dict], override=False,
+def check_models(df: pd.DataFrame,
+                 jmodels: dict[str, dict],
                  model_includes=None, model_excludes=None,
-                 data_includes=None, data_excludes=None,):
+                 data_includes=None, data_excludes=None,
+                 override=False,):
+
     dfdict = pdx.groups_split(df, groups=["cat"])
 
     # -- sequential
-    for name in jmodels:
-        if included(name, model_includes, model_excludes):
-            check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+    # for name in jmodels:
+    #     if included(name, model_includes, model_excludes):
+    #         check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
 
     # -- parallel
-    # Parallel(n_jobs=14)(
-    #     delayed(check_model)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
-    #     for name in jmodels if included(name, model_includes, model_excludes)
-    # )
+    Parallel(n_jobs=4)(
+        delayed(check_model_par)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+        for name in jmodels if included(name, model_includes, model_excludes)
+    )
 
     pass
 # end
 
 
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
 def main():
     tprint("dataframe")
-    df = create_syntethic_data(12*8, 0.0, 1, 0.33)
+    df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
 
     MODEL_INCLUDES = []
     MODEL_EXCLUDES = []
-    # DATA_INCLUDES = ["sin1","sin2","sin3","sin4","sin12"]
     DATA_INCLUDES = []
     DATA_EXCLUDES = []
 
     # tprint("config/darts_models.json")
     # jmodels = jsonx.load("config/darts_models.json")
-    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
-    #
-    # tprint("config/nf_models.json")
-    # jmodels = jsonx.load("config/nf_models.json")
-    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
-    #
+
+    tprint("config/nf_models.json")
+    jmodels = jsonx.load("config/nf_models.json")
+
     # tprint("config/skt_models.json")
     # jmodels = jsonx.load("config/skt_models.json")
-    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
-    #
+
     # tprint("config/skl_models.json")
     # jmodels = jsonx.load("config/skl_models.json")
-    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
-    #
+
     # tprint("config/skx_models.json")
     # jmodels = jsonx.load("config/skx_models.json")
-    # check_models(df, jmodels, includes=INCLUDES, excludes=EXCLUDES)
-    #
+
     # tprint("config/ext_models.json")
     # jmodels = jsonx.load("config/ext_models.json")
-    # check_models(df, jmodels, override=True, includes=INCLUDES, excludes=EXCLUDES)
 
-    tprint("config/auto_models.json")
-    jmodels = jsonx.load("config/auto_models.json")
-    check_models(df, jmodels,
-                 model_includes=MODEL_INCLUDES, model_excludes=MODEL_EXCLUDES,
-                 data_includes=DATA_INCLUDES, data_excludes=DATA_EXCLUDES,
-                 override=False,
+    # tprint("run_models")
+    # jmodels = jsonx.load("config/auto_models.json")
+
+    check_models(
+        df, jmodels,
+        model_includes=MODEL_INCLUDES, model_excludes=MODEL_EXCLUDES,
+        data_includes=DATA_INCLUDES, data_excludes=DATA_EXCLUDES,
+        override=False,
     )
-
     pass
 # end
 

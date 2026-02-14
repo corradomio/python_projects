@@ -111,3 +111,8 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
     def set_params(self, **params):
         super().set_params(**params)
         return self
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

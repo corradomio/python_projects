@@ -72,42 +72,38 @@ def resolve(config: dict, params: dict={}) -> dict:
     assert isinstance(config, dict)
     assert isinstance(params, dict)
 
-    # if len(params) == 0:
-    #     return config
+    def _check(name):
+        if name not in params:
+            raise KeyError(f"Parameter '{name}' not specified")
 
-    def is_param(v):
-        return isinstance(v, str) and v.startswith("{") and v.endswith("}")
-
-    def has_param(v):
-        return isinstance(v, str) and "{" in v and "}" in v
-
-    def value_of(v: str):
-        p = v[1:-1]
-        return params[p]
-
-    def insert_into(v: str):
-        while("{" in v):
-            bgn = v.find("{")
-            end = v.find("}", bgn + 1)
-            p = v[bgn+1:end]
-            v = v[:bgn] + params[p] + v[end + 1:]
-        return v
-
-    def repl(v):
-        if isinstance(v, dict):
-            return drepl(v)
-        if isinstance(v, list):
-            return lrepl(v)
-        if isinstance(v, str):
-            if is_param(v):
-                return value_of(v)
-            elif has_param(v):
-                return insert_into(v)
+    def vrepl(v):
         if isinstance(v, np.integer):
             return int(v)
         if isinstance(v, np.inexact):
             return float(v)
-        return v
+        if isinstance(v, np.bool_):
+            return bool(v)
+        if not isinstance(v, str):
+            return v
+        # "${<name>}"
+        if v.startswith("${") and v.endswith("}"):
+            name = v[2:-1]
+            _check(name)
+            return params[name]
+        # "...${<name>..."
+        while "${" in v:
+            s = v.find("${")
+            e = v.find("}", s)
+            name = v[s + 2:e]
+            _check(name)
+            v = v[:s] + str(params[name]) + v[e + 1:]
+        # "$<name>"
+        if v.startswith("$"):
+            name = v[1:]
+            _check(name)
+            return params[name]
+        else:
+            return v
 
     def drepl(d: dict) -> dict:
         # skip the keys starting with '#...'
@@ -122,7 +118,16 @@ def resolve(config: dict, params: dict={}) -> dict:
             for v in l
         ]
 
+    def repl(v):
+        if isinstance(v, dict):
+            return drepl(v)
+        if isinstance(v, list):
+            return lrepl(v)
+        else:
+            return vrepl(v)
+
     return repl(config)
+# end
 
 
 def create_from(config: str | dict, params: dict={}, aliases: dict={}) -> Any:
@@ -155,32 +160,31 @@ def create_from(config: str | dict, params: dict={}, aliases: dict={}) -> Any:
     assert isinstance(aliases, dict)
     assert isinstance(params, dict)
 
+    # delete "#name" keys and resolve parameters
     config = resolve(config, params)
 
     qname: str = ""
     clazz_args = {} | config
 
-    # delete '#name' parameters
-    # for k in config:
-    #     if k.startswith("#"):
-    #         del clazz_args[k]
-
     # delete one of the 'class' keywords
-    for k in ["class", "class_name", "clazz", "method"]:
+    for k in ["class", "class_name", "clazz"]:
         if k in config:
             qname = config[k]
-            if qname in aliases:
-                qname = aliases[qname]
             del clazz_args[k]
             break
 
+    # convert the aliases
+    if qname in aliases:
+        qname = aliases[qname]
+
     assert isinstance(qname, str) and len(qname) > 0 or isinstance(qname, type), \
-        "Missing mandatory key: ('class', 'class_name', 'clazz', 'method')"
+        "Missing mandatory key: ('class', 'class_name', 'clazz')"
     if isinstance(qname, type):
         clazz = qname
     else:
         clazz = cast(type, import_from(qname))
     return clazz(**clazz_args)
+# end
 
 
 def create_from_collection(collection: Union[None, list, dict]) -> Union[None, list, dict]:
@@ -241,10 +245,10 @@ def name_of(s: str) -> str:
 def class_of(info: Union[str, dict]) -> str:
     if isinstance(info, str):
         return info
-    for k in ["class", "class_name", "clazz", "method"]:
+    for k in ["class", "class_name", "clazz"]:
         if k in info:
             return info[k]
-    raise ValueError("Missing mandatory key: ('class', 'class_name', 'clazz', 'method')")
+    raise ValueError("Missing mandatory key: ('class', 'class_name', 'clazz')")
 
 # ---------------------------------------------------------------------------
 # End
