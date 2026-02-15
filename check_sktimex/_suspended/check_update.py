@@ -29,7 +29,8 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
 
 
 def create_fdir(name:str, cat: str) -> str:
-    module = replaces(name, ["_", "-", "."], "/")
+    # module = replaces(name, ["_", "-", "."], "/")
+    module = name.replace(".", "/")
 
     if cat.endswith("-t"):
         # fdir = f"plots_update_trend/{module}/"

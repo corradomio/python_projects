@@ -6,16 +6,15 @@ import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from filelock import FileLock
-from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError, MeanSquaredScaledError, \
-    MeanAbsoluteScaledError
 
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
+
+from filelock import Timeout, FileLock
 from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
-from sklearn.metrics import r2_score
+from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError
 from stdlib import jsonx
 from stdlib.tprint import tprint
 from synth import create_syntethic_data
@@ -26,7 +25,6 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 12
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -40,7 +38,8 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
 
 
 def create_fdir(name:str, cat: str) -> str:
-    module = replaces(name, ["_", "-", "."], "/")
+    # module = replaces(name, ["_", "-", "."], "/")
+    module = name.replace(".", "/")
 
     if cat.endswith("-t"):
         fdir = f"plots_trends/{module}/"
@@ -64,31 +63,33 @@ def included(name, includes: list[str], excludes: list[str]) -> bool:
 
 
 def save_params(name, cat, model):
-    best_params = model.best_params_
+    try:
+        best_params = model.best_params_
+        # module = replaces(name, ["_", "-", "."], "/")
+        module = name.replace(".", "/")
 
-    module = replaces(name, ["_", "-", "."], "/")
-    if cat.endswith("-t"):
-        fdir = f"best_params/{module}/"
-    else:
-        fdir = f"best_params/{module}/"
+        if cat.endswith("-t"):
+            fdir = f"best_params/{module}/"
+        else:
+            fdir = f"best_params/{module}/"
 
-    os.makedirs(fdir, exist_ok=True)
+        os.makedirs(fdir, exist_ok=True)
 
-    fname = f"{fdir}/{name}-{cat}.json"
-    jsonx.dump(best_params, fname)
+        fname = f"{fdir}/{name}-{cat}.json"
+        jsonx.dump(best_params, fname)
+    except Exception as e:
+        pass
 # end
 
 
 def save_scores(name, cat, scores):
-    scores_file = "models_scores.csv"
-    lock_file = scores_file + ".lock"
-    lock = FileLock(lock_file)
+    lock = FileLock("models_scores.lock")
     with lock:
-        if not os.path.exists(scores_file):
-            with open(scores_file, "w") as f:
+        if not os.path.exists(name):
+            with open("models_scores.csv", "w") as f:
                 meas_names = ",".join(scores.keys())
                 f.writelines("model,cat," + meas_names + "\n")
-        with open(scores_file, "a") as f:
+        with open("models_scores.csv", "a") as f:
             values = ",".join(map(str, scores.values()))
             f.writelines(f"{name},{cat},{values}\n")
 # end
@@ -101,7 +102,7 @@ def save_scores(name, cat, scores):
 def check_model_par(*args, **kwargs):
 
     # it is necessary to configure the logging system inside each
-    # python process, when it is used the joblib
+    # python process, when it is used 'joblib'
     logging.config.fileConfig('logging_config.ini')
 
     check_model_cat(*args, **kwargs)
@@ -135,12 +136,13 @@ def check_model_cat(
         return
 
     # 3) create the dataset (not very efficient, but is it not a big problem)
+    tprint("---", name, "/", cat, "---")
+
     df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
-    dfdict = pdx.groups_split(df, groups=["cat"])
+    dfdict = pdx.groups_split(df, groups="cat")
     dfg = dfdict[(cat,)]
 
     # 4) evaluate the model
-    print("---", name, "/", cat, "---")
     try:
         X, y = pdx.xy_split(dfg, target=TARGET)
         X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
@@ -157,23 +159,20 @@ def check_model_cat(
         y_predict = model.predict(fh=fh, X=X_test)
         # y_predict = y_predict + 0.01
 
-        # save params
-        save_params(name, cat, model)
-
         # save scores
         save_scores(name, cat, {
             "mae": MeanAbsoluteError()(y_test, y_predict),
-            "mase": MeanAbsoluteScaledError()(y_test, y_predict),
             "mse": MeanSquaredError()(y_test, y_predict),
-            "r2": r2_score(y_test, y_predict),
         })
 
-        # print("... plot")
+        # save params
+        save_params(name, cat, model)
+
+        # save plot
         sktx.utils.plot_series(y_train, y_test, y_predict,
                                labels=["train", "test", "predict"],
                                title=f"{name}: {cat}")
 
-        # save plot
         plt.savefig(fname, dpi=300)
         plt.close()
 
@@ -187,15 +186,15 @@ def check_model_cat(
 def check_models(cats: list[str], jmodels: dict[str, dict]):
 
     # -- sequential
-    # for name in jmodels:
-    #     for cat in cats:
-    #         check_model_cat(name, cat, jmodels[name])
+    for name in jmodels:
+        for cat in cats:
+            check_model_cat(name, cat, jmodels[name])
 
     # -- parallel
-    Parallel(n_jobs=N_JOBS)(
-        delayed(check_model_par)(name, cat, jmodels[name])
-        for name in jmodels for cat in cats
-    )
+    # Parallel(n_jobs=8)(
+    #     delayed(check_model_par)(name, cat, jmodels[name])
+    #     for name in jmodels for cat in cats
+    # )
 
     pass
 # end
@@ -206,18 +205,17 @@ def check_models(cats: list[str], jmodels: dict[str, dict]):
 # ---------------------------------------------------------------------------
 
 def main():
-
     tprint("dataframe")
     df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
-    tprint("auto_dartsx_models")
-    jmodels = load_model_selection_config("config/auto_dartsx_models.json")
-    jsonx.dump(jmodels, f"config/resolved_auto_dartsx_models.json")
+    # tprint("auto_dartsx_models")
+    # jmodels = load_model_selection_config("config/auto_dartsx_models.json")
+    # jsonx.dump(jmodels, f"config/resolved_auto_dartsx_models.json")
 
-    # tprint("auto_nfx_models")
-    # jmodels = load_model_selection_config("config/auto_nfx_models.json")
-    # jsonx.dump(jmodels, f"config/resolved_auto_nfx_models.json")
+    tprint("auto_nfx_models")
+    jmodels = load_model_selection_config("config/auto_nfx_models.json")
+    jsonx.dump(jmodels, f"config/resolved_auto_nfx_models.json")
 
     check_models(cats, jmodels)
     pass

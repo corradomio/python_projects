@@ -6,6 +6,9 @@ from .base import _BaseDartsForecaster, TREND_MODE, SEASONALITY_MODE, MODEL_MODE
 
 
 class _ExponentialSmoothing(dm.ExponentialSmoothing):
+    # For compatibility with the general implementation,
+    # the original 'kwargs' is renamed in 'init_kwargs', and
+    # the original '**fit_kwargs' in '**kwargs'
     def __init__(
             self,
             trend: Optional[str] = "additive",
@@ -15,7 +18,7 @@ class _ExponentialSmoothing(dm.ExponentialSmoothing):
             error: Optional[str] = "add",
             random_errors: Optional[Any] = None,
             random_state: Optional[int] = None,
-            kwargs: Optional[dict[str, Any]] = None,
+            init_kwargs: Optional[dict[str, Any]] = None,
             **fit_kwargs,
     ):
         super().__init__(
@@ -26,7 +29,7 @@ class _ExponentialSmoothing(dm.ExponentialSmoothing):
             error=error,
             random_errors=random_errors,
             random_state=random_state,
-            kwargs=kwargs,
+            kwargs=init_kwargs,
             **fit_kwargs
         )
 
@@ -60,10 +63,10 @@ class ExponentialSmoothing(_BaseDartsForecaster):
             error: Optional[str] = "add",
             random_errors: Optional[Any] = None,
             random_state: Optional[int] = None,
-            kwargs: Optional[dict[str, Any]] = None,
+            init_kwargs: Optional[dict[str, Any]] = None,
             # --
             scaler=None,
             # --
-            **fit_kwargs,
+            **kwargs,
     ):
         super().__init__(_ExponentialSmoothing, locals())

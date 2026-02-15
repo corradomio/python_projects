@@ -9,13 +9,13 @@ def const_wave(x: np.ndarray, c: float = 0) -> tuple[np.ndarray, np.ndarray]:
 
 def sin_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     # y = a*np.sin(x*np.pi + phase)
-    y = a * np.sin(2 * x * np.pi + phase) + a*1.1
+    y = a * np.sin(2 * x * np.pi + phase) + 1
     return y, x
 
 
 def sinabs_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     # y = a*(2*np.abs(np.sin(x*np.pi + phase))-1)
-    y = a * (2 * np.abs(np.sin(2 * x * np.pi + phase))) + a*0.1
+    y = a * (2 * np.abs(np.sin(2 * x * np.pi + phase)))
     return y, x
 
 
@@ -24,7 +24,7 @@ def square_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarr
     t = (x + phase) % 1
     # y[t< 0.5] = -a
     # y[t>=0.5] = +a
-    y[t < 0.5] = a*0.1
+    y[t < 0.5] = 0
     y[t >= 0.5] = +a
     return y, t
 
@@ -32,7 +32,7 @@ def square_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarr
 def triangle_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
-    y = a * t + a*0.1
+    y = a * t
     return y, x
 
 
@@ -42,7 +42,7 @@ def noise_signal(y: np.ndarray, noise: float = 0.) -> np.ndarray:
     k = len(y)
     a = y.max() - y.min()
     if a == 0.: a = 1.
-    return np.abs(y + a * noise * np.random.normal(0, 1, size=k))
+    return y + a * noise * np.random.normal(0, 1, size=k)
 
 
 def add_trend(y: np.ndarray, b0: float, bn: float) -> np.ndarray:

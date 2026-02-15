@@ -392,7 +392,7 @@ class _BaseNFForecaster(ScaledForecaster):
 
     def _predict(self, fh, X):
         assert len(fh) % self.h == 0, \
-            "ForecastingHorizon length must be a multiple than prediction_length"
+            f"ForecastingHorizon length must be a multiple than prediction_length: fh={fh}, prediction_length={self.h}"
 
         if len(fh) == self.h:
             y_pred = self._predict_same(fh, X)

@@ -229,20 +229,23 @@ def _setattr(obj, a, v):
 def _parse_kwargs(kwargs: dict) -> dict:
     # darts_kwargs = to_py_types(kwargs)
     darts_kwargs = {}|kwargs
+    pl_trainer_kwargs = {}
 
     # remove 'scaler', not used in DarTS
     if "scaler" in darts_kwargs:
         del darts_kwargs["scaler"]
 
     # Compatibility with Neuralforecast
-    if "pl_trainer_kwargs" not in darts_kwargs:
-        darts_kwargs["pl_trainer_kwargs"] = {}
+    if "pl_trainer_kwargs" in darts_kwargs:
+        pl_trainer_kwargs |= darts_kwargs["pl_trainer_kwargs"]
 
-    pl_trainer_kwargs = darts_kwargs["pl_trainer_kwargs"]
     for k in kwargs:
         if k in PL_TRAINER_KWARGS:
             pl_trainer_kwargs[k] = darts_kwargs[k]
             del darts_kwargs[k]
+
+    if len(pl_trainer_kwargs) > 0:
+        darts_kwargs["pl_trainer_kwargs"] = pl_trainer_kwargs
 
     return darts_kwargs
 
@@ -314,7 +317,8 @@ class _BaseDartsForecaster(ScaledForecaster):
     # end
 
     def _analyze_locals(self, locals):
-
+        # Special case: ExponentialSmoothing
+        #
         if "kwargs" in locals.keys():
             locals = locals | locals["kwargs"]
 

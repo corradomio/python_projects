@@ -37,9 +37,13 @@ def _extract_param_grid(config: dict, ms_name) -> tuple[dict, dict, dict]:
     # end
     return param_grid, config, ms_override
 
+
 def _compose_model_selection_model_name(msname: str, mname: str) -> str:
-    p = msname.split(".")
-    return f"{p[0]}.{mname}.{p[1]}"
+    if "." in msname:
+        p = msname.split(".")
+        return f"{p[0]}-{mname}.{p[1]}"
+    else:
+        return f"{msname}-{mname}"
 
 
 def load_model_selection_config(config_file: str) -> dict:

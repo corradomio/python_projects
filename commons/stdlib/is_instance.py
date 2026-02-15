@@ -1,4 +1,38 @@
 # ---------------------------------------------------------------------------
+# Python Data Model
+#
+#   object has identity and type
+#   id(obj)
+#   type(obj)
+#
+#   None: type(None)
+#   NotImplemented: type(NotImplemented)
+#   .../Ellipsis: type(Ellipsis)
+#   Number
+#       Integral: int, bool
+#       Real: float
+#       Complex: complex
+#   Sequences
+#       immutable: bytes, str, tuple
+#       mutable: list, bytearray
+#   Sets: set, frozenset
+#   Mapping: dict
+#   Callable:
+#       -- functions --
+#       readonly attrs: f.[__builtins__, __globals__, __closure__]
+#       writable attrs: f.[__doc__, __name__, __qualname__, __module__, __defauls__, __code__, __dict__,
+#                          __annotations__, __annotate__, __kwdefaults__, __type_params__]
+#       -- methods --
+#       readonly: m.[__self__, __func__, __doc__, __name__, __module__]
+#
+#   Class/type
+#       attrs: t.[__name__, __qualname__, __module__, __dict__, __bases__, __base__, __doc__, __annotations__,
+#                 __annotate__, __type_params__, __static_attributes__, __firstlineno__, __mro__]
+#       t.mro(), t.__subclasses__
+#   Instance
+#       attrs: obj.[__class__, __dict__ | __slots__].
+
+# ---------------------------------------------------------------------------
 # Extension of 'isinstance' to support (partially) the Python type hints
 # It is possible to use
 #

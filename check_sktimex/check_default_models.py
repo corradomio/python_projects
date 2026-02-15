@@ -6,6 +6,9 @@ import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
+from filelock import FileLock
+from sklearn.metrics import r2_score
+from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError
 
 import pandasx as pdx
 import sktimex as sktx
@@ -14,6 +17,7 @@ from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
 from stdlib.tprint import tprint
+from stdlib.qname import ns_of
 from synth import create_syntethic_data
 
 # Suppress all UserWarning instances
@@ -21,6 +25,9 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
+N_JOBS=12
+MODE="sequential"
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -34,7 +41,8 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
 
 
 def create_fdir(name:str, cat: str) -> str:
-    module = replaces(name, ["_", "-", "."], "/")
+    # module = replaces(name, ["_", "-", "."], "/")
+    module = name.replace(".", "/")
 
     if cat.endswith("-t"):
         fdir = f"plots_trends/{module}/"
@@ -60,8 +68,9 @@ def included(name, includes: list[str], excludes: list[str]) -> bool:
 def save_params(name, cat, model):
     try:
         best_params = model.best_params_
+        # module = replaces(name, ["_", "-", "."], "/")
+        module = name.replace(".", "/")
 
-        module = replaces(name, ["_", "-", "."], "/")
         if cat.endswith("-t"):
             fdir = f"best_params/{module}/"
         else:
@@ -73,6 +82,22 @@ def save_params(name, cat, model):
         jsonx.dump(best_params, fname)
     except Exception as e:
         pass
+
+
+def save_scores(name, cat, scores):
+    ns = ns_of(name)
+    scores_file = f"scores/{ns}_models_scores.csv"
+    lock_file = scores_file + ".lock"
+    lock = FileLock(lock_file)
+    with lock:
+        if not os.path.exists(scores_file):
+            with open(scores_file, "w") as f:
+                meas_names = ",".join(scores.keys())
+                f.writelines("model,cat," + meas_names + "\n")
+        with open(scores_file, "a") as f:
+            values = ",".join(map(str, scores.values()))
+            f.writelines(f"{name},{cat},{values}\n")
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -90,29 +115,27 @@ def check_model_par(*args, **kwargs):
 
 
 def check_model(
-        name, dfdict: dict[tuple, pd.DataFrame],
+        name,
+        dfdict: dict[tuple, pd.DataFrame],
         jmodel: dict,
         data_includes=None, data_excludes=None,
         override=False,
 ):
-    if data_excludes is False:
-        data_excludes = []
-    if data_includes is False:
-        data_includes = []
+    # 1) chech if to analize the timeseries (cat is excluded or not included)
+    cats_excluded = []
+    cats_included = []
 
-    if name.startswith("#"):
-        return
-
-    if "data_includes" in jmodel:
-        data_includes += jmodel["data_includes"]
-        del jmodel["data_includes"]
-    if "data_excludes" in jmodel:
-        data_excludes += jmodel["data_excludes"]
-        del jmodel["data_excludes"]
+    jforecaster = jmodel["forecaster"]
+    if "+datasets" in jforecaster:
+        cats_included += jforecaster["+datasets"]
+        del jforecaster["+datasets"]
+    if "-data_excludes" in jforecaster:
+        cats_excluded += jforecaster["-data_excludes"]
+        del jforecaster["-data_excludes"]
 
     for g in dfdict:
         cat = g[0]
-        if not included(cat, data_includes, data_excludes):
+        if not included(cat, cats_included, cats_excluded):
             continue
 
         fdir = create_fdir(name, cat)
@@ -140,20 +163,24 @@ def check_model(
 
             # print("... predict")
             y_predict = model.predict(fh=fh, X=X_test)
-            # y_predict = y_predict + 0.01
 
-            # print("... plot")
+            # save params
+            # save_params(name, cat, model)
+
+            # save scores
+            save_scores(name, cat, {
+                "mae": MeanAbsoluteError()(y_test, y_predict),
+                "mse": MeanSquaredError()(y_test, y_predict),
+                "r2": r2_score(y_test.to_numpy(), y_predict.to_numpy()),
+            })
+
+            # save plot
             sktx.utils.plot_series(y_train, y_test, y_predict,
                                    labels=["train", "test", "predict"],
                                    title=f"{name}: {g[0]}")
 
-            # save plot
-            # fname = f"{fdir}/{name}-{g[0]}.png"
             plt.savefig(fname, dpi=300)
             plt.close()
-
-            # save params
-            save_params(name, cat, model)
 
             # break
         except Exception as e:
@@ -171,15 +198,15 @@ def check_models(df: pd.DataFrame,
     dfdict = pdx.groups_split(df, groups=["cat"])
 
     # -- sequential
-    # for name in jmodels:
-    #     if included(name, model_includes, model_excludes):
-    #         check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+    for name in jmodels:
+        if included(name, model_includes, model_excludes):
+            check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
 
     # -- parallel
-    Parallel(n_jobs=4)(
-        delayed(check_model_par)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
-        for name in jmodels if included(name, model_includes, model_excludes)
-    )
+    # Parallel(n_jobs=N_JOBS)(
+    #     delayed(check_model_par)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+    #     for name in jmodels if included(name, model_includes, model_excludes)
+    # )
 
     pass
 # end
@@ -192,39 +219,21 @@ def check_models(df: pd.DataFrame,
 def main():
     tprint("dataframe")
     df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
+    cats = df["cat"].unique().tolist()
 
-    MODEL_INCLUDES = []
-    MODEL_EXCLUDES = []
-    DATA_INCLUDES = []
-    DATA_EXCLUDES = []
+    for config_file in [
+        "config/darts_models.json",
+        # "config/nf_models.json",
+        # "config/skt_models.json",
+        # "config/skl_models.json",
+        # "config/skx_models.json",
+        # "config/ext_models.json",
+        # "config/auto_models.json"
+    ]:
+        tprint(config_file)
+        jmodels = jsonx.load(config_file)
+        check_models(df, jmodels)
 
-    # tprint("config/darts_models.json")
-    # jmodels = jsonx.load("config/darts_models.json")
-
-    tprint("config/nf_models.json")
-    jmodels = jsonx.load("config/nf_models.json")
-
-    # tprint("config/skt_models.json")
-    # jmodels = jsonx.load("config/skt_models.json")
-
-    # tprint("config/skl_models.json")
-    # jmodels = jsonx.load("config/skl_models.json")
-
-    # tprint("config/skx_models.json")
-    # jmodels = jsonx.load("config/skx_models.json")
-
-    # tprint("config/ext_models.json")
-    # jmodels = jsonx.load("config/ext_models.json")
-
-    # tprint("run_models")
-    # jmodels = jsonx.load("config/auto_models.json")
-
-    check_models(
-        df, jmodels,
-        model_includes=MODEL_INCLUDES, model_excludes=MODEL_EXCLUDES,
-        data_includes=DATA_INCLUDES, data_excludes=DATA_EXCLUDES,
-        override=False,
-    )
     pass
 # end
 
