@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import os
 import sys
 import traceback
@@ -17,7 +18,6 @@ from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
 from sklearn.metrics import r2_score
 from stdlib import jsonx
-from stdlib.tprint import tprint
 from stdlib.qname import ns_of
 from synth import create_syntethic_data
 from load_config import load_model_selection_config
@@ -28,6 +28,20 @@ warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
 N_JOBS = 12
+
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+os.makedirs("best_params", exist_ok=True)
+os.makedirs("config_resolved", exist_ok=True)
+os.makedirs("plots_synth", exist_ok=True)
+os.makedirs("plots_synth/trends", exist_ok=True)
+os.makedirs("plots_plain", exist_ok=True)
+os.makedirs("plots_trends", exist_ok=True)
+os.makedirs("scores", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -68,6 +82,8 @@ def included(name, includes: list[str], excludes: list[str]) -> bool:
 
 def save_params(name, cat, model):
     best_params = model.best_params_
+    n_best_forecasters = model.n_best_forecasters_
+    n_best_scores = model.n_best_scores_
     # module = replaces(name, ["_", "-", "."], "/")
     module = name.replace(".", "/")
 
@@ -103,11 +119,27 @@ def save_scores(name, cat, scores):
 # check_model
 # ---------------------------------------------------------------------------
 
-def check_model_par(*args, **kwargs):
+def handle_category(cat, jmodel):
+    cats_excluded = []
+    cats_included = []
 
+    jforecaster = jmodel["forecaster"]
+    if "+datasets" in jforecaster:
+        cats_included += jforecaster["+datasets"]
+    if "-data_excludes" in jforecaster:
+        cats_excluded += jforecaster["-data_excludes"]
+
+    return included(cat, cats_included, cats_excluded)
+# end
+
+
+def check_model_par(*args, **kwargs):
     # it is necessary to configure the logging system inside each
     # python process, when it is used the joblib
     logging.config.fileConfig('logging_config.ini')
+
+    warnings.simplefilter("ignore", UserWarning)
+    warnings.simplefilter("ignore", FutureWarning)
 
     check_model(*args, **kwargs)
 # end
@@ -119,20 +151,15 @@ def check_model(
         jmodel: dict,
         override=False
 ):
-    # 1) chech if to analize the timeseries (cat is excluded or not included)
-    cats_excluded = []
-    cats_included = []
+    log = logging.getLogger("main")
 
+    jmodel = {} | jmodel
+
+    # remove ["+datasets", "-datasets"] if necessary
     jforecaster = jmodel["forecaster"]
-    if "+datasets" in jforecaster:
-        cats_included += jforecaster["+datasets"]
-        del jforecaster["+datasets"]
-    if "-data_excludes" in jforecaster:
-        cats_excluded += jforecaster["-data_excludes"]
-        del jforecaster["-data_excludes"]
-
-    if not included(cat, cats_included, cats_excluded):
-        return
+    for key in ["+datasets", "-datasets"]:
+        if key in jforecaster:
+            del jforecaster[key]
 
     # 2) check if the time series is already analyzed (the plot is present)
     fdir = create_fdir(name, cat)
@@ -146,20 +173,20 @@ def check_model(
     dfg = dfdict[(cat,)]
 
     # 4) evaluate the model
-    print("---", name, "/", cat, "---")
+    log.info(f"---{name}/{cat}---")
     try:
         X, y = pdx.xy_split(dfg, target=TARGET)
         X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
         fh = y_test.index
 
-        # print("... create")
+        # log.info("... create")
         # model = create_from(jmodel)
         model = create_forecaster(name, jmodel)
 
-        # print("... fit")
+        # log.info("... fit")
         model.fit(y=y_train, X=X_train)
 
-        # print("... predict")
+        # log.info("... predict")
         y_predict: pd.Series = model.predict(fh=fh, X=X_test)
 
         # save params
@@ -182,7 +209,7 @@ def check_model(
 
         # break
     except Exception as e:
-        print(f"ERROR[{name}]:", e)
+        log.exception(f"ERROR[{name}]:", e)
         traceback.print_exception(*sys.exc_info())
 # end
 
@@ -190,15 +217,16 @@ def check_model(
 def check_models(cats: list[str], jmodels: dict[str, dict]):
 
     # -- sequential
-    # for name in jmodels:
-    #     for cat in cats:
-    #         check_model(name, cat, jmodels[name])
+    for name in jmodels:
+        for cat in cats:
+            if handle_category(cat, jmodels[name]):
+                check_model(name, cat, jmodels[name])
 
     # -- parallel
-    Parallel(n_jobs=N_JOBS)(
-        delayed(check_model_par)(name, cat, jmodels[name])
-        for name in jmodels for cat in cats
-    )
+    # Parallel(n_jobs=N_JOBS)(
+    #     delayed(check_model_par)(name, cat, jmodels[name])
+    #     for name in jmodels for cat in cats if handle_category(cat, jmodels[name])
+    # )
 
     pass
 # end
@@ -209,16 +237,17 @@ def check_models(cats: list[str], jmodels: dict[str, dict]):
 # ---------------------------------------------------------------------------
 
 def main():
+    log = logging.getLogger('main')
 
-    tprint("dataframe")
     df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
     for config in [
-        # "auto_dartsx_models",
+        #"auto_dartsx_models",
         "auto_nfx_models",
     ]:
-        tprint(config)
+        log.info(f"processing {config}")
+
         config_file = f"config/{config}.json"
         resolved_file = f"config_resolved/{config}.json"
         jmodels = load_model_selection_config(config_file)

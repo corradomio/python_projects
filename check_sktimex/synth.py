@@ -8,13 +8,11 @@ def const_wave(x: np.ndarray, c: float = 0) -> tuple[np.ndarray, np.ndarray]:
 
 
 def sin_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
-    # y = a*np.sin(x*np.pi + phase)
     y = a * np.sin(2 * x * np.pi + phase) + a*1.1
     return y, x
 
 
 def sinabs_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
-    # y = a*(2*np.abs(np.sin(x*np.pi + phase))-1)
     y = a * (2 * np.abs(np.sin(2 * x * np.pi + phase))) + a*0.1
     return y, x
 
@@ -22,17 +20,32 @@ def sinabs_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarr
 def square_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
     y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
-    # y[t< 0.5] = -a
-    # y[t>=0.5] = +a
     y[t < 0.5] = a*0.1
     y[t >= 0.5] = +a
     return y, t
 
 
-def triangle_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
-    y = np.zeros(x.shape, dtype=float)
+def sawtooth_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
+    # y = np.zeros(x.shape, dtype=float)
     t = (x + phase) % 1
     y = a * t + a*0.1
+    return y, x
+
+
+def inverted_sawtooth_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
+    # y = np.zeros(x.shape, dtype=float)
+    t = (x + phase) % 1
+    y = (a - a * t) + a*0.1
+    return y, x
+
+
+
+def triangle_wave(x: np.ndarray, a: float = 1, phase: float = 0) -> tuple[np.ndarray, np.ndarray]:
+    y = np.zeros(x.shape, dtype=float)
+    t = (x + phase) % 1.0
+    y[t <= 0.5] = a * (0 + 2 * t[t <= 0.5])
+    y[t >= 0.5] = a * (1 + 2* (0.5 - t[t >= 0.5]))
+    y += a * 0.1
     return y, x
 
 
@@ -117,6 +130,24 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"tri{p}"
         df_list.append(df)
 
+    # -- sawtooth_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = sawtooth_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"saw{p}"
+        df_list.append(df)
+
+    # -- inverted_sawtooth_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = inverted_sawtooth_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"was{p}"
+        df_list.append(df)
+
     # -- sinabs_wave --
     for p in PERIODS:
         x = np.linspace(0, n, num=m, dtype=float)/p
@@ -143,6 +174,16 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         df["cat"] = f"{name}-t"
         df_list.append(df)
 
+    # -- square_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = square_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"sq{p}-t"
+        df_list.append(df)
+
     # -- triangle_wave --
     for p in PERIODS:
         x = np.linspace(0, n, num=m, dtype=float)/p
@@ -151,6 +192,36 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
         y = add_trend(y, 0, 1)
         df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
         df["cat"] = f"tri{p}-t"
+        df_list.append(df)
+
+    # -- sawtooth_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = sawtooth_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"saw{p}-t"
+        df_list.append(df)
+
+    # -- inverted_sawtooth_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = inverted_sawtooth_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"was{p}-t"
+        df_list.append(df)
+
+    # -- sin_wave --
+    for p in PERIODS:
+        x = np.linspace(0, n, num=m, dtype=float)/p
+        y, x = sin_wave(x, a, phase)
+        y = noise_signal(y, noise)
+        y = add_trend(y, 0, 1)
+        df = pd.DataFrame(data=np.array([y, x]).T, columns=["y", "x"])
+        df["cat"] = f"sin{p}-t"
         df_list.append(df)
 
     # -- sinabs_wave --

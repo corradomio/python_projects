@@ -17,7 +17,11 @@ def main():
 
         plt.plot_series(y, labels=[cat])
 
-        plt.savefig(f"plot_synth/{cat[0]}.png", dpi=300)
+        name = cat[0]
+        if name.endswith("-t"):
+            plt.savefig(f"plots_synth/trends/{cat[0]}.png", dpi=300)
+        else:
+            plt.savefig(f"plots_synth/{cat[0]}.png", dpi=300)
         plt.close()
     # end
     pass

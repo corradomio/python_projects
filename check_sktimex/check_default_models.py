@@ -1,4 +1,5 @@
 import logging
+import logging.config
 import os
 import sys
 import traceback
@@ -16,7 +17,6 @@ import sktimex.utils
 from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
-from stdlib.tprint import tprint
 from stdlib.qname import ns_of
 from synth import create_syntethic_data
 
@@ -25,8 +25,23 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS=12
-MODE="sequential"
+N_JOBS = 12
+MODE = "sequential"
+# MODE = "parallel"
+
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+os.makedirs("best_params", exist_ok=True)
+os.makedirs("config_resolved", exist_ok=True)
+os.makedirs("plots_synth", exist_ok=True)
+os.makedirs("plots_synth/trends", exist_ok=True)
+os.makedirs("plots_plain", exist_ok=True)
+os.makedirs("plots_trends", exist_ok=True)
+os.makedirs("scores", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 
 # ---------------------------------------------------------------------------
@@ -110,6 +125,9 @@ def check_model_par(*args, **kwargs):
     # python process, when it is used the joblib
     logging.config.fileConfig('logging_config.ini')
 
+    warnings.simplefilter("ignore", UserWarning)
+    warnings.simplefilter("ignore", FutureWarning)
+
     check_model(*args, **kwargs)
 # end
 
@@ -121,11 +139,14 @@ def check_model(
         data_includes=None, data_excludes=None,
         override=False,
 ):
+    log = logging.getLogger("main")
+
     # 1) chech if to analize the timeseries (cat is excluded or not included)
     cats_excluded = []
     cats_included = []
 
-    jforecaster = jmodel["forecaster"]
+    # jforecaster = jmodel["forecaster"]
+    jforecaster = jmodel
     if "+datasets" in jforecaster:
         cats_included += jforecaster["+datasets"]
         del jforecaster["+datasets"]
@@ -143,7 +164,7 @@ def check_model(
         if os.path.exists(fname) and not override:
             continue
 
-        print("---", name, "/", cat, "---")
+        log.info(f"--- {name}/{cat} ---")
 
         try:
             dfg = dfdict[g]
@@ -184,7 +205,7 @@ def check_model(
 
             # break
         except Exception as e:
-            print(f"ERROR[{name}]:", e)
+            log.exception(f"ERROR[{name}]:", e)
             traceback.print_exception(*sys.exc_info())
 # end
 
@@ -197,16 +218,17 @@ def check_models(df: pd.DataFrame,
 
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    # -- sequential
-    for name in jmodels:
-        if included(name, model_includes, model_excludes):
-            check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
-
-    # -- parallel
-    # Parallel(n_jobs=N_JOBS)(
-    #     delayed(check_model_par)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
-    #     for name in jmodels if included(name, model_includes, model_excludes)
-    # )
+    if MODE == "sequential":
+        # -- sequential
+        for name in jmodels:
+            if included(name, model_includes, model_excludes):
+                check_model(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+    else:
+        # -- parallel
+        Parallel(n_jobs=N_JOBS)(
+            delayed(check_model_par)(name, dfdict, jmodels[name], override, data_includes, data_excludes)
+            for name in jmodels if included(name, model_includes, model_excludes)
+        )
 
     pass
 # end
@@ -217,20 +239,20 @@ def check_models(df: pd.DataFrame,
 # ---------------------------------------------------------------------------
 
 def main():
-    tprint("dataframe")
+    log = logging.getLogger("main")
+
     df = create_syntethic_data(12 * 8, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
     for config_file in [
         "config/darts_models.json",
-        # "config/nf_models.json",
-        # "config/skt_models.json",
-        # "config/skl_models.json",
-        # "config/skx_models.json",
-        # "config/ext_models.json",
-        # "config/auto_models.json"
+        "config/nf_models.json",
+        "config/skt_models.json",
+        "config/skl_models.json",
+        "config/skx_models.json",
+        "config/ext_models.json"
     ]:
-        tprint(config_file)
+        log.info(config_file)
         jmodels = jsonx.load(config_file)
         check_models(df, jmodels)
 

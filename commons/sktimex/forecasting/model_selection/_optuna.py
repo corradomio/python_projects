@@ -2,6 +2,7 @@ import optuna.samplers
 from optuna.distributions import CategoricalDistribution
 from sktime.forecasting.model_selection import ForecastingOptunaSearchCV as Sktime_ForecastingOptunaSearchCV
 from stdlib.qname import create_from
+from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
@@ -31,7 +32,7 @@ def to_optuna_distributions(param_grid: dict):
 # Note:
 #   'param_grid' must be a dictionary of 'optuna samplers'
 
-class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
+class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV, ModelSelection):
     """
     Added support to create the class using a dict/JSON object
     """
@@ -58,6 +59,7 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV):
             backend_params=None,    # for compatibility
             verbose=0,
     ):
+        assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         forecaster_instance = create_from(forecaster)
         cv_instance = create_from(cv)
         super().__init__(

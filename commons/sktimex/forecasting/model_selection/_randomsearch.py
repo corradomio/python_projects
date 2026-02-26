@@ -2,6 +2,7 @@ from typing import Optional
 
 from sktime.forecasting.model_selection import ForecastingRandomizedSearchCV as Sktime_ForecastingRandomizedSearchCV
 from stdlib.qname import create_from
+from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +21,7 @@ def safe_float(x):
 # ForecastingRandomizedSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
+class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV, ModelSelection):
     """
     Extends
 
@@ -57,6 +58,7 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV):
             backend_params=None,
             verbose=0,
     ):
+        assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         assert param_grid is None or param_distributions is None, \
             "Only one of 'param_grid' or 'param_distributions' can be not None"
 

@@ -329,6 +329,16 @@ class _BaseDartsForecaster(ScaledForecaster):
             else:
                 _setattr(self, k, locals[k])
 
+        # special process for 'lags_past_covariates'
+        if "lags_past_covariates" in keys and isinstance(locals["lags_past_covariates"], str):
+            key = locals["lags_past_covariates"]
+            locals["lags_past_covariates"] = locals[key]
+
+        # special process for 'training_length'
+        if "training_length" in keys and isinstance(locals["training_length"], str):
+            key = locals["training_length"]
+            locals["training_length"] = locals[key]
+
         self._kwargs = locals
     # end
 

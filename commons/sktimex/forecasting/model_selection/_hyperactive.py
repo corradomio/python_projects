@@ -1,6 +1,7 @@
 from sktime.forecasting.base import ForecastingHorizon
 from sktime.forecasting.model_selection import ForecastingOptCV as Sktime_ForecastingOptCV
 from stdlib.qname import create_from
+from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
@@ -41,7 +42,7 @@ def safe_float(x):
 # ForecastingHyperactiveSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV):
+class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV, ModelSelection):
     """
     Added support to create the class using a dict/JSON object
     """

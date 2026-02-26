@@ -1,8 +1,14 @@
 from typing import Optional
+import numpy as np
+import pandas as pd
+from sklearn.model_selection import check_cv
+
+from sktime.exceptions import NotFittedError
+from sktime.utils.validation.forecasting import check_scoring
 
 from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
-
 from stdlib.qname import create_from
+from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
@@ -20,7 +26,7 @@ def safe_float(x):
 # ForecastingRandomizedSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
+class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
     """
     Added support to create the class using a dict/JSON object
     """
@@ -82,6 +88,7 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV):
             backend=backend,
             backend_params=backend_params,
         )
+        assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         self.param_grid = param_grid
         self._forecaster_override = forecaster
         self._cv_override = cv

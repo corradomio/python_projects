@@ -1,0 +1,4 @@
+
+class ModelSelection:
+    pass
+

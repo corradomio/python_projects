@@ -1,5 +1,6 @@
 from sktime.forecasting.model_selection import ForecastingGridSearchCV as Sktime_ForecastingGridSearchCV
 from stdlib.qname import create_from
+from ._base import ModelSelection
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -16,7 +17,7 @@ def safe_float(x):
 # ForecastingGridSearchCV
 # ---------------------------------------------------------------------------
 
-class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
+class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV, ModelSelection):
     """
     Added support to create the class using a dict/JSON object
     """
@@ -42,6 +43,7 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV):
             backend_params=None,
             verbose=0,
     ):
+        assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         forecaster_instance = create_from(forecaster)
         cv_instance = create_from(cv)
         super().__init__(

@@ -16,20 +16,22 @@ networkx
 # igraph
 
 scikit-learn
-catboost
-xgboost
+#catboost
+#xgboost
+
+statsmodels
 
 
 #--extra-index-url https://download.pytorch.org/whl/cu118
 #--extra-index-url https://download.pytorch.org/whl/cu124
 --extra-index-url https://download.pytorch.org/whl/cu121
 torch
-skorch
+#skorch
 
-# available ONLY for Python 3.7, 3.8
-# mindspore
+#gcastle
+causal-learn
 
-gcastle
+
 dowhy
 econml
 catenets

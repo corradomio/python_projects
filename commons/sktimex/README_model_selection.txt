@@ -26,6 +26,9 @@ score
 
 
 
+Parameters
+----------
+
 # ForecastingGridSearchCV
 #         forecaster,
 #         cv,
@@ -100,3 +103,117 @@ score
 #         error_score=np.nan,
 #         n_evals=100,
 #         sampler=None,
+
+
+
+Attributes
+----------
+
+ForecastingGridSearchCV
+    Attributes:
+
+        best_index_: int
+        best_score_: float
+            Score of the best model
+        best_params_ dict
+            Best parameter values across the parameter grid
+        best_forecaster_ estimator
+            Fitted estimator with the best parameters
+        cv_results_ dict
+            Results from grid search cross validation
+        n_splits_: int
+            Number of splits in the data for cross validation
+        refit_time_ float
+            Time (seconds) to refit the best forecaster
+        scorer_ function
+            Function used to score model
+        n_best_forecasters_: list of tuples (“rank”, <forecaster>)
+            The “rank” is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst score of forecasters
+        forecasters_ pd.DataFrame
+
+            DataFrame with all fitted forecasters and their parameters. Only present if
+            tune_by_instance=True or tune_by_variable=True, and at least one of the two is
+            applicable. In this case, the other attributes are not present in self, only
+            in the fields of forecasters_.
+
+
+
+ForecastingRandomizedSearchCV
+    Attributes:
+
+        best_index_: int
+        best_score_: float
+            Score of the best model
+        best_params_ dict
+            Best parameter values across the parameter grid
+        best_forecaster_ estimator
+            Fitted estimator with the best parameters
+        cv_results_ dict
+            Results from grid search cross validation
+        n_best_forecasters_: list of tuples (“rank”, <forecaster>)
+            The “rank” is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst score of forecasters
+        forecasters_ pd.DataFrame
+
+            DataFrame with all fitted forecasters and their parameters. Only present if
+            tune_by_instance=True or tune_by_variable=True, and at least one of the two is
+            applicable. In this case, the other attributes are not present in self, only
+            in the fields of forecasters_.
+
+
+
+ForecastingSkoptSearchCV
+    Attributes:
+
+        best_index_ int
+        best_score_: float
+            Score of the best model
+        best_params_ dict
+            Best parameter values across the parameter grid
+        best_forecaster_ estimator
+            Fitted estimator with the best parameters
+        cv_results_ dict
+            Results from grid search cross validation
+        n_best_forecasters_: list of tuples (“rank”, <forecaster>)
+            The “rank” is in relation to best_forecaster_
+        n_best_scores_: list of float
+            The scores of n_best_forecasters_ sorted from best to worst score of forecasters
+        forecasters_ pd.DataFrame
+
+            DataFrame with all fitted forecasters and their parameters. Only present if
+            tune_by_instance=True or tune_by_variable=True, and at least one of the two is
+            applicable. In this case, the other attributes are not present in self, only
+            in the fields of forecasters_.
+
+
+
+ForecastingHiperactive/ForecastingOptCV
+    Attributes:
+
+        cutoff
+            Cut-off = “present time” state of forecaster.
+        fh
+            Forecasting horizon that was passed.
+        is_fitted
+            Whether fit has been called.
+
+
+ForecastingOptunaSearchCV
+
+    best_index_ int
+    best_score_: float
+        Score of the best model
+    best_params_ dict
+        Best parameter values across the parameter grid
+    best_forecaster_ estimator
+        Fitted estimator with the best parameters
+    cv_results_ dict
+        Results from grid search cross validation
+    n_best_forecasters_: list of tuples (“rank”, <forecaster>)
+        The “rank” is in relation to best_forecaster_
+    n_best_scores_: list of float
+        The scores of n_best_forecasters_ sorted from best to worst score of forecasters
+
