@@ -1,12 +1,12 @@
 import pandasx as pdx
-from synth import create_syntethic_data
+from synth import create_synthetic_data
 import sktimex.utils.plotting as plt
 
 TARGET = "y"
 
 
 def main():
-    df = create_syntethic_data(12*8, 0.0, 1, 0.33)
+    df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
     # df = create_syntethic_data(12 * 8, 0.0, 1, 0)
 
     dfdict = pdx.groups_split(df, groups=["cat"])

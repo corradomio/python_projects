@@ -1,6 +1,9 @@
 from collections import deque
 from typing import Collection, Union, Iterator
 import networkx as nx
+import numpy as np
+
+import netx
 from stdlib import is_instance
 from .cache import check_cache
 from .gclass import is_networkx_graph
@@ -61,7 +64,7 @@ def add_edges_from(G, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) ->
 # is_directed_acyclic_graph
 # ---------------------------------------------------------------------------
 
-def is_directed_acyclic_graph(G: Graph) -> bool:
+def is_directed_acyclic_graph(G: Graph | np.ndarray) -> bool:
     """
     Check if the graph is a DAG (Directed Acyclic Graph).
     If it is not directed, it is not a DAG
@@ -70,6 +73,10 @@ def is_directed_acyclic_graph(G: Graph) -> bool:
     :param G: graph to check
     :return: true or false
     """
+    if isinstance(G, np.ndarray):
+        am: np.ndarray = G
+        G = netx.from_adjacency_matrix(am)
+
     if not nx.is_directed(G):
         return False
     try:
@@ -78,7 +85,6 @@ def is_directed_acyclic_graph(G: Graph) -> bool:
     except nx.NetworkXNoCycle:
         return True
 # end
-is_dag = is_directed_acyclic_graph
 
 
 # ---------------------------------------------------------------------------

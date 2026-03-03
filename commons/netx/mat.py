@@ -52,6 +52,11 @@ def from_numpy_matrix(adjacency_matrix: np.ndarray) -> Graph:
 # end
 
 
+def from_numpy_array(adjacency_matrix: np.ndarray) -> Graph:
+    return from_adjacency_matrix(adjacency_matrix)
+# end
+
+
 def adjacency_matrix(G: Graph) -> np.ndarray:
     n = G.order()
     is_directed = G.is_directed()

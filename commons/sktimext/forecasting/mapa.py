@@ -8,6 +8,9 @@ from .recpred import RecursivePredict
 #
 
 class MAPAForecaster(sktf.MAPAForecaster, RecursivePredict):
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
             self,

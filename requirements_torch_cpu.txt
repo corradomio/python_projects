@@ -91,7 +91,7 @@ torchtext
 
 # https://lightning.ai/docs/pytorch/stable/
 # https://github.com/Lightning-AI/pytorch-lightning
-# lightning
+lightning
 
 # https://skorch.readthedocs.io/en/stable/
 # https://github.com/skorch-dev/skorch

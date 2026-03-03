@@ -76,7 +76,7 @@ def set_dt_index(df: pd.DataFrame, use=False):
     return dft
 
 
-def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float = 0) -> pd.DataFrame:
+def create_synthetic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float = 0) -> pd.DataFrame:
     """
     Note: the reference is 12 months
     The wave must have: 3,6,12,24,36,48
@@ -88,7 +88,8 @@ def create_syntethic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
     df_list = []
     m = n+1
 
-    PERIODS = [3,6,12,24,36,48]
+    # PERIODS = [3,6,12,24,36,48]
+    PERIODS = [3, 6, 12, 24, 48]
 
     # -- const_wave --
     for c in [1]:

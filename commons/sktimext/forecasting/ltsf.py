@@ -8,6 +8,9 @@ from .recpred import RecursivePredict
 #
 
 class LTSFLinearForecaster(sktf.LTSFLinearForecaster, RecursivePredict):
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
         self,
@@ -53,6 +56,9 @@ class LTSFLinearForecaster(sktf.LTSFLinearForecaster, RecursivePredict):
 
 
 class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster, RecursivePredict):
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
         self,
@@ -98,6 +104,9 @@ class LTSFDLinearForecaster(sktf.LTSFDLinearForecaster, RecursivePredict):
 
 
 class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster, RecursivePredict):
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
         self,
@@ -143,7 +152,9 @@ class LTSFNLinearForecaster(sktf.LTSFNLinearForecaster, RecursivePredict):
 
 
 class LTSFTransformerForecaster(sktf.LTSFTransformerForecaster, RecursivePredict):
-
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
         self,

@@ -329,16 +329,6 @@ class _BaseDartsForecaster(ScaledForecaster):
             else:
                 _setattr(self, k, locals[k])
 
-        # special process for 'lags_past_covariates'
-        if "lags_past_covariates" in keys and isinstance(locals["lags_past_covariates"], str):
-            key = locals["lags_past_covariates"]
-            locals["lags_past_covariates"] = locals[key]
-
-        # special process for 'training_length'
-        if "training_length" in keys and isinstance(locals["training_length"], str):
-            key = locals["training_length"]
-            locals["training_length"] = locals[key]
-
         self._kwargs = locals
     # end
 
@@ -352,8 +342,6 @@ class _BaseDartsForecaster(ScaledForecaster):
             param_names = sorted(param_names)
         return param_names
 
-    # def get_params(self, deep=True):
-    #     return super().get_params(deep=deep)
     def get_params(self, deep=True):
         params = {}
         params |= super().get_params(deep=deep)
@@ -377,7 +365,7 @@ class _BaseDartsForecaster(ScaledForecaster):
     #    nf: the parameters for pl.Trainer are flat
 
     def _compile_model(self, y, X=None):
-        # create the DarTS parameters
+        # create the DarTS parameters (cloned)
         darts_kwargs = _parse_kwargs(self._kwargs)
 
         # create the model
@@ -387,9 +375,27 @@ class _BaseDartsForecaster(ScaledForecaster):
 
         darts_kwargs["class"] = self._darts_class
 
+        # apply special transformations to the parameters
+        darts_kwargs = self._validate_kwargs(darts_kwargs, y, X)
+
         model = create_from(darts_kwargs)
 
         return model
+    # end
+
+    def _validate_kwargs(self, darts_kwargs, y, X):
+
+        # special process for 'training_length'
+        if "training_length" in darts_kwargs and isinstance(darts_kwargs["training_length"], str):
+            key = darts_kwargs["training_length"]
+            darts_kwargs["training_length"] = darts_kwargs[key]
+
+        # special process for 'lags_past_covariates'
+        if "lags_past_covariates" in darts_kwargs and isinstance(darts_kwargs["lags_past_covariates"], str):
+            key = darts_kwargs["lags_past_covariates"]
+            darts_kwargs["lags_past_covariates"] = darts_kwargs[key]
+
+        return darts_kwargs
     # end
 
     def _fit(self, y, X, fh):

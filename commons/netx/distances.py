@@ -2,8 +2,9 @@ from networkx.algorithms.components import is_connected
 
 import netx
 from . import adjacency_matrix
-from .causalfun import all_paths_blocked, no_descendats, is_direct_connected
+from .causalfun import all_paths_blocked, no_descendats
 from .graph import Graph, NODE_TYPE
+from .paths import is_direct_connected
 
 
 # ---------------------------------------------------------------------------

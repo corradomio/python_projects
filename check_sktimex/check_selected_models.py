@@ -210,35 +210,12 @@ def check_models(
         df: pd.DataFrame,
         jmodels: dict[str, dict],
 ):
-    log = logging.getLogger("main")
     dfdict = pdx.groups_split(df, groups=["cat"])
-    cats = list(map(lambda k:k[0], dfdict.keys()))
 
-    if MODE == "sequential":
-        # -- sequential
-        for name in jmodels:
-            for cat in cats:
-                if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-                        and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-                        and (name, cat) not in SPECIAL_EXCLUSIONS
-                ):
-                    dfg = dfdict[(cat,)]
-                    check_model(name, cat, dfg, jmodels[name],)
-                else:
-                    log.info(f"--- {name}/{cat}: skipped ---")
-
-    else:
-        # -- parallel
-        Parallel(n_jobs=N_JOBS)(
-            delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
-            for cat in cats
-            for name in jmodels
-            if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-                and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-                and (name, cat) not in SPECIAL_EXCLUSIONS
-            )
-        )
-
+    for name, cat in SPECIAL_CASES:
+        if name in jmodels:
+            dfg = dfdict[(cat,)]
+            check_model(name, cat, dfg, jmodels[name], )
     pass
 # end
 

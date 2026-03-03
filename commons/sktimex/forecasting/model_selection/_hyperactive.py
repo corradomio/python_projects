@@ -46,6 +46,9 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV, ModelSelection):
     """
     Added support to create the class using a dict/JSON object
     """
+    _tags = {
+        "requires-fh-in-fit": False,  # is the forecasting horizon required in fit?
+    }
 
     def __init__(
             self,

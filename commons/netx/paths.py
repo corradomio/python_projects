@@ -5,6 +5,14 @@ from .graph import Graph, NODE_TYPE
 
 
 # ---------------------------------------------------------------------------
+# is_direct_connected
+# ---------------------------------------------------------------------------
+
+def is_direct_connected(G: Graph, u: NODE_TYPE, v: NODE_TYPE) ->  bool:
+    uv_path = next(find_directed_paths(G, u, v))
+    return uv_path is not None
+
+# ---------------------------------------------------------------------------
 # find_paths
 # find_all_paths
 # ---------------------------------------------------------------------------

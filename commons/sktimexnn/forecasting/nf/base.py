@@ -333,24 +333,26 @@ class _BaseNFForecaster(ScaledForecaster):
     def _compile_model(self, y, X):
         self._freq = _freqstr(y.index)
 
-        hist_exog_list = None if X is None or self._ignores_exogenous_X else list(X.columns)
-
-        # create the Neuralforecast parameters
+        # create the Neuralforecast parameters (cloned)
         nf_kwargs = _parse_kwargs(self._kwargs)
 
-        # model = self._nf_class(
-        #     hist_exog_list=hist_exog_list,
-        #     # stat_exog_list=None,
-        #     # futr_exog_list=None,
-        #     **nf_kwargs
-        # )
-
         nf_kwargs["class"] = self._nf_class
-        nf_kwargs["hist_exog_list"] = hist_exog_list
+
+        # apply special transformations to the parameters
+        nf_kwargs = self._validate_kwargs(nf_kwargs, y, X)
 
         model = create_from(nf_kwargs)
 
         return model
+    # end
+
+    def _validate_kwargs(self, nf_kwargs: dict, y, X) -> dict:
+
+        hist_exog_list = None if X is None or self._ignores_exogenous_X else list(X.columns)
+
+        nf_kwargs["hist_exog_list"] = hist_exog_list
+
+        return nf_kwargs
     # end
 
     def _fit(self, y, X, fh):

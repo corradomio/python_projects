@@ -55,6 +55,24 @@ class TimeXer(_BaseNFForecaster):
             **trainer_kwargs
     ):
         # pacth_len must be smaller than the input_size
-        if input_size < patch_len: patch_len = input_size//7
+        # if input_size < patch_len: patch_len = input_size//7
         super().__init__(nfm.TimeXer, locals())
         return
+
+    def _validate_kwargs(self, nf_kwargs: dict, y, X) -> dict:
+        nf_kwargs = super()._validate_kwargs(nf_kwargs, y, X)
+
+        #
+        # This trick try to resolve the problem with hyper-parameters optimization
+        # when th search is applied to 'input_size' and 'patch_len'
+
+        input_size = nf_kwargs["input_size"]
+        patch_len = nf_kwargs["patch_len"]
+
+        if input_size < patch_len:
+            nf_kwargs["patch_len"] = max(1, input_size // 2)
+
+        return nf_kwargs
+    # end
+
+

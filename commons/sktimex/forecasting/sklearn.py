@@ -155,7 +155,7 @@ class ScikitLearnForecaster(BaseForecaster):
         efh = fh.to_relative(self.cutoff)
 
         # using 'sktimex.forecasting.compose.make_reduction'
-        # it is resolved the problems with predict horizon larger than the train horizon
+        # it is resolved the problems with predict a horizon larger than the train horizon
 
         y_pred: pd.Series = self._estimator.predict(fh=efh, X=X)
 

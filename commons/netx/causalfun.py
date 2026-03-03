@@ -2,7 +2,8 @@ from typing import Collection, Optional
 from stdlib.is_instance import is_instance
 from .graph import Graph, NODE_TYPE
 from .paths import find_all_undirected_paths, find_all_directed_paths
-from .dagfun import descendants
+from .dagfun import descendants, ancestors
+from .mat import adjacency_matrix
 
 # ---------------------------------------------------------------------------
 # chain, fork, collider
@@ -229,8 +230,8 @@ def structural_intervention_distance(G: Graph, H: Graph) -> float:
 
     sid = 0
     for i in N:
-        PAHi = netx.ancestors(H, i, recursive=True)    # ancestors    in H of i
-        DEGi = netx.descendants(G, i, recursive=True)   # descendants  in G of i
+        PAHi = ancestors(H, i, recursive=True)    # ancestors    in H of i
+        DEGi = descendants(G, i, recursive=True)   # descendants  in G of i
         for j in N:
             if i == j:
                 continue
