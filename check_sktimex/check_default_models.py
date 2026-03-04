@@ -25,7 +25,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 12
+N_JOBS = 4
 MODE = "sequential"
 # MODE = "parallel"
 
@@ -218,10 +218,11 @@ def check_models(
         # -- sequential
         for name in jmodels:
             for cat in cats:
-                if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-                        and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-                        and (name, cat) not in SPECIAL_EXCLUSIONS
-                ):
+                # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
+                #         and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
+                #         and (name, cat) not in SPECIAL_EXCLUSIONS
+                # ):
+                if (name, cat) not in SPECIAL_EXCLUSIONS:
                     dfg = dfdict[(cat,)]
                     check_model(name, cat, dfg, jmodels[name],)
                 else:
@@ -233,10 +234,11 @@ def check_models(
             delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
             for cat in cats
             for name in jmodels
-            if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-                and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-                and (name, cat) not in SPECIAL_EXCLUSIONS
-            )
+            if (name, cat) not in SPECIAL_EXCLUSIONS
+            # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
+            #     and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
+            #     and (name, cat) not in SPECIAL_EXCLUSIONS
+            # )
         )
 
     pass
