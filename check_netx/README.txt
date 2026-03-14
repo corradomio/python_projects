@@ -5,8 +5,6 @@ Networkx
         G.nodes()       G.nodes
         G.edges()       G.edges
 
-
-
     networkx/algoriths/dag
         is_directed_acyclic_graph
         descendants
@@ -38,8 +36,6 @@ Networkx
 
         colliders
 
-
-
 Graph libraries:
 
     graph_tool.graph
@@ -47,3 +43,10 @@ Graph libraries:
     networkit
     networkx.classes        Networkx
     snap
+
+
+Graph drawing
+
+    iplotx
+    pydot
+    pygraphviz

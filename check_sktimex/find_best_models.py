@@ -11,6 +11,7 @@ from filelock import FileLock
 from sklearn.metrics import r2_score
 from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError
 
+import torch
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
@@ -26,7 +27,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 8
+N_JOBS = 4
 MODE = "sequential"
 # MODE = "parallel"
 
@@ -35,7 +36,10 @@ SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),     # unsupported data
     ("skl.CatBoostRegressor", "pos"),   # unsupported data
 
-    ("darts.NBEATSModel", "*")
+    ("darts.NBEATSModel", "*"),
+    ("darts.BlockRNNModel", "*"),
+    ("darts.TransformerModel", "*"),
+    ("darts.CatBoostModel", "*"),
 ]
 
 
@@ -52,6 +56,7 @@ os.makedirs("plots_trends", exist_ok=True)
 os.makedirs("scores", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
+# torch.set_default_tensor_type("torch.cuda.FloatTensor")
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -180,7 +185,7 @@ def check_model(
 
     # 3) create the dataset (not very efficient, but is it not a big problem)
     # df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
-    df = create_synthetic_data(48 * 8, 0.0, 1, 0.33)
+    df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     dfdict = pdx.groups_split(df, groups=["cat"])
     dfg = dfdict[(cat,)]
 
@@ -257,7 +262,7 @@ def main():
     log = logging.getLogger('main')
 
     # df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
-    df = create_synthetic_data(48 * 8, 0.0, 1, 0.33)
+    df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
     for config in [

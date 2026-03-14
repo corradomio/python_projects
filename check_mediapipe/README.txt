@@ -1,0 +1,2 @@
+Mediapipe
+    Abbastanza scarca

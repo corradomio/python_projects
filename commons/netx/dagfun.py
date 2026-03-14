@@ -6,17 +6,17 @@ import numpy as np
 import netx
 from stdlib import is_instance
 from .cache import check_cache
-from .gclass import is_networkx_graph
-from .graph import Graph, NODE_TYPE, EDGE_TYPE
+from .graph import Graph, NODE_TYPE, EDGE_TYPE, is_networkx_graph
 
 
 # ---------------------------------------------------------------------------
 # add_edges_from
 # ---------------------------------------------------------------------------
 
-def add_edges_from(G, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) -> Graph:
+def add_edges_from(G: Graph, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) -> Graph:
     """
-    Add support for edges (u1,u2) od (u,v,uvprops)  and paths (u1,...,un) or (u1,...,un,uprops)
+    Extends G.add_edges_from(...) adding support for paths (u1,...,un) or (u1,...,un,uprops)
+
     :param G: graph
     :param elist: list of edges/paths
     :param eprops: common properties
@@ -24,8 +24,7 @@ def add_edges_from(G, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) ->
     """
     for e in elist:
         if len(e) == 2:
-            u, v = e
-            G.add_edge(u, v, **eprops)
+            G.add_edge(*e, **eprops)
             continue
 
         if isinstance(e[-1], dict):
@@ -39,6 +38,7 @@ def add_edges_from(G, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) ->
             u = e[i]
             v = e[i + 1]
             G.add_edge(u, v, **(eprops | uvprops))
+        # end
     return G
 # end
 
@@ -48,15 +48,11 @@ def add_edges_from(G, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **eprops) ->
 #   sources
 #   destinations
 #
-#   predecessors == parents   (single step)
-#   succesors    == children     (single step)
+#   predecessors == parents     (single step)
+#   succesors    == children    (single step)
 #
 #   ancestors   (recursive)
 #   descendants (recursive)
-#
-#   find_paths
-#   find_all_directed_paths
-#   find_all_undirected_paths
 #
 
 
@@ -69,6 +65,8 @@ def is_directed_acyclic_graph(G: Graph | np.ndarray) -> bool:
     Check if the graph is a DAG (Directed Acyclic Graph).
     If it is not directed, it is not a DAG
     If there are cycles, it is not a DAG
+
+    TODO: which is the difference with nx.is_directed_acyclic_graph(G) ???
 
     :param G: graph to check
     :return: true or false
@@ -91,7 +89,7 @@ def is_directed_acyclic_graph(G: Graph | np.ndarray) -> bool:
 # Structure
 # ---------------------------------------------------------------------------
 #   sources
-#   destinations
+#   destinations/sinks
 
 def sources(G: Graph) -> set[NODE_TYPE]:
     """
@@ -102,7 +100,7 @@ def sources(G: Graph) -> set[NODE_TYPE]:
     # support for networkx
     check_cache(G)
 
-    if "nodes" not in G.__netx_cache__["sources"]:
+    if "sources" not in G.__netx_cache__:
         sset = set()
         for n in G.nodes():
             if G.in_degree(n) == 0:
@@ -122,26 +120,26 @@ def destinations(G: Graph) -> set[NODE_TYPE]:
     # support for networkx
     check_cache(G)
 
-    if "nodes" not in G.__netx_cache__["destinations"]:
+    if "destinations" not in G.__netx_cache__:
         dset = set()
         for n in G.nodes():
             if G.out_degree(n) == 0:
                 dset.add(n)
-        G.__netx_cache__["destinations"]["nodes"] = dset
+        G.__netx_cache__["destinations"]["nodes"]= dset
     return G.__netx_cache__["destinations"]["nodes"]
 # end
+
+
+# compatibility
+sinks = destinations
 
 
 # ---------------------------------------------------------------------------
 # descendants
 # ancestors
 # ---------------------------------------------------------------------------
-# multimethod unable to support the signatures:
-#
-#   def descendants(G: Graph, nodes:Collection[NODE_TYPE], recursive: bool = False) -> set[NODE_TYPE]:
-#   def descendants(G: Graph, n: NODE_TYPE, recursive: bool = False) -> set[NODE_TYPE]:
 
-def descendants(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recursive=False) -> set[NODE_TYPE]:
+def descendants(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recursive=True) -> set[NODE_TYPE]:
     assert G.is_directed()
 
     if is_instance(nodes, NODE_TYPE):
@@ -158,7 +156,7 @@ def descendants(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recurs
 # end
 
 
-def ancestors(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recursive=False) -> set[NODE_TYPE]:
+def ancestors(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recursive=True) -> set[NODE_TYPE]:
     assert G.is_directed()
 
     if is_instance(nodes,NODE_TYPE):
@@ -174,6 +172,7 @@ def ancestors(G: Graph, nodes: Union[NODE_TYPE, Collection[NODE_TYPE]], recursiv
     return A
 # end
 
+
 # ---------------------------------------------------------------------------
 # _descendants
 # _ancestors
@@ -188,8 +187,8 @@ def _descendants(G: Graph, u: NODE_TYPE) -> set[NODE_TYPE]:
     # support for networkx
     check_cache(G)
 
-    if is_networkx_graph(G):
-        return nx.descendants(G, u)
+    # if is_networkx_graph(G):
+    #     return nx.descendants(G, u)
 
     if u not in G.__netx_cache__["descendants"]:
         waiting = deque()
@@ -215,8 +214,8 @@ def _ancestors(G: Graph, v: NODE_TYPE) -> set[NODE_TYPE]:
     # support for networkx
     check_cache(G)
 
-    if is_networkx_graph(G):
-        return nx.ancestors(G, v)
+    # if is_networkx_graph(G):
+    #     return nx.ancestors(G, v)
 
     if v not in G.__netx_cache__["ancestors"]:
         waiting = deque()
@@ -231,6 +230,7 @@ def _ancestors(G: Graph, v: NODE_TYPE) -> set[NODE_TYPE]:
     # end
     return G.__netx_cache__["ancestors"][v]
 # end
+
 
 # ---------------------------------------------------------------------------
 # end

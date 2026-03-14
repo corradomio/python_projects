@@ -1,0 +1,89 @@
+class Graph:
+    __networkx_backend__ = "networkx"
+
+    _adj = _CachedPropertyResetterAdj()
+    _node = _CachedPropertyResetterNode()
+
+    def to_directed_class(self):
+    def to_undirected_class(self):
+
+    def __init__(self, incoming_graph_data=None, **attr):
+    def adj(self):
+    def name(self):
+    def name(self, s):
+    def __str__(self):
+    def __iter__(self):
+    def __contains__(self, n):
+    def __len__(self):
+    def __getitem__(self, n):
+    def add_node(self, node_for_adding, **attr):
+    def add_nodes_from(self, nodes_for_adding, **attr):
+    def remove_node(self, n):
+    def remove_nodes_from(self, nodes):
+    def nodes(self):
+    def number_of_nodes(self):
+    def order(self):
+    def has_node(self, n):
+    def add_edge(self, u_of_edge, v_of_edge, **attr):
+    def add_edges_from(self, ebunch_to_add, **attr):
+    def add_weighted_edges_from(self, ebunch_to_add, weight="weight", **attr):
+    def remove_edge(self, u, v):
+    def remove_edges_from(self, ebunch):
+    def update(self, edges=None, nodes=None):
+    def has_edge(self, u, v):
+    def neighbors(self, n):
+    def edges(self):
+    def get_edge_data(self, u, v, default=None):
+    def adjacency(self):
+    def degree(self):
+    def clear(self):
+    def clear_edges(self):
+    def is_multigraph(self):
+    def is_directed(self):
+    def copy(self, as_view=False):
+    def to_directed(self, as_view=False):
+    def to_undirected(self, as_view=False):
+    def subgraph(self, nodes):
+    def edge_subgraph(self, edges):
+    def size(self, weight=None):
+    def number_of_edges(self, u=None, v=None):
+    def nbunch_iter(self, nbunch=None):
+
+
+
+
+
+class DiGraph(Graph):
+    _adj = _CachedPropertyResetterAdjAndSucc()  # type: ignore[assignment]
+    _succ = _adj  # type: ignore[has-type]
+    _pred = _CachedPropertyResetterPred()
+
+    def __init__(self, incoming_graph_data=None, **attr):
+    def adj(self):
+    def succ(self):
+    def pred(self):
+    def add_node(self, node_for_adding, **attr):
+    def add_nodes_from(self, nodes_for_adding, **attr):
+    def remove_node(self, n):
+    def remove_nodes_from(self, nodes):
+    def add_edge(self, u_of_edge, v_of_edge, **attr):
+    def add_edges_from(self, ebunch_to_add, **attr):
+    def remove_edge(self, u, v):
+    def remove_edges_from(self, ebunch):
+    def has_successor(self, u, v):
+    def has_predecessor(self, u, v):
+    def successors(self, n):
+    neighbors = successors
+    def predecessors(self, n):
+    def edges(self):
+    def out_edges(self):
+    def in_edges(self):
+    def degree(self):
+    def in_degree(self):
+    def out_degree(self):
+    def clear(self):
+    def clear_edges(self):
+    def is_multigraph(self):
+    def is_directed(self):
+    def to_undirected(self, reciprocal=False, as_view=False):
+    def reverse(self, copy=True):

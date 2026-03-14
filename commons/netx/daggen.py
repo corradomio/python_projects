@@ -81,12 +81,12 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
 # ---------------------------------------------------------------------------
 # dag_enum
 # ---------------------------------------------------------------------------
-# DAG: represented by a upper triangular matrix
+# DAG: represented by an upper triangular matrix
 # Constraints: all rows and all columns must be not 0
 
 def iset_to_amdag(S: int, n: int) -> np.ndarray:
     """
-    Set to adjacency matrix for  DAG
+    Set to adjacency matrix for DAG
     :param S: set as integer
     :param n: n of nodes
     :return: adjacency matrix
@@ -112,7 +112,7 @@ def iset_to_amdag(S: int, n: int) -> np.ndarray:
 # end
 
 
-def dag_enum(n: int, create_using=None) -> Generator:
+def enumerate_all_directed_acyclic_graphs(n: int, create_using=None) -> Generator:
     """
     Generate all connected DAGs with n nodes
     :param n: n of nodes
@@ -133,32 +133,34 @@ def dag_enum(n: int, create_using=None) -> Generator:
 # end
 
 
-def from_numpy_array(A: np.ndarray, create_using=None):
-    """
-    Create a Graph from a numpy adjacency matrix
+dag_enum = enumerate_all_directed_acyclic_graphs
 
-    :param A: adjacency matrix
-    :param create_using: a already graph to fill
-        otherwise it is created a Graph if the matrix is simmetryc
-        else a DiGraph
-    :return: the graph satisfying the adjacency matrix
-    """
-    symmetric = False if create_using else is_symmetric(A)
-    if create_using:
-        G = create_using()
-    elif symmetric:
-        G = nx.Graph()
-    else:
-        G = nx.DiGraph()
-
-    n = A.shape[0]
-
-    G.add_nodes_from(range(n))
-
-    for u in range(n):
-        for v in range(n):
-            if A[u, v]:
-                G.add_edge(u, v)
-
-    return G
-# end
+# def from_numpy_array(A: np.ndarray, create_using=None):
+#     """
+#     Create a Graph from a numpy adjacency matrix
+#
+#     :param A: adjacency matrix
+#     :param create_using: a already graph to fill
+#         otherwise it is created a Graph if the matrix is simmetryc
+#         else a DiGraph
+#     :return: the graph satisfying the adjacency matrix
+#     """
+#     symmetric = False if create_using else is_symmetric(A)
+#     if create_using:
+#         G = create_using()
+#     elif symmetric:
+#         G = nx.Graph()
+#     else:
+#         G = nx.DiGraph()
+#
+#     n = A.shape[0]
+#
+#     G.add_nodes_from(range(n))
+#
+#     for u in range(n):
+#         for v in range(n):
+#             if A[u, v]:
+#                 G.add_edge(u, v)
+#
+#     return G
+# # end

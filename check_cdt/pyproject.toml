@@ -1,0 +1,20 @@
+[project]
+name = "check-cdt"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "cdt",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "joblib",
+    "pandas",
+    "networkx",
+    "tqdm",
+    "GPUtil",
+    "statsmodels",
+    "requests",
+    "torch",
+    "gadjid"
+]

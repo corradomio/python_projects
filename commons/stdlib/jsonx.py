@@ -32,6 +32,11 @@
 #
 #
 
+# [2025/09/13] add parameters
+#   $<varname>
+#   ${<varname>}
+#
+
 #
 # json.dumps(obj) -> str
 # json.dump(obj, fp)
@@ -45,11 +50,15 @@ import os
 
 import numpy as np
 import numpy.dtypes as npdt
-import pandas as pd
 import datetime as dt
 
 from typing import Optional, Union, cast
 from datetime import datetime
+
+try:
+    import pandas as pd
+except:
+    print("jsonx - Pandas library is not installed.")
 
 
 OPEN_KWARGS = ['mode', 'buffering', 'encoding', 'errors', 'newline', 'closefd', 'opener']

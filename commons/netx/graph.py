@@ -1,8 +1,8 @@
-from collections import defaultdict
-from typing import Union, Iterator, Any, Optional, Collection
-from functools import cached_property
+import networkx as nx
 from collections import defaultdict, deque
+from functools import cached_property
 from typing import Optional
+from typing import Union, Iterator, Collection
 
 from .types import NODE_TYPE, EDGE_TYPE
 
@@ -369,7 +369,7 @@ class DegreeView:
             return self.G._edges.in_degree(n, multi=self.multi)
         if self.degree_type == self.OUT_DEGREE:
             return self.G._edges.out_degree(n, multi=self.multi)
-        if self.G._direct:
+        if self.G._directed:
             return self.G._edges.in_degree(n, multi=self.multi) + self.G._edges.out_degree(n, multi=self.multi)
         else:
             return self.G._edges.out_degree(n, multi=self.multi)
@@ -445,20 +445,21 @@ class AdjacencyView:
 class Graph:
 
     def __init__(self,
-                 direct=False,
+                 directed=False,
                  loops=False,
                  multi=False,
                  acyclic=False,
                  **gprops):
         """
 
-        :param direct: if the graph id oriented/directed
+        :param directed: if the graph id oriented/directed
         :param acyclic: if the graph id oriented/directed and acyclic
         :param loops: if the loops are permitted
         :param multi: if multiple edges are permitted between 2 nodes
         :param gprops: graph properties
         """
-        self._direct = direct or acyclic
+        self._directed = directed or acyclic
+        self._loops = loops
         self._acyclic = acyclic
         self._props = gprops
 
@@ -466,7 +467,7 @@ class Graph:
 
         if acyclic:
             self._edges: IEdges = DAGEdges(multi)
-        elif direct:
+        elif directed:
             self._edges: IEdges = DEdges(loops, multi)
         else:
             self._edges: IEdges = UEdges(loops, multi)
@@ -480,11 +481,13 @@ class Graph:
 
         self._succ = self._edges.succ
         self._pred = self._edges.pred
+
+        self.__netx_cache__ = defaultdict(lambda : dict())
     # end
 
     def copy(self):
         # networks
-        C = Graph(direct=self._direct,
+        C = Graph(directed=self._directed,
                   loops=self.has_loops(),
                   multi=self.is_multigraph(),
                   acyclic=self._acyclic,
@@ -514,17 +517,17 @@ class Graph:
         """
         if type:
             return self._props | dict(
-                direct=self._direct,
+                direct=self._directed,
                 acyclic=self._acyclic,
-                multi=self._edges.multi,
-                loops=self._edges.loops
+                loops=self._edges.loops,
+                multi = self._edges.multi,
             )
         else:
             return self._props
 
     def is_directed(self) -> bool:
         # networkx
-        return self._direct
+        return self._directed
 
     def is_multigraph(self) -> bool:
         # networkx
@@ -537,7 +540,7 @@ class Graph:
         return self._acyclic
 
     def is_dag(self) -> bool:
-        return self._direct and self._acyclic
+        return self._directed and self._acyclic
 
     # -----------------------------------------------------------------------
     # Nodes
@@ -806,7 +809,7 @@ class Graph:
         # networkx
         G = Graph(
             name=name,
-            direct=self.is_directed(),
+            directed=self.is_directed(),
             loops=self.has_loops(),
             multi=self.is_multigraph(),
             acyclic=self.is_acyclic()
@@ -848,12 +851,12 @@ class Graph:
 
 class DiGraph(Graph):
     def __init__(self, loops=False, **gprops):
-        super().__init__(direct=True, loops=loops, **gprops)
+        super().__init__(directed=True, loops=loops, **gprops)
 
 
 class DirectAcyclicGraph(Graph):
     def __init__(self, **gprops):
-        super().__init__(acyclic=True, direct=True, loops=False, **gprops)
+        super().__init__(acyclic=True, directed=True, loops=False, **gprops)
 
 
 class MultiGraph(Graph):
@@ -863,8 +866,54 @@ class MultiGraph(Graph):
 
 class MultiDiGraph(Graph):
     def __init__(self, loops=False, **gprops):
-        super().__init__(direct=True, multi=True, loops=loops, **gprops)
+        super().__init__(directed=True, multi=True, loops=loops, **gprops)
 
+
+# ---------------------------------------------------------------------------
+# Graph classes
+# ---------------------------------------------------------------------------
+
+def is_netx_graph(G):
+    gclass = G.__class__
+    return gclass in {Graph}
+
+
+def is_networkx_graph(G):
+    gclass = G.__class__
+    return gclass in {nx.Graph, nx.DiGraph, nx.MultiGraph, nx.MultiDiGraph}
+
+
+# ---------------------------------------------------------------------------
+# create_like
+# ---------------------------------------------------------------------------
+
+def create_like(G):
+    if isinstance(G, Graph):
+        return Graph(directed=G.is_directed(), loops=G.has_loops(), multi=G.is_multigraph(), acyclic=G.is_acyclic())
+    if isinstance(G, nx.DiGraph):
+        return nx.DiGraph()
+    if isinstance(G, nx.MultiDiGraph):
+        return nx.MultiDiGraph()
+    if isinstance(G, nx.MultiGraph):
+        return nx.MultiGraph()
+    if isinstance(G, nx.Graph):
+        return nx.Graph()
+    else:
+        raise TypeError(f"Unsupported graph type: {type(G)}")
+
+
+# ---------------------------------------------------------------------------
+# print_graph_stats
+# ---------------------------------------------------------------------------
+
+def print_graph_stats(G: nx.Graph):
+    n = G.order()
+    m = G.size()
+    if G.is_directed():
+        print(f"G={{|V|={n}, |V|={m}, direct}}")
+    else:
+        print(f"G={{|V|={n}, |V|={m}}}")
+# end
 
 # ---------------------------------------------------------------------------
 # End

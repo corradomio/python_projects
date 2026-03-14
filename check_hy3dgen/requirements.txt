@@ -1,0 +1,4 @@
+#torch==2.7.0+cu126
+hy3dgen
+trimesh
+pyglet

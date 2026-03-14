@@ -3,6 +3,13 @@ import cv2 as cv
 from vidgear.gears import CamGear
 from stdlib.tprint import tprint
 
+ips = ["10.248.37.111", "10.248.37.108", "10.248.37.12", "10.248.37.100"]
+username = "admin"
+password = "password1234"
+all_rtsp_urls = [f"rtsp://{username}:{password}@{ip}/Streaming/Channels/101?tcp" for ip in ips]
+
+
+
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
 CAMERA_FPS = 10

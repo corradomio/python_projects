@@ -12,7 +12,7 @@ def replace_nodes(G: Graph, n: NODE_TYPE, neighbors: Collection[NODE_TYPE], r: N
     :param G: graph to modify
     :param n: previous node
     :param neighbors: nodes to replace
-    :param r: node used as replacement
+    :param r: the node used as a replacement
     :return: updated graph
     """
     assert G.is_directed(), "Only for directed graphs"

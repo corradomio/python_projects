@@ -7,7 +7,7 @@ from networkx import Graph
 def coarsening_graph(g: Graph, partitions: List[List[int]], create_using=None, direct=False, **kwargs) -> Graph:
     """
     Create a coarse graph using the partitions as 'super' nodes and edges between
-    partitions i and j if there exist a node in partition i connected to a node in partition j
+    partitions i and j if there exists a node in partition i connected to a node in partition j
 
     :param g: original graph
     :param partitions: partitions

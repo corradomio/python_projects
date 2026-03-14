@@ -1,0 +1,14 @@
+[project]
+name = "check-cam"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "numpy",
+    "scipy",
+    "pandas",
+    "opencv-python",
+    "opencv-contrib-python",
+    "vidgear",
+    "mediapipe"
+]

@@ -228,7 +228,7 @@ def main():
     log = logging.getLogger("main")
 
     # df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
-    df = create_synthetic_data(48 * 8, 0.0, 1, 0.33)
+    df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
     for config_file in [

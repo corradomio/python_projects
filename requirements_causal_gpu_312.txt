@@ -1,0 +1,44 @@
+#
+# Python 3.12!
+#
+
+path
+h5py
+
+numpy
+scipy
+pandas
+
+matplotlib
+seaborn
+
+networkx
+igraph
+iplotx
+ilayoutx
+
+scikit-learn
+#catboost
+#xgboost
+
+statsmodels
+
+
+#--extra-index-url https://download.pytorch.org/whl/cu118
+#--extra-index-url https://download.pytorch.org/whl/cu124
+--extra-index-url https://download.pytorch.org/whl/cu121
+torch
+
+gcastle
+causal-learn
+lingam
+
+#dowhy
+#econml
+#catenets
+#causica
+#pygam
+#causalpy
+
+# pydot
+# pygraphviz

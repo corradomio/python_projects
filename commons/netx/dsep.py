@@ -59,16 +59,3 @@ def d_separation_pairs(G: Union[nx.DiGraph, np.ndarray], create_using=None) -> n
     # end u/v
     return mat
 # end
-
-
-def power_adjacency_matrix(A: np.ndarray) -> np.ndarray:
-    n = A.shape[0]
-    I = np.identity(n, int)
-    A = I + A
-
-    P = I
-    for e in range(n-1):
-        P = np.dot(P, A)
-    P[P > 0] = 1
-    P = P.astype(A.dtype)
-    return P

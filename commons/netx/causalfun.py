@@ -1,9 +1,10 @@
-from typing import Collection, Optional
+from typing import Collection
 from stdlib.is_instance import is_instance
-from .graph import Graph, NODE_TYPE
-from .paths import find_all_undirected_paths, find_all_directed_paths
 from .dagfun import descendants, ancestors
+from .graph import Graph, NODE_TYPE
 from .mat import adjacency_matrix
+from .paths import find_all_undirected_paths, find_all_directed_paths
+
 
 # ---------------------------------------------------------------------------
 # chain, fork, collider
@@ -20,15 +21,17 @@ def path_chains(G: Graph, P: Collection[NODE_TYPE]) -> set[NODE_TYPE]:
     # A->u->B
     # A<-u<-B
     chains = set()
-    for k in range(1, n-1):
+
+    for k in range(1,n-1):
+        a = P[k-1]
         u = P[k]
-        a = P[k - 1]
-        b = P[k + 1]
+        b = P[k+1]
 
         if G.has_edge(a, u) and G.has_edge(u, b):
             chains.add(u)
-        if G.has_edge(b, u) and G.has_edge(u, a):
+        if G.has_edge(b, u) and G.edges(u, a):
             chains.add(u)
+
     return chains
 # end
 
@@ -39,13 +42,15 @@ def path_forks(G: Graph, P: Collection[NODE_TYPE]) -> set[NODE_TYPE]:
 
     # A<-u->B
     forks = set()
-    for k in range(1, n - 1):
+
+    for k in range(1,n-1):
+        a = P[k-1]
         u = P[k]
-        a = P[k - 1]
-        b = P[k + 1]
+        b = P[k+1]
 
         if G.has_edge(u, a) and G.has_edge(u, b):
             forks.add(u)
+
     return forks
 # end
 
@@ -56,13 +61,15 @@ def path_colliders(G: Graph, P: Collection[NODE_TYPE]) -> set[NODE_TYPE]:
 
     # A->u<-B
     colliders = set()
-    for k in range(1, n-1):
+
+    for k in range(1,n-1):
+        a = P[k-1]
         u = P[k]
-        a = P[k - 1]
-        b = P[k + 1]
+        b = P[k+1]
 
         if G.has_edge(a, u) and G.has_edge(b, u):
             colliders.add(u)
+
     return colliders
 # end
 
@@ -80,7 +87,7 @@ def path_colliders(G: Graph, P: Collection[NODE_TYPE]) -> set[NODE_TYPE]:
 # https://fiveable.me/causal-inference/unit-9/d-separation-backdoor-criterion/study-guide/JmKovLOknVvGzRBz
 #
 # https://en.wikipedia.org/wiki/Bayesian_network#d-separation
-# We first define the "d"-separation of a trail and then we will define the "d"-separation of two nodes in terms of that.
+# We first define the "d"-separation of a trail then we will define the "d"-separation of two nodes in terms of that.
 # Let P be a trail from node u to v. A trail is a loop-free, undirected (i.e. all edge directions are ignored) path
 # between two nodes.
 # Then P is said to be d-separated by a set of nodes Z if any of the following conditions holds:
@@ -90,9 +97,9 @@ def path_colliders(G: Graph, P: Collection[NODE_TYPE]) -> set[NODE_TYPE]:
 #
 
 def is_path_blocked(G: Graph, P: list[NODE_TYPE], Z: Collection[NODE_TYPE]) -> bool:
-    assert isinstance(G, Graph), f"Unsupported graphs of type {type(G)}"
-
-    # check for P=[u,v] not necessary
+    # check for P=[u,v] NECESSARY
+    if len(P) <= 2:
+        return True
 
     # chain where the middle node m is in Z
     J = path_chains(G, P)
@@ -113,14 +120,7 @@ def is_path_blocked(G: Graph, P: list[NODE_TYPE], Z: Collection[NODE_TYPE]) -> b
         if c not in Z and len(D.intersection(Z)) == 0:
             blocked = True
             break
-    if blocked:
-        return True
-
-    # if len(P) == 2 and len(Z) == 0:
-    #     return True
-
-    else:
-        return False
+    return blocked
 # end
 
 
@@ -137,117 +137,67 @@ def all_paths_blocked(G: Graph, u: NODE_TYPE, v: NODE_TYPE, Z: Collection[NODE_T
 
 # d)rectional-separation
 
-def is_d_separator(G: Graph, U: Collection[NODE_TYPE], V: Collection[NODE_TYPE], Z: Collection[NODE_TYPE]) -> bool:
-    if is_instance(U, NODE_TYPE): U = [U]
-    if is_instance(V, NODE_TYPE): V = [V]
-    if is_instance(Z, NODE_TYPE): Z = [Z]
+def is_d_separated(G, u: NODE_TYPE, v: NODE_TYPE, Z: Collection[NODE_TYPE]) -> bool:
+    U = [u] if is_instance(u, NODE_TYPE) else u
+    V = [v] if is_instance(v, NODE_TYPE) else v
+    Z = [Z] if is_instance(Z, NODE_TYPE) else Z
 
     for u in U:
         for v in V:
-            if not all_paths_blocked(G, u, v, Z):
-                return False
-    return True
-# end
-
-
-def no_descendats(G: Graph, u: NODE_TYPE, v: NODE_TYPE, Z: Collection[NODE_TYPE]) -> bool:
-    # no z ∈ Z is a descendant of any w != u which lies on a directed path from u to v
-    # Note: SOME path, NOT ALL paths
-    assert u not in Z and v not in Z
-
-    for P in find_all_directed_paths(G, u, v):
-        if len(P) == 2: continue
-        for w in P:
-            if w == u: continue
-            DEw = descendants(G, w, recursive=True)
-            if len(DEw.intersection(Z)) > 0:
-                return False
-    # end
+            # if not all_paths_blocked(G, u, v, Z):
+            #     return False
+            for P in find_all_undirected_paths(G, u, v):
+                if not is_path_blocked(G, P, Z):
+                    return False
     return True
 # end
 
 
 # ---------------------------------------------------------------------------
-# structural_hamming_distance
+# are_markov_equivalents
 # ---------------------------------------------------------------------------
 
-def structural_hamming_distance(G: Graph, H: Graph) -> float:
-    assert G.order() == H.order(), "Incompatible graphs"
-    Gam = adjacency_matrix(G)
-    Ham = adjacency_matrix(H)
-    n, m = Gam.shape
-    # shd = np.abs(G-H).sum()
-    shd = 0
-    for i in range(n):
-        for j in range(i + 1, m):
-            if Gam[i, j] == Ham[i, j]:
-                pass
-            elif Gam[i, j] == Ham[j, i]:
-                shd += 1
-            else:
-                shd += 1
-    return shd
+def _find_colliders(G: Graph) -> set[NODE_TYPE]:
+    colliders = set()
+    for n in G.nodes():
+        # if a node has multiple inputs and 1+ outputs,
+        # it can be part of a chain
+        if G.in_degree(n) >= 2 and G.out_degree(n) == 0:
+            colliders.add(n)
+    return colliders
 
 
-# ---------------------------------------------------------------------------
-# structural_intervention_distance
-# ---------------------------------------------------------------------------
-# G = (V, E)
-# PA(G,i)   parents  (1 step)
-# CH(G,i)   children (1 step)
-# DE(G, i)  descendants (recursive)
-# AN(G, i)  ancestors   (recursive)
-# ND(G, i)  non descendants = V \ DE(G,i)
+def is_markov_equivalent(G: Graph, H: Graph) ->bool:
+    """
+    The graphs G and H are Markov-equivalent if they have the same
+    skeleton and the same set of colliders.
+    The same skeleton means that the nodes u and v are connected as
+    'u->v' OR 'u<-v'.
+    A collider is a node with an input degree >= 2
 
-# G(x, y, Z)
-# In G, Z subset of V \ {x,y}
-# 1) no z ∈ Z is a descendant of any w != x which lies on a directed path from x to y
-# 2) and Z blocks all nondirected paths from x to y
+    :param G:
+    :param H:
+    :return:
+    """
+    assert G.is_directed(), "Graph G must be directed"
+    assert H.is_directed(), "Graph H must be directed"
 
-# for P i paths(G, x, y):
-#   for w in P
-#       DEw = descendant(G, w)
-#       |Z intersect DEw|
-
-def sid_step(G: Graph, u:NODE_TYPE, v:NODE_TYPE, Z:set[NODE_TYPE]) -> bool:
-    assert u not in Z and v not in Z
-
-    # no z ∈ Z is a descendant of any w != u which lies on a directed path from u to v
-    if not no_descendats(G, u, v, Z):
+    # 1) che if they have the same skeleton, that is the have the
+    #    same undirected edges (the direction is not important)
+    if G.number_of_nodes() != H.number_of_nodes():
         return False
-    #  Z blocks all nondirected paths from u to v
-    if not all_paths_blocked(G, u, v, Z):
+    if G.number_of_edges() != H.number_of_edges():
         return False
-    else:
-        return True
+    for u, v in G.edges:
+        if not H.has_edge(u, v) and not H.has_edge(v, u):
+            return False
+
+    # 2) check if both graphs have the same set of colliders
+    if _find_colliders(G) != _find_colliders(H):
+        return False
+    return True
 # end
 
-
-def structural_intervention_distance(G: Graph, H: Graph) -> float:
-    # 2015 - Structural Intervention Distance (SID) for Evaluating Causal Graphs.pdf
-    assert G.order() == H.order(), f"Incompatible graphs: {G.order()}, {H.order()}"
-    N = list(G.nodes)
-
-    sid = 0
-    for i in N:
-        PAHi = ancestors(H, i, recursive=True)    # ancestors    in H of i
-        DEGi = descendants(G, i, recursive=True)   # descendants  in G of i
-        for j in N:
-            if i == j:
-                continue
-            if j in PAHi and j in DEGi:
-                sid += 1
-                continue
-            if j in PAHi:
-                continue
-
-            ss = sid_step(G, i, j, PAHi)
-            if not ss:
-                sid += 1
-        # end
-    # end
-    return sid
-# end
 
 # ---------------------------------------------------------------------------
 # end

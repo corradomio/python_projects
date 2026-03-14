@@ -1,9 +1,10 @@
-from networkx.algorithms.components import is_connected
+from typing import Collection
 
 import netx
-from . import adjacency_matrix
-from .causalfun import all_paths_blocked, no_descendats
+from .mat import adjacency_matrix
+from .causalfun import all_paths_blocked, find_all_directed_paths
 from .graph import Graph, NODE_TYPE
+from .dagfun import descendants
 from .paths import is_direct_connected
 
 
@@ -66,6 +67,23 @@ def sid_step(G: Graph, u:NODE_TYPE, v:NODE_TYPE, Z:set[NODE_TYPE]) -> bool:
         return False
     else:
         return True
+# end
+
+
+def no_descendats(G: Graph, u: NODE_TYPE, v: NODE_TYPE, Z: Collection[NODE_TYPE]) -> bool:
+    # no z ∈ Z is a descendant of any w != u which lies on a directed path from u to v
+    # Note: SOME path, NOT ALL paths
+    assert u not in Z and v not in Z
+
+    for P in find_all_directed_paths(G, u, v):
+        if len(P) == 2: continue
+        for w in P:
+            if w == u: continue
+            DEw = descendants(G, w, recursive=True)
+            if len(DEw.intersection(Z)) > 0:
+                return False
+    # end
+    return True
 # end
 
 
