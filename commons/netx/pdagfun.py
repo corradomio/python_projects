@@ -1,9 +1,15 @@
+
+__all__ = [
+    "is_partial_adjacency_matrix",
+    "is_partial_directed_acyclic_graph",
+    "enumerate_all_directed_graphs",
+]
+
 from typing import Iterator, Union
 import networkx as nx
 import netx
 import numpy as np
 
-from .cache import clear_caches
 from .types import EDGE_TYPE
 from .dagfun import is_directed_acyclic_graph
 from .graph import Graph

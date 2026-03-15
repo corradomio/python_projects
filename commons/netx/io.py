@@ -1,8 +1,12 @@
 #
 # Read & write graphs in some non-standard format, but used very often
 #
-import networkx as nx
 
+__all__ = [
+    "read_vecsv"
+]
+
+import networkx as nx
 
 def read_vecsv(path: str, comments="#", header=True, separator=",", create_using=None, direct=True) -> nx.Graph:
     # -vertices.csv

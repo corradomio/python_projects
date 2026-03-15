@@ -1,3 +1,9 @@
+
+__all__ = [
+    "d_separation",
+    "d_separation_pairs"
+]
+
 from typing import Union
 
 import numpy as np

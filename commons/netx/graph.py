@@ -1,7 +1,21 @@
+
+__all__ = [
+    "Graph", "NetxGraph",
+    "DiGraph", "NetxDiGraph",
+    "DirectAcyclicGraph",
+    "MultiGraph",
+    "MultiDiGraph",
+
+    "is_netx_graph",
+    "is_networkx_graph",
+    "create_like",
+    "print_graph_stats"
+]
+
 import networkx as nx
 from collections import defaultdict, deque
 from functools import cached_property
-from typing import Optional
+from typing import Optional, Any
 from typing import Union, Iterator, Collection
 
 from .types import NODE_TYPE, EDGE_TYPE
@@ -63,8 +77,20 @@ __version__ = "1.1.1"
 #   it is not specified the direction
 
 # ---------------------------------------------------------------------------
+# _ukey
+# ---------------------------------------------------------------------------
+
+def _ukey(key):
+    u, v = key
+    return key if u < v else (v, u)
+
+# ---------------------------------------------------------------------------
 # Edges
 # ---------------------------------------------------------------------------
+# IEdges
+#   it is a dictionary with key (u,v) and value the edge properties
+#   it contains
+#
 
 class IEdges(dict):
     """
@@ -74,6 +100,7 @@ class IEdges(dict):
 
     def __init__(self, loops: bool, multi: bool):
         super().__init__()
+        self.directed = False
         self.loops = loops
         self.multi = multi
 
@@ -126,11 +153,16 @@ class IEdges(dict):
 
         if v not in self.adj[u]:
             self[(u, v)] = [eprops] if self.multi else eprops
+        elif len(eprops) > 0 and not self.multi:
+            self[(u, v)] = self[(u, v)] | eprops
         elif self.multi:
             self[(u, v)].append(eprops)
 
         return self
     # end
+
+    def get_edge(self, u, v):
+        return self.__getitem__((u, v))
 
     def _check_edge(self, u: NODE_TYPE, v: NODE_TYPE):
         # check if u == v (loop)
@@ -190,6 +222,25 @@ class UEdges(IEdges):
         self._adj: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
         pass
 
+    # -----------------------------------------------------------------------
+    #
+    # def get(self, key, default=None):
+    #     return super().get(_ukey(key), default)
+    #
+    # def __getitem__(self, key):
+    #     return super().__getitem__(_ukey(key))
+    #
+    # def __setitem__(self, key, value):
+    #     return super().__setitem__(_ukey(key), value)
+    #
+    # def __contains__(self, key):
+    #     return super().__contains__(_ukey(key))
+    #
+    # def __delitem__(self, key):
+    #     return super().__delitem__(_ukey(key))
+    #
+    # -----------------------------------------------------------------------
+
     @property
     def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._adj
@@ -202,10 +253,11 @@ class UEdges(IEdges):
     def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
         return self._adj
 
-    def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops):
-        if u > v:
-            u, v = v, u
+    def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops: dict):
         super().add_edge(u, v, eprops)
+
+    def get_edge(self, u: NODE_TYPE, v: NODE_TYPE) -> dict:
+        return self[(u, v)]
 
     def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> set[NODE_TYPE]:
         return self._adj[n]
@@ -215,26 +267,18 @@ class UEdges(IEdges):
         super().remove_node(n)
 
     def remove_edge(self, u: NODE_TYPE, v: NODE_TYPE):
-        if u > v:
-            u, v = v, u
         super().remove_edge(u, v)
 
     def __contains__(self, uv):
-        u, v = uv
-        if u > v:
-            uv = v, u
+        uv = _ukey(uv)
         return super().__contains__(uv)
 
     def __getitem__(self, uv):
-        u, v = uv
-        if u > v:
-            uv = v, u
+        uv = _ukey(uv)
         return super().__getitem__(uv)
 
     def __setitem__(self, uv, eprops):
-        u, v = uv
-        if u > v:
-            uv = v, u
+        u, v = _ukey(uv)
         if not self.loops and u == v:
             return None
         elif super().__contains__(uv):
@@ -259,8 +303,9 @@ class DEdges(IEdges):
 
     def __init__(self, loops: bool, multi: bool):
         super().__init__(loops, multi)
+        self.directed = True
         self._succ: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
-        self._prec: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
+        self._pred: dict[NODE_TYPE, set[NODE_TYPE]] = defaultdict(lambda: set())
         pass
 
     @property
@@ -273,22 +318,22 @@ class DEdges(IEdges):
 
     @property
     def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
-        return self._prec
+        return self._pred
 
     def add_edge(self, u: NODE_TYPE, v: NODE_TYPE, eprops: dict):
         super().add_edge(u, v, eprops)
 
     def neighbors(self, n: NODE_TYPE, inbound: Optional[bool]) -> set[NODE_TYPE]:
         if inbound is None:
-            return self._prec[n].union(self._succ[n])
+            return self._pred[n].union(self._succ[n])
         elif inbound:
-            return self._prec[n]
+            return self._pred[n]
         else:
             return self._succ[n]
 
     def remove_node(self, n: NODE_TYPE):
-        if n in self._prec[n]:
-            del self._prec[n]
+        if n in self._pred[n]:
+            del self._pred[n]
         if n in self._succ[n]:
             del self._succ[n]
         super().remove_node(n)
@@ -310,7 +355,7 @@ class DEdges(IEdges):
             return super().__setitem__(uv, epros)
         else:
             self._succ[u].add(v)
-            self._prec[v].add(u)
+            self._pred[v].add(u)
             return super().__setitem__(uv, epros)
     # end
 
@@ -354,86 +399,125 @@ class DAGEdges(DEdges):
 class DegreeView:
     IN_DEGREE = 1
     OUT_DEGREE = 2
-    DEGREE = 3
+    DEGREE = 0
 
-    def __init__(self, degree_type: int, G, multi: bool):
-        self.degree_type = degree_type
-        self.G = G
-        self.multi = multi
+    def __init__(self, edges: IEdges, degree_type: int):
+        self._edges = edges
+        self._degree_type = degree_type
+        self._directed = edges.directed
+        self._multi = edges.multi
 
-    def __call__(self, n: NODE_TYPE):
-        return self.__getitem__(n)
+    def __call__(self, n: Optional[NODE_TYPE]=None):
+        if n is None:
+            return self
+        else:
+            return self._get_degree(n)
 
     def __getitem__(self, n: NODE_TYPE):
-        if self.degree_type == self.IN_DEGREE:
-            return self.G._edges.in_degree(n, multi=self.multi)
-        if self.degree_type == self.OUT_DEGREE:
-            return self.G._edges.out_degree(n, multi=self.multi)
-        if self.G._directed:
-            return self.G._edges.in_degree(n, multi=self.multi) + self.G._edges.out_degree(n, multi=self.multi)
+        return self._get_degree(n)
+
+    def _get_degree(self, n: NODE_TYPE) -> int:
+        if self._degree_type == self.IN_DEGREE:
+            return self._edges.in_degree(n, multi=self._multi)
+        if self._degree_type == self.OUT_DEGREE:
+            return self._edges.out_degree(n, multi=self._multi)
+        if self._directed:
+            return self._edges.in_degree(n, multi=self._multi) + self._edges.out_degree(n, multi=self._multi)
         else:
-            return self.G._edges.out_degree(n, multi=self.multi)
+            return self._edges.out_degree(n, multi=self._multi)
 # end
 
 
 class EdgesView:
     IN_EDGES = 1
     OUT_EDGES = 2
-    EDGES = 3
+    EDGES = 0
 
-    def __init__(self, edge_type: int, G):
-        self.edge_type = edge_type
-        self.G = G
+    def __init__(self, edges, edge_type: int):
+        self._edges = edges
+        self._edge_type = edge_type
 
     def __call__(self, *args, **kwargs):
-        return self.G._edges.keys()
+        return self._edges.keys()
 
     def __getitem__(self, n: NODE_TYPE):
-        if self.edge_type == EdgesView.IN_EDGES:
-            return self.G._edges.pred[n]
-        if self.edge_type == EdgesView.OUT_EDGES:
-            return self.G._edges.succ[n]
+        if isinstance(n, tuple):
+            assert len(n) == 2
+            u, v = n
+            return self._edges.get_edge(u, v)
+        if self._edge_type == EdgesView.IN_EDGES:
+            return self._edges.pred[n]
+        if self._edge_type == EdgesView.OUT_EDGES:
+            return self._edges.succ[n]
         else:
-            return self.G._edges.adj[n]
+            return self._edges.adj[n]
 
     def __iter__(self):
-        if self.edge_type == EdgesView.IN_EDGES:
-            return iter(self.G._edges.__iter__())
-        if self.edge_type == EdgesView.OUT_EDGES:
-            return iter(self.G._edges.__iter__())
-        else:
-            return iter(self.G._edges.__iter__())
+        # if self._edge_type == EdgesView.IN_EDGES:
+        #     return iter(self._edges.__iter__())
+        # if self._edge_type == EdgesView.OUT_EDGES:
+        #     return iter(self._edges.__iter__())
+        # else:
+        #     return iter(self._edges.__iter__())
+        return self._edges.__iter__()
 # end
 
 
 class NodesView:
-    def __init__(self, G):
-        self.G = G
+    def __init__(self, nodes):
+        self._nodes = nodes
 
     def __call__(self, *args, **kwargs):
-        return iter(self.G._nodes)
+        return iter(self._nodes)
 
     def __iter__(self):
-        return iter(self.G._nodes)
+        return iter(self._nodes)
 
     def __contains__(self, n: NODE_TYPE):
-        return n in self.G._nodes
+        return n in self._nodes
 
     def __getitem__(self, n: NODE_TYPE):
-        return self.G._nodes[n]
+        return self._nodes[n]
 # end
 
 
-class AdjacencyView:
-    def __init__(self, G, adjacency_dict: dict):
-        self.G = G
-        self.adjacency_dict = adjacency_dict
+class AtlasView:
 
-    def __call__(self, n: NODE_TYPE):
-        return self.__getitem__(n)
+    def __init__(self, edges: IEdges, adj: dict, n: NODE_TYPE, rev: bool):
+        assert isinstance(edges, IEdges)
+        assert isinstance(adj, dict)
+        self._edges = edges
+        self._adj = adj
+        self._n = n
+        self._rev = rev
+
+    def __call__(self, v: NODE_TYPE):
+        return self.__getitem__(v)
+
+    def __getitem__(self, v: NODE_TYPE):
+        uv = (v,self._n) if self._rev else (self._n,v)
+        return self._edges.get_edge(*uv)
+
+    def __repr__(self):
+        return f"AtlasView({self._n})"
+
+
+class AdjacencyView:
+    def __init__(self, edges: IEdges, adj: dict, rev=False):
+        assert isinstance(edges, IEdges)
+        assert isinstance(adj, dict)
+        self._edges = edges
+        self._adj = adj
+        self._rev = rev
+
+    def __call__(self, n: Optional[NODE_TYPE]=None):
+        if n is None:
+            return self
+        else:
+            return AtlasView(self._edges, self._adj, n, self._rev)
 
     def __getitem__(self, n: NODE_TYPE):
-        return self.adjacency_dict[n]
+        return AtlasView(self._edges, self._adj, n, self._rev)
 # end
 
 
@@ -459,44 +543,42 @@ class Graph:
         :param gprops: graph properties
         """
         self._directed = directed or acyclic
-        self._loops = loops
+        self._loops = loops and not acyclic
         self._acyclic = acyclic
-        self._props = gprops
+        self._props = {} | gprops
 
-        self._nodes: dict[int, dict] = {}
+        self._nodes: dict[NODE_TYPE, dict[str, Any]] = {}
+        self._edges: IEdges = None
 
         if acyclic:
             self._edges: IEdges = DAGEdges(multi)
         elif directed:
-            self._edges: IEdges = DEdges(loops, multi)
+            self._edges: IEdges = DEdges(self._loops, multi)
         else:
-            self._edges: IEdges = UEdges(loops, multi)
+            self._edges: IEdges = UEdges(self._loops, multi)
 
         if "name" not in self._props:
             self._props["name"] = "G"
 
+        # self._succ = self._edges.succ
+        # self._pred = self._edges.pred
+
         # local cache used to save results of some complex computation
         # Cleared on EACH change
         self.__netx_cache__: dict[str, dict] = defaultdict(lambda : dict())
-
-        self._succ = self._edges.succ
-        self._pred = self._edges.pred
-
-        self.__netx_cache__ = defaultdict(lambda : dict())
     # end
 
     def copy(self):
         # networks
-        C = Graph(directed=self._directed,
+        C = Graph(directed=self.is_directed(),
                   loops=self.has_loops(),
                   multi=self.is_multigraph(),
-                  acyclic=self._acyclic,
+                  acyclic=self.is_acyclic(),
                   **self._props)
 
         C.add_nodes_from(self.nodes())
         C.add_edges_from(self.edges())
         return C
-
 
     # -----------------------------------------------------------------------
     # Properties
@@ -517,10 +599,10 @@ class Graph:
         """
         if type:
             return self._props | dict(
-                direct=self._directed,
-                acyclic=self._acyclic,
-                loops=self._edges.loops,
-                multi = self._edges.multi,
+                directed=self.is_directed(),
+                acyclic=self.is_acyclic(),
+                loops=self.has_loops(),
+                multi = self.is_multigraph(),
             )
         else:
             return self._props
@@ -580,13 +662,15 @@ class Graph:
     def nodes(self):
         # networkx
         # return self._nodes.keys()
-        return NodesView(self)
+        return NodesView(self._nodes)
 
     def add_node(self, n: NODE_TYPE, **nprops):
         # networkx
         return self._add_node(n, nprops)
 
     def add_nodes_from(self, nlist: Union[Collection[NODE_TYPE], Iterator[NODE_TYPE]], **nprops):
+        # ([n1, ...], prop1=value1, ...)
+        # ([(n1, {prop1: value1}), ...],
         # networkx
         for n in nlist:
             if isinstance(n, tuple):
@@ -598,9 +682,8 @@ class Graph:
 
     def remove_node(self, n: NODE_TYPE):
         # networkx
-        if n not in self._nodes:
-            return
-        del self._nodes[n]
+        if n in self._nodes:
+            del self._nodes[n]
         self._edges.remove_node(n)
 
     def remove_nodes_from(self, nlist: Collection[NODE_TYPE]):
@@ -612,17 +695,28 @@ class Graph:
         # networkx
         return n in self._nodes
 
-    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool] = None) -> set[NODE_TYPE]:
+    def neighbors(self, n: NODE_TYPE, inbound: Optional[bool] = False) -> set[NODE_TYPE]:
         """
+        Neighbours of the specified node.
+        If the graph is not directed, the parameter 'inbound' has no effect.
+        For directed graphs, 'inbound' can be:
+
+             None: in and out edges
+            False: out edges
+             True: in edges
+
         :param n:
-        :param inbound:
-            None    in/out
-            False   out
-            True    in
-        :return:
+        :param inbound: None (in/out), False (out), True (in)
+        :return:  set of nodes
         """
         # networkx
         return set(self._edges.neighbors(n, inbound))
+
+    def successors(self, n: NODE_TYPE) -> set[NODE_TYPE]:
+        return self.neighbors(n, inbound=False)
+
+    def predecessors(self, n: NODE_TYPE) -> set[NODE_TYPE]:
+        return self.neighbors(n, inbound=True)
 
     def nbunch_iter(self, source: Optional[Union[list,tuple,NODE_TYPE]]) -> Iterator[NODE_TYPE]:
         # networkx
@@ -650,9 +744,8 @@ class Graph:
     def _add_node(self, n: NODE_TYPE, nprops: dict):
         if n not in self._nodes:
             self._nodes[n] = nprops
-            # self.adj[n] = set()
-        else:
-            pass
+        elif len(nprops) > 0:
+            self._nodes[n] |= nprops
         self.__netx_cache__.clear()
         return self
 
@@ -665,15 +758,17 @@ class Graph:
     def edges(self):
         # networkx
         # return self._edges.keys()
-        return EdgesView(EdgesView.EDGES, self)
+        return EdgesView(self._edges, EdgesView.EDGES)
 
+    @cached_property
     def in_edges(self):
         # networkx (DiGraph)
-        return EdgesView(EdgesView.IN_EDGES, self)
+        return EdgesView(self._edges, EdgesView.IN_EDGES)
 
+    @cached_property
     def out_edges(self):
         # networkx (DiGraph)
-        return EdgesView(EdgesView.OUT_EDGES, self)
+        return EdgesView(self._edges, EdgesView.OUT_EDGES)
 
     def size(self) -> int:
         # networkx
@@ -759,20 +854,20 @@ class Graph:
     # -----------------------------------------------------------------------
     # For undirected graphs, succ and pred are the same
 
-    @property
-    def adj(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
+    @cached_property
+    def adj(self) -> AdjacencyView: # dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx
-        return self._edges.adj
+        return AdjacencyView(self._edges, self._edges.adj)
 
-    @property
-    def succ(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
+    @cached_property
+    def succ(self) -> AdjacencyView: # dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx (DiGraph)
-        return self._edges.succ
+        return AdjacencyView(self._edges, self._edges.succ)
 
-    @property
-    def pred(self) -> dict[NODE_TYPE, set[NODE_TYPE]]:
+    @cached_property
+    def pred(self) -> AdjacencyView: # dict[NODE_TYPE, set[NODE_TYPE]]:
         # networkx (DiGraph)
-        return self._edges.pred
+        return AdjacencyView(self._edges, self._edges.pred, True)
 
     # -----------------------------------------------------------------------
     # DiGraph
@@ -788,20 +883,20 @@ class Graph:
     # Note: with multi=False, multiple edges are not counted
     #
 
-    @property
+    @cached_property
     def degree(self, multi=False):
         # networkx
-        return DegreeView(DegreeView.DEGREE, self, multi)
+        return DegreeView(self._edges, DegreeView.DEGREE)
 
-    @property
+    @cached_property
     def in_degree(self, multi=False):
         # networkx (DiGraph)
-        return DegreeView(DegreeView.IN_DEGREE, self, multi)
+        return DegreeView(self._edges, DegreeView.IN_DEGREE)
 
-    @property
+    @cached_property
     def out_degree(self, multi=False):
         # networkx (DiGraph)
-        return DegreeView(DegreeView.OUT_DEGREE, self, multi)
+        return DegreeView(self._edges, DegreeView.OUT_DEGREE)
 
     # -----------------------------------------------------------------------
 
@@ -844,7 +939,6 @@ class Graph:
     # -----------------------------------------------------------------------
 # end
 
-
 # ---------------------------------------------------------------------------
 # Extensions
 # ---------------------------------------------------------------------------
@@ -867,6 +961,11 @@ class MultiGraph(Graph):
 class MultiDiGraph(Graph):
     def __init__(self, loops=False, **gprops):
         super().__init__(directed=True, multi=True, loops=loops, **gprops)
+
+
+
+NetxGraph = Graph
+NetxDiGraph = DiGraph
 
 
 # ---------------------------------------------------------------------------

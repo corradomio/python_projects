@@ -1,9 +1,34 @@
+
+__all__ = [
+    "is_symmetric",
+    "from_adjacency_matrix",
+    "from_numpy_matrix",
+    "from_numpy_array",
+    "adjacency_matrix",
+    "power_adjacency_matrix",
+    "random_adjacency_matrix",
+    "is_empty_adjacency_matrix"
+]
+
 from stdlib.is_instance import is_instance
 import networkx as nx
 import numpy as np
 from .graph import Graph
 from scipy.sparse import csr_array
 from random import randrange
+
+# ---------------------------------------------------------------------------
+# is_symmetric
+# ---------------------------------------------------------------------------
+
+def is_symmetric(M: np.ndarray):
+    n = len(M)
+    for i in range(n-1):
+        for j in range(i+1, n):
+            if M[i, j] != M[j, i]:
+                return False
+    return True
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -78,6 +103,8 @@ def adjacency_matrix(G: Graph, dtype=np.int8) -> np.ndarray:
     """
     Create the adjacency matrix [0,1] from the graph G.
     If the graph is undirected, the matrix is symmetric.
+
+    TODO: it doesnt support NOT integer nodes!
 
     :param G: graph
     :param dtype: matrix elements' type
@@ -163,3 +190,7 @@ def random_adjacency_matrix(n: int, k: int, directed: bool=False, loop: bool = F
 
     return A
 # end
+
+
+def is_empty_adjacency_matrix(adjacency_matrix: np.ndarray) -> bool:
+    return adjacency_matrix.sum() == 0

@@ -1,9 +1,15 @@
 from typing import Collection
+
 from stdlib.is_instance import is_instance
-from .dagfun import descendants, ancestors
+from .dagfun import descendants
 from .graph import Graph, NODE_TYPE
-from .mat import adjacency_matrix
-from .paths import find_all_undirected_paths, find_all_directed_paths
+
+__all__ = [
+    "is_d_separated",
+    "is_markov_equivalent"
+]
+
+from .paths import find_all_undirected_paths
 
 
 # ---------------------------------------------------------------------------

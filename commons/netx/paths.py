@@ -1,8 +1,16 @@
+
+__all__ = [
+    "is_direct_connected",
+    "is_undirect_connected",
+    "find_directed_paths",
+    "find_undirected_paths",
+    "all_simple_paths"
+]
+
 from typing import Iterator, Collection
 
 from .cache import check_cache
 from .graph import Graph, NODE_TYPE
-
 
 # ---------------------------------------------------------------------------
 # is_direct_connected
@@ -71,7 +79,7 @@ find_all_directed_paths = find_directed_paths
 # find_all_trails (compatibility)
 # ---------------------------------------------------------------------------
 
-def all_neighbors(G: Graph, u: NODE_TYPE) -> set[NODE_TYPE]:
+def _all_neighbors(G: Graph, u: NODE_TYPE) -> set[NODE_TYPE]:
     """
     Equivalent to 'nx.all_neighbors(G, u, v)' but caches the results
     :param G: graph node
@@ -98,7 +106,7 @@ def _find_undirected_path(G: Graph, u_path: Collection[NODE_TYPE], s: NODE_TYPE,
     if s == v:
         yield u_path + [v]
 
-    for t in all_neighbors(G, s):
+    for t in _all_neighbors(G, s):
         if t in u_processed: continue
         yield from _find_undirected_path(G, u_path + [s], t, v, u_processed | {s})
 # end

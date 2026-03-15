@@ -1,3 +1,10 @@
+
+__all__ = [
+    "random_dag",
+    "extends_dag",
+    "enumerate_all_directed_acyclic_graphs",
+]
+
 import random as rnd
 from typing import Generator
 
@@ -5,20 +12,6 @@ import networkx as nx
 import numpy as np
 
 from stdlib.iset import ilexsubset, imembers
-
-
-# ---------------------------------------------------------------------------
-# is_symmetric
-# ---------------------------------------------------------------------------
-
-def is_symmetric(M: np.ndarray):
-    n = len(M)
-    for i in range(n-1):
-        for j in range(i+1, n):
-            if M[i, j] != M[j, i]:
-                return False
-    return True
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +77,7 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
 # DAG: represented by an upper triangular matrix
 # Constraints: all rows and all columns must be not 0
 
-def iset_to_amdag(S: int, n: int) -> np.ndarray:
+def _iset_to_amdag(S: int, n: int) -> np.ndarray:
     """
     Set to adjacency matrix for DAG
     :param S: set as integer
@@ -124,7 +117,7 @@ def enumerate_all_directed_acyclic_graphs(n: int, create_using=None) -> Generato
         create_using = nx.DiGraph
 
     for S in ilexsubset(n=N, k=(n - 1, N)):
-        A = iset_to_amdag(S, n)
+        A = _iset_to_amdag(S, n)
 
         G = nx.from_numpy_array(A, create_using=create_using)
         if not nx.is_weakly_connected(G):

@@ -1,6 +1,6 @@
 import numpy as np
 import networkx as nx
-from ..daggen import is_symmetric
+from ..mat import is_symmetric
 
 
 def draw(G: np.ndarray | nx.Graph, pos=None, ax=None, labels=True, **kwargs):
