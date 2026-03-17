@@ -18,7 +18,7 @@ from functools import cached_property
 from typing import Optional, Any
 from typing import Union, Iterator, Collection
 
-from .types import NODE_TYPE, EDGE_TYPE
+from .types import NODE_TYPE, EDGE_TYPE, uedge
 
 __version__ = "1.1.1"
 
@@ -75,14 +75,6 @@ __version__ = "1.1.1"
 # A DirectedAcyclicGraph (DAG) is a directed graph without cycles
 # A PartialDirectedGraph (PDG) is a directed graph where for some edge
 #   it is not specified the direction
-
-# ---------------------------------------------------------------------------
-# _ukey
-# ---------------------------------------------------------------------------
-
-def _ukey(key):
-    u, v = key
-    return key if u < v else (v, u)
 
 # ---------------------------------------------------------------------------
 # Edges
@@ -225,19 +217,19 @@ class UEdges(IEdges):
     # -----------------------------------------------------------------------
     #
     # def get(self, key, default=None):
-    #     return super().get(_ukey(key), default)
+    #     return super().get(uedge(key), default)
     #
     # def __getitem__(self, key):
-    #     return super().__getitem__(_ukey(key))
+    #     return super().__getitem__(uedge(key))
     #
     # def __setitem__(self, key, value):
-    #     return super().__setitem__(_ukey(key), value)
+    #     return super().__setitem__(uedge(key), value)
     #
     # def __contains__(self, key):
-    #     return super().__contains__(_ukey(key))
+    #     return super().__contains__(uedge(key))
     #
     # def __delitem__(self, key):
-    #     return super().__delitem__(_ukey(key))
+    #     return super().__delitem__(uedge(key))
     #
     # -----------------------------------------------------------------------
 
@@ -270,15 +262,15 @@ class UEdges(IEdges):
         super().remove_edge(u, v)
 
     def __contains__(self, uv):
-        uv = _ukey(uv)
+        uv = uedge(uv)
         return super().__contains__(uv)
 
     def __getitem__(self, uv):
-        uv = _ukey(uv)
+        uv = uedge(uv)
         return super().__getitem__(uv)
 
     def __setitem__(self, uv, eprops):
-        u, v = _ukey(uv)
+        u, v = uedge(uv)
         if not self.loops and u == v:
             return None
         elif super().__contains__(uv):
@@ -987,18 +979,21 @@ def is_networkx_graph(G):
 # ---------------------------------------------------------------------------
 
 def create_like(G):
-    if isinstance(G, Graph):
-        return Graph(directed=G.is_directed(), loops=G.has_loops(), multi=G.is_multigraph(), acyclic=G.is_acyclic())
-    if isinstance(G, nx.DiGraph):
-        return nx.DiGraph()
-    if isinstance(G, nx.MultiDiGraph):
-        return nx.MultiDiGraph()
-    if isinstance(G, nx.MultiGraph):
-        return nx.MultiGraph()
     if isinstance(G, nx.Graph):
-        return nx.Graph()
+        H = nx.Graph()
+    elif isinstance(G, nx.DiGraph):
+        H = nx.DiGraph()
+    elif isinstance(G, Graph):
+        H = Graph(directed=G.is_directed(), loops=G.has_loops(), multi=G.is_multigraph(), acyclic=G.is_acyclic())
+    elif isinstance(G, nx.MultiDiGraph):
+        H = nx.MultiDiGraph()
+    elif isinstance(G, nx.MultiGraph):
+        H = nx.MultiGraph()
     else:
         raise TypeError(f"Unsupported graph type: {type(G)}")
+
+    H.add_nodes_from(G.nodes())
+    return H
 
 
 # ---------------------------------------------------------------------------

@@ -5,35 +5,99 @@ __all__ = [
 
 import networkx as nx
 import numpy as np
-from .graph import Graph
+
+from .pdagfun import enumerate_directed_adjacency_matrices, enumerate_directed_graphs
 from .mat import adjacency_matrix
-from .sidimpl.structIntervDist import struct_interv_dist
+from .sidimpl.structIntervDistDAG import structIntervDist
+from .sidimpl.hammingDist import hammingDist
+
+
+# ---------------------------------------------------------------------------
+# utilities
+# ---------------------------------------------------------------------------
+
+def _mean(l) -> float:
+    if len(l) == 0:
+        return -1
+    return sum(l)/len(l)
+
+
+# ---------------------------------------------------------------------------
+# hamming_distance
+# ---------------------------------------------------------------------------
+
+def hamming_distance(G: nx.DiGraph, H: nx.DiGraph, all_mistakes_one: bool=True) -> float:
+    """
+    Hamming distance based on R implementation converted in Python
+    :param G:
+    :param H:
+    :param all_mistakes_one:
+    :return:
+    """
+    if isinstance(G, (nx.DiGraph)):
+        assert G.order() == H.order(), "Incompatible graphs"
+        Gam = adjacency_matrix(G)
+        Ham = adjacency_matrix(H)
+    else:
+        Gam = G
+        Ham = H
+
+    assert isinstance(G, np.ndarray)
+    assert isinstance(H, np.ndarray)
+    return hammingDist(Gam, Ham, all_mistakes_one=all_mistakes_one)
+# end
 
 
 # ---------------------------------------------------------------------------
 # structural_hamming_distance
 # ---------------------------------------------------------------------------
 
-def structural_hamming_distance_graph(G: Graph, H: Graph) -> float:
-    assert G.order() == H.order(), "Incompatible graphs"
-    Gam = adjacency_matrix(G)
-    Ham = adjacency_matrix(H)
-    return structural_hamming_distance_matrix(Gam, Ham)
+def _structural_hamming_distance(G: np.ndarray, H: np.ndarray, all_mistakes_one: bool=True) -> float:
+    diff = np.abs(G - H)
+    if all_mistakes_one:
+        diff = diff + diff.transpose()
+        diff[diff > 1] = 1
+        shd = np.sum(diff) / 2
+    else:
+        shd = np.sum(diff)
+    return shd
+# end
 
-def structural_hamming_distance_matrix(G: np.ndarray, H:np.ndarray) -> float:
+
+def structural_hamming_distance(G: np.ndarray, H: np.ndarray, all_mistakes_one: bool=True) -> float:
+    """
+    Hamming distance between two DAG
+    :param G: ground truth DAG
+    :param H: DAG
+    :param all_mistakes_one:
+    :return:
+    """
     assert isinstance(G, np.ndarray)
     assert isinstance(H, np.ndarray)
-    n, m = G.shape
-    shd = 0
-    for i in range(n):
-        for j in range(i + 1, m):
-            if G[i, j] == H[i, j]:
-                pass
-            elif G[i, j] == H[j, i]:
-                shd += 1
-            else:
-                shd += 1
-    return shd
+    return _structural_hamming_distance(G, H, all_mistakes_one=all_mistakes_one)
+# end
+
+
+def structural_hamming_distance_pdag(G: np.ndarray, H: np.ndarray, all_mistakes_one: bool=True, *,
+        max_count=256, max_tries=8192) -> float:
+    """
+    Hamming distance between a DAG and a PDAG
+    :param G: ground truth DAG
+    :param H: PDAG
+    :param all_mistakes_one:
+    :return:
+    """
+    assert isinstance(G, np.ndarray)
+    assert isinstance(H, np.ndarray)
+
+    shd_list = []
+    for Gi in enumerate_directed_adjacency_matrices(G, dag=True, max_count=max_count, max_tries=max_tries):
+        for Hj in enumerate_directed_adjacency_matrices(H, dag=True, max_count=max_count, max_tries=max_tries):
+            shd = _structural_hamming_distance(Gi, Hj, all_mistakes_one=all_mistakes_one)
+            shd_list.append(shd)
+    return _mean(shd_list)
+# end
+
 
 # ---------------------------------------------------------------------------
 # structural_intervention_distance
@@ -118,17 +182,135 @@ def structural_hamming_distance_matrix(G: np.ndarray, H:np.ndarray) -> float:
 #     return sid
 # # end
 
-def structural_intervention_distance_graph(G: Graph, H: Graph) -> float:
-    Gam = nx.adjacency_matrix(G)
-    Ham = nx.adjacency_matrix(H)
-    return structural_intervention_distance_from_matrix(Gam, Ham)
+def structural_intervention_distance(G: np.ndarray, H: np.ndarray) -> float:
+    """
+    Compute the Structural Intervention Distance between two DAGs,
+    Based on the R implementation converted in Python.
 
-
-def structural_intervention_distance_from_matrix(G: np.ndarray, H:np.ndarray) -> float:
+    :param G: DAG ground truth
+    :param H: causal graph
+    :return:
+    """
     assert isinstance(G, np.ndarray)
     assert isinstance(H, np.ndarray)
-    # {'sid': 8, 'sidUpperBound': 8, 'sidLowerBound': 8, 'incorrectMat': array([...])}
-    sid_res = struct_interv_dist(G, H)
-    return sid_res["sid"]
+    assert G.shape == H.shape
+    # sid_res: {'sid': 8, 'sidUpperBound': 8, 'sidLowerBound': 8, 'incorrectMat': array([...])}
+
+    return float(structIntervDist(G, H)["sid"])
 # end
 
+
+def structural_intervention_distance_pdag(G: np.ndarray, H: np.ndarray, *,
+        max_count=256, max_tries=8192) -> float:
+    """
+    Hamming distance between a DAG and a PDAG
+    :param G: ground truth DAG
+    :param H: PDAG
+    :param all_mistakes_one:
+    :return:
+    """
+    assert isinstance(G, np.ndarray)
+    assert isinstance(H, np.ndarray)
+
+    sid_list = []
+    for Gi in enumerate_directed_graphs(G, dag=True, max_count=max_count, max_tries=max_tries):
+        for Hj in enumerate_directed_adjacency_matrices(H, dag=True, max_count=max_count, max_tries=max_tries):
+            sid = float(structIntervDist(Gi, Hj)["sid"])
+            sid_list.append(sid)
+    return _mean(sid_list)
+# end
+
+
+# ---------------------------------------------------------------------------
+# symmetric_intervention_distance
+# ---------------------------------------------------------------------------
+
+def symmetric_intervention_distance(G: np.ndarray, H: np.ndarray):
+    """
+        Compute the Structural Intervention Distance between two DAGs,
+        Based on the R implementation converted in Python.
+
+        :param G: DAG ground truth
+        :param H: causal graph
+        :return:
+        """
+    assert isinstance(G, np.ndarray)
+    assert isinstance(H, np.ndarray)
+    assert G.shape == H.shape
+    # sid_res: {'sid': 8, 'sidUpperBound': 8, 'sidLowerBound': 8, 'incorrectMat': array([...])}
+
+    sidgh = structIntervDist(G, H)["sid"]
+    sidhg = structIntervDist(H, G)["sid"]
+    return (sidgh + sidhg)/2
+# end
+
+
+def symmetric_intervention_distance_pdag(G: np.ndarray, H: np.ndarray, *,
+        max_count=256, max_tries=8192) -> float:
+    """
+    Hamming distance between a DAG and a PDAG
+    :param G: ground truth DAG
+    :param H: PDAG
+    :param all_mistakes_one:
+    :return:
+    """
+    assert isinstance(G, np.ndarray)
+    assert isinstance(H, np.ndarray)
+
+    ssid_list = []
+    for Gi in enumerate_directed_adjacency_matrices(G, dag=True, max_count=max_count, max_tries=max_tries):
+        for Hj in enumerate_directed_adjacency_matrices(H, dag=True, max_count=max_count, max_tries=max_tries):
+            sidgh = float(structIntervDist(Gi, Hj)["sid"])
+            sidhg = float(structIntervDist(Hj, Gi)["sid"])
+            ssid_list += [sidgh, sidhg]
+    return _mean(ssid_list)
+# end
+
+
+# ---------------------------------------------------------------------------
+# d_separation_distance
+# ---------------------------------------------------------------------------
+
+def _d_separation_matrix(G: nx.DiGraph) -> np.ndarray:
+    n = G.order()
+    dsep = np.ndarray((n,n), dtype=np.int8)
+    for u in G.nodes:
+        for v in G.nodes:
+            if u == v: continue
+            dsep[u,v] = nx.is_d_separator(G, u, v, set())
+    return dsep
+# end
+
+
+def d_separation_distance(G: nx.DiGraph, H: nx.DiGraph) -> float:
+    assert isinstance(G, nx.DiGraph)
+    assert isinstance(H, nx.DiGraph)
+    assert G.order() == H.order()
+
+    gdsep = _d_separation_matrix(G)
+    hdsep = _d_separation_matrix(H)
+    # hamming distance
+    return float((np.abs(gdsep - hdsep)).sum())
+# end
+
+
+def d_separation_distance_pdag(G: nx.DiGraph, H: nx.DiGraph, *,
+        max_count=256, max_tries=8192) -> float:
+    assert isinstance(G, nx.DiGraph)
+    assert isinstance(H, nx.DiGraph)
+    assert G.order() == H.order()
+
+    dsd_list = []
+    for Gi in enumerate_directed_graphs(G, dag=True, max_count=max_count, max_tries=max_tries):
+        gdsep = _d_separation_matrix(Gi)
+        for Hj in enumerate_directed_graphs(H, dag=True, max_count=max_count, max_tries=max_tries):
+            hdsep = _d_separation_matrix(Hj)
+            dsd = float((np.abs(gdsep - hdsep)).sum())
+            dsd_list.append(dsd)
+    return _mean(dsd_list)
+# end
+
+
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

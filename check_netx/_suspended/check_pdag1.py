@@ -19,7 +19,7 @@ g = ig.Graph.Ring(4)
 layout = g.layout("circle").coords
 # ipx.network(g, layout)
 
-for H in netx.enumerate_all_directed_graphs(G, True):
+for H in netx.enumerate_directed_graphs(G, True):
     # netx.print_graph_stats(H)
     # netx.draw(H)
     ipx.network(H, layout, vertex_labels=["A","B","C","D"])

@@ -7,15 +7,28 @@ __all__ = [
     "adjacency_matrix",
     "power_adjacency_matrix",
     "random_adjacency_matrix",
-    "is_empty_adjacency_matrix"
+    "is_empty_adjacency_matrix",
+    "is_full_adjacency_matrix",
 ]
 
-from stdlib.is_instance import is_instance
 import networkx as nx
 import numpy as np
 from .graph import Graph
 from scipy.sparse import csr_array
 from random import randrange
+
+
+# ---------------------------------------------------------------------------
+# is_symmetric
+# ---------------------------------------------------------------------------
+
+def ilog2(x):
+    i, e = 0, 1
+    while e < x:
+        e *= 2
+        i += 1
+    return i
+
 
 # ---------------------------------------------------------------------------
 # is_symmetric
@@ -30,14 +43,9 @@ def is_symmetric(M: np.ndarray):
     return True
 # end
 
-
 # ---------------------------------------------------------------------------
-# Adjacency matrix
+# Adjacency matrix -> Graph
 # ---------------------------------------------------------------------------
-# direct=False,
-# loops=False,
-# multi=False,
-# acyclic=False,
 
 def from_adjacency_matrix(adjacency_matrix: np.ndarray, create_using=None) -> Graph:
     if isinstance(adjacency_matrix, csr_array):
@@ -99,7 +107,17 @@ def from_numpy_array(adjacency_matrix: np.ndarray, create_using=None) -> Graph:
 # end
 
 
-def adjacency_matrix(G: Graph, dtype=np.int8) -> np.ndarray:
+# ---------------------------------------------------------------------------
+# adjacency_matrix
+# power_adjacency_matrix
+# is_empty_adjacency_matrix
+# ---------------------------------------------------------------------------
+# direct=False,
+# loops=False,
+# acyclic=False,
+# multi=False,
+
+def adjacency_matrix(G: nx.Graph, dtype=np.int8) -> np.ndarray:
     """
     Create the adjacency matrix [0,1] from the graph G.
     If the graph is undirected, the matrix is symmetric.
@@ -123,7 +141,7 @@ def adjacency_matrix(G: Graph, dtype=np.int8) -> np.ndarray:
 # end
 
 
-def power_adjacency_matrix(A: np.ndarray, exp=-1, condset=None, loop=False) -> np.ndarray:
+def power_adjacency_matrix(A: np.ndarray, exp=-1) -> np.ndarray:
     """
     Compute the power of an adjacency matrix.
 
@@ -133,64 +151,91 @@ def power_adjacency_matrix(A: np.ndarray, exp=-1, condset=None, loop=False) -> n
     :param loop: if to include the loops (diagonal=1) in the result matrix
     :return:
     """
-    is_instance(condset, None | list[int])
 
-    def ilog2(x):
-        i, e = 0, 1
-        while e < x:
-            e *= 2
-            i += 1
-        return i
-
-    n = A.shape[0]
-    I = np.identity(n, A.dtype)
-
-    if condset is not None:
-        A[:, condset] = 0
+    n, _ = A.shape
+    I = np.identity(n, int)
 
     A = I + A
 
-    if exp == 0:
-        P = I
-    elif exp > 0:
+    if exp >= 0:
         P = I
         for e in range(exp):
             P = np.dot(P, A)
     else:
-        P = A
         l = ilog2(n)
+        P = A
         for e in range(l):
             P = np.dot(P, P)
+
     P[P > 0] = 1
 
-    if not loop:
-        P -= I
     return P
 # end
 
 
-def random_adjacency_matrix(n: int, k: int, directed: bool=False, loop: bool = False, acyclic: bool = False) -> np.ndarray:
-    A = np.zeros((n, n), dtype=np.int8)
-    e = 0
-    while e < k:
-        i = randrange(0, n)
-        j = randrange(0, n)
+def is_empty_adjacency_matrix(A: np.ndarray) -> bool:
+    return A.sum() == 0
 
-        if i == j and not loop:
-            continue
-        if A[i,j] == 1:
-            continue
 
-        A[i,j] = 1
-        if not directed:
-            A[j,i] = 1
+def is_full_adjacency_matrix(A: np.ndarray) -> bool:
+    n, m = A.shape
+    return A.sum() == n*m
 
-        e += 1
-    # end
+# ---------------------------------------------------------------------------
+# random_adjacency_matrix
+# ---------------------------------------------------------------------------
 
+def _random_am(n: int, k: int, loop: bool) -> np.ndarray:
+    assert k <= (n*n-1)//2
+    A = np.ndarray((n,n), np.int8)
+    nedges = 0
+    while nedges < k:
+        u = randrange(n)
+        v = randrange(n)
+        if u == v and not loop: continue
+        if A[u,v] == 1: continue
+        A[u, v] = 1
+        A[v, u] = 1
+        nedges += 1
     return A
+
+def _random_directed_am(n: int, k: int) -> np.ndarray:
+    assert k <= (n * n - 1)
+    A = np.ndarray((n, n), np.int8)
+    nedges = 0
+    while nedges < k:
+        u = randrange(n)
+        v = randrange(n)
+        if u == v: continue
+        if A[u, v] == 1: continue
+        A[u, v] = 1
+        nedges += 1
+    return A
+
+def _random_dag_am(n: int, k: int) -> np.ndarray:
+    assert k <= (n * n - 1)
+    A = np.ndarray((n, n), np.int8)
+    nedges = 0
+    while nedges < k:
+        u = randrange(n)
+        v = randrange(n)
+        if u > v: u, v = v, u
+        if u == v: continue
+        if A[u, v] == 1: continue
+        A[u, v] = 1
+        nedges += 1
+    return A
+
+def random_adjacency_matrix(n: int, k: int, directed: bool=False, loop: bool = False, acyclic: bool = False) -> np.ndarray:
+    if not directed:
+        return _random_am(n, k, loop)
+    if not acyclic:
+        return _random_directed_am(n, k)
+    else:
+        return _random_dag_am(n, k)
 # end
 
 
-def is_empty_adjacency_matrix(adjacency_matrix: np.ndarray) -> bool:
-    return adjacency_matrix.sum() == 0
+# ---------------------------------------------------------------------------
+# end
+# ---------------------------------------------------------------------------

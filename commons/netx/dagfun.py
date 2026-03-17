@@ -72,7 +72,7 @@ def add_edges_from(G: Graph, elist: list[EDGE_TYPE] | Iterator[EDGE_TYPE], **epr
 # is_directed_acyclic_graph
 # ---------------------------------------------------------------------------
 
-def is_directed_acyclic_graph(G: Graph | np.ndarray) -> bool:
+def is_directed_acyclic_graph(G: nx.DiGraph | np.ndarray) -> bool:
     """
     Check if the graph is a DAG (Directed Acyclic Graph).
     If it is not directed, it is not a DAG

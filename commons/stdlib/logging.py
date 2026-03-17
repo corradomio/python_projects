@@ -165,8 +165,9 @@ class Logger:
         delta = now - self.timestamp
         if (delta) > self.TIMEDELAY or force:
             self.timestamp = now
-            print(time.strftime("[%H:%M:%S] "), end="")
-            print(fmt.format(*args), **kwargs)
+            # print(time.strftime("[%H:%M:%S] "), end="")
+            # print(fmt.format(*args), **kwargs)
+            self.info(fmt.format(*args), **kwargs)
 
     def full_error(self, e, fmt, *args, **kwargs):
         exc = traceback.format_exc()

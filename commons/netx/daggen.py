@@ -32,7 +32,7 @@ def random_dag(n: int, m: int, connected=True, create_using=None):
     # assert connected and m >= (n-1), "Not enough edges for a connected graph"
 
     G = nx.DiGraph() if create_using is None else create_using()
-    G.add_nodes_from(list(range(n)))
+    G.add_nodes_from(range(n))
     return extends_dag(G, m, connected=connected)
 # end
 
@@ -67,6 +67,7 @@ def extends_dag(G: nx.DiGraph, m: int, connected=True):
         # required number of edges
         completed = not (connected and not nx.is_weakly_connected(G) or len(G.edges()) < m)
     # end
+    assert connected and nx.is_weakly_connected(G) or not connected
     return G
 # end
 
