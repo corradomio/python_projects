@@ -32,9 +32,12 @@ def is_undirect_connected(G: Graph, u: NODE_TYPE, v: NODE_TYPE) -> bool:
 # find_all_directed_paths (compatibility)
 # ---------------------------------------------------------------------------
 
-def _find_directed_path(G: Graph, u_path: list[NODE_TYPE], s: NODE_TYPE, v: NODE_TYPE, u_processed: set[NODE_TYPE]) \
-        -> Iterator[list[NODE_TYPE]]:
-    assert s not in u_processed
+def _find_directed_path(G: Graph,
+                        u_path: list[NODE_TYPE],
+                        s: NODE_TYPE,
+                        v: NODE_TYPE,
+                        u_processed: set[NODE_TYPE]) -> Iterator[list[NODE_TYPE]]:
+    # assert s not in u_processed
 
     if s == v:
         yield u_path + [v]
@@ -99,9 +102,12 @@ def _all_neighbors(G: Graph, u: NODE_TYPE) -> set[NODE_TYPE]:
 # end
 
 
-def _find_undirected_path(G: Graph, u_path: Collection[NODE_TYPE], s: NODE_TYPE, v: NODE_TYPE, u_processed: set[NODE_TYPE]) \
-        -> Iterator[list[NODE_TYPE]]:
-    assert s not in u_processed
+def _find_undirected_path(G: Graph,
+                          u_path: Collection[NODE_TYPE],
+                          s: NODE_TYPE,
+                          v: NODE_TYPE,
+                          u_processed: set[NODE_TYPE]) -> Iterator[list[NODE_TYPE]]:
+    # assert s not in u_processed
 
     if s == v:
         yield u_path + [v]
@@ -139,7 +145,7 @@ def find_undirected_paths(G: Graph, u: NODE_TYPE, v: NODE_TYPE) -> Iterator[list
 find_all_undirected_paths = find_undirected_paths
 
 # trail: undirectional path
-find_all_trails = find_all_undirected_paths
+find_all_trails = find_undirected_paths
 
 
 # ---------------------------------------------------------------------------
@@ -157,7 +163,7 @@ def all_simple_paths(G: Graph, u: NODE_TYPE, v: NODE_TYPE) -> Iterator[list[NODE
     if G.is_directed():
         return find_directed_paths(G, u, v)
     else:
-        return find_all_undirected_paths(G, u, v)
+        return find_undirected_paths(G, u, v)
 
 
 # ---------------------------------------------------------------------------

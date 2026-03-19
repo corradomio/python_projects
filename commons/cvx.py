@@ -116,3 +116,11 @@ VIDEO_CAPTURE_PROPERTIES = {
     cv2.CAP_PROP_PTS: "CAP_PROP_PTS",
     cv2.CAP_PROP_DTS_DELAY: "CAP_PROP_DTS_DELAY",
 }
+
+
+
+def print_props(vc: cv2.VideoCapture):
+    for prop, pname in VIDEO_CAPTURE_PROPERTIES.items():
+        value = vc.get(prop)
+        if value > 0:
+            print(f"{pname}: {value}")

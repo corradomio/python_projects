@@ -2,25 +2,16 @@ from stdlib.tprint import tprint
 import cv2 as cv
 import cvx
 
-ips = ["10.248.37.111", "10.248.37.108", "10.248.37.12", "10.248.37.100"]
-username = "admin"
-password = "password1234"
-all_rtsp_urls = [f"rtsp://{username}:{password}@{ip}/Streaming/Channels/101?tcp" for ip in ips]
-
-# rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp
-
 CAMERA_WIDTH = 1280
 CAMERA_HEIGHT = 720
 CAMERA_FPS = 10
 
 cv.namedWindow("preview")
-# vc = cv2.VideoCapture(0)
-vc = cv.VideoCapture(all_rtsp_urls[0])
+vc = cv.VideoCapture(0)
 
 vc.set(cv.CAP_PROP_FRAME_WIDTH, CAMERA_WIDTH)
 vc.set(cv.CAP_PROP_FRAME_HEIGHT, CAMERA_HEIGHT)
 vc.set(cv.CAP_PROP_FPS, CAMERA_FPS)
-
 
 if vc.isOpened(): # try to get the first frame
     rval, frame = vc.read()
@@ -51,6 +42,7 @@ while rval:
     #     break
 
     # {do something with the frame here}
+
     # frame = cv.flip(frame, 1)
     cv.imshow("preview", frame)
 
@@ -60,8 +52,6 @@ while rval:
         break
 
     tprint(f"Frames: {count}, frame_id: {vc.get(cv.CAP_PROP_POS_FRAMES)}", force=False, )
-    # if count % 100 == 0:
-    #     tprint(f"Frames: {count}, frame_id: {vc.get(cv2.CAP_PROP_POS_FRAMES)}", force=False, )
 # end
 
 vc.release()

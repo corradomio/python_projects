@@ -10,5 +10,7 @@ dependencies = [
     "opencv-python",
     "opencv-contrib-python",
     "vidgear",
-    "mediapipe"
+#    "ffmpeg-python",
+#    "pyffmpeg",
+#    "mediapipe"
 ]
