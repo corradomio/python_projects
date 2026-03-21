@@ -17,6 +17,23 @@ Face direction:
       weights
       https://cloud.ovgu.de/s/Q67RnLDy6JKLRWm/download/6DRepNet_300W_LP_AFLW2000.pth
 
+    roll, pitch, yaw / euler angles
+        https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
+        https://en.wikipedia.org/wiki/Euler_angles
+
+        X, Roll: Controls banking, managed by ailerons.
+        Y, Pitch: Controls nose-up or nose-down attitude, managed by elevators.
+        Z, Yaw: Controls heading, often managed by a rudder in aircraft.
+
+        euler angles to rotation matrix
+        available in
+
+    - FSA-Net (Fine-Grained Structure Aggregation Network)
+    - HopeNet
+    - DirectMHP (Direct Multi-Hypothesis Head Pose)
+    - TriNet / FDN  ???
+    - 6DRepNet360
+    -
 
 MTCNN:
     boxes/landmarks=False -> [[tx, ty, bx, by], ...]  top-left
@@ -38,18 +55,6 @@ MTCNN:
 
 Medimum: facenet-pytorch | Pretrained Pytorch face detection (MTCNN) and facial recognition (InceptionResnet) models | Computer Vision library
     https://medium.com/@danushidk507/facenet-pytorch-pretrained-pytorch-face-detection-mtcnn-and-facial-recognition-b20af8771144
-
-
-roll, pitch, yaw / euler angles
-    https://simple.wikipedia.org/wiki/Pitch,_yaw,_and_roll
-    https://en.wikipedia.org/wiki/Euler_angles
-
-    X, Roll: Controls banking, managed by ailerons.
-    Y, Pitch: Controls nose-up or nose-down attitude, managed by elevators.
-    Z, Yaw: Controls heading, often managed by a rudder in aircraft.
-
-    euler angles to rotation matrix
-    available in
 
 
 osnet_x1_0

@@ -107,6 +107,7 @@ dependencies = [
     { name = "pandas" },
     { name = "pillow" },
     { name = "scipy" },
+    { name = "scipy-stubs" },
     { name = "sixdrepnet" },
     { name = "torch", version = "2.10.0", source = { registry = "https://pypi.org/simple" }, marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torch", version = "2.10.0+cu126", source = { registry = "https://download.pytorch.org/whl/cu126" }, marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
@@ -126,6 +127,7 @@ requires-dist = [
     { name = "pandas" },
     { name = "pillow" },
     { name = "scipy" },
+    { name = "scipy-stubs", specifier = "~=1.17.1" },
     { name = "sixdrepnet" },
     { name = "torch", marker = "sys_platform != 'linux' and sys_platform != 'win32'" },
     { name = "torch", marker = "sys_platform == 'linux' or sys_platform == 'win32'", index = "https://download.pytorch.org/whl/cu126" },
@@ -664,6 +666,18 @@ wheels = [
 ]
 
 [[package]]
+name = "numpy-typing-compat"
+version = "20251206.2.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/5f/29fd5f29b0a5d96e2def96ecba3112fc330ecd16e8c97c2b332563c5e201/numpy_typing_compat-20251206.2.4.tar.gz", hash = "sha256:59882d23aaff054a2536da80564012cdce33487657be4d79c5925bb8705fcabc", size = 5011, upload-time = "2025-12-06T20:02:04.942Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/63/7c/5c2892e6bc0628a2ccf4e938e1e2db22794657ccb374672d66e20d73839e/numpy_typing_compat-20251206.2.4-py3-none-any.whl", hash = "sha256:a82e723bd20efaa4cf2886709d4264c144f1f2b609bda83d1545113b7e47a5b5", size = 6300, upload-time = "2025-12-06T20:01:57.578Z" },
+]
+
+[[package]]
 name = "nvidia-cublas-cu12"
 version = "12.6.4.1"
 source = { registry = "https://pypi.org/simple" }
@@ -860,6 +874,24 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/fd/55/b3b49a1b97aabcfbbd6c7326df9cb0b6fa0c0aefa8e89d500939e04aa229/opencv_python-4.13.0.92-cp37-abi3-manylinux_2_28_x86_64.whl", hash = "sha256:620d602b8f7d8b8dab5f4b99c6eb353e78d3fb8b0f53db1bd258bb1aa001c1d5", size = 72927042, upload-time = "2026-02-05T06:59:23.389Z" },
     { url = "https://files.pythonhosted.org/packages/fb/17/de5458312bcb07ddf434d7bfcb24bb52c59635ad58c6e7c751b48949b009/opencv_python-4.13.0.92-cp37-abi3-win32.whl", hash = "sha256:372fe164a3148ac1ca51e5f3ad0541a4a276452273f503441d718fab9c5e5f59", size = 30932638, upload-time = "2026-02-05T07:02:14.98Z" },
     { url = "https://files.pythonhosted.org/packages/e9/a5/1be1516390333ff9be3a9cb648c9f33df79d5096e5884b5df71a588af463/opencv_python-4.13.0.92-cp37-abi3-win_amd64.whl", hash = "sha256:423d934c9fafb91aad38edf26efb46da91ffbc05f3f59c4b0c72e699720706f5", size = 40212062, upload-time = "2026-02-05T07:02:12.724Z" },
+]
+
+[[package]]
+name = "optype"
+version = "0.17.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions", marker = "python_full_version < '3.13'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/9f/3b13bab05debf685678b8af004e46b8c67c6f98ffa08eaf5d33bcf162c16/optype-0.17.0.tar.gz", hash = "sha256:31351a1e64d9eba7bf67e14deefb286e85c66458db63c67dd5e26dd72e4664e5", size = 53484, upload-time = "2026-03-08T23:03:12.594Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6b/44/dca78187415947d1bb90b2ee2a58e47d9573528331e8dc6196996b53612a/optype-0.17.0-py3-none-any.whl", hash = "sha256:8c2d88ff13149454bcf6eb47502f80d288bc542e7238fcc412ac4d222c439397", size = 65854, upload-time = "2026-03-08T23:03:11.425Z" },
+]
+
+[package.optional-dependencies]
+numpy = [
+    { name = "numpy" },
+    { name = "numpy-typing-compat" },
 ]
 
 [[package]]
@@ -1189,6 +1221,18 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/52/52/e57eceff0e342a1f50e274264ed47497b59e6a4e3118808ee58ddda7b74a/scipy-1.17.1-cp314-cp314t-musllinux_1_2_x86_64.whl", hash = "sha256:a77cbd07b940d326d39a1d1b37817e2ee4d79cb30e7338f3d0cddffae70fcaa2", size = 37682317, upload-time = "2026-02-23T00:22:18.513Z" },
     { url = "https://files.pythonhosted.org/packages/11/2f/b29eafe4a3fbc3d6de9662b36e028d5f039e72d345e05c250e121a230dd4/scipy-1.17.1-cp314-cp314t-win_amd64.whl", hash = "sha256:eb092099205ef62cd1782b006658db09e2fed75bffcae7cc0d44052d8aa0f484", size = 37345327, upload-time = "2026-02-23T00:22:24.442Z" },
     { url = "https://files.pythonhosted.org/packages/07/39/338d9219c4e87f3e708f18857ecd24d22a0c3094752393319553096b98af/scipy-1.17.1-cp314-cp314t-win_arm64.whl", hash = "sha256:200e1050faffacc162be6a486a984a0497866ec54149a01270adc8a59b7c7d21", size = 25489165, upload-time = "2026-02-23T00:22:29.563Z" },
+]
+
+[[package]]
+name = "scipy-stubs"
+version = "1.17.1.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "optype", extra = ["numpy"] },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c7/ab/43f681ffba42f363b7ed6b767fd215d1e26006578214ff8330586a11bf95/scipy_stubs-1.17.1.2.tar.gz", hash = "sha256:2ecadc8c87a3b61aaf7379d6d6b10f1038a829c53b9efe5b174fb97fc8b52237", size = 388354, upload-time = "2026-03-15T22:33:20.449Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8c/0b/ec4fe720c1202d9df729a3e9d9b7e4d2da9f6e7f28bd2877b7d0769f4f75/scipy_stubs-1.17.1.2-py3-none-any.whl", hash = "sha256:f19e8f5273dbe3b7ee6a9554678c3973b9695fa66b91f29206d00830a1536c06", size = 594377, upload-time = "2026-03-15T22:33:18.684Z" },
 ]
 
 [[package]]

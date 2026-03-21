@@ -1,15 +1,12 @@
 import cv2 as cv
+from ultralytics import YOLO
 import torch
 from PIL import Image
 from facenet_pytorch import MTCNN
 from sixdrepnet import SixDRepNet
-from ultralytics import YOLO
+from sixdrepnet360 import SixDRepNet360
 import face_detection
-import cvx
 from stdlib.tprint import tprint
-
-tprint(f"torch: {torch.__version__}")
-print(face_detection.available_detectors)
 
 fontFace = cv.FONT_HERSHEY_SIMPLEX
 fontScale = 0.5
@@ -18,15 +15,13 @@ radius = 2
 thickness = 1
 lineType = cv.LINE_AA
 
-CAMERA_WIDTH = 1280
-CAMERA_HEIGHT = 720
-CAMERA_FPS = 10
-
-cv.namedWindow("preview")
+# Load an official or custom model
 
 MTCNN_NET = MTCNN(keep_all=True)
-# RESNET = InceptionResnetV1(pretrained='casia-webface').eval()
+
 SIXDREPNET = SixDRepNet(dict_path="./6DRepNet_300W_LP_AFLW2000.pth")
+
+SIXDREPNET360 = SixDRepNet360(dict_path="./6DRepNet360_300W_LP.pth")
 
 # ['DSFDDetector', 'RetinaNetResNet50', 'RetinaNetMobileNetV1']
 FACE_DETECTOR = face_detection.build_detector("DSFDDetector", confidence_threshold=.5, nms_iou_threshold=.3)
@@ -34,11 +29,8 @@ FACE_DETECTOR = face_detection.build_detector("DSFDDetector", confidence_thresho
 # YOLO26n-pose, YOLO26s-pose, YOLO26m-pose, YOLO26l-pose, YOLO26x-pose
 POSE_ESTIMATION = YOLO("yolo26n-pose.pt")
 
-TRACKING_MODEL = YOLO()
 
-# RGB -> BGR
-
-def mn_draw_boxes(frame, detection, show_landmarks=False):
+def mn_draw_boxes(frame, detection, show_landmarks=True):
     def _box(box):
         tx, ty, bx, by = box
         top_left_corner = (int(tx), int(ty))
@@ -59,12 +51,12 @@ def mn_draw_boxes(frame, detection, show_landmarks=False):
     if detection is None:
         return
 
-    tprint(detection)
+    # tprint(detection)
 
     if isinstance(detection, tuple):
         boxes, accuracies, landmarks = detection
         if boxes is None:
-            tprint("NO BOXES")
+            # tprint("NO BOXES")
             return
         for box in boxes:
             _box(box)
@@ -117,59 +109,59 @@ def yolo_draw_poses(frame, poses):
         _keypoint(pose.keypoints)
 # end
 
+N_FRAMES = 10
+
 
 def main():
     vc = cv.VideoCapture(r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi")
 
+    count = -1
     rval = True
-    count = 0
     while rval:
         count += 1
-
         rval, frame = vc.read()
-        if not rval or frame is None:
-            tprint("No frames available")
-            break
 
-        image = Image.fromarray(cv.cvtColor(frame, cv.COLOR_BGR2RGB), "RGB")
+        if count % N_FRAMES != 0:
+            cv.imshow("preview", frame)
+            continue
 
-        boxes, _ = MTCNN_NET.detect(image)
+        ftemp = cv.cvtColor(frame, cv.COLOR_BGR2RGB)
+        image = Image.fromarray(ftemp, "RGB")
+
+        # ---
+
+        # boxes, _ = MTCNN_NET.detect(image)
         # boxes = MTCNN_NET.detect(image, landmarks=True)
-        mn_draw_boxes(frame, boxes, show_landmarks=True)
-        # if boxes is not None:
-        #     # (n_faces, n_channels, width?, height?)
-        #     faces = MTCNN_NET(image)
+        # mn_draw_boxes(frame, boxes)
 
-        # pitch, yaw, roll = SIXDREPNET.predict(frame)
-        # pitch, yaw, roll = SIXDREPNET.predict(image)
-        # print(f"pitch={pitch}, yaw={yaw}, roll={roll}")
+        # --
 
         # detections = FACE_DETECTOR.detect(frame)
-        # if count%1 == 0:
-        #     fd_draw_boxes(frame, detections)
+        # fd_draw_boxes(frame, detections)
 
-        poses = POSE_ESTIMATION(frame, verbose=False)
-        yolo_draw_poses(frame, poses)
-        # if poses is not None and count%100 == 0:
-        #     pprint(poses)
+        # ---
 
+        # poses = POSE_ESTIMATION(frame, verbose=False)
+        # yolo_draw_poses(frame, poses)
 
-        # {do something with the frame here}
-        if count == 100:
-            image.save(f"image-{count}.png")
+        # ---
 
-        # frame = cv.flip(frame, 1)
+        # pitch, yaw, roll = SIXDREPNET.predict(frame)
+        # SIXDREPNET.draw_axis(frame, pitch, yaw, roll)
+
+        pitch_yaw_roll = SIXDREPNET360.predict(frame)
+
+        # ---
+
         cv.imshow("preview", frame)
 
         key = cv.waitKey(1)
-        if key == 27: # exit on ESC
+        while key == 32:
+            key = cv.waitKey(500)
+            key = 32 if key != 32 else 0
+        if key == 27:  # exit on ESC
             break
-
-        tprint(f"Frames: {count}, frame_id: {vc.get(cv.CAP_PROP_POS_FRAMES)}", force=False, )
     # end
-
-    vc.release()
-    cv.destroyWindow("preview")
 # end
 
 

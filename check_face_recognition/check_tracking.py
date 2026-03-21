@@ -11,6 +11,17 @@ print("track")
 # Perform tracking with the model
 # results = model.track("https://youtu.be/LNwODJXcvt4", show=True)  # Tracking with default tracker
 # results = model.track("https://youtu.be/LNwODJXcvt4", show=True, tracker="bytetrack.yaml")  # with ByteTrack
-results = model.track(r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi", show=True, tracker="bytetrack.yaml", verbose=False)  # Tracking with default tracker
-# print(results)
-#
+
+# results = model.track(
+#     r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi",
+#     show=True,
+#     tracker="bytetrack.yaml",
+#     verbose=False
+# )  # Tracking with default tracker
+
+results = model.track(
+    r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi",
+    show=True,
+    tracker="botsort.yaml",
+    verbose=False
+)

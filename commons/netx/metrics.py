@@ -6,7 +6,8 @@ __all__ = [
 import networkx as nx
 import numpy as np
 
-from .pdagfun import enumerate_directed_adjacency_matrices, enumerate_directed_graphs
+from .graph_am import enumerate_directed_adjacency_matrices
+from .pdagfun import enumerate_directed_graphs
 from .mat import adjacency_matrix
 from .sidimpl.structIntervDistDAG import structIntervDist
 from .sidimpl.hammingDist import hammingDist

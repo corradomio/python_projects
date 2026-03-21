@@ -16,7 +16,8 @@ dependencies = [
     "sixdrepnet",
     "ultralytics",
     "face_detection",
-    "lap"
+    "lap",
+    "scipy-stubs~=1.17.1",
 ]
 
 

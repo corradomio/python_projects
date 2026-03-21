@@ -6,10 +6,11 @@ __all__ = [
     "from_numpy_array",
     "adjacency_matrix",
     "power_adjacency_matrix",
-    "random_adjacency_matrix",
     "is_empty_adjacency_matrix",
     "is_full_adjacency_matrix",
 ]
+
+from typing import Iterator
 
 import networkx as nx
 import numpy as np
@@ -28,6 +29,21 @@ def ilog2(x):
         e *= 2
         i += 1
     return i
+
+def _rand_int_iter(ulim: int) -> Iterator[int]:
+    while True:
+        yield randrange(ulim)
+
+
+def _bools(nbits: int, iseq: Iterator[int]):
+    for ival in iseq:
+        bits = [False]*nbits
+        m = 1
+        for j in range(nbits):
+            if ival & m:
+                bits[j] = True
+            m <<= 1
+        yield bits
 
 
 # ---------------------------------------------------------------------------
@@ -180,60 +196,6 @@ def is_empty_adjacency_matrix(A: np.ndarray) -> bool:
 def is_full_adjacency_matrix(A: np.ndarray) -> bool:
     n, m = A.shape
     return A.sum() == n*m
-
-# ---------------------------------------------------------------------------
-# random_adjacency_matrix
-# ---------------------------------------------------------------------------
-
-def _random_am(n: int, k: int, loop: bool) -> np.ndarray:
-    assert k <= (n*n-1)//2
-    A = np.ndarray((n,n), np.int8)
-    nedges = 0
-    while nedges < k:
-        u = randrange(n)
-        v = randrange(n)
-        if u == v and not loop: continue
-        if A[u,v] == 1: continue
-        A[u, v] = 1
-        A[v, u] = 1
-        nedges += 1
-    return A
-
-def _random_directed_am(n: int, k: int) -> np.ndarray:
-    assert k <= (n * n - 1)
-    A = np.ndarray((n, n), np.int8)
-    nedges = 0
-    while nedges < k:
-        u = randrange(n)
-        v = randrange(n)
-        if u == v: continue
-        if A[u, v] == 1: continue
-        A[u, v] = 1
-        nedges += 1
-    return A
-
-def _random_dag_am(n: int, k: int) -> np.ndarray:
-    assert k <= (n * n - 1)
-    A = np.ndarray((n, n), np.int8)
-    nedges = 0
-    while nedges < k:
-        u = randrange(n)
-        v = randrange(n)
-        if u > v: u, v = v, u
-        if u == v: continue
-        if A[u, v] == 1: continue
-        A[u, v] = 1
-        nedges += 1
-    return A
-
-def random_adjacency_matrix(n: int, k: int, directed: bool=False, loop: bool = False, acyclic: bool = False) -> np.ndarray:
-    if not directed:
-        return _random_am(n, k, loop)
-    if not acyclic:
-        return _random_directed_am(n, k)
-    else:
-        return _random_dag_am(n, k)
-# end
 
 
 # ---------------------------------------------------------------------------
