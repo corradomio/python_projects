@@ -1,0 +1,17 @@
+[project]
+name = "check-deepface"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "opencv-python",
+    "deepface",
+    "tensorflow",
+    "tf-keras",
+    "insightface>=0.7.3",
+    "onnxruntime>=1.9.0",
+    "facenet-pytorch",          # numpy v1!!!!
+    "mediapipe<0.10.30",        # [0.10.31] AttributeError: module 'mediapipe' has no attribute 'solutions'
+    "ultralytics"
+]
+

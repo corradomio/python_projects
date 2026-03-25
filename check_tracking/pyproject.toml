@@ -1,5 +1,5 @@
 [project]
-name = "check-face-recognition"
+name = "check-tracking"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
@@ -16,8 +16,8 @@ dependencies = [
     "sixdrepnet",
     "ultralytics",
     "face_detection",
-    "lap",
-    # "deepface",
+     "lap",             # used by ultralitics
+    # "deepface",       # uses tensorflow
     "scipy-stubs~=1.17.1",
 ]
 

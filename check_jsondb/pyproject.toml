@@ -1,0 +1,10 @@
+[project]
+name = "check-jsondb"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "tinydb",       # 2024
+    "pysondb-v2",   # 2023
+    "lightdb",      # 2024
+]

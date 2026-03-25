@@ -1,0 +1,14 @@
+[project]
+name = "check-vector-db"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "tinydb",
+    "tensorflow_hub",
+    "jaraco.text",
+    "platformdirs",
+    "sentence_transformers",
+    "faiss-cpu",
+    "mrpt",
+]

@@ -20,7 +20,9 @@ print("track")
 # )  # Tracking with default tracker
 
 results = model.track(
-    r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi",
+    # r"E:\Movies\FILM - Polar - 2019.iTALiAN.WEBRiP.XviD-PRiME.avi",
+    # r"E:\Dropbox\Movies\Scifi Movies\Tron.Ares.2025.bdrip.1080p.x264.ita.eac3.ac3.eng.ac3.subs.fd.mkv",
+    0,
     show=True,
     tracker="botsort.yaml",
     verbose=False
