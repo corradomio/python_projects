@@ -27,7 +27,7 @@ DF_BACKENDS = [
     "mtcnn",
     "fastmtcnn",
     "retinaface",
-    "mediapipe",             # AttributeError: module 'mediapipe' has no attribute 'solutions'
+    "mediapipe",
     "yolov8n",
     # "yolov8m",
     # "yolov8l",
@@ -43,13 +43,18 @@ DF_BACKENDS = [
     "centerface",
 ]
 
+DF_MODELS = ["Facenet512"]
+DF_BACKENDS = ["opencv"]
+
 
 for model in DF_MODELS:
     for backend in DF_BACKENDS:
 
         print("---", backend, "/", model, "---")
-        result: dict = DeepFace.verify(img1_path = "dataset/img1.jpg", img2_path = "dataset/img2.jpg",
-                                       model_name=model, detector_backend=backend)
+        result: dict = DeepFace.verify(
+            img1_path = "dataset/img1.jpg", img2_path = "dataset/img2.jpg",
+            model_name=model, detector_backend=backend
+        )
         print("   ", backend, "/", model, ": ", end="")
         pprint(result)
 

@@ -57,3 +57,7 @@ register()
 
 search()
 
+
+
+FaceNet128
+    InceptionResNetV1(128)

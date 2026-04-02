@@ -18,7 +18,7 @@ class TrackSaver:
         :param directions: [:, [pitch, yaw, roll]]
         :return:
         """
-        timestamp =
+        timestamp = None
 
         pass
 

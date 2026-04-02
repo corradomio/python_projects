@@ -3,7 +3,7 @@
 #
 #   1)  use 'load' and 'dump' directly with a file path
 #
-#   2)  [REMOVED] returning an 'stdlib.dict', a dictionary with a lot
+#   2)  returning an 'stdlib.dict', a dictionary with a lot
 #       of improvements useful for configurations
 #       [REMOVED] It introduces a lot of problems
 #
@@ -14,12 +14,9 @@
 #   4)  [2025/09/13] support for parameters, passed on the load.
 #       The parameter can be written as:
 #
-#           "{<name>}"        -> value replacement
+#           "${<name>}"       -> value replacement
 #           "$<name>"         -> value replacement
-#           "...{<name>}..."  -> string replacement
-#
-#   5)  [2026/03/25] added 'get(dict, k1,...kn, default=None)
-#       Retrieve the value navigating the dictionary
+#           "...${<name>}..." -> string replacement
 #
 #
 # Added support for Pandas dataframes
@@ -77,7 +74,7 @@ TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
 # Pandas support
 # ---------------------------------------------------------------------------
 
-def pandas_to_jsonx(
+def _pandas_to_jsonx(
         data: Union[pd.Series, pd.DataFrame],
         path: Optional[str] = None,
         date_format=None,
@@ -219,7 +216,7 @@ class JSONxEncoder(json.JSONEncoder):
         t = type(o)
 
         if t in [pd.Series, pd.DataFrame]:
-            return pandas_to_jsonx(o, path=None, **self._pandas_kwargs)
+            return _pandas_to_jsonx(o, path=None, **self._pandas_kwargs)
 
         q = f'{t.__module__}.{t.__name__}'
         if q in JSONX_ENCODERS:
@@ -547,23 +544,82 @@ def validate(record: dict|list, schema: dict|list):
 # ---------------------------------------------------------------------------
 # get
 # ---------------------------------------------------------------------------
+
 EMPTY_DICT = dict()
 
-def get(config, *keys, default=None):
-    for k in keys[:-1]:
-        #
-        if isinstance(k, int) and isinstance(config, list):
-            config = config[k]
+class JSONConfiguration:
+
+    @staticmethod
+    def load(config_file: str, smarker='{', emarker='}', marker='$'):
+        # config = load(config_file)
+        return JSONConfiguration(config_file, smarker, emarker, marker)
+
+    def __init__(self, config_of_file: str | dict, smarker: str, emarker: str, marker: str):
+        if isinstance(config_of_file, str):
+            self._config_file = config_of_file
+            self._config_timestamp = 0
+            config = self._get_config()
         else:
-            config = config.get(k, EMPTY_DICT)
+            config = config_of_file
+            self._config_file = None
+            self._config_timestamp = 0
+        # end
+        self._config = config
+        self._smarker = smarker
+        self._emarker = emarker
+        self._marker = marker
+    # end
 
-    k = keys[-1]
-    if isinstance(k, int) and isinstance(config, list):
-        return config[k]
-    else:
-        return config.get(k, default)
+    def get(self, *keys, default="raise", params=None):
+        """
+        Navigate inside the configuration file to extract the value from the keys' path
+
+        Note: keys can be specified as
+
+            "k1", "k2", ...
+            ["k1", "k2", ...]
+            "k1.k2...."
+
+        :param keys: list of keys for the path. It can be string or a list
+        :param default:
+        :return:
+        """
+        config = self._get_config()
+
+        config = resolve(config, params=params, smarker=self._smarker, emarker=self._emarker, marker=self._marker)
+
+        if len(keys) == 1 and isinstance(keys[0], list):
+            keys = keys[0]
+        if len(keys) == 1 and isinstance(keys[0], str):
+            keys = keys[0].split(".")
+
+        for k in keys[:-1]:
+            if isinstance(k, int) and isinstance(config, list):
+                config = config[k]
+            elif k not in config and default == "raise":
+                raise ValueError(f"Key {keys} not existent")
+            else:
+                config = config.get(k, EMPTY_DICT)
+
+        k = keys[-1]
+        if isinstance(k, int) and isinstance(config, list):
+            value = config[k]
+        elif k not in config and default == "raise":
+            raise ValueError(f"Key {keys} not existent")
+        else:
+            value = config.get(k, default)
+
+        # return resolve(value, params, smarker=self._smarker, emarker=self._emarker, marker=self._marker)
+        return value
+    # end
+
+    def _get_config(self):
+        if self._config_file is not None and os.path.getmtime(self._config_file) > self._config_timestamp:
+            self._config = load(self._config_file)
+            self._config_timestamp = os.path.getmtime(self._config_file)
+        return self._config
+    # end
 # end
-
 
 # ---------------------------------------------------------------------------
 # End

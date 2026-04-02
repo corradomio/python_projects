@@ -1,14 +1,28 @@
-# DON'T remove
-import traceback
-from logging import config, disable, shutdown, captureWarnings, getLevelName
-import logging as log
-from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL
-import time
+__all__ = [
+    "getLogger",
+    "get_logger",
+    "debug",
+    "info",
+    "warn",
+    "warning",
+    "error",
+    "fatal",
+    "setFileLoggerFile",
+]
 
+# [DON'T remove]
+import logging
+from logging import config, disable, shutdown, captureWarnings, getLevelName
+from logging import DEBUG, INFO, WARN, WARNING, ERROR, CRITICAL, FATAL
+import traceback
+import time
+# [DON'T remove]
 
 # ---------------------------------------------------------------------------
 # Utilities
 # ---------------------------------------------------------------------------
+
+TIMEDELAY = 3   # seconds
 
 def getLogger(name):
     return get_logger(name)
@@ -17,49 +31,25 @@ def getLogger(name):
 def get_logger(name):
     return Logger.getLogger(name)
 
-
 # ---------------------------------------------------------------------------
 # Logger
 # ---------------------------------------------------------------------------
 
 class Logger:
-    TIMEDELAY = 3
 
     # -----------------------------------------------------------------------
-
-    # @staticmethod
-    # def configure(**kwargs):
-    #     log.basicConfig(**kwargs)
-
-    # @staticmethod
-    # def configure_using(fname: str, **kwargs):
-    #     # log.basicConfig(filename=fname)
-    #     log.config.fileConfig(fname, **kwargs)
-
-    # @staticmethod
-    # def configure_level(level=INFO):
-    #     log.basicConfig(level=level)
 
     @staticmethod
     def getLogger(name):
         if not isinstance(name, str):
             name = type(name).__name__
-        # logger = log.getLogger(name)
-        # return Logger(logger)
         return Logger(name)
 
     # -----------------------------------------------------------------------
 
-    # def __init__(self, logger):
-    #     """
-    #     :param log.Logger logger:
-    #     """
-    #     self._logger = logger
-    #     self.timestamp = time.time()
-
     def __init__(self, name):
         """
-        :param log.Logger logger:
+        :param logging.Logger logger:
         """
         self._name = name
         self._logger = None
@@ -68,7 +58,7 @@ class Logger:
     @property
     def logger(self):
         if self._logger is None:
-            self._logger = log.getLogger(self._name)
+            self._logger = logging.getLogger(self._name)
         return self._logger
 
     # -----------------------------------------------------------------------
@@ -77,6 +67,12 @@ class Logger:
         self.logger.setLevel(level)
 
     def isEnabledFor(self, level):
+        return self.logger.isEnabledFor(level)
+
+    def set_level(self, level):
+        self.logger.setLevel(level)
+
+    def is_enabled_for(self, level):
         return self.logger.isEnabledFor(level)
 
     # -----------------------------------------------------------------------
@@ -105,15 +101,19 @@ class Logger:
     # -----------------------------------------------------------------------
 
     def debug(self, msg, *args, **kwargs):
+        self.timestamp = time.time()
         self.logger.debug(msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
+        self.timestamp = time.time()
         self.logger.info(msg, *args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
+        self.timestamp = time.time()
         self.logger.warning(msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
+        self.timestamp = time.time()
         self.logger.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
@@ -125,27 +125,42 @@ class Logger:
     # -----------------------------------------------------------------------
 
     def debugf(self, fmt, *args, **kwargs):
+        self.timestamp = time.time()
         if self.isEnabledFor(DEBUG):
             self.debug(fmt.format(*args), **kwargs)
 
     def infof(self, fmt, *args, **kwargs):
+        self.timestamp = time.time()
         if self.isEnabledFor(INFO):
             self.info(fmt.format(*args), **kwargs)
 
     def warnf(self, fmt, *args, **kwargs):
+        self.timestamp = time.time()
         self.warn(fmt.format(*args), **kwargs)
 
     def warningf(self, fmt, *args, **kwargs):
+        self.timestamp = time.time()
         self.warning(fmt.format(*args), **kwargs)
 
     def errorf(self, fmt, *args, **kwargs):
+        self.timestamp = time.time()
         self.error(fmt.format(*args), **kwargs)
+
+    # -----------------------------------------------------------------------
+
+    def warnt(self, msg, *args, **kwargs):
+        if self.isEnabledFor(INFO):
+            now = time.time()
+            delta = now - self.timestamp
+            if (delta) > TIMEDELAY:
+                self.timestamp = now
+                self.warning(msg.format(*args), **kwargs)
 
     def infot(self, msg, *args, **kwargs):
         if self.isEnabledFor(INFO):
             now = time.time()
             delta = now - self.timestamp
-            if (delta) > self.TIMEDELAY:
+            if (delta) > TIMEDELAY:
                 self.timestamp = now
                 self.info(msg.format(*args), **kwargs)
 
@@ -153,7 +168,7 @@ class Logger:
         if self.isEnabledFor(DEBUG):
             now = time.time()
             delta = now - self.timestamp
-            if (delta) > self.TIMEDELAY:
+            if (delta) > TIMEDELAY:
                 self.timestamp = now
                 self.debug(msg.format(*args), **kwargs)
 
@@ -163,17 +178,13 @@ class Logger:
 
         now = time.time()
         delta = now - self.timestamp
-        if (delta) > self.TIMEDELAY or force:
+        if (delta) > TIMEDELAY or force:
             self.timestamp = now
-            # print(time.strftime("[%H:%M:%S] "), end="")
-            # print(fmt.format(*args), **kwargs)
-            self.info(fmt.format(*args), **kwargs)
+            print(time.strftime("[%H:%M:%S] "), end="")
+            print(fmt.format(*args), **kwargs)
 
-    def full_error(self, e, fmt, *args, **kwargs):
-        exc = traceback.format_exc()
-        self.error(fmt.format(*args), **kwargs)
-        self.error(f"... error type: {type(e)}\n{exc}")
-
+    def exception(self, msg, *args, exc_info=True, **kwargs):
+        self.logger.exception(msg.format(*args), exc_info=exc_info, **kwargs)
 # end
 
 
@@ -216,6 +227,54 @@ def error(msg, *args, **kwargs):
 
 def fatal(msg, *args, **kwargs):
     Logger.getLogger(ROOT).fatal(msg, *args, **kwargs)
+
+
+
+# ---------------------------------------------------------------------------
+# Replace File Logger
+# ---------------------------------------------------------------------------
+
+def setFileLoggerFile(filename: str):
+    """
+    Used to replace the file used by 'logging.FileLogger'.
+
+    The code is:
+
+        logging.config.fileConfig('logging_config.ini')
+        loggingx.setFileLoggerFile("another.log")
+
+    where 'logging_config.ini' has the following file handler configuration:
+
+        [handler_logfile]
+        class=FileHandler
+        level=DEBUG
+        formatter=fileFormatter
+        kwargs={'filename':'app1.log', 'delay':True}
+
+    where 'delay' is used to avoid to open the file if not necessary
+
+    :param filename: new filename to use
+    :return:
+    """
+    import os
+    from logging import StreamHandler
+    # 'logging.root' is a GLOBAL object
+    handlers = logging.root.handlers
+
+    for handler in handlers:
+        if not isinstance(handler, logging.FileHandler):
+            continue
+
+        filename = os.fspath(filename)
+        # keep the absolute path, otherwise derived classes which use this
+        # can generate problems when the current directory changes
+        handler.baseFilename = os.path.abspath(filename)
+
+        if handler.stream is not None:
+            handler.stream.close()
+            StreamHandler.__init__(handler, handler._open())
+    # end
+# end
 
 
 # ---------------------------------------------------------------------------
