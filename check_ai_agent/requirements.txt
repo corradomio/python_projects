@@ -1,0 +1,23 @@
+dotenv
+pypdf
+
+# https://pypi.org/project/langchain/
+# https://reference.langchain.com/python/langchain/langchain
+# https://docs.langchain.com/oss/python/integrations/document_loaders
+
+langchain
+langchain-openai
+langchain-ollama
+langchain-qdrant
+langchain-community
+langchain-text-splitters
+
+
+# https://www.llamaindex.ai/
+# https://developers.llamaindex.ai/python/framework/module_guides/
+
+llama-index
+llama-index-llms-openai
+llama-index-vector-stores-qdrant
+llama-index-readers-file
+llama-parse

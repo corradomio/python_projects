@@ -137,7 +137,7 @@ def main():
         # frame = cv2.resize(frame, (w // 4, h // 4))
         frame = cv2.resize(frame, (w // 2, h // 2))
 
-        frame, _, _ = automatic_brightness_and_contrast(frame)
+        # frame, _, _ = automatic_brightness_and_contrast(frame)
 
         annotated = frame.copy()
 

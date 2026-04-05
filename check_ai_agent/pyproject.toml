@@ -1,0 +1,65 @@
+[project]
+name = "check-ai-agent"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "path",
+    "tabulate",
+    "multimethod",
+    "tqdm",
+
+    "numpy",
+    "scipy",
+    "pandas",
+
+    "matplotlib",
+    "seaborn",
+
+    "pillow",
+    "opencv-python",
+
+    "scikit-learn",
+
+    "torch",
+    "torchvision",
+    "torchtext",
+
+    "dotenv",
+    "pypdf",
+
+    # https://pypi.org/project/langchain/
+    # https://reference.langchain.com/python/langchain/langchain
+    # https://docs.langchain.com/oss/python/integrations/document_loaders
+
+    "langchain",
+    "langchain-openai",
+    "langchain-ollama",
+    "langchain-qdrant",
+    "langchain-community",
+    "langchain-text-splitters",
+
+    # https://www.llamaindex.ai/
+    # https://developers.llamaindex.ai/python/framework/module_guides/
+
+    "llama-index",
+    "llama-index-llms-openai",
+    "llama-index-vector-stores-qdrant",
+    "llama-index-readers-file",
+    "llama-parse"
+
+]
+
+
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]

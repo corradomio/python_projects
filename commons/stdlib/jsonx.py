@@ -3,7 +3,7 @@
 #
 #   1)  use 'load' and 'dump' directly with a file path
 #
-#   2)  returning an 'stdlib.dict', a dictionary with a lot
+#   2)  returning a 'stdlib.dict', a dictionary with a lot
 #       of improvements useful for configurations
 #       [REMOVED] It introduces a lot of problems
 #
@@ -14,9 +14,9 @@
 #   4)  [2025/09/13] support for parameters, passed on the load.
 #       The parameter can be written as:
 #
-#           "${<name>}"       -> value replacement
+#           "{<name>}"       -> value replacement
 #           "$<name>"         -> value replacement
-#           "...${<name>}..." -> string replacement
+#           "...{<name>}..." -> string replacement
 #
 #
 # Added support for Pandas dataframes
@@ -31,10 +31,6 @@
 #       Dataframe   {‘split’, ‘records’, ‘index’, ‘columns’, ‘values’, ‘table’}.
 #
 #
-
-# [2025/09/13] add parameters
-#   $<varname>
-#   ${<varname>}
 #
 
 #
@@ -52,7 +48,7 @@ import numpy as np
 import numpy.dtypes as npdt
 import datetime as dt
 
-from typing import Optional, Union, cast
+from typing import Optional, Union, cast, Any
 from datetime import datetime
 
 try:
@@ -112,7 +108,7 @@ def _pandas_to_jsonx(
             jdata = json.load(t)
         os.remove(json_file)
     else:
-        jdata = None
+        jdata = {}
 
     return jdata
 # end
@@ -121,6 +117,8 @@ def _pandas_to_jsonx(
 # ---------------------------------------------------------------------------
 # Numpy support
 # ---------------------------------------------------------------------------
+# JSON format supports ONLY Python types.
+# The numpy types must be converted into the correspondent Python type
 
 NP_FLOAT_TYPES = (
     npdt.Float16DType,
@@ -159,7 +157,7 @@ NP_TIME_TYPES = (
 )
 
 
-def ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
+def _ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
     atype = a.dtype
     if atype in NP_FLOAT_TYPES:
         return list(map(float, a))
@@ -176,11 +174,11 @@ def ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
 # JSONX encoder
 # ---------------------------------------------------------------------------
 
-def period_to_jsonx(period: pd.Period) -> str:
+def _period_to_jsonx(period: pd.Period) -> str:
     return str(period)
 
 
-def timestamp_to_jsonx(timestamp: pd.Timestamp) -> str:
+def _timestamp_to_jsonx(timestamp: pd.Timestamp) -> str:
     return str(timestamp)
 
 
@@ -190,7 +188,7 @@ JSONX_ENCODERS = {
     'datetime.date': lambda o: cast(dt.date, o).strftime(DAY_FORMAT),
 
     # Numpy array
-    'numpy.ndarray': ndarray_to_jsonx,
+    'numpy.ndarray': _ndarray_to_jsonx,
     'numpy.int64': int,
     'numpy.float16': float,
     'numpy.float32': float,
@@ -199,8 +197,8 @@ JSONX_ENCODERS = {
     # Pandas Series & DataFrame
     # 'pandas.core.series.Series': ser_to_jsonx,
     # 'pandas.core.frame.DataFrame': df_to_jsonx,
-    'pandas._libs.tslibs.period.Period': period_to_jsonx,
-    'pandas._libs.tslibs.timestamps.Timestamp': timestamp_to_jsonx,
+    'pandas._libs.tslibs.period.Period': _period_to_jsonx,
+    'pandas._libs.tslibs.timestamps.Timestamp': _timestamp_to_jsonx,
     'pandas._libs.missing.NAType': (lambda o: None),
     # 'pandas.core.indexes.base.Index': lambda o: cast(pd.Index, o).tolist()
 }
@@ -281,30 +279,30 @@ def _normalize(obj):
 # ---------------------------------------------------------------------------
 
 def resolve(
-        config: dict | list,
+        value: Any,
         params: Optional[dict]=None,
         smarker="{", emarker="}", marker="$"
-) -> dict:
+) -> Any:
     """
     Replaces the 'parametrized configuration' with the values specified in 'params
 
-    :param config: configuration
+    :param value: value to solve
     :param params: parameters
     :param smarker: start marker. For example '{' or '${'
     :param emarker: end marker. For example '}'
     :param marker: single marker. For example '$'.
     :return:
     """
-    assert isinstance(config, (dict, list))
     assert isinstance(params, (dict, type(None)))
 
     if params is None or len(params) == 0:
-        return config
+        return value
 
     def _check(name):
         if name not in params:
             raise KeyError(f"Parameter '{name}' not specified")
 
+    # value replace
     def vrepl(v):
         if isinstance(v, np.integer):
             return int(v)
@@ -317,7 +315,9 @@ def resolve(
 
         # "{<name>}"
         if v.startswith(smarker) and v.endswith(emarker):
-            name = v[1:-1]
+            sl = len(smarker)
+            el = len(emarker)
+            name = v[sl:-el]
             _check(name)
             return params[name]
 
@@ -325,18 +325,22 @@ def resolve(
         while smarker in v:
             s = v.find(smarker)
             e = v.find(emarker, s)
-            name = v[s + 1:e]
+            sl = len(smarker)
+            el = len(emarker)
+            name = v[s + sl:e]
             _check(name)
-            v = v[:s] + str(params[name]) + v[e + 1:]
+            v = v[:s] + str(params[name]) + v[e + el:]
 
         # "$<name>"
         if v.startswith(marker):
-            name = v[1:]
+            ml = len(marker)
+            name = v[ml:]
             _check(name)
             return params[name]
         else:
             return v
 
+    # dictionary replce
     def drepl(d: dict) -> dict:
         # skip the keys starting with '#...'
         return {
@@ -344,12 +348,14 @@ def resolve(
             for k in d if not k.startswith("#")
         }
 
+    # list replace
     def lrepl(l: list) -> list:
         return [
             repl(v)
             for v in l
         ]
 
+    # generic replace
     def repl(v):
         if isinstance(v, dict):
             return drepl(v)
@@ -358,7 +364,7 @@ def resolve(
         else:
             return vrepl(v)
 
-    return repl(config)
+    return repl(value)
 
 
 # ---------------------------------------------------------------------------
@@ -542,10 +548,19 @@ def validate(record: dict|list, schema: dict|list):
 
 
 # ---------------------------------------------------------------------------
-# get
+# JSONConfiguration
 # ---------------------------------------------------------------------------
+# Note: reload automatically the configuration file if this is changed
 
 EMPTY_DICT = dict()
+
+def _as_int(x):
+    try:
+        return int(x)
+    except:
+        return x
+# end
+
 
 class JSONConfiguration:
 
@@ -581,12 +596,11 @@ class JSONConfiguration:
             "k1.k2...."
 
         :param keys: list of keys for the path. It can be string or a list
-        :param default:
+        :param default: default value. If 'raise', a ValueError is raised
+        :param params: variables replacement
         :return:
         """
         config = self._get_config()
-
-        config = resolve(config, params=params, smarker=self._smarker, emarker=self._emarker, marker=self._marker)
 
         if len(keys) == 1 and isinstance(keys[0], list):
             keys = keys[0]
@@ -594,6 +608,7 @@ class JSONConfiguration:
             keys = keys[0].split(".")
 
         for k in keys[:-1]:
+            k = _as_int(k)
             if isinstance(k, int) and isinstance(config, list):
                 config = config[k]
             elif k not in config and default == "raise":
@@ -601,7 +616,7 @@ class JSONConfiguration:
             else:
                 config = config.get(k, EMPTY_DICT)
 
-        k = keys[-1]
+        k = _as_int(keys[-1])
         if isinstance(k, int) and isinstance(config, list):
             value = config[k]
         elif k not in config and default == "raise":
@@ -609,8 +624,8 @@ class JSONConfiguration:
         else:
             value = config.get(k, default)
 
-        # return resolve(value, params, smarker=self._smarker, emarker=self._emarker, marker=self._marker)
-        return value
+        return resolve(value, params, smarker=self._smarker, emarker=self._emarker, marker=self._marker)
+        # return value
     # end
 
     def _get_config(self):

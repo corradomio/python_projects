@@ -1,0 +1,55 @@
+# Python 3.12
+
+# ---------------------------------------------------------------------------
+
+path
+multimethod
+tabulate
+tqdm
+
+# ---------------------------------------------------------------------------
+
+numpy
+scipy
+pandas
+
+# ---------------------------------------------------------------------------
+
+matplotlib
+seaborn
+
+# ---------------------------------------------------------------------------
+
+pillow
+opencv-python
+
+# ---------------------------------------------------------------------------
+
+scikit-learn
+xgboost
+catboost
+
+# ---------------------------------------------------------------------------
+
+--extra-index-url https://download.pytorch.org/whl/cu124
+torch
+torchvision
+torchaudio
+torchtext
+
+# ---------------------------------------------------------------------------
+# https://www.llamaindex.ai/
+# https://developers.llamaindex.ai/python/framework/module_guides/
+
+
+
+llama-index
+
+# https://pypi.org/project/langchain/
+# https://reference.langchain.com/python/langchain/langchain
+# https://docs.langchain.com/oss/python/integrations/document_loaders
+
+langchain
+
+
+# ---------------------------------------------------------------------------
