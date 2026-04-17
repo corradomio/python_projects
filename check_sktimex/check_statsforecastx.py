@@ -3,7 +3,7 @@ from sktime.forecasting.base import ForecastingHorizon
 
 import sktimex
 import sktimexnn
-import sktimexnn.forecasting.stf as stf
+import statsforecastx.models as stf
 import pandas as pd
 import pandasx as pdx
 from pandasx import xy_split
