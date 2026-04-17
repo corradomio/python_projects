@@ -102,9 +102,12 @@ NF_LOSSES = {
 # ---------------------------------------------------------------------------
 # unique_id, ds, y
 
-def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame]) -> pd.DataFrame:
+def to_nfdf(y: pd.Series, X: Optional[pd.DataFrame], ignores_exogenous_X) -> pd.DataFrame:
     assert isinstance(y, pd.Series)
     assert isinstance(X, (type(None), pd.DataFrame))
+
+    if ignores_exogenous_X:
+        X = None
 
     ydf = pd.DataFrame({
         "ds": y.index.to_series(),
@@ -191,7 +194,7 @@ def concat_ser(slist) -> pd.Series:
         return pd.concat(slist, axis=0)
 
 
-def concat_df(slist) -> pd.Series:
+def concat_df(slist) -> pd.DataFrame:
     slist = [s for s in slist if s is not None]
     if len(slist) == 1:
         return slist[0]
@@ -259,7 +262,7 @@ class _BaseNFForecaster(ScaledForecaster):
         "fit_is_empty": False,  # is fit empty and can be skipped?
     }
 
-    def __init__(self, nf_class, locals):
+    def __init__(self, nf_class, locals: dict):
         super().__init__()
 
         self._nf_class = nf_class
@@ -268,7 +271,7 @@ class _BaseNFForecaster(ScaledForecaster):
         self._val_size = 0
         self._data_kwargs = {}
 
-        self._model = None  # TS model
+        self._model = None
         self._nf = None     # NeuralForecast wrapper
         self._freq = None
         self._kwargs = {}
@@ -279,7 +282,7 @@ class _BaseNFForecaster(ScaledForecaster):
         self._analyze_locals(locals)
     # end
 
-    def _analyze_locals(self, locals):
+    def _analyze_locals(self, locals: dict):
 
         assert "kwargs" not in locals
 
@@ -355,6 +358,8 @@ class _BaseNFForecaster(ScaledForecaster):
         return nf_kwargs
     # end
 
+    # -----------------------------------------------------------------------
+
     def _fit(self, y, X, fh):
 
         # y, X = self.transform(y, X)
@@ -368,29 +373,23 @@ class _BaseNFForecaster(ScaledForecaster):
             freq=self._freq
         )
 
-        nf_df = self._to_nfdf(y, X)
+        nfdf = to_nfdf(y, X, self._ignores_exogenous_X)
 
-        self._nf.fit(df=nf_df, val_size=self._val_size)
+        self._nf.fit(df=nfdf, val_size=self._val_size)
         return self
-
-    def _to_nfdf(self, y, X):
-        # combine (y,X) in NF format
-        if X is None or self._ignores_exogenous_X:
-            nf_df = to_nfdf(y, None)
-        else:
-            nf_df = to_nfdf(y, X)
-        return nf_df
 
     def _to_nfdf_ext(self, yext, X):
         if yext is None:
-            return self._to_nfdf(self._y, self._X)
+            return to_nfdf(self._y, self._X, self._ignores_exogenous_X)
 
         n = len(yext)
         Xext = X.iloc[:n] if X is not None else None
         yall = concat_ser([self._y, yext])
-        Xall = concat_df([self._X, Xext]) if self._X is not None else None
-        nfdf = self._to_nfdf(yall, Xall)
+        Xall: Optional[pd.DataFrame] = concat_df([self._X, Xext]) if self._X is not None else None
+        nfdf = to_nfdf(yall, Xall, self._ignores_exogenous_X)
         return nfdf
+
+    # -----------------------------------------------------------------------
 
     def _predict(self, fh, X):
         assert len(fh) % self.h == 0, \
@@ -405,7 +404,7 @@ class _BaseNFForecaster(ScaledForecaster):
         return y_pred
 
     def _predict_same(self, fh, X):
-        nf_df = self._to_nfdf(self._y, self._X)
+        nf_df = to_nfdf(self._y, self._X, self._ignores_exogenous_X)
 
         y_pred = self._nf.predict(
             df=nf_df,

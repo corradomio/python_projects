@@ -182,7 +182,7 @@ def read_data(
     dtype=None,             # list of columns types
     boolean=None,           # boolean columns
     integer=None,           # integer columns
-    numerical=None,           # numerical/float columns
+    numerical=None,         # numerical/float columns
     categorical=None,       # pandas categorical columns
 
     onehot=None,            # categorical columns to convert using onehot encoding.

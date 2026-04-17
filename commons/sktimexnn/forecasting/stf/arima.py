@@ -40,6 +40,7 @@ class AutoARIMA(_BaseStatsForecastForecaster):
         alias: str = "AutoARIMA",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
+        verbose: bool = False,
     ):
         super().__init__(stfm.AutoARIMA, locals())
         return
@@ -61,6 +62,7 @@ class ARIMA(_BaseStatsForecastForecaster):
         alias: str = "ARIMA",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
+        verbose: bool = False,
     ):
         super().__init__(stfm.ARIMA, locals())
         return

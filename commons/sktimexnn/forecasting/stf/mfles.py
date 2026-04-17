@@ -12,10 +12,10 @@ class AutoMFLES(_BaseStatsForecastForecaster):
         config: Optional[Dict[str, Any]] = None,
         step_size: Optional[int] = None,
         metric: str = "smape",
-        verbose: bool = False,
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
         alias: str = "AutoMFLES",
+        verbose: bool = False,
     ):
         super().__init__(stfm.AutoMFLES, locals())
         return
@@ -44,10 +44,10 @@ class MFLES(_BaseStatsForecastForecaster):
         multiplicative: Optional[bool] = None,
         smoother: bool = False,
         robust: Optional[bool] = None,
-        verbose: bool = False,
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
         alias: str = "MFLES",
+        verbose: bool = False,
     ):
         super().__init__(stfm.MFLES, locals())
         return

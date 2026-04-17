@@ -29,6 +29,8 @@ check_openai_
 .idea
 .mvn
 .venv
+.env
+
 Hands*
 __modules
 __pycache__

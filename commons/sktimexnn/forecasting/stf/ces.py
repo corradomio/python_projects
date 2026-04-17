@@ -11,6 +11,7 @@ class AutoCES(_BaseStatsForecastForecaster):
         alias: str = "CES",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
+        verbose: bool = False,
     ):
         super().__init__(stfm.AutoCES, locals())
         return

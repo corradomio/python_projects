@@ -13,6 +13,7 @@ class AutoETS(_BaseStatsForecastForecaster):
         alias: str = "AutoETS",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
+        verbose: bool = False,
     ):
         super().__init__(stfm.AutoETS, locals())
         return

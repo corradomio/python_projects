@@ -4,7 +4,6 @@ from typing import Optional, Union, Any
 import numpy as np
 import pandas as pd
 from darts import TimeSeries
-from darts.models.forecasting.forecasting_model import GlobalForecastingModel
 from darts.utils.utils import ModelMode, SeasonalityMode, TrendMode
 from sktime.forecasting.base import ForecastingHorizon
 
@@ -21,6 +20,7 @@ TREND_MODE = {
     "exponential": TrendMode.EXPONENTIAL,
     None: None
 }
+
 
 SEASONALITY_MODE = {
     "additive": SeasonalityMode.ADDITIVE,
@@ -316,7 +316,7 @@ class _BaseDartsForecaster(ScaledForecaster):
         pass
     # end
 
-    def _analyze_locals(self, locals):
+    def _analyze_locals(self, locals: dict):
         # Special case: ExponentialSmoothing
         #
         if "kwargs" in locals.keys():

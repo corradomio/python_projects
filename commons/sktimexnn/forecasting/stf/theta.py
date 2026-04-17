@@ -12,6 +12,7 @@ class AutoTheta(_BaseStatsForecastForecaster):
         alias: str = "AutoTheta",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
+        verbose: bool = False,
     ):
         super().__init__(stfm.AutoTheta, locals())
         return
