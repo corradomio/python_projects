@@ -6,7 +6,7 @@ def main():
     records = jsonx.load("data_records.json")
     n_records = len(records)
 
-    records = jsonx.validate(records, [schema])
+    # records = jsonx.validate(records, [schema])
     pass
 
 

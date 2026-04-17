@@ -26,8 +26,9 @@ warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
 N_JOBS = 4
-MODE = "sequential"
+# MODE = "sequential"
 # MODE = "parallel"
+MODE = "dataset"
 
 MODELS_INCLUDED = []
 MODELS_EXCLUDED = []
@@ -134,7 +135,12 @@ def save_scores(name, cat, scores):
 # check_model
 # ---------------------------------------------------------------------------
 
-def check_model_par(*args, **kwargs):
+def check_model_par(
+        name: str,
+        cat: str,
+        dfg: pd.DataFrame,
+        jmodel: dict,
+):
 
     # it is necessary to configure the logging system inside each
     # python process, when it is used the joblib
@@ -143,7 +149,7 @@ def check_model_par(*args, **kwargs):
     warnings.simplefilter("ignore", UserWarning)
     warnings.simplefilter("ignore", FutureWarning)
 
-    check_model(*args, **kwargs)
+    check_model(name, cat, dfg, jmodel)
 # end
 
 
@@ -152,14 +158,13 @@ def check_model(
         cat: str,
         dfg: pd.DataFrame,
         jmodel: dict,
-        override=False,
 ):
     log = logging.getLogger("main")
 
     # check if the model is already processed on the category
     fdir = create_fdir(name, cat)
     fname = f"{fdir}/{name}-{cat}.png"
-    if os.path.exists(fname) and not override:
+    if os.path.exists(fname):
         return
 
     log.info(f"--- {name}/{cat} ---")
@@ -206,27 +211,69 @@ def check_model(
 # end
 
 
+# def check_models(
+#         df: pd.DataFrame,
+#         jmodels: dict[str, dict],
+# ):
+#     log = logging.getLogger("main")
+#     dfdict = pdx.groups_split(df, groups=["cat"])
+#     cats = list(map(lambda k:k[0], dfdict.keys()))
+#
+#     if MODE == "sequential":
+#         # -- sequential
+#         for name in jmodels:
+#             for cat in cats:
+#                 # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
+#                 #         and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
+#                 #         and (name, cat) not in SPECIAL_EXCLUSIONS
+#                 # ):
+#                 if (name, cat) not in SPECIAL_EXCLUSIONS:
+#                     dfg = dfdict[(cat,)]
+#                     check_model(name, cat, dfg, jmodels[name],)
+#                 else:
+#                     log.info(f"--- {name}/{cat}: skipped ---")
+#
+#     else:
+#         # -- parallel
+#         Parallel(n_jobs=N_JOBS)(
+#             delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
+#             for cat in cats
+#             for name in jmodels
+#             if (name, cat) not in SPECIAL_EXCLUSIONS
+#             # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
+#             #     and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
+#             #     and (name, cat) not in SPECIAL_EXCLUSIONS
+#             # )
+#         )
+#
+#     pass
+# # end
+
+
 def check_models(
         df: pd.DataFrame,
         jmodels: dict[str, dict],
 ):
     log = logging.getLogger("main")
     dfdict = pdx.groups_split(df, groups=["cat"])
-    cats = list(map(lambda k:k[0], dfdict.keys()))
+    cats = [c[0] for c in dfdict]
+    # select ONLY 'pos' and '*12'
+    cats = [c for c in cats if ('pos' in c or '12' in c)]
 
-    if MODE == "sequential":
+    if MODE == "sequential" or N_JOBS == 0:
         # -- sequential
         for name in jmodels:
             for cat in cats:
-                # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-                #         and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-                #         and (name, cat) not in SPECIAL_EXCLUSIONS
-                # ):
-                if (name, cat) not in SPECIAL_EXCLUSIONS:
-                    dfg = dfdict[(cat,)]
-                    check_model(name, cat, dfg, jmodels[name],)
-                else:
-                    log.info(f"--- {name}/{cat}: skipped ---")
+                dfg = dfdict[(cat,)]
+                check_model(name, cat, dfg, jmodels[name])
+
+    elif MODE == "model":
+        # -- sequential on model
+        for name in jmodels:
+            Parallel(n_jobs=N_JOBS)(
+                delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
+                for cat in cats
+            )
 
     else:
         # -- parallel
@@ -234,11 +281,6 @@ def check_models(
             delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
             for cat in cats
             for name in jmodels
-            if (name, cat) not in SPECIAL_EXCLUSIONS
-            # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-            #     and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-            #     and (name, cat) not in SPECIAL_EXCLUSIONS
-            # )
         )
 
     pass
@@ -252,8 +294,8 @@ def check_models(
 def main():
     log = logging.getLogger("main")
 
-    # df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
-    df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
+    df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
+    # df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
     for config_file in [

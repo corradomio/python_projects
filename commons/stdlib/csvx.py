@@ -642,7 +642,7 @@ def _guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -
 def load(fname: str, **kwargs):
     if fname.endswith('.arff'):
         return _load_arff(fname, **kwargs)
-    elif fname.expandtabs('.csv'):
+    elif fname.endswith('.csv'):
         return _load_csv(fname, **kwargs)
     else:
         raise ValueError(f"Unsupported file {fname}")

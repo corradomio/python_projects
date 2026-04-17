@@ -89,7 +89,7 @@ def create_synthetic_data(n: int = 12 * 7, noise=0., a: float = 1, phase: float 
     m = n+1
 
     # PERIODS = [3,6,12,24,36,48]
-    PERIODS = [3, 6, 12, 24, 48]
+    PERIODS = [3, 6, 12, 24, 36, 48]
 
     # -- const_wave --
     for c in [1]:

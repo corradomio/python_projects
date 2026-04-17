@@ -218,6 +218,7 @@ def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
     nc = len(calls)                 # n of calls
     ns = n_jobs*n_splits            # n of splits
     sz = (nc + ns - 1)//ns                     # split size
+    if sz == 0: sz = 1
 
     indices = list(range(nc))       # indices
     rnd.shuffle(indices)            # shuffle the indices

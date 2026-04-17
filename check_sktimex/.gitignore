@@ -1,6 +1,6 @@
 logs
 libraries
-plot*
+plots_*
 ~$*
 catboost_info
 
