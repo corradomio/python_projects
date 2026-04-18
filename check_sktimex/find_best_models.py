@@ -11,7 +11,6 @@ from filelock import FileLock
 from sklearn.metrics import r2_score
 from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError
 
-import torch
 import pandasx as pdx
 import sktimex as sktx
 import sktimex.utils
@@ -19,6 +18,7 @@ from joblibx import Parallel, delayed
 from load_config import load_model_selection_config
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
+from stdlib.tprint import tprint
 from stdlib.qname import ns_of
 from synth import create_synthetic_data
 
@@ -27,9 +27,9 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 4
-MODE = "sequential"
-# MODE = "parallel"
+N_JOBS = 12
+# MODE = "sequential"
+MODE = "parallel"
 
 
 SPECIAL_EXCLUSIONS = [
@@ -190,7 +190,7 @@ def check_model(
     dfg = dfdict[(cat,)]
 
     # 4) evaluate the model
-    log.info(f"--- {name}/{cat} ---")
+    tprint(f"--- {name}/{cat} ---")
     try:
         X, y = pdx.xy_split(dfg, target=TARGET)
         X_train, X_test, y_train, y_test = pdx.train_test_split(X, y, test_size=18)
@@ -266,12 +266,14 @@ def main():
     cats = df["cat"].unique().tolist()
 
     for config in [
-        "auto_darts_models",
-        "auto_nf_models",
-        "auto_skl_models",
-        "auto_skt_models",
+        # "auto_darts_models",
+        # "auto_nf_models",
+        # "auto_skl_models",
+        # "auto_skt_models",
+        # "auto_skf_models"
+        "auto_stf_models"
     ]:
-        log.info(f"processing {config}")
+        tprint(f"processing {config}")
 
         config_file = f"config/{config}.json"
         resolved_file = f"config_resolved/{config}.json"

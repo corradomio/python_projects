@@ -20,7 +20,7 @@
 # in such way to have the same 'layout' of RNN.
 #
 
-from sktimex import LagsTrainTransform, LagsPredictTransform
+from sktimex.transform import LagsTrainTransform, LagsPredictTransform
 
 
 # ---------------------------------------------------------------------------

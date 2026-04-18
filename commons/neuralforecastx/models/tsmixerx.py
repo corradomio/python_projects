@@ -7,10 +7,9 @@ from .base import _BaseNFForecaster
 
 class TSMixerx(_BaseNFForecaster):
 
-    # _tags = {
-    #     # "ignores-exogeneous-X": True,
-    #     "capability:exogenous": False,
-    # }
+    _tags = {
+        "capability:exogenous": True,
+    }
 
     def __init__(
             self,

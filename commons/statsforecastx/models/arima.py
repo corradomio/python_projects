@@ -59,7 +59,7 @@ class ARIMA(_BaseStatsForecastForecaster):
         biasadj: bool = False,
         method: str = "CSS-ML",
         fixed: Optional[dict] = None,
-        alias: str = "ARIMA",
+        # alias: str = "ARIMA",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
         verbose: bool = False,

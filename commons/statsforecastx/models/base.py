@@ -12,7 +12,7 @@ from stdlib.qname import create_from
 # Utilities
 # ---------------------------------------------------------------------------
 
-def _to_numpy(df: Optional[pd.DataFrame]) -> np.ndarray:
+def _to_numpy(df: Optional[pd.DataFrame]) -> Optional[np.ndarray]:
     return None if df is None else df.to_numpy()
 
 
@@ -192,8 +192,9 @@ class _BaseStatsForecastForecaster(ScaledForecaster):
 
     def _predict(self, fh: ForecastingHorizon, X):
         X_arr = _to_numpy(None if self._ignores_exogenous_X else X)
+        nfh = len(fh)
 
-        y_pred_dict = self._model.predict(h=len(fh), X=X_arr)
+        y_pred_dict = self._model.predict(h=nfh, X=X_arr)
         y_pred_arr = y_pred_dict["mean"]
 
         index = fh.to_absolute_index(self._cutoff)

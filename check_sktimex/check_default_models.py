@@ -25,7 +25,7 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 4
+N_JOBS = 6
 # MODE = "sequential"
 # MODE = "parallel"
 MODE = "dataset"
@@ -258,7 +258,7 @@ def check_models(
     dfdict = pdx.groups_split(df, groups=["cat"])
     cats = [c[0] for c in dfdict]
     # select ONLY 'pos' and '*12'
-    cats = [c for c in cats if ('pos' in c or '12' in c)]
+    cats = [c for c in cats if '36' not in c]
 
     if MODE == "sequential" or N_JOBS == 0:
         # -- sequential
@@ -299,12 +299,13 @@ def main():
     cats = df["cat"].unique().tolist()
 
     for config_file in [
-        "config/darts_models.json",
-        "config/nf_models.json",
-        "config/skt_models.json",
-        "config/skl_models.json",
-        "config/skx_models.json",
-        "config/ext_models.json"
+        # "config/darts_models.json",
+        # "config/nf_models.json",
+        # "config/skt_models.json",
+        # "config/skl_models.json",
+        # "config/skx_models.json",
+        # "config/ext_models.json"
+        "config/stf_models.json"
     ]:
         log.info(config_file)
         jmodels = jsonx.load(config_file)

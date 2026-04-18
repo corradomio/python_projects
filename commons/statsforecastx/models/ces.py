@@ -8,7 +8,7 @@ class AutoCES(_BaseStatsForecastForecaster):
         self,
         season_length: int = 1,
         model: str = "Z",
-        alias: str = "CES",
+        # alias: str = "CES",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
         verbose: bool = False,

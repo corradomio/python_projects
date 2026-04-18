@@ -8,7 +8,8 @@ from .base import _BaseNFForecaster
 class Autoformer(_BaseNFForecaster):
 
     _tags = {
-        # "ignores-exogeneous-X": True,
+        # EXOGENOUS_FUTR = True
+        # EXOGENOUS_HIST = False
         "capability:exogenous": False,
     }
 

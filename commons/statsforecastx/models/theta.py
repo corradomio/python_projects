@@ -9,11 +9,10 @@ class AutoTheta(_BaseStatsForecastForecaster):
         season_length: int = 1,
         decomposition_type: str = "multiplicative",
         model: Optional[str] = None,
-        alias: str = "AutoTheta",
+        # alias: str = "AutoTheta",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
         verbose: bool = False,
     ):
         super().__init__(stfm.AutoTheta, locals())
         return
-

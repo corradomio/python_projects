@@ -14,7 +14,7 @@ class AutoMFLES(_BaseStatsForecastForecaster):
         metric: str = "smape",
         # prediction_intervals: Optional[ConformalIntervals] = None,
         prediction_intervals: Optional[Dict] = None,
-        alias: str = "AutoMFLES",
+        # alias: str = "AutoMFLES",
         verbose: bool = False,
     ):
         super().__init__(stfm.AutoMFLES, locals())

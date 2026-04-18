@@ -13,9 +13,8 @@ class AutoTBATS(_BaseStatsForecastForecaster):
         use_trend: Optional[bool] = None,
         use_damped_trend: Optional[bool] = None,
         use_arma_errors: bool = True,
-        alias: str = "AutoTBATS",
+        # alias: str = "AutoTBATS",
         verbose: bool = False,
     ):
         super().__init__(stfm.AutoTBATS, locals())
         return
-
