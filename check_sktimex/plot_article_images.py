@@ -18,13 +18,16 @@ SEASONALITIES = [
 ]
 
 
-def plot_timeseries(df: pd.DataFrame):
+def plot_timeseries(df: pd.DataFrame, trend=False):
     plt.clf()
     plt.figure(figsize=(10,5))
 
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    models = [f"{m}24" for m in MODELS]
+    if trend:
+        models = [f"{m}24-t" for m in MODELS]
+    else:
+        models = [f"{m}24" for m in MODELS]
     for i, m in enumerate(models):
         data = dfdict[(m,)]
         plt.subplot(231+i)
@@ -41,17 +44,23 @@ def plot_timeseries(df: pd.DataFrame):
     plt.tight_layout()
 
     # plt.show()
-    plt.savefig("plots_article/models.png", dpi=300)
+    if trend:
+        plt.savefig("plots_article/models-t.png", dpi=300)
+    else:
+        plt.savefig("plots_article/models.png", dpi=300)
     pass
 
 
-def plot_seasonalities(df: pd.DataFrame, m: str="sin"):
+def plot_seasonalities(df: pd.DataFrame, m: str="sin", trend=False):
     plt.clf()
     plt.figure(figsize=(10,5))
 
     dfdict = pdx.groups_split(df, groups=["cat"])
 
-    models = [f"{m}{s}" for s in SEASONALITIES]
+    if trend:
+        models = [f"{m}{s}-t" for s in SEASONALITIES]
+    else:
+        models = [f"{m}{s}" for s in SEASONALITIES]
     for i, m in enumerate(models):
         data = dfdict[(m,)]
         plt.subplot(231 + i)
@@ -69,7 +78,10 @@ def plot_seasonalities(df: pd.DataFrame, m: str="sin"):
     plt.tight_layout()
 
     # plt.show()
-    plt.savefig("plots_article/seasonalities.png", dpi=300)
+    if trend:
+        plt.savefig("plots_article/seasonalities-t.png", dpi=300)
+    else:
+        plt.savefig("plots_article/seasonalities.png", dpi=300)
     pass
 
 
@@ -78,6 +90,8 @@ def main():
 
     plot_timeseries(df)
     plot_seasonalities(df)
+    plot_timeseries(df, trend=True)
+    plot_seasonalities(df, trend=True)
     pass
 
 

@@ -315,6 +315,8 @@ def resolve(
             return bool(v)
         if not isinstance(v, str):
             return v
+        if params is None or len(params) == 0:
+            return v
 
         # "{<name>}"
         if v.startswith(smarker) and v.endswith(emarker):

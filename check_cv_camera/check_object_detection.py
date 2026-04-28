@@ -58,14 +58,14 @@ def main():
     while True:
         ret, frame = cap.read()
 
-        if c < 200:
-            c += 1
-            print(".", end="")
-        else:
-            c = 0
-            print(".")
-            results = model(frame, stream=True)
-            print_results(results)
+        # if c < 200:
+        #     c += 1
+        #     print(".", end="")
+        # else:
+        #     c = 0
+        #     print(".")
+        #     results = model(frame, stream=True)
+        #     print_results(results)
 
         # results = model(frame, stream=True)
         # print(results)
