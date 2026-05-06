@@ -36,9 +36,9 @@ SPECIAL_EXCLUSIONS = [
     ("skl.CatBoostRegressor", "pos")
 ]
 
-SPECIAL_CASES = [
-    ("skl.RadiusNeighborsRegressor", "pos-t")
-]
+# SPECIAL_CASES = [
+#     ("skl.RadiusNeighborsRegressor", "pos-t")
+# ]
 
 BEST_PARAMS_DIR = "./best_params"
 
@@ -149,10 +149,11 @@ def main():
     for config_file in [
         "config/darts_models.json",
         "config/nf_models.json",
-        # "config/skt_models.json",
-        # "config/skl_models.json",
-        # "config/skx_models.json",
-        # "config/ext_models.json"
+        "config/skt_models.json",
+        "config/skl_models.json",
+        "config/skx_models.json",
+        # "config/ext_models.json",
+        "config/stf_models.json"
     ]:
         log.info(config_file)
         jmodels = jsonx.load(config_file)

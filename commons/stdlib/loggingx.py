@@ -101,19 +101,15 @@ class Logger:
     # -----------------------------------------------------------------------
 
     def debug(self, msg, *args, **kwargs):
-        self.timestamp = time.time()
         self.logger.debug(msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
-        self.timestamp = time.time()
         self.logger.info(msg, *args, **kwargs)
 
     def warn(self, msg, *args, **kwargs):
-        self.timestamp = time.time()
         self.logger.warning(msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
-        self.timestamp = time.time()
         self.logger.warning(msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
@@ -128,26 +124,24 @@ class Logger:
     # -----------------------------------------------------------------------
 
     def debugf(self, fmt, *args, **kwargs):
-        self.timestamp = time.time()
         if self.isEnabledFor(DEBUG):
             self.debug(fmt.format(*args), **kwargs)
 
     def infof(self, fmt, *args, **kwargs):
-        self.timestamp = time.time()
         if self.isEnabledFor(INFO):
             self.info(fmt.format(*args), **kwargs)
 
     def warnf(self, fmt, *args, **kwargs):
-        self.timestamp = time.time()
         self.warn(fmt.format(*args), **kwargs)
 
     def warningf(self, fmt, *args, **kwargs):
-        self.timestamp = time.time()
         self.warning(fmt.format(*args), **kwargs)
 
     def errorf(self, fmt, *args, **kwargs):
-        self.timestamp = time.time()
         self.error(fmt.format(*args), **kwargs)
+
+    def exceptionf(self, msg, *args, exc_info=True, **kwargs):
+        self.logger.exception(msg.format(*args), exc_info=exc_info, **kwargs)
 
     # -----------------------------------------------------------------------
 
@@ -186,8 +180,6 @@ class Logger:
             print(time.strftime("[%H:%M:%S] "), end="")
             print(fmt.format(*args), **kwargs)
 
-    def exception(self, msg, *args, exc_info=True, **kwargs):
-        self.logger.exception(msg.format(*args), exc_info=exc_info, **kwargs)
 # end
 
 

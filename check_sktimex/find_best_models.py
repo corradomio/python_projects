@@ -28,8 +28,8 @@ warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
 N_JOBS = 12
-# MODE = "sequential"
-MODE = "parallel"
+MODE = "sequential"
+# MODE = "parallel"
 
 
 SPECIAL_EXCLUSIONS = [
@@ -266,12 +266,12 @@ def main():
     cats = df["cat"].unique().tolist()
 
     for config in [
-        # "auto_darts_models",
+        "auto_darts_models",
         # "auto_nf_models",
         # "auto_skl_models",
         # "auto_skt_models",
         # "auto_skf_models"
-        "auto_stf_models"
+        # "auto_stf_models"
     ]:
         tprint(f"processing {config}")
 

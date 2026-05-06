@@ -35,7 +35,9 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 3
+# NO MORE than 3 processes because some models based on NN use
+# a lot of GPU memory
+N_JOBS = 8
 N_SCORES = 3
 # N_JOBS = 0
 N_REPEATS = 20
@@ -51,12 +53,13 @@ CATS_EXCLUDED = []
 SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),
     ("skl.CatBoostRegressor", "pos"),
-    ("nf.FEDformer", "*")
+    ("nf.FEDformer", "*"),
+    ("stf.AutoCES", "pos"),
 ]
 
-SPECIAL_CASES = [
-    ("skl.RadiusNeighborsRegressor", "pos-t")
-]
+# SPECIAL_CASES = [
+#     ("skl.RadiusNeighborsRegressor", "pos-t")
+# ]
 
 BEST_PARAMS_DIR = "./best_params"
 
@@ -68,12 +71,16 @@ def is_excluded(name: str, cat: str, r:int = 0) -> bool:
     return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
 
 
-def is_stable_scores(name: str, cat: str, r: int) -> bool:
+def is_stable_scores(name: str, cat: str, r: int, noise: int) -> bool:
     # check if the scores of the model are the same in each run
     # Test on 3 runs.
     # If this is true, it is not necessary to run the model 20/30 times
     ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    if noise == 0:
+        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    else:
+        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
 
@@ -105,9 +112,13 @@ def is_stable_scores(name: str, cat: str, r: int) -> bool:
 # end
 
 
-def is_already_processed(name: str, cat: str, r: int) -> bool:
+def is_already_processed(name: str, cat: str, r: int, noise: int) -> bool:
     ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    if noise == 0:
+        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    else:
+        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
     with lock:
@@ -125,9 +136,13 @@ def is_already_processed(name: str, cat: str, r: int) -> bool:
 # end
 
 
-def save_scores(name, cat, r, scores):
+def save_scores(name, cat, r, noise, scores):
     ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    if noise == 0:
+        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
+    else:
+        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
     with lock:
@@ -165,7 +180,7 @@ def update_configuration(name, cat, jmodel):
 # check_model
 # ---------------------------------------------------------------------------
 
-def check_model_par(name, cat, dfg, jmodel, r):
+def check_model_par(name, cat, dfg, jmodel, r, noise):
 
     # it is necessary to configure the logging system inside each
     # python process, when it is used the joblib
@@ -174,7 +189,7 @@ def check_model_par(name, cat, dfg, jmodel, r):
     warnings.simplefilter("ignore", UserWarning)
     warnings.simplefilter("ignore", FutureWarning)
 
-    check_model(name, cat, dfg, jmodel, r)
+    check_model(name, cat, dfg, jmodel, r, noise)
 # end
 
 
@@ -183,20 +198,21 @@ def check_model(
         cat: str,
         dfg: pd.DataFrame,
         jmodel: dict,
-        r: int
+        r: int,
+        noise: int
 ):
     log = logging.getLogger("main")
 
-    if is_already_processed(name, cat, r):
-        tprint(f"--- {name}/{cat}/{r:2}: already processed")
+    if is_already_processed(name, cat, r, noise):
+        # tprint(f"--- {name}/{cat}/{r:2}: already processed")
         return
 
-    if is_stable_scores(name, cat, r):
-        tprint(f"--- {name}/{cat}/{r:2}: stable scores")
+    if is_stable_scores(name, cat, r, noise):
+        # tprint(f"--- {name}/{cat}/{r:2}: stable scores")
         return
 
     if is_excluded(name, cat, r):
-        tprint(f"--- {name}/{cat}/{r:2}: excluded")
+        # tprint(f"--- {name}/{cat}/{r:2}: excluded")
         return
 
     # log.info(f"--- {name}/{cat}/{r:2} ---")
@@ -225,7 +241,7 @@ def check_model(
         # save_params(name, cat, model)
 
         # save scores
-        save_scores(name, cat, r, {
+        save_scores(name, cat, r, noise, {
             "mae": MeanAbsoluteError()(y_test, y_predict),
             "mse": MeanSquaredError()(y_test, y_predict),
             "r2": r2_score(y_test.to_numpy(), y_predict.to_numpy()),
@@ -247,8 +263,9 @@ def check_model(
 
 
 def check_models(
-        df: pd.DataFrame,
-        jmodels: dict[str, dict],
+    df: pd.DataFrame,
+    jmodels: dict[str, dict],
+    noise: int
 ):
     log = logging.getLogger("main")
     dfdict = pdx.groups_split(df, groups=["cat"])
@@ -262,7 +279,7 @@ def check_models(
             for cat in cats:
                 for r in range(N_REPEATS):
                     dfg = dfdict[(cat,)]
-                    check_model(name, cat, dfg, jmodels[name], r)
+                    check_model(name, cat, dfg, jmodels[name], r, noise)
                     # if not is_excluded(name, cat, r):
                     #     dfg = dfdict[(cat,)]
                     #     check_model(name, cat, dfg, jmodels[name], r)
@@ -273,7 +290,7 @@ def check_models(
         # -- sequential on model
         for name in jmodels:
             Parallel(n_jobs=N_JOBS)(
-                delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r)
+                delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r, noise)
                 for r in range(N_REPEATS)
                 for cat in cats
                 # if not is_excluded(name, cat, r)
@@ -284,14 +301,14 @@ def check_models(
         for name in jmodels:
             for cat in cats:
                 Parallel(n_jobs=N_JOBS)(
-                    delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r)
+                    delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r, noise)
                     for r in range(N_REPEATS)
                     # if not is_excluded(name, cat, r)
                 )
     else:
         # -- parallel
         Parallel(n_jobs=N_JOBS)(
-            delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r)
+            delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name], r, noise)
             for r in range(N_REPEATS)
             for cat in cats
             for name in jmodels
@@ -308,22 +325,27 @@ def check_models(
 def main():
     log = logging.getLogger("main")
 
-    df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
-    # df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
-    # cats = df["cat"].unique().tolist()
+    NOISE_VALUES = [0,5,10,15,20,25]
+    NOISE_VALUES = [25]
+    for NOISE in NOISE_VALUES:
+        print(f"--- NOISE: {NOISE} ---")
 
-    for config_file in [
-        # "config/darts_models.json",
-        # "config/nf_models.json",
-        # "config/skt_models.json",
-        # "config/skl_models.json",
-        # "config/skx_models.json",
-        # "config/ext_models.json",
-        "config/stf_models.json"
-    ]:
-        log.info(config_file)
-        jmodels = jsonx.load(config_file)
-        check_models(df, jmodels)
+        df = create_synthetic_data(12*8, NOISE/100, 1, 0.33)
+        # df = create_synthetic_data(48 * 4, NOISE/100, 1, 0.33)
+
+        for config_file in [
+            "config/darts_models.json",
+            "config/nf_models.json",
+            "config/skt_models.json",
+            "config/skl_models.json",
+            "config/skx_models.json",
+            # "config/ext_models.json",
+            "config/stf_models.json"
+        ]:
+            log.info(config_file)
+            jmodels = jsonx.load(config_file)
+            check_models(df, jmodels, NOISE)
+        pass
     pass
 # end
 

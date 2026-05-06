@@ -1,3 +1,4 @@
+import datetime
 import time
 from multiprocessing import Process, Value, Queue, SimpleQueue
 from threading import Thread
@@ -323,12 +324,12 @@ class VideoCaptureThread:
             time.sleep(1)
 
         frame = self.frame[0]
-        frame_dt = self.frame_dt[0]
+        frame_time = self.frame_dt[0]
         frame_id = self.frame_id[0]
 
         frame = frame_resize(frame, self.props)
 
-        return frame, frame_dt, frame_id
+        return frame, frame_time, frame_id
 # end
 
 
@@ -352,7 +353,7 @@ def video_capture_process(
     # cam_print_props(cam)
 
     start_time = time.time()
-    check_time = start_time
+    # check_time = start_time
     frame_id = 0
 
     # read, grab, retrieve
@@ -362,21 +363,11 @@ def video_capture_process(
             continue
 
         if status.value == 1:
-            # print("... ... grab frame")
-            # queue.put((fid, frame), False)
-            frame_dt = time.time()
-            queue.put((frame, frame_dt, frame_id))
+            frame_time = time.time()
+            queue.put_nowait((frame, frame_time, frame_id))
             status.value = 0
 
         frame_id += 1
-
-        # now = time.time()
-        # if (now - check_time) > 3:
-        #     check_time = now
-        #     delta = now - start_time
-        #     fid, fdt = cam_get_frame_info(cam)
-        #     print(f"...  {frame_id:5}: {frame_id / delta:.4} fps")
-        #     print(f"...  {fid:5}: {fdt:6} fps")
     # end
     cam.release()
     cv2.destroyAllWindows()
@@ -393,7 +384,7 @@ class VideoCaptureProcess:
         self.fps = fps
 
         self.status = Value('b', 0)
-        self.queue = SimpleQueue()
+        self.queue = Queue()
 
         self.process_video_capture = Process(
             target=video_capture_process,
@@ -411,14 +402,14 @@ class VideoCaptureProcess:
 
     # end
 
-    def read(self):
+    def read(self, mode=0):
         self.status.value = 1
 
-        frame, frame_dt, frame_id = self.queue.get()
+        frame, frame_time, frame_id = self.queue.get()
 
         frame = frame_resize(frame, self.props)
 
-        return frame, frame_dt, frame_id
+        return frame, frame_time, frame_id
     # end
 # end
 

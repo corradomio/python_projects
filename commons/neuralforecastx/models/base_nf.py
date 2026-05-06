@@ -145,7 +145,6 @@ def _name_of(model):
     return model.__class__.__name__ if model.alias is None else model.alias
 
 
-
 def _concat_ser(slist) -> pd.Series:
     slist = [s for s in slist if s is not None]
     if len(slist) == 1:
@@ -171,6 +170,7 @@ def _freqstr(index: pd.Index) -> Optional[str]:
         return index.freqstr
     else:
         return 1
+
 
 def _setattr(obj, a, v):
     if a not in ["scaler", "h"]:

@@ -32,31 +32,31 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
     """
 
     def __init__(
-            self,
-            forecaster: str | dict,
-            cv: str | dict,
-            param_grid: Optional[dict] = None,
-            param_distributions: None | dict | list[dict] = None,
+        self,
+        forecaster: str | dict,
+        cv: str | dict,
+        param_grid: Optional[dict] = None,
+        param_distributions: None | dict | list[dict] = None,
 
-            scoring=None,
-            strategy: str | None = "refit",
-            refit: bool = True,
-            update_behaviour: str = "full_refit",
+        scoring=None,
+        strategy: str | None = "refit",
+        refit: bool = True,
+        update_behaviour: str = "full_refit",
 
-            n_iter: int = 10,
-            n_points: int | None = 1,
-            optimizer_kwargs: dict | None = None,
+        n_iter: int = 10,
+        n_points: int | None = 1,
+        optimizer_kwargs: dict | None = None,
 
-            return_n_best_forecasters: int = 1,
+        return_n_best_forecasters: int = 1,
 
-            error_score="nan",
-            tune_by_instance=False,
-            tune_by_variable=False,
-            random_state: int | None = None,
+        error_score="nan",
+        tune_by_instance=False,
+        tune_by_variable=False,
+        random_state: int | None = None,
 
-            backend: str = "loky",
-            backend_params=None,
-            verbose: int = 0,
+        backend: str = "loky",
+        backend_params=None,
+        verbose: int = 0,
     ):
         # TRICK: force [1,2] to be converted into Categorical([1,2])
         import skopt.space.space as skopt_space

@@ -3,6 +3,7 @@ import time
 
 import cv2
 import opencvx as cvx
+from stdlib.tprint import tprint
 
 def timestamp():
     return time.time()
@@ -59,14 +60,14 @@ def main():
     while True:
         # time.sleep(1)
 
-        frame, frame_dt, frame_id = cam.read()
+        frame, frame_time, frame_id = cam.read(3)
 
         now = time.time()
         if now - log_time > 3:
             log_time = now
             delta = (timestamp() - start_time)
-            print(f"main: {main_id :4}: {main_id/delta :.4} fps")
-            print(f" cam: {frame_id:4}: {frame_id/delta:.4} fps")
+            tprint(f"main: {main_id :4}: {main_id/delta :.2f} fps")
+            tprint(f" cam: {frame_id:4}: {frame_id/delta:.2f} fps")
 
         main_id += 1
 

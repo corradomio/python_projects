@@ -120,20 +120,20 @@ def create_fdir(name:str, cat: str) -> str:
 #         pass
 
 
-def save_scores(name, cat, scores):
-    ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores.csv"
-    lock_file = scores_file + ".lock"
-    lock = FileLock(lock_file)
-    with lock:
-        if not os.path.exists(scores_file):
-            with open(scores_file, "w") as f:
-                meas_names = ",".join(scores.keys())
-                f.writelines("model,cat," + meas_names + "\n")
-        with open(scores_file, "a") as f:
-            values = ",".join(map(str, scores.values()))
-            f.writelines(f"{name},{cat},{values}\n")
-# end
+# def save_scores(name, cat, scores):
+#     ns = ns_of(name)
+#     scores_file = f"scores/{ns}_models_scores.csv"
+#     lock_file = scores_file + ".lock"
+#     lock = FileLock(lock_file)
+#     with lock:
+#         if not os.path.exists(scores_file):
+#             with open(scores_file, "w") as f:
+#                 meas_names = ",".join(scores.keys())
+#                 f.writelines("model,cat," + meas_names + "\n")
+#         with open(scores_file, "a") as f:
+#             values = ",".join(map(str, scores.values()))
+#             f.writelines(f"{name},{cat},{values}\n")
+# # end
 
 
 def is_already_processed(name: str, cat: str) -> bool:
@@ -155,6 +155,11 @@ def is_already_processed(name: str, cat: str) -> bool:
             pass
     return False
 # end
+
+def is_already_plotted(name: str, cat: str) -> bool:
+    fdir = create_fdir(name, cat)
+    fname = f"{fdir}/{name}-{cat}.png"
+    return os.path.exists(fname)
 
 
 # ---------------------------------------------------------------------------
@@ -190,7 +195,7 @@ def check_model(
     if is_excluded(name, cat):
         # tprint(f"--- {name}/{cat}: excluded")
         return
-    if is_already_processed(name, cat):
+    if is_already_plotted(name, cat):
         # tprint(f"--- {name}/{cat}: already processed")
         return
 
@@ -225,11 +230,11 @@ def check_model(
         # save_params(name, cat, model)
 
         # save scores
-        save_scores(name, cat, {
-            "mae": MeanAbsoluteError()(y_test, y_predict),
-            "mse": MeanSquaredError()(y_test, y_predict),
-            "r2": r2_score(y_test.to_numpy(), y_predict.to_numpy()),
-        })
+        # save_scores(name, cat, {
+        #     "mae": MeanAbsoluteError()(y_test, y_predict),
+        #     "mse": MeanSquaredError()(y_test, y_predict),
+        #     "r2": r2_score(y_test.to_numpy(), y_predict.to_numpy()),
+        # })
 
         # save plot
         sktx.utils.plot_series(y_train, y_test, y_predict,

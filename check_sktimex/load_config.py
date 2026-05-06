@@ -48,7 +48,7 @@ def _compose_model_selection_model_name(msname: str, mname: str) -> str:
 
 def load_model_selection_config(config_file: str) -> dict:
     config = jsonx.load(config_file)
-    conposed_config = {}
+    composed_config = {}
 
     # 1) extract the configuration of the model selector (ms) name and config
     ms_name, ms_config, config = _extract_model_selector(config)
@@ -69,8 +69,8 @@ def load_model_selection_config(config_file: str) -> dict:
         msm_config["param_grid"] = param_grid
 
         # 2.2) populate the global configuration
-        conposed_config[msm_name] = msm_config
+        composed_config[msm_name] = msm_config
     # end
 
-    return conposed_config
+    return composed_config
 # end

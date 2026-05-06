@@ -42,18 +42,43 @@ ACTIVATION_FUNCTIONS = {
 NF_LOSSES = {
     None: nflp.MSE,
     "mae": nflp.MAE,
+    "MAE": nflp.MAE,
+
     "mse": nflp.MSE,
+    "MSE": nflp.MSE,
+
     "rmse": nflp.RMSE,
+    "RMSE": nflp.RMSE,
+
     "mape": nflp.MAPE,
+    "MAPE": nflp.MAPE,
+
     "smape": nflp.SMAPE,
+    "SMAPE": nflp.SMAPE,
+
     "mase": nflp.MASE,
+    "MASE": nflp.MASE,
+
     "relmse": nflp.relMSE,
+    "relMSE": nflp.relMSE,
+
     "quatileloss": nflp.QuantileLoss,
+    "QuantileLoss": nflp.QuantileLoss,
+
     "mqloss": nflp.MQLoss,
+    "MQLoss": nflp.MQLoss,
+
     "huberloss": nflp.HuberLoss,
+    "HuberLoss": nflp.HuberLoss,
+
     "huberqloss": nflp.HuberQLoss,
+    "HuberQLoss": nflp.HuberQLoss,
+
     "hubermqloss": nflp.HuberMQLoss,
-    "distributionloss": nflp.DistributionLoss
+    "HuberMQLoss": nflp.HuberMQLoss,
+
+    "distributionloss": nflp.DistributionLoss,
+    "DistributionLoss": nflp.DistributionLoss,
 }
 
 
