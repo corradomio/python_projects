@@ -1,0 +1,93 @@
+import sktime.forecasting.sarimax as sktf
+from sktime.forecasting.base import ForecastingHorizon
+
+
+class SARIMAX(sktf.SARIMAX):
+    def __init__(
+        self,
+        #order=(1, 0, 0),
+        order=None,
+        p=1,
+        d=1,
+        q=1,
+        #seasonal_order=(0, 0, 0, 0),
+        seasonal_order=None,
+        P=0,
+        D=0,
+        Q=0,
+        S=0,
+        trend="c",
+        measurement_error=False,
+        time_varying_regression=False,
+        mle_regression=True,
+        simple_differencing=False,
+        enforce_stationarity=True,
+        enforce_invertibility=True,
+        hamilton_representation=False,
+        concentrate_scale=False,
+        trend_offset=1,
+        use_exact_diffuse=False,
+        dates=None,
+        freq=None,
+        missing="none",
+        validate_specification=True,
+        disp=False,
+        random_state=None,
+        start_params=None,
+        transformed=True,
+        includes_fixed=False,
+        cov_type=None,
+        cov_kwds=None,
+        method="lbfgs",
+        maxiter=50,
+        full_output=1,
+        callback=None,
+        return_params=False,
+        optim_score=None,
+        optim_complex_step=None,
+        optim_hessian=None,
+        low_memory=False,
+    ):
+        self.p = p
+        self.d = d
+        self.q = q
+        self.P = P
+        self.D = D
+        self.Q = Q
+        self.S = S
+        
+        super().__init__(
+            order=(p,d,q) if order is None else order,
+            seasonal_order=(P,D,Q,S) if seasonal_order is None else seasonal_order,
+            trend=trend,
+            measurement_error=measurement_error,
+            time_varying_regression=time_varying_regression,
+            mle_regression=mle_regression,
+            simple_differencing=simple_differencing,
+            enforce_stationarity=enforce_stationarity,
+            enforce_invertibility=enforce_invertibility,
+            hamilton_representation=hamilton_representation,
+            concentrate_scale=concentrate_scale,
+            trend_offset=trend_offset,
+            use_exact_diffuse=use_exact_diffuse,
+            dates=dates,
+            freq=freq,
+            missing=missing,
+            validate_specification=validate_specification,
+            disp=disp,
+            random_state=random_state,
+            start_params=start_params,
+            transformed=transformed,
+            includes_fixed=includes_fixed,
+            cov_type=cov_type,
+            cov_kwds=cov_kwds,
+            method=method,
+            maxiter=maxiter,
+            full_output=full_output,
+            callback=callback,
+            return_params=return_params,
+            optim_score=optim_score,
+            optim_complex_step=optim_complex_step,
+            optim_hessian=optim_hessian,
+            low_memory=low_memory,
+        )

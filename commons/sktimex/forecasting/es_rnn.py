@@ -57,5 +57,6 @@ class ESRNNForecaster(sktf.ESRNNForecaster, RecursivePredict):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
     def predict(self, fh=None, X=None):
+        assert fh is not None
         # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)

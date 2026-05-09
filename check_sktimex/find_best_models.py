@@ -35,11 +35,6 @@ MODE = "sequential"
 SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),     # unsupported data
     ("skl.CatBoostRegressor", "pos"),   # unsupported data
-
-    ("darts.NBEATSModel", "*"),
-    ("darts.BlockRNNModel", "*"),
-    ("darts.TransformerModel", "*"),
-    ("darts.CatBoostModel", "*"),
 ]
 
 
@@ -133,6 +128,35 @@ def save_scores(name, cat, scores):
 # check_model
 # ---------------------------------------------------------------------------
 
+def is_excluded(name: str, cat: str) -> bool:
+    return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
+
+
+# def is_already_processed(name: str, cat: str) -> bool:
+#     ns = ns_of(name)
+#     scores_file = f"scores/{ns}_models_scores.csv"
+#     lock_file = scores_file + ".lock"
+#     lock = FileLock(lock_file)
+#
+#     with lock:
+#         if not os.path.exists(scores_file):
+#             return False
+#
+#         with open(scores_file, "r") as f:
+#             values = f.readlines()
+#             for value in values:
+#                 parts = value.strip().split(",")
+#                 if parts[0] == name and parts[1] == cat:
+#                     return True
+#             pass
+#     return False
+# # end
+
+def is_already_plotted(name: str, cat: str) -> bool:
+    fdir = create_fdir(name, cat)
+    fname = f"{fdir}/{name}-{cat}.png"
+    return os.path.exists(fname)
+
 def handle_category(name, cat, jmodels):
     # if (name, cat) in SPECIAL_EXCLUSIONS:
     #     return False
@@ -168,6 +192,11 @@ def check_model(
 ):
     log = logging.getLogger("main")
 
+    if is_excluded(name, cat):
+        return
+    if is_already_plotted(name, cat):
+        return
+
     jmodel = {}|jmodel
     jmodel["forecaster"] = {}|jmodel["forecaster"]
 
@@ -180,8 +209,6 @@ def check_model(
     # 2) check if the time series is already analyzed (the plot is present)
     fdir = create_fdir(name, cat)
     fname = f"{fdir}/{name}-{cat}.png"
-    if os.path.exists(fname) and not override:
-        return
 
     # 3) create the dataset (not very efficient, but is it not a big problem)
     # df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
@@ -266,12 +293,18 @@ def main():
     cats = df["cat"].unique().tolist()
 
     for config in [
-        "auto_darts_models",
+        # "auto_darts_models",
         # "auto_nf_models",
         # "auto_skl_models",
         # "auto_skt_models",
         # "auto_skf_models"
         # "auto_stf_models"
+
+        "auto_darts_models_upd",
+        "auto_nf_models_upd",
+        "auto_skl_models_upd",
+        "auto_skt_models_upd",
+        "auto_stf_models_upd",
     ]:
         tprint(f"processing {config}")
 

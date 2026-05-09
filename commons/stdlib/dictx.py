@@ -9,17 +9,16 @@
 from typing import Union
 
 
-def dict_get(d:dict, keys:list[str], defval=None):
+def dict_get(d:dict, keys:list[str]|str, defval=None):
     """
     Scan the dictionary and retrieve the value specified by the
     list of keys, or the default value
     """
     if isinstance(keys, str):
-        keys = [keys]
+        keys = keys.split(".")
 
-    pkeys = keys[:-1]
     c = d
-    for k in pkeys:
+    for k in keys[:-1]:
         if k not in c:
             return defval
         c = c[k]
@@ -28,6 +27,36 @@ def dict_get(d:dict, keys:list[str], defval=None):
     # end
     k = keys[-1]
     return c[k] if k in c else defval
+# end
+
+
+def dict_set(d:dict, keys:list[str|int]|str, value):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    c = d
+    for k in keys[:-1]:
+        if k not in c:
+            c[k] = dict()
+        c = c[k]
+    # end
+    k = keys[-1]
+    c[k] = value
+    return value
+# end
+
+
+def dict_has_key(d:dict, keys:list[str|int]|str):
+    if isinstance(keys, str):
+        keys = keys.split(".")
+
+    c = d
+    for k in keys:
+        if k not in c:
+            return False
+        c = c[k]
+    # end
+    return True
 # end
 
 

@@ -53,7 +53,7 @@ CATS_EXCLUDED = []
 SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),
     ("skl.CatBoostRegressor", "pos"),
-    ("nf.FEDformer", "*"),
+    # ("nf.FEDformer", "*"),
     ("stf.AutoCES", "pos"),
 ]
 
@@ -76,10 +76,7 @@ def is_stable_scores(name: str, cat: str, r: int, noise: int) -> bool:
     # Test on 3 runs.
     # If this is true, it is not necessary to run the model 20/30 times
     ns = ns_of(name)
-    if noise == 0:
-        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
-    else:
-        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+    scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
 
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
@@ -114,10 +111,7 @@ def is_stable_scores(name: str, cat: str, r: int, noise: int) -> bool:
 
 def is_already_processed(name: str, cat: str, r: int, noise: int) -> bool:
     ns = ns_of(name)
-    if noise == 0:
-        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
-    else:
-        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+    scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
 
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
@@ -138,10 +132,7 @@ def is_already_processed(name: str, cat: str, r: int, noise: int) -> bool:
 
 def save_scores(name, cat, r, noise, scores):
     ns = ns_of(name)
-    if noise == 0:
-        scores_file = f"scores/{ns}_models_scores_{N_REPEATS}.csv"
-    else:
-        scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
+    scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
 
     lock_file = scores_file + ".lock"
     lock = FileLock(lock_file)
@@ -326,7 +317,7 @@ def main():
     log = logging.getLogger("main")
 
     NOISE_VALUES = [0,5,10,15,20,25]
-    NOISE_VALUES = [25]
+    # NOISE_VALUES = [25]
     for NOISE in NOISE_VALUES:
         print(f"--- NOISE: {NOISE} ---")
 

@@ -69,6 +69,33 @@ os.makedirs("logs", exist_ok=True)
 def is_excluded(name: str, cat: str, r:int = 0) -> bool:
     return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
 
+
+# def is_already_processed(name: str, cat: str) -> bool:
+#     ns = ns_of(name)
+#     scores_file = f"scores/{ns}_models_scores.csv"
+#     lock_file = scores_file + ".lock"
+#     lock = FileLock(lock_file)
+#
+#     with lock:
+#         if not os.path.exists(scores_file):
+#             return False
+#
+#         with open(scores_file, "r") as f:
+#             values = f.readlines()
+#             for value in values:
+#                 parts = value.strip().split(",")
+#                 if parts[0] == name and parts[1] == cat:
+#                     return True
+#             pass
+#     return False
+# # end
+
+def is_already_plotted(name: str, cat: str) -> bool:
+    fdir = create_fdir(name, cat)
+    fname = f"{fdir}/{name}-{cat}.png"
+    return os.path.exists(fname)
+
+
 def replaces(s: str, tlist: list[str], r: str) -> str:
     for t in tlist:
         s = s.replace(t, r)
@@ -134,33 +161,6 @@ def create_fdir(name:str, cat: str) -> str:
 #             values = ",".join(map(str, scores.values()))
 #             f.writelines(f"{name},{cat},{values}\n")
 # # end
-
-
-def is_already_processed(name: str, cat: str) -> bool:
-    ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores.csv"
-    lock_file = scores_file + ".lock"
-    lock = FileLock(lock_file)
-
-    with lock:
-        if not os.path.exists(scores_file):
-            return False
-
-        with open(scores_file, "r") as f:
-            values = f.readlines()
-            for value in values:
-                parts = value.strip().split(",")
-                if parts[0] == name and parts[1] == cat:
-                    return True
-            pass
-    return False
-# end
-
-def is_already_plotted(name: str, cat: str) -> bool:
-    fdir = create_fdir(name, cat)
-    fname = f"{fdir}/{name}-{cat}.png"
-    return os.path.exists(fname)
-
 
 # ---------------------------------------------------------------------------
 # check_model
@@ -352,7 +352,6 @@ def main():
         log.info(config_file)
         jmodels = jsonx.load(config_file)
         check_models(df, jmodels)
-
     pass
 # end
 

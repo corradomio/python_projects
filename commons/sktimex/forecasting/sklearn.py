@@ -42,7 +42,8 @@ class ScikitLearnForecaster(BaseForecaster):
         self, *,
         estimator: Union[str, type, dict] = "sklearn.linear_model.LinearRegression",
         window_length=10,
-        prediction_length=1
+        prediction_length=1,
+        **kwargs
     ):
 
         super().__init__()
@@ -54,6 +55,8 @@ class ScikitLearnForecaster(BaseForecaster):
         self.window_length = window_length
         self.prediction_length = prediction_length
 
+        self._set_kwargs(kwargs)
+
         # Effective parameters
         self._estimator = None
         # self._kwargs = _replace_lags(kwargs)
@@ -63,6 +66,14 @@ class ScikitLearnForecaster(BaseForecaster):
         estimator_class = class_of(self.estimator)
         name = name_of(estimator_class)
         self._log = logging.getLogger(f"sktimex.ScikitLearnForecaster.{name}")
+    # end
+
+    def _set_kwargs(self, kwargs):
+        for k in kwargs:
+            if k in ["self", "class"]: continue
+            assert "__" in k, f"{k} is not a valid kwarg"
+            setattr(self, k, kwargs[k])
+        pass
     # end
 
     def _create_estimator(self):

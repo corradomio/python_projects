@@ -85,13 +85,59 @@ def plot_seasonalities(df: pd.DataFrame, m: str="sin", trend=False):
     pass
 
 
+def plot_noises(df_list, model, seasonality, trend=False):
+    plt.clf()
+    plt.figure(figsize=(10, 5))
+
+    cat = f"{model}{seasonality}" + ("-t" if trend else "")
+
+    s_list = [
+        pdx.groups_select(df, groups=["cat"], values=[cat])["y"]
+        for df in df_list
+    ]
+
+    NOISE = [0,5,10,15,20,25]
+
+    for i in range(6):
+        s = s_list[i]
+        plt.subplot(231 + i)
+        plt.plot(s)
+        plt.title(f"NOISE: {NOISE[i]}%")
+
+        ax = plt.gca()
+        if i < 3:
+            ax.set_xticklabels([])
+
+        ax.set_yticklabels([])
+    pass
+
+    plt.tight_layout()
+
+    # plt.show()
+    if trend:
+        plt.savefig("plots_article/noises-t.png", dpi=300)
+    else:
+        plt.savefig("plots_article/noises.png", dpi=300)
+    pass
+
+
 def main():
     df = create_synthetic_data(12 * 10, 0.0, 1, 0.33)
+    print(df["cat"].unique())
 
-    plot_timeseries(df)
-    plot_seasonalities(df)
-    plot_timeseries(df, trend=True)
-    plot_seasonalities(df, trend=True)
+    # plot_timeseries(df)
+    # plot_seasonalities(df)
+    # plot_timeseries(df, trend=True)
+    # plot_seasonalities(df, trend=True)
+
+    df00 = df
+    df05 = create_synthetic_data(12 * 10, 5/100, 1, 0.33)
+    df10 = create_synthetic_data(12 * 10,10/100, 1, 0.33)
+    df15 = create_synthetic_data(12 * 10,15/100, 1, 0.33)
+    df20 = create_synthetic_data(12 * 10,20/100, 1, 0.33)
+    df25 = create_synthetic_data(12 * 10,25/100, 1, 0.33)
+    plot_noises([df00, df05, df10, df15, df20, df25], "sin", 12)
+    plot_noises([df00, df05, df10, df15, df20, df25], "sin", 12, trend=True)
     pass
 
 

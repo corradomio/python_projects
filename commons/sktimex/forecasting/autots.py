@@ -1,3 +1,5 @@
+from typing import Optional
+
 import sktime.forecasting.autots as sktf
 from sktime.forecasting.base import ForecastingHorizon
 # from .fix_fh import fix_fh_relative
@@ -86,12 +88,15 @@ class AutoTS(sktf.AutoTS, RecursivePredict):
             verbose=verbose,
             n_jobs=n_jobs
         )
-        self.pred_len=pred_len
+        self.pred_len = pred_len
         self._fh_in_fit = ForecastingHorizon(values=list(range(1, pred_len + 1)))
 
     def fit(self, y, X=None, fh=None):
         return super().fit(y, X=X, fh=self._fh_in_fit)
 
-    def predict(self, fh=None, X=None):
-        # fh = fix_fh_relative(fh)
-        return self.recursive_predict(fh, X)
+    # def update(self, y, X=None, update_params=True):
+    #     return super().update(y=y, X=X, update_params=update_params)
+
+    # def predict(self, fh: Optional[ForecastingHorizon]=None, X=None):
+    #     assert fh is not None
+    #     return super().predict(fh=fh, X=X)
