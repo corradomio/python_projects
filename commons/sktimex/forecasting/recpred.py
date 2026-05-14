@@ -84,9 +84,9 @@ class RecursivePredict(BaseForecaster):
             Xp, Xf = _split_pandas(X, p)
             Xh = _combine_pandas(Xo, Xp)
             Xf = _reindex_pandas(Xo, Xf)
-            self.update(yh, Xh)
+            self.update(yh, Xh, update_params=False)
         else:
-            self.update(yo, Xo)
+            self.update(yo, Xo, update_params=False)
         return yp
 
     def update(self, y, X=None, update_params=True):

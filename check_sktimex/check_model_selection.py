@@ -1,155 +1,82 @@
 from sktimex.forecasting.models import create_forecaster
 from stdlib.language import null, true, false
+from synth import create_synthetic_data
+import pandasx as pdx
 
 
 def main():
-    name = "skopt-skl.CatBoostRegressor"
+    name = "model"
     jmodel = {
         "class": "sktimex.forecasting.model_selection.ForecastingSkoptSearchCV",
         "n_iter": 16,
         "cv": {
-            "class": "sktimex.split.slidingwindow.SlidingWindowSplitter",
-            "step_length": 6,
-            "window_length": 70,
-            "fh": 6
+            "class": "sktimex.split.slidingwindow.CountWindowSplitter",
+            "n_splits": 6,
+            "window_length": 48,
+            "fh": 12
         },
-        "return_n_best_forecasters": 4,
+        "#return_n_best_forecasters": 4,
         "error_score": "raise",
+        "verbose": 1,
         "backend": null,
-        "backend_params": {
-            "n_jobs": 4
-        },
         "forecaster": {
-            "class": "sktimex.forecasting.sklearn.ScikitLearnForecaster",
-            "estimator": {
-                "class": "catboost.core.CatBoostRegressor",
-
-                "#allow_const_label": null,
-                "#allow_writing_files": null,
-                "#approx_on_full_history": null,
-                "#bagging_temperature": null,
-                "#best_model_min_trees": null,
-                "#boost_from_average": null,
-                "#boosting_type": null,
-                "#bootstrap_type": null,
-                "#border_count": null,
-                "#cat_features": null,
-                "#colsample_bylevel": null,
-                "#combinations_ctr": null,
-                "#counter_calc_method": null,
-                "#ctr_description": null,
-                "#ctr_history_unit": null,
-                "#ctr_leaf_count_limit": null,
-                "#ctr_target_border_count": null,
-                "#custom_metric": null,
-                "#data_partition": null,
-                "#depth": null,
-                "#dev_efb_max_buckets": null,
-                "#dev_score_calc_obj_block_size": null,
-                "#device_config": null,
-                "#devices": null,
-                "#dictionaries": null,
-                "#diffusion_temperature": null,
-                "#early_stopping_rounds": null,
-                "#embedding_features": null,
-                "#eta": null,
-                "#eval_fraction": null,
-                "#eval_metric": null,
-                "#feature_border_type": null,
-                "#feature_calcers": null,
-                "#feature_weights": null,
-                "#final_ctr_computation_mode": null,
-                "#first_feature_use_penalties": null,
-                "#fixed_binary_splits": null,
-                "#fold_len_multiplier": null,
-                "#fold_permutation_block": null,
-                "#gpu_cat_features_storage": null,
-                "#gpu_ram_part": null,
-                "#grow_policy": null,
-                "#has_time": null,
-                "#ignored_features": null,
-                "#input_borders": null,
-                "#iterations": null,
-                "#l2_leaf_reg": null,
-                "#langevin": null,
-                "#leaf_estimation_backtracking": null,
-                "#leaf_estimation_iterations": null,
-                "#leaf_estimation_method": null,
-                "#learning_rate": null,
-                "#logging_level": null,
-                "#loss_function": "RMSE",
-                "#max_bin": null,
-                "#max_ctr_complexity": null,
-                "#max_depth": null,
-                "#max_leaves": null,
-                "#metadata": null,
-                "#metric_period": null,
-                "#min_child_samples": null,
-                "#min_data_in_leaf": null,
-                "#model_shrink_mode": null,
-                "#model_shrink_rate": null,
-                "#model_size_reg": null,
-                "#monotone_constraints": null,
-                "#mvs_reg": null,
-                "#n_estimators": null,
-                "#name": null,
-                "#nan_mode": null,
-                "#num_boost_round": null,
-                "#num_leaves": null,
-                "#num_trees": null,
-                "#objective": null,
-                "#od_pval": null,
-                "#od_type": null,
-                "#od_wait": null,
-                "#one_hot_max_size": null,
-                "#output_borders": null,
-                "#penalties_coefficient": null,
-                "#per_feature_ctr": null,
-                "#per_float_feature_quantization": null,
-                "#per_object_feature_penalties": null,
-                "#pinned_memory_size": null,
-                "#posterior_sampling": null,
-                "#random_score_type": null,
-                "#random_seed": null,
-                "#random_state": null,
-                "#random_strength": null,
-                "#reg_lambda": null,
-                "#rsm": null,
-                "#sampling_frequency": null,
-                "#sampling_unit": null,
-                "#save_snapshot": null,
-                "#score_function": null,
-                "#simple_ctr": null,
-                "#snapshot_file": null,
-                "#snapshot_interval": null,
-                "#sparse_features_conflict_fraction": null,
-                "#store_all_simple_ctr": null,
-                "#subsample": null,
-                "#target_border": null,
-                "#task_type": null,
-                "#text_features": null,
-                "#text_processing": null,
-                "#thread_count": null,
-                "#tokenizers": null,
-                "#train_dir": null,
-                "#use_best_model": null,
-                "#used_ram_limit": null,
-
-                "verbose": null,
-                "silent": true
-            },
-            "prediction_length": 6,
-            "window_length": 24
+            "class": "sktimex.forecasting.es_rnn.ESRNNForecaster",
+            "pred_len": 6,
+            "seasonality_type": "single",
+            "+datasets": [
+                "was12",
+                "sq12",
+                "sin12",
+                "tri12",
+                "saw12-t",
+                "saw12",
+                "tri12-t",
+                "sq12-t",
+                "was12-t",
+                "sin12-t"
+            ],
+            "season1_length": 3,
+            "window": 6,
+            "hidden_size": 5,
+            "num_layer": 2,
+            "num_epochs": 250,
+            "lr": 0.1
         },
         "param_grid": {
-            "estimator__allow_const_label": [false, true],
-            "window_length": [
-                24,
-                48
+            "season1_length": [
+                3,
+                6,
+                12
+            ],
+            "window": [
+                6,
+                12
+            ],
+            "hidden_size": [
+                5,
+                10
+            ],
+            "num_layer": [
+                2,
+                5
+            ],
+            "num_epochs": [
+                250,
+                500,
+                1000
+            ],
+            "lr": [
+                0.1,
+                0.01
             ]
         }
     }
-    forecaster = model = create_forecaster(name, jmodel)
+    model = create_forecaster(name, jmodel)
+
+    df = create_synthetic_data(12 * 8, 0.0, 1, 0.33)
+    y = pdx.groups_select(df, groups=["cat"], values=["sin12"])["y"]
+
+    model.fit(y)
 
 
 

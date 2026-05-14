@@ -66,16 +66,6 @@ os.makedirs("logs", exist_ok=True)
 # Utilities
 # ---------------------------------------------------------------------------
 
-def is_excluded(name: str, cat: str, r:int = 0) -> bool:
-    return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
-
-def replaces(s: str, tlist: list[str], r: str) -> str:
-    for t in tlist:
-        s = s.replace(t, r)
-    return s
-# end
-
-
 def create_fdir(name:str, cat: str) -> str:
     # module = replaces(name, ["_", "-", "."], "/")
     module = name.replace(".", "/")
@@ -90,15 +80,42 @@ def create_fdir(name:str, cat: str) -> str:
 # end
 
 
-# def included(name, includes: list[str], excludes: list[str]) -> bool:
-#     assert isinstance(name, str)
-#     if includes is not None and len(includes) > 0:
-#         return name in includes
-#     if excludes is not None and len(excludes) > 0:
-#         return name not in excludes
-#     else:
-#         return True
-# # end
+def is_excluded(name: str, cat: str, r:int = 0) -> bool:
+    return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
+
+
+def is_already_processed(name: str, cat: str) -> bool:
+    ns = ns_of(name)
+    scores_file = f"scores/{ns}_models_scores.csv"
+    lock_file = scores_file + ".lock"
+    lock = FileLock(lock_file)
+
+    with lock:
+        if not os.path.exists(scores_file):
+            return False
+
+        with open(scores_file, "r") as f:
+            values = f.readlines()
+            for value in values:
+                parts = value.strip().split(",")
+                if parts[0] == name and parts[1] == cat:
+                    return True
+            pass
+    return False
+# end
+
+
+def is_already_plotted(name: str, cat: str) -> bool:
+    fdir = create_fdir(name, cat)
+    fname = f"{fdir}/{name}-{cat}.png"
+    return os.path.exists(fname)
+
+
+def replaces(s: str, tlist: list[str], r: str) -> str:
+    for t in tlist:
+        s = s.replace(t, r)
+    return s
+# end
 
 
 # def save_params(name, cat, model):
@@ -136,27 +153,6 @@ def save_scores(name, cat, scores):
 # end
 
 
-def is_already_processed(name: str, cat: str) -> bool:
-    ns = ns_of(name)
-    scores_file = f"scores/{ns}_models_scores.csv"
-    lock_file = scores_file + ".lock"
-    lock = FileLock(lock_file)
-
-    with lock:
-        if not os.path.exists(scores_file):
-            return False
-
-        with open(scores_file, "r") as f:
-            values = f.readlines()
-            for value in values:
-                parts = value.strip().split(",")
-                if parts[0] == name and parts[1] == cat:
-                    return True
-            pass
-    return False
-# end
-
-
 # ---------------------------------------------------------------------------
 # check_model
 # ---------------------------------------------------------------------------
@@ -190,16 +186,13 @@ def check_model(
     if is_excluded(name, cat):
         # tprint(f"--- {name}/{cat}: excluded")
         return
-    if is_already_processed(name, cat):
+    if is_already_processed(name, cat) and is_already_plotted(name, cat):
         # tprint(f"--- {name}/{cat}: already processed")
         return
 
     # check if the model is already processed on the category
     fdir = create_fdir(name, cat)
     fname = f"{fdir}/{name}-{cat}.png"
-
-    # if os.path.exists(fname):
-    #     return
 
     # log.info(f"--- {name}/{cat} ---")
     tprint(f"--- {name}/{cat} ---")
@@ -290,6 +283,7 @@ def check_models(
         jmodels: dict[str, dict],
 ):
     log = logging.getLogger("main")
+
     dfdict = pdx.groups_split(df, groups=["cat"])
     cats = [c[0] for c in dfdict]
     # select ONLY 'pos' and '*12'
@@ -338,10 +332,9 @@ def main():
     for config_file in [
         "config/darts_models.json",
         "config/nf_models.json",
-        "config/skt_models.json",
         "config/skl_models.json",
+        "config/skt_models.json",
         "config/skx_models.json",
-        # "config/ext_models.json",
         "config/stf_models.json"
     ]:
         log.info(config_file)

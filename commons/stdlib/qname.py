@@ -109,7 +109,7 @@ def resolve(config: dict, params: dict={}) -> dict:
         # skip the keys starting with '#...'
         return {
             k: repl(d[k])
-            for k in d if not k.startswith("#")
+            for k in d if not (k.startswith("#") or k.startswith("+"))
         }
 
     def lrepl(l: list) -> list:
@@ -226,6 +226,11 @@ def create_from_collection(collection: Union[None, list, dict]) -> Union[None, l
 # Name handling
 # ---------------------------------------------------------------------------
 
+
+def is_class_instance(obj: Any) -> bool:
+    return hasattr(obj, "__class__")
+
+
 def namespace_of(s: str) -> str:
     """First component of a fully qualified name"""
     p = s.find('.')
@@ -243,11 +248,15 @@ def name_of(s: str) -> str:
 
 
 def class_of(info: Union[str, dict]) -> str:
+    if isinstance(info, type):
+        return qualified_name(info)
     if isinstance(info, str):
         return info
     for k in ["class", "class_name", "clazz"]:
         if k in info:
             return info[k]
+    if is_class_instance(info):
+        return qualified_type(info)
     raise ValueError("Missing mandatory key: ('class', 'class_name', 'clazz')")
 
 # ---------------------------------------------------------------------------

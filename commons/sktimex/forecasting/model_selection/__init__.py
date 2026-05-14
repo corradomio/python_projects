@@ -1,5 +1,5 @@
 from ._gridsearch import ForecastingGridSearchCV
-from ._randomsearch import ForecastingRandomizedSearchCV
+from ._randomsearch import ForecastingRandomizedSearchCV, ForecastingRandomSearchCV
 from ._skopt import ForecastingSkoptSearchCV
 from ._hyperactive import ForecastingHyperactiveSearchCV
 from ._optuna import ForecastingOptunaSearchCV

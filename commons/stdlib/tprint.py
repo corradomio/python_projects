@@ -1,4 +1,6 @@
+import sys
 import time
+import traceback
 from datetime import datetime
 
 
@@ -27,8 +29,13 @@ def tprint(*args, force=True, **nargs):
         print(*args, **nargs)
     # else:
     #     TIMESTAMP -= TIMEDELAY+1
-
 # end
+
+
+def tprint_exception(e):
+    print(time.strftime("[%H:%M:%S] "), end="", file=sys.stderr)
+    print(e, file=sys.stderr)
+    print(traceback.format_exc(), file=sys.stderr)
 
 
 class Timing:

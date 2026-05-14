@@ -5,6 +5,9 @@ from sklearn.base import clone
 from sktime.forecasting.base import ForecastingHorizon
 
 from sktime.forecasting.compose._reduce import _Reducer
+
+from stdlib import kwselect, kwexclude
+from stdlib.kwargs import kwinclude
 from ...transform import LinearTrainTransform, LinearPredictTransform
 from ...transform._utils import lmax
 
@@ -18,6 +21,9 @@ class ITabularEstimator:
         ...
 
     def predict(self, X) -> np.ndarray:
+        ...
+
+    def set_params(self, **params):
         ...
 
 
@@ -116,28 +122,11 @@ class WindowLength:
     @property
     def tlags(self):
         return self._tlags
-# end
 
 
 def _is_fh_seq(fh):
     """ Check if fh is [1,2,...n]"""
     return len(fh) == fh[-1]
-
-
-# def _to_tlags(fh):
-#     """
-#     Convert fh into tlags:
-#
-#         fh = [1,2,3] -> tlags = [0,1,2]
-#
-#     """
-#     if fh is None:
-#         tlags = [1]
-#     elif fh.is_relative:
-#         tlags = list(fh)
-#     else:
-#         raise ValueError("fh is not relative")
-#     return tlags
 
 
 # ---------------------------------------------------------------------------
@@ -146,7 +135,6 @@ def _is_fh_seq(fh):
 
 class StrategyBasedRegressorForecaster(_Reducer):
     strategy = "any"
-
 
     _tags = {
         # "y_inner_mtype": "np.ndarray",
@@ -179,22 +167,39 @@ class StrategyBasedRegressorForecaster(_Reducer):
         self.prediction_length = prediction_length
         self.windows_identical = windows_identical
 
-        self._estimators: list[ITabularEstimator] = []
-        self.window_length_ = WindowLength(window_length, False)
-        self.prediction_length_ = WindowLength(prediction_length, True)
+        self.estimators_: list[ITabularEstimator] = []
+
+        self._window_length = WindowLength(window_length, False)
+        self._prediction_length = WindowLength(prediction_length, True)
 
         self._lt = None
         self._pt = None
         pass
 
     # -----------------------------------------------------------------------
+    # set_params
+    # -----------------------------------------------------------------------
+
+    def set_params(self, **union_params):
+        param_names = self.get_param_names()
+        params = kwinclude(union_params, param_names)
+        ekwargs = kwexclude(union_params, param_names)
+
+        super().set_params(**params)
+
+        self.estimator.set_params(**ekwargs)
+        for estimator in self.estimators_:
+            estimator.set_params(**ekwargs)
+        return self
+
+    # -----------------------------------------------------------------------
     # Operations
     # -----------------------------------------------------------------------
 
     def _transform(self, y, X=None) -> tuple[np.ndarray, np.ndarray]:
-        xlags = self.window_length_.xlags
-        ylags = self.window_length_.ylags
-        tlags = self.prediction_length_.tlags
+        xlags = self._window_length.xlags
+        ylags = self._window_length.ylags
+        tlags = self._prediction_length.tlags
 
         lt = LinearTrainTransform(xlags=xlags, ylags=ylags, tlags=tlags)
         self._lt = lt
@@ -202,6 +207,10 @@ class StrategyBasedRegressorForecaster(_Reducer):
 
         Xt, yt = lt.fit_transform(y=y, X=X)
         return yt, Xt
+
+    # -----------------------------------------------------------------------
+    # fit
+    # -----------------------------------------------------------------------
 
     def _fit(self,  y, X=None, fh=None):
         assert fh is self._fh
@@ -219,18 +228,25 @@ class StrategyBasedRegressorForecaster(_Reducer):
         return self
 
     def _fit_single(self, Xt, yt):
-        self.estimator.fit(Xt, yt)
-        self.estimators_.append(self.estimator)
+        estimator: ITabularEstimator = cast(ITabularEstimator, clone(self.estimator))
+        self.estimators_.append(estimator)
+
+        estimator.fit(Xt, yt)
 
     def _fit_multiple(self, Xt, yt):
         for i in range(yt.shape[1]):
             yti = yt[:, i:i+1]
 
             estimator: ITabularEstimator = cast(ITabularEstimator, clone(self.estimator))
-            estimator.fit(Xt, yti)
-
             self.estimators_.append(estimator)
+
+            estimator.fit(Xt, yti)
+        # end
     # end
+
+    # -----------------------------------------------------------------------
+    # predict
+    # -----------------------------------------------------------------------
 
     def _predict(self, fh, X):
         # fh MUST BE passed!
@@ -262,12 +278,13 @@ class StrategyBasedRegressorForecaster(_Reducer):
 
     def _predict_single(self, nfh, pt):
         y_pred = pt._yp
+        estimator = self.estimators_[0]
 
         i = 0
         while i < nfh:
             Xt = pt.step(i)
 
-            yp: np.ndarray = self.estimator.predict(Xt)
+            yp: np.ndarray = estimator.predict(Xt)
 
             i = pt.update(i, yp)
         # end
@@ -319,6 +336,7 @@ class StrategyBasedRegressorForecaster(_Reducer):
     # -----------------------------------------------------------------------
     #
     # -----------------------------------------------------------------------
+# end
 
 
 class FlexibleDirectRegressionForecaster(StrategyBasedRegressorForecaster):

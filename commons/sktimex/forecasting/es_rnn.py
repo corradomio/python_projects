@@ -60,3 +60,6 @@ class ESRNNForecaster(sktf.ESRNNForecaster, RecursivePredict):
         assert fh is not None
         # fh = fix_fh_relative(fh)
         return self.recursive_predict(fh, X)
+
+    def _update(self, y, X=None, update_params=True):
+        return super()._update(y=y, X=X, update_params=update_params)

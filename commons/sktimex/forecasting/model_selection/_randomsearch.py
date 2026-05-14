@@ -6,18 +6,6 @@ from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-
-def safe_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
-
-
-# ---------------------------------------------------------------------------
 # ForecastingRandomizedSearchCV
 # ---------------------------------------------------------------------------
 
@@ -36,27 +24,27 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV, ModelS
     """
 
     def __init__(
-            self,
-            forecaster: str | dict,
-            cv: str | dict,
-            param_grid: Optional[dict] =None,
-            param_distributions: Optional[dict]=None,
+        self,
+        forecaster: str | dict,
+        cv: str | dict,
+        param_grid: Optional[dict] =None,
+        param_distributions: Optional[dict]=None,
 
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            update_behaviour="full_refit",
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        update_behaviour="full_refit",
 
-            n_iter=10,
-            return_n_best_forecasters=1,
-            error_score="nan",
-            random_state=None,
-            tune_by_instance=False,
-            tune_by_variable=False,
+        n_iter=10,
+        return_n_best_forecasters=1,
+        error_score="nan",
+        random_state=None,
+        tune_by_instance=False,
+        tune_by_variable=False,
 
-            backend="loky",
-            backend_params=None,
-            verbose=0,
+        backend="loky",
+        backend_params=None,
+        verbose=0,
     ):
         assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         assert param_grid is None or param_distributions is None, \
@@ -76,7 +64,7 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV, ModelS
             return_n_best_forecasters=return_n_best_forecasters,
             random_state=random_state,
             update_behaviour=update_behaviour,
-            error_score=safe_float(error_score),
+            error_score=error_score,
             tune_by_instance=tune_by_instance,
             tune_by_variable=tune_by_variable,
 
@@ -103,6 +91,8 @@ class ForecastingRandomizedSearchCV(Sktime_ForecastingRandomizedSearchCV, ModelS
         super().set_params(**params)
         return self
 
+
+ForecastingRandomSearchCV = ForecastingRandomizedSearchCV
 
 # ---------------------------------------------------------------------------
 # End

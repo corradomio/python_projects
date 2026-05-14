@@ -1,26 +1,62 @@
-from typing import Optional
-import numpy as np
-import pandas as pd
-from sklearn.model_selection import check_cv
-
-from sktime.exceptions import NotFittedError
-from sktime.utils.validation.forecasting import check_scoring
-
+import numbers
+import warnings
+from typing import Optional, Iterable, cast
+import skopt.space.space as skoss
+from skopt.space.space import Dimension, Integer, Real, Categorical
 from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
+
+from stdlib.tprint import tprint, tprint_exception
 from stdlib.qname import create_from
 from ._base import ModelSelection
 
 
 # ---------------------------------------------------------------------------
-# Utilities
+# _check_dimension_ext
 # ---------------------------------------------------------------------------
+# Extends the support for an enumeration composed by list of values.
+# Each list is handled as a single value
 
-def safe_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
+def _check_dimension_ext(dimension, transform=None):
+    if isinstance(dimension, Dimension):
+        return dimension
+    if isinstance(dimension, tuple) and 2 <= len(dimension) <= 4:
+        low, high, *args = dimension
+        # Check that optional distribution and base have correct types
+        if (not args or isinstance(args[0], str)) and (
+            len(args) < 2 or isinstance(args[1], int)
+        ):
+            # Infer an Integer if both bounds are Integral
+            if isinstance(low, numbers.Integral) and isinstance(high, numbers.Integral):
+                return Integer(int(low), int(high), *args, transform=transform)
+            # Infer a Real if both bounds are Real numbers
+            elif isinstance(low, numbers.Real) and isinstance(high, numbers.Real):
+                return Real(float(low), float(high), *args, transform=transform)
+        # warn if falling back on Categorical for tuples that look like they
+        # might be an error, because there is more than one type in them
+        if len(set(map(type, dimension))) > 1:
+            warnings.warn(
+                f"{dimension!r} was inferred to a Categorical "
+                "object, but looks like a tuple for an Integer or "
+                "Real dimension that was miss-spelled. Pass a list "
+                "or a Categorical object to suppress this warning.",
+                UserWarning,
+            )
+    # [CM: 2026/05/12] Extension: support for: [[v11,v12,...],[v21,v22,...], ...]
+    # list converted in tuple to have it 'hashable'
+    if isinstance(dimension, list) and isinstance(dimension[0], list):
+        dimension = list(map(tuple, dimension))
+        return Categorical(dimension, transform=transform)
+    elif isinstance(dimension, Iterable):
+        return Categorical(dimension, transform=transform)
+    # Unconditionned so handle all cases that make it here
+    raise ValueError(
+        f"Invalid dimension {dimension!r}. See the "
+        "documentation of check_dimension for supported values."
+    )
 
+# OVVERRIDE the original implementation of 'skopt.space.space._check_dimension(..)'
+# with the implementation available HERE
+skoss._check_dimension = _check_dimension_ext
 
 # ---------------------------------------------------------------------------
 # ForecastingRandomizedSearchCV
@@ -62,15 +98,15 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
         import skopt.space.space as skopt_space
         skopt_space._check_dimension_old = skopt_space._check_dimension
 
-        assert param_grid is None or param_distributions is None, \
-            "Only one of 'param_grid' or 'param_distributions' can be not None"
+        assert param_grid is not None or param_distributions is not None, \
+            "Only one of 'param_grid' or 'param_distributions' must be not None"
 
         forecaster_instance = create_from(forecaster)
         cv_instance = create_from(cv)
         super().__init__(
             forecaster=forecaster_instance,
             cv=cv_instance,
-            param_distributions=param_distributions if param_grid is None else param_grid,
+            param_distributions=cast(dict|list[dict], param_distributions if param_grid is None else param_grid),
             n_iter=n_iter,
             n_points=n_points,
             scoring=scoring,
@@ -81,7 +117,7 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
             return_n_best_forecasters=return_n_best_forecasters,
             random_state=random_state,
             update_behaviour=update_behaviour,
-            error_score=safe_float(error_score),
+            error_score=error_score,
             tune_by_instance=tune_by_instance,
             tune_by_variable=tune_by_variable,
 
@@ -109,6 +145,13 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
         super().set_params(**params)
         return self
 
+    def _evaluate_step(self, y, X, optimizer, n_points, mapping=None):
+        tprint(f"... _evaluate_step on {n_points} points")
+        try:
+            return super()._evaluate_step(y, X, optimizer, n_points, mapping)
+        except Exception as e:
+            tprint_exception(e)
+            return None
 
 # ---------------------------------------------------------------------------
 # End

@@ -66,7 +66,7 @@ def main():
     # end
 
     for lib in auto_models:
-        auto_file = f"config/auto_{lib}_models_ext.json"
+        auto_file = f"config_ext/auto_{lib}_models_ext.json"
         auto_config = auto_models[lib]
         jsonx.dump(auto_config, auto_file)
 

@@ -188,6 +188,7 @@ JSONX_ENCODERS = {
     'datetime.date': lambda o: cast(dt.date, o).strftime(DAY_FORMAT),
 
     # Numpy array
+    'numpy.bool': bool,
     'numpy.ndarray': _ndarray_to_jsonx,
     'numpy.int64': int,
     'numpy.float16': float,
@@ -212,6 +213,13 @@ class JSONxEncoder(json.JSONEncoder):
 
     def default(self, o):
         t = type(o)
+
+        # if isinstance(o, (np.bool_)):
+        #     o = bool(o)
+        # elif isinstance(o, np.integer):
+        #     o = int(o)
+        # elif isinstance(o, np.inexact):
+        #     o = float(o)
 
         if t in [pd.Series, pd.DataFrame]:
             return _pandas_to_jsonx(o, path=None, **self._pandas_kwargs)

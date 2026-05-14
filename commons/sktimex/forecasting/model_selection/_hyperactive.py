@@ -31,13 +31,6 @@ from ._base import ModelSelection
 #
 
 
-def safe_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
-
-
 # ---------------------------------------------------------------------------
 # ForecastingHyperactiveSearchCV
 # ---------------------------------------------------------------------------
@@ -51,27 +44,27 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV, ModelSelection):
     }
 
     def __init__(
-            self,
-            forecaster: str|dict,
-            cv: str | dict,
-            # param_grid: dict,
-            pred_len: int,
+        self,
+        forecaster: str|dict,
+        cv: str | dict,
+        # param_grid: dict,
+        pred_len: int,
 
-            optimizer: str | dict,
+        optimizer: str | dict,
 
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            update_behaviour="full_refit",
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        update_behaviour="full_refit",
 
-            n_iter=-1,              # for compatibility/ignored
+        n_iter=-1,              # for compatibility/ignored
 
-            error_score="nan",
-            cv_X=None,
+        error_score="nan",
+        cv_X=None,
 
-            backend=None,
-            backend_params=None,
-            verbose=0               # for compatibility/ignored
+        backend=None,
+        backend_params=None,
+        verbose=0               # for compatibility/ignored
     ):
         forecaster_instance = create_from(forecaster)
         cv_instance = create_from(cv)
@@ -86,7 +79,7 @@ class ForecastingHyperactiveSearchCV(Sktime_ForecastingOptCV, ModelSelection):
 
             cv_X=cv_X,
             update_behaviour=update_behaviour,
-            error_score=safe_float(error_score),
+            error_score=error_score,
 
             backend=backend,
             backend_params=backend_params,

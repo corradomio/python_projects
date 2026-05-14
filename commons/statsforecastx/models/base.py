@@ -197,6 +197,10 @@ class _BaseStatsForecastForecaster(ScaledForecaster):
         y_pred_dict = self._model.predict(h=nfh, X=X_arr)
         y_pred_arr = y_pred_dict["mean"]
 
+        # BOH: WHY y_pred_arr has  the same length then X_arr???
+        if len(y_pred_arr) > nfh:
+            y_pred_arr = y_pred_arr[-nfh:]
+
         index = fh.to_absolute_index(self._cutoff)
         return _from_numpy(y_pred_arr, index, self._y)
 

@@ -114,6 +114,32 @@ def kwselect(kwargs: dict, prefix: str) -> dict:
     return s
 
 
+def kwinclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
+    """
+    Create a new dictionary with keys having as prefix a string in 'exclude'
+
+    :param kwargs: keyword parameters
+    :param keys: prefix(es) to exclude
+    :return: a new dictionary with the included parameters
+    """
+    assert isinstance(kwargs, dict)
+    assert isinstance(exclude, (str, list))
+
+    exclude = as_list(exclude, 'exclude')
+
+    def has_prefix(k: str):
+        for p in exclude:
+            if k.startswith(p): return True
+        return False
+
+    filtered = {}
+    for kw in kwargs:
+        if has_prefix(kw):
+            filtered[kw] = kwargs[kw]
+
+    return filtered
+
+
 def kwexclude(kwargs: dict, exclude: Union[str, list[str]]) -> dict:
     """
     Create a new dictionary without keys having as prefix a string in 'exclude'

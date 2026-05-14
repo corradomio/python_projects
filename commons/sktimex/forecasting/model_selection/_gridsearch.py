@@ -2,16 +2,6 @@ from sktime.forecasting.model_selection import ForecastingGridSearchCV as Sktime
 from stdlib.qname import create_from
 from ._base import ModelSelection
 
-# ---------------------------------------------------------------------------
-# Utilities
-# ---------------------------------------------------------------------------
-
-def safe_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
-
 
 # ---------------------------------------------------------------------------
 # ForecastingGridSearchCV
@@ -23,25 +13,25 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV, ModelSelection):
     """
 
     def __init__(
-            self,
-            forecaster: str | dict,
-            cv: str | dict,
-            param_grid: dict,
+        self,
+        forecaster: str | dict,
+        cv: str | dict,
+        param_grid: dict,
 
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            update_behaviour="full_refit",
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        update_behaviour="full_refit",
 
-            n_iter: int = -1,               # compatibility/ignored
-            return_n_best_forecasters=1,
-            error_score="nan",
-            tune_by_instance=False,
-            tune_by_variable=False,
+        n_iter: int = -1,               # compatibility/ignored
+        return_n_best_forecasters=1,
+        error_score="nan",
+        tune_by_instance=False,
+        tune_by_variable=False,
 
-            backend="loky",
-            backend_params=None,
-            verbose=0,
+        backend="loky",
+        backend_params=None,
+        verbose=0,
     ):
         assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         forecaster_instance = create_from(forecaster)
@@ -56,7 +46,7 @@ class ForecastingGridSearchCV(Sktime_ForecastingGridSearchCV, ModelSelection):
             verbose=verbose,
             return_n_best_forecasters=return_n_best_forecasters,
             update_behaviour=update_behaviour,
-            error_score=safe_float(error_score),
+            error_score=error_score,
             backend=backend,
             backend_params=backend_params,
             tune_by_instance=tune_by_instance,

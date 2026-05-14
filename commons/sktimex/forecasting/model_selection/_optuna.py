@@ -1,6 +1,6 @@
-import optuna.samplers
 from optuna.distributions import CategoricalDistribution
 from sktime.forecasting.model_selection import ForecastingOptunaSearchCV as Sktime_ForecastingOptunaSearchCV
+
 from stdlib.qname import create_from
 from ._base import ModelSelection
 
@@ -9,14 +9,6 @@ from ._base import ModelSelection
 # Utilities
 # ---------------------------------------------------------------------------
 # https://optuna.readthedocs.io/en/stable/reference/samplers/index.html
-
-
-def safe_float(x):
-    try:
-        return float(x)
-    except ValueError:
-        return x
-
 
 def to_optuna_distributions(param_grid: dict):
     return {
@@ -38,26 +30,26 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV, ModelSelection
     """
 
     def __init__(
-            self,
-            forecaster,
-            cv,
-            param_grid,
+        self,
+        forecaster,
+        cv,
+        param_grid,
 
-            scoring=None,
-            strategy="refit",
-            refit=True,
-            update_behaviour="full_refit",
+        scoring=None,
+        strategy="refit",
+        refit=True,
+        update_behaviour="full_refit",
 
-            n_iter=-1,              # alternative to n_evals
-            return_n_best_forecasters=1,
-            error_score="nan",
+        n_iter=-1,              # alternative to n_evals
+        return_n_best_forecasters=1,
+        error_score="nan",
 
-            n_evals=100,
-            sampler=None,
+        n_evals=100,
+        sampler=None,
 
-            backend="loky",
-            backend_params=None,    # for compatibility
-            verbose=0,
+        backend="loky",
+        backend_params=None,    # for compatibility
+        verbose=0,
     ):
         assert return_n_best_forecasters > 0, "Unsupported 'return_n_best_forecasters' <= 0"
         forecaster_instance = create_from(forecaster)
@@ -73,7 +65,7 @@ class ForecastingOptunaSearchCV(Sktime_ForecastingOptunaSearchCV, ModelSelection
             return_n_best_forecasters=return_n_best_forecasters,
             backend=backend,
             update_behaviour=update_behaviour,
-            error_score=safe_float(error_score),
+            error_score=error_score,
             n_evals=n_iter if n_iter > 0 else n_evals,
             sampler=sampler
         )

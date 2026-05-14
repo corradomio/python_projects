@@ -27,14 +27,15 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 12
-MODE = "sequential"
+N_JOBS = 6
+# MODE = "sequential"
 # MODE = "parallel"
 
 
 SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),     # unsupported data
     ("skl.CatBoostRegressor", "pos"),   # unsupported data
+    ("stf.AutoCES", "pos")
 ]
 
 
@@ -52,6 +53,7 @@ os.makedirs("scores", exist_ok=True)
 os.makedirs("logs", exist_ok=True)
 
 # torch.set_default_tensor_type("torch.cuda.FloatTensor")
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -128,34 +130,37 @@ def save_scores(name, cat, scores):
 # check_model
 # ---------------------------------------------------------------------------
 
-def is_excluded(name: str, cat: str) -> bool:
+
+def is_excluded(name: str, cat: str, r:int = 0) -> bool:
     return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
 
 
-# def is_already_processed(name: str, cat: str) -> bool:
-#     ns = ns_of(name)
-#     scores_file = f"scores/{ns}_models_scores.csv"
-#     lock_file = scores_file + ".lock"
-#     lock = FileLock(lock_file)
-#
-#     with lock:
-#         if not os.path.exists(scores_file):
-#             return False
-#
-#         with open(scores_file, "r") as f:
-#             values = f.readlines()
-#             for value in values:
-#                 parts = value.strip().split(",")
-#                 if parts[0] == name and parts[1] == cat:
-#                     return True
-#             pass
-#     return False
-# # end
+def is_already_processed(name: str, cat: str) -> bool:
+    ns = ns_of(name)
+    scores_file = f"scores/{ns}_models_scores.csv"
+    lock_file = scores_file + ".lock"
+    lock = FileLock(lock_file)
+
+    with lock:
+        if not os.path.exists(scores_file):
+            return False
+
+        with open(scores_file, "r") as f:
+            values = f.readlines()
+            for value in values:
+                parts = value.strip().split(",")
+                if parts[0] == name and parts[1] == cat:
+                    return True
+            pass
+    return False
+# end
+
 
 def is_already_plotted(name: str, cat: str) -> bool:
     fdir = create_fdir(name, cat)
     fname = f"{fdir}/{name}-{cat}.png"
     return os.path.exists(fname)
+
 
 def handle_category(name, cat, jmodels):
     # if (name, cat) in SPECIAL_EXCLUSIONS:
@@ -258,17 +263,22 @@ def check_model(
 # end
 
 
+
+# ---------------------------------------------------------------------------
+# main
+# ---------------------------------------------------------------------------
+
+N_JOBS = 6
+
 def check_models(cats: list[str], jmodels: dict[str, dict]):
     log = logging.getLogger("main")
 
-    if MODE == "sequential":
+    if N_JOBS == 0:
         # -- sequential
         for name in jmodels:
             for cat in cats:
                 if handle_category(name, cat, jmodels):
                     check_model(name, cat, jmodels[name])
-                # else:
-                #     log.info(f"--- {name}/{cat}: skipped ---")
 
     else:
         # -- parallel
@@ -281,10 +291,6 @@ def check_models(cats: list[str], jmodels: dict[str, dict]):
 # end
 
 
-# ---------------------------------------------------------------------------
-# main
-# ---------------------------------------------------------------------------
-
 def main():
     log = logging.getLogger('main')
 
@@ -292,23 +298,19 @@ def main():
     df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
-    for config in [
-        # "auto_darts_models",
-        # "auto_nf_models",
-        # "auto_skl_models",
-        # "auto_skt_models",
-        # "auto_skf_models"
-        # "auto_stf_models"
+    config_dir = "config_auto"
+    # config_dir = "config_auto_upd"
 
-        "auto_darts_models_upd",
-        "auto_nf_models_upd",
-        "auto_skl_models_upd",
-        "auto_skt_models_upd",
-        "auto_stf_models_upd",
+    for config in [
+        "auto_darts_models",
+        "auto_nf_models",
+        "auto_skl_models",
+        "auto_skt_models",
+        "auto_stf_models",
     ]:
         tprint(f"processing {config}")
 
-        config_file = f"config/{config}.json"
+        config_file = f"{config_dir}/{config}.json"
         resolved_file = f"config_resolved/{config}.json"
         jmodels = load_model_selection_config(config_file)
         jsonx.dump(jmodels, resolved_file)
