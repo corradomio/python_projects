@@ -54,8 +54,8 @@ SPECIAL_EXCLUSIONS = [
 
 os.makedirs("best_params", exist_ok=True)
 os.makedirs("config_resolved", exist_ok=True)
-os.makedirs("plots_synth", exist_ok=True)
-os.makedirs("plots_synth/trends", exist_ok=True)
+# os.makedirs("plots_synth", exist_ok=True)
+# os.makedirs("plots_synth/trends", exist_ok=True)
 os.makedirs("plots_plain", exist_ok=True)
 os.makedirs("plots_trends", exist_ok=True)
 os.makedirs("scores", exist_ok=True)
@@ -116,25 +116,6 @@ def replaces(s: str, tlist: list[str], r: str) -> str:
         s = s.replace(t, r)
     return s
 # end
-
-
-# def save_params(name, cat, model):
-#     try:
-#         best_params = model.best_params_
-#         # module = replaces(name, ["_", "-", "."], "/")
-#         module = name.replace(".", "/")
-#
-#         if cat.endswith("-t"):
-#             fdir = f"best_params/{module}/"
-#         else:
-#             fdir = f"best_params/{module}/"
-#
-#         os.makedirs(fdir, exist_ok=True)
-#
-#         fname = f"{fdir}/{name}-{cat}.json"
-#         jsonx.dump(best_params, fname)
-#     except Exception as e:
-#         pass
 
 
 def save_scores(name, cat, scores):

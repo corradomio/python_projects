@@ -3,7 +3,7 @@ import torchreid
 import matplotlib.pyplot as plt
 from path import Path
 
-from torchreid.utils import FeatureExtractor
+from torchreidx.utils import FeatureExtractor
 from torchreid.metrics.distance import compute_distance_matrix
 
 
@@ -19,19 +19,21 @@ def main():
                 device='cuda'
             )
 
-            root_dir = Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring\tmp_saved\0_5754_DONE\random_crop")
-            image_list = root_dir.files("*.jpg")
+            root_dir = r"D:\Projects.ebtic\project.diwang\lab_monitoring\tmp_result\0_0_DONE\random_crop"
+            other_dir = r"D:\Projects.ebtic\project.diwang\lab_monitoring\tmp_result\0_1_DONE\random_crop"
+            # image_list = root_dir.files("*.jpg")
 
-            embeddings: torch.Tensor = extractor(image_list)
+            embeddings: torch.Tensor = extractor(root_dir)
+            embother: torch.Tensor = extractor(other_dir)
             print(embeddings.shape)
-            n = len(embeddings)
 
-            edist: torch.Tensor = compute_distance_matrix(embeddings, embeddings, metric="euclidean")
+
+            edist: torch.Tensor = compute_distance_matrix(embeddings, embother, metric="euclidean")
             plt.title(f"{name}/euclidean")
             plt.imshow(edist.detach().cpu().numpy())
             plt.savefig(f"images/{name}-euclidean.jpg", dpi=300)
 
-            cdist: torch.Tensor = compute_distance_matrix(embeddings, embeddings, metric="cosine")
+            cdist: torch.Tensor = compute_distance_matrix(embeddings, embother, metric="cosine")
             plt.title(f"{name}/cosine")
             plt.imshow(cdist.detach().cpu().numpy())
             plt.savefig(f"images/{name}-cosine.jpg", dpi=300)

@@ -37,7 +37,7 @@ warnings.simplefilter("ignore", FutureWarning)
 TARGET = "y"
 # NO MORE than 3 processes because some models based on NN use
 # a lot of GPU memory
-N_JOBS = 8
+N_JOBS = 6
 N_SCORES = 3
 # N_JOBS = 0
 N_REPEATS = 20
@@ -67,11 +67,18 @@ BEST_PARAMS_DIR = "./best_params"
 # Utilities
 # ---------------------------------------------------------------------------
 
-def is_excluded(name: str, cat: str, r:int = 0) -> bool:
+def has_best_params(name: str, cat: str) -> bool:
+    parts = name.split('.')
+    ns, model = parts[0], parts[1]
+    best_config_file = f"{BEST_PARAMS_DIR}/skopt-{ns}/{model}/skopt-{ns}.{model}-{cat}.json"
+    return os.path.exists(best_config_file)
+
+
+def is_excluded(name: str, cat: str) -> bool:
     return ((name, cat) in SPECIAL_EXCLUSIONS) or ((name, "*") in SPECIAL_EXCLUSIONS)
 
 
-def is_stable_scores(name: str, cat: str, r: int, noise: int) -> bool:
+def is_stable_scores(name: str, cat: str, noise: int) -> bool:
     # check if the scores of the model are the same in each run
     # Test on 3 runs.
     # If this is true, it is not necessary to run the model 20/30 times
@@ -106,10 +113,19 @@ def is_stable_scores(name: str, cat: str, r: int, noise: int) -> bool:
                     return False
 
     return True
-# end
 
 
-def is_already_processed(name: str, cat: str, r: int, noise: int) -> bool:
+def is_already_processed(name: str, cat: str, r: int, noise: int, sep="") -> bool:
+    def strip_before_sep(values: list[str]) -> list[str]:
+        if sep in [None, ""]:
+            return values
+        n = len(values)
+        for i in range(n):
+            if values[i].startswith(sep):
+                return values[i+1:]
+        return values
+    # end
+
     ns = ns_of(name)
     scores_file = f"scores/{ns}_models_scores_{noise}_{N_REPEATS}.csv"
 
@@ -121,13 +137,13 @@ def is_already_processed(name: str, cat: str, r: int, noise: int) -> bool:
 
         with open(scores_file, "r") as f:
             values = f.readlines()
+            values = strip_before_sep(values)
             for value in values:
                 parts = value.strip().split(",")
                 if parts[0] == name and parts[1] == cat and int(parts[2]) == r:
                     return True
             pass
     return False
-# end
 
 
 def save_scores(name, cat, r, noise, scores):
@@ -144,7 +160,6 @@ def save_scores(name, cat, r, noise, scores):
         with open(scores_file, "a") as f:
             values = ",".join(map(str, scores.values()))
             f.writelines(f"{name},{cat},{r},{values}\n")
-# end
 
 
 def update_configuration(name, cat, jmodel):
@@ -194,16 +209,17 @@ def check_model(
 ):
     log = logging.getLogger("main")
 
-    if is_already_processed(name, cat, r, noise):
-        # tprint(f"--- {name}/{cat}/{r:2}: already processed")
+    if not has_best_params(name, cat):
+        tprint(f"--- {name}/{cat}/{r:2}: no best params available")
         return
-
-    if is_stable_scores(name, cat, r, noise):
-        # tprint(f"--- {name}/{cat}/{r:2}: stable scores")
+    if is_already_processed(name, cat, r, noise, "---"):
+        tprint(f"--- {name}/{cat}/{r:2}: already processed")
         return
-
-    if is_excluded(name, cat, r):
-        # tprint(f"--- {name}/{cat}/{r:2}: excluded")
+    if is_stable_scores(name, cat, noise):
+        tprint(f"--- {name}/{cat}/{r:2}: stable scores")
+        return
+    if is_excluded(name, cat):
+        tprint(f"--- {name}/{cat}/{r:2}: excluded")
         return
 
     # log.info(f"--- {name}/{cat}/{r:2} ---")
