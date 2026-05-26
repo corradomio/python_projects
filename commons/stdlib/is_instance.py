@@ -120,6 +120,7 @@ __all__ = [
 
 __version__ = '1.0.2'
 
+import typing
 from abc import ABCMeta
 from typing import _type_check, _tp_cache
 from typing import _GenericAlias, _SpecialGenericAlias
@@ -1050,6 +1051,292 @@ def cast(obj, a_type) -> object:
     assert is_instance(obj, a_type)
     return obj
 
+
+# ---------------------------------------------------------------------------
+# Optional module: numpy
+# ---------------------------------------------------------------------------
+# np.ndarray
+# np.ndarray[Any]
+# np.ndarray[tuple[int,int]]
+# np.ndarray[Any, np.dtype[np.float[16]]
+# np.ndarray[tuple[int,int], np.dtype[np.float[16]]
+# np.ndarray[(1,2), ...]
+#
+# generic(_ArrayOrScalarCommon, Generic[_ItemT_co]) (numpy stub)
+#     rational(__numpy.generic) (numpy._core._rational_tests)
+#     number(generic[_NumberItemT_co], Generic[_NBit, _NumberItemT_co]) (numpy stub)
+#         integer(_IntegralMixin, _RoundMixin, number[_NBit, int]) (numpy stub)
+#             signedinteger(__numpy.integer) (numpy._core._multiarray_umath)
+#             unsignedinteger(__numpy.integer) (numpy._core._multiarray_umath)
+#             signedinteger(integer[_NBit]) (numpy stub)
+#             unsignedinteger(integer[_NBit1]) (numpy stub)
+#         inexact(number[_NBit, _InexactItemT_co], Generic[_NBit, _InexactItemT_co]) (numpy stub)
+#             complexfloating(__numpy.inexact) (numpy._core._multiarray_umath)
+#             floating(__numpy.inexact) (numpy._core._multiarray_umath)
+#             floating(_RealMixin, _RoundMixin, inexact[_NBit1, float]) (numpy stub)
+#                 float64(floating[_64Bit], float) (numpy stub)
+#             complexfloating(inexact[_NBit1, complex], Generic[_NBit1, _NBit2]) (numpy stub)
+#                 complex128(complexfloating[_64Bit, _64Bit], complex) (numpy stub)
+#     bool(generic[_BoolItemT_co], Generic[_BoolItemT_co]) (numpy stub)
+#     object_(_RealMixin, generic) (numpy stub)
+#     timedelta64(_IntegralMixin, generic[_TD64ItemT_co], Generic[_TD64ItemT_co]) (numpy stub)
+#     datetime64(_RealMixin, generic[_DT64ItemT_co], Generic[_DT64ItemT_co]) (numpy stub)
+#     flexible(_RealMixin, generic[_FlexibleItemT_co], Generic[_FlexibleItemT_co]) (numpy stub)
+#         character(__numpy.flexible) (numpy._core._multiarray_umath)
+#         void(flexible[bytes | tuple[Any, ...]]) (numpy stub)
+#             record(nt.void) (numpy._core.records)
+#             record(np.void) (numpy._core.records stub)
+#         character(flexible[_CharacterItemT_co], Generic[_CharacterItemT_co]) (numpy stub)
+#             bytes_(character[bytes], bytes) (numpy stub)
+#             str_(character[str], str) (numpy stub)
+
+try:
+    import numpy as np
+
+    NP_GENERIC = np.generic
+
+    PY_TYPES = (bool, float, int, complex)
+
+    NP_TYPES = (
+        np.bool, np.integer, np.inexact, np.floating,
+        np.int8, np.int16, np.int32, np.int64,
+        np.uint8, np.uint16, np.uint32, np.uint64,
+        np.float16, np.float32, np.float64,
+        np.complex64, np.complex128
+    )
+
+
+    class IsNumpyArray(IsInstance):
+        def __init__(self, tp):
+            super().__init__(tp)
+
+        def is_instance(self, obj) -> bool:
+            if not isinstance(obj, np.ndarray):
+                return False
+
+            arry: np.ndarray = obj
+            n_args = len(self.args)
+            if n_args == 0:
+                return True
+
+            # shape
+            if n_args >=1:
+                shape = self.args[0]
+                # Any
+                if shape == Any:
+                    pass
+                # (1,2)
+                elif isinstance(shape, tuple|list) and tuple(shape) != arry.shape:
+                    return False
+                # (1,2)
+                elif isinstance(shape, tuple|list) and tuple(shape) == arry.shape:
+                    pass
+                # tuple[int,int]
+                elif len(get_args(shape)) != len(arry.shape):
+                    return False
+
+            # shape, dtype
+            # dtype: bool, int, float
+            #        np.bool, ...
+            #        np.dtype[type]
+            if n_args == 2:
+                dtype = self.args[1]
+                if len(get_args(dtype)) > 0:
+                    dtype = get_args(dtype)[0]
+
+                if dtype == Any:
+                    return True
+                elif dtype in PY_TYPES and dtype != arry.dtype.type:
+                    return False
+                elif dtype in NP_TYPES and not issubclass(arry.dtype.type, dtype):
+                    return False
+            # end
+            return True
+
+    IS_INSTANCE_OF["numpy.ndarray"] = IsNumpyArray
+except Exception as e:
+    pass
+
+
+# ---------------------------------------------------------------------------
+# Optional module: pandas
+# ---------------------------------------------------------------------------
+
+try:
+    import pandas as pd
+
+    # Check if the type is a DataFrame or a Series
+    #
+    # For a DataFrame it is possible to check:
+    #   1) if there are a list of columns
+    #   2) if the columns have a specific type
+    #   3) if contains 'at most' a list of columns.
+    #      The other columns can be represented by '*'
+    #      Simplified: it is checked if contains 'at minimum'
+    #      the specified list of columns
+    #
+    # For a Series it is possible to check:
+    #   1) it is of the specified type
+    #
+    # Syntax:
+    #   pd.Series[type]
+    #   pd.DataFrame["name1", ...]
+    #   pd.DataFrame[["name1", ...]]
+    #   pdDataFrame[{"name1": type, ...}]
+    #
+    #
+
+    # ---------------------------------------------------------------------------
+    # __class_getitem__
+    # ---------------------------------------------------------------------------
+
+    if not hasattr(pd.Series, "__class_getitem__"):
+        @classmethod
+        def series_class_getitem(cls, item):
+            return typing._GenericAlias(pd.Series, item)
+
+
+        pd.Series.__class_getitem__ = series_class_getitem
+
+    if not hasattr(pd.DataFrame, "__class_getitem__"):
+        @classmethod
+        def dataframe_class_getitem(cls, item):
+            if not isinstance(item, tuple):
+                item = (item,)
+            return typing._GenericAlias(pd.DataFrame, item)
+
+
+        pd.DataFrame.__class_getitem__ = dataframe_class_getitem
+
+
+    # ---------------------------------------------------------------------------
+    # IsPandas
+    #   IsSeries
+    #   IsDataFrame
+    #
+
+    class IsPandas(IsInstance):
+        def __init__(self, tp):
+            super().__init__(tp)
+
+
+    class IsSeries(IsPandas):
+        def __init__(self, tp):
+            super().__init__(tp)
+
+        def is_instance(self, ser: pd.Series):
+            if not isinstance(ser, pd.Series):
+                return False
+
+            if len(self.args) == 0:
+                return True
+
+            base_type = self.args[0]
+            ser_dtype = ser.dtype.type
+            issc = issubclass(ser_dtype, base_type)
+
+            if issc or len(ser) == 0:
+                return True
+
+            # Note: dtype[object_] is a generic type to contain any other object type
+            #       The trick is to test just some objects
+            if not issubclass(ser_dtype, np.object_):
+                return False
+
+            # n = len(ser)
+            # for _ in range(10):
+            #     i = randrange(n)
+            #     val = ser.iloc[i]
+            #     if not is_instance(val, base_type):
+            #         return False
+            if len(ser) > 0:
+                val = ser.iloc[0]
+                if not is_instance(val, base_type):
+                    return False
+            return True
+
+
+    class IsDataFrame(IsPandas):
+        def __init__(self, tp):
+            super().__init__(tp)
+            # self._dtypes = tuple(set(self.args))
+            if len(self.args) == 0:
+                self._columns = []
+                self._coltypes = None
+            elif len(self.args) == 1 and isinstance(self.args[0], str):
+                self._columns = [self.args[0]]
+                self._coltypes = None
+            elif len(self.args) == 1 and isinstance(self.args[0], list):
+                self._columns = self.args[0]
+                self._coltypes = None
+            elif len(self.args) == 1 and isinstance(self.args[0], dict):
+                self._columns = list(self.args[0].keys())
+                self._coltypes = self.args[0]
+            elif len(self.args) > 1:
+                self._columns = self.args
+                self._coltypes = None
+            else:
+                raise ValueError("Unsupported 'pd.DataFrame[...]' syntax")
+            pass
+
+        def is_instance(self, df: pd.DataFrame):
+            if not isinstance(df, pd.DataFrame):
+                return False
+            if len(self._columns) == 0:
+                return True
+
+            columns = df.columns
+            for col in self._columns:
+                if col not in columns:
+                    return False
+
+            if self._coltypes is None:
+                return True
+
+            for col in columns:
+                ctype = self._coltypes[col]
+                dtype = df[col].dtype
+
+                if ctype is None:
+                    continue
+                if issubclass(dtype, ctype):
+                    continue
+                else:
+                    return False
+
+            # df_types = [t.type for t in df.dtypes]
+            # df_objects: list[tuple[int, typing.Any]] = []
+            #
+            # if len(self.args) != len(df_types):
+            #     return False
+            #
+            # for i, dft in enumerate(df_types):
+            #     # series of type 'O' require special treatment
+            #     if issubclass(dft, np.object_):
+            #         df_objects.append((i, dft))
+            #         continue
+            #     if not issubclass(dft, self._dtypes):
+            #         return False
+            #
+            # # special processing
+            # if len(df_objects) == 0:
+            #     if not self._check_object_types(df, df_objects):
+            #         return False
+            return True
+
+        def _check_object_types(self, df: pd.DataFrame, df_objects: list[tuple[int, typing.Any]]):
+            # TODO: missing implementation
+            for i, dft in enumerate(df_objects):
+                pass
+            return True
+
+
+    # end
+
+    IS_INSTANCE_OF['pandas.core.series.Series'] = IsSeries
+    IS_INSTANCE_OF['pandas.core.frame.DataFrame'] = IsDataFrame
+except Exception as e:
+    pass
 # ---------------------------------------------------------------------------
 # End
 # ---------------------------------------------------------------------------

@@ -126,6 +126,37 @@ def plot_log(log_file: path):
 # end
 
 
+def plot_all_ilp_plots(all_gl: dict[int, GurobiLog]):
+    fig, axs = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(6, 4))
+
+    c = -1
+    for nw in [50,60,70,80,90,100]:
+        c += 1
+        gl = all_gl[nw]
+
+        ax = axs[c//3, c%3]
+        plt.sca(ax)
+        plt.plot(gl.primal)
+        plt.plot(gl.dual)
+        if c == 0:
+            plt.legend(["primal", "dual"])
+
+        plt.text(0.75, 0.05, f"N={nw}",fontsize=8, transform=ax.transAxes)
+    # end
+
+    plt.tight_layout(pad=1.75)
+    # plt.tight_layout()
+
+    for i in range(2):
+        axs[i, 0].set_ylabel("solution_value")
+
+    for j in range(3):
+        axs[1,j].set_xlabel("steps")
+
+    fname = f"results_plots_ilp/ilp_history-7200s-all.png"
+    plt.savefig(fname, dpi=300)
+    pass
+# end
 
 # ---------------------------------------------------------------------------
 
@@ -135,9 +166,18 @@ def main():
     #     plot_log(log)
     # # end
 
+    all_logs = {}
+
     GUROBI_HOME=path("7200s")
-    for log in GUROBI_HOME.files("*.log"):
-        plot_log(log)
+    for log_file in GUROBI_HOME.files("*.log"):
+        # plot_log(log)
+        nw = nw_of(log_file.stem)
+        gl = GurobiLog(log_file)
+        gl.parse()
+
+        all_logs[nw] = gl
+
+    plot_all_ilp_plots(all_logs)
     # end
 # end
 

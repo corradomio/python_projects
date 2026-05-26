@@ -1,0 +1,47 @@
+[project]
+name = "check-face-embedding"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "torch",
+    "torchvision",
+    "pytorch_lightning",
+    "facenet-pytorch",
+    "insightface",
+#    "fastreid",
+    "opencv-python",
+    "gdown",
+    "tensorboard",
+    "path",
+    "deepface",
+
+    "tf-keras",
+
+    "insightface",
+    "onnxruntime",
+    "typing-extensions",
+    "pydantic",
+
+    "mediapipe",
+    "ultralytics<9.0.0",
+
+    "scipy-stubs~=1.17.1",
+]
+
+
+
+
+
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]

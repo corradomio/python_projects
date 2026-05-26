@@ -5,7 +5,6 @@ import skopt.space.space as skoss
 from skopt.space.space import Dimension, Integer, Real, Categorical
 from sktime.forecasting.model_selection import ForecastingSkoptSearchCV as Sktime_ForecastingSkoptSearchCV
 
-from stdlib.tprint import tprint, tprint_exception
 from stdlib.qname import create_from
 from ._base import ModelSelection
 
@@ -146,12 +145,11 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
         return self
 
     def _evaluate_step(self, y, X, optimizer, n_points, mapping=None):
-        tprint(f"... _evaluate_step on {n_points} points")
         try:
             return super()._evaluate_step(y, X, optimizer, n_points, mapping)
         except Exception as e:
-            tprint_exception(e)
-            return None
+
+
 
 # ---------------------------------------------------------------------------
 # End

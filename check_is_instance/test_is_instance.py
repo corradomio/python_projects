@@ -5,6 +5,8 @@ from stdlib.is_instance import is_instance, has_methods, Supertype, Not
 from stdlib.is_instance import Intersection, Literals, Mapping, Immutable
 
 
+NoneType = type(None)
+
 class C:
     def method(self):
         pass
@@ -130,7 +132,7 @@ def test_namedtuple():
 
 def test_callable():
     assert (is_instance(lambda x: x, Callable))
-    assert (is_instance(1, (type(None), str, float, bytes, int)))
+    assert (is_instance(1, (NoneType, str, float, bytes, int)))
 
 
 def test_type_alias():
@@ -178,11 +180,11 @@ def test_mapping():
 
 
 def test_union():
-    assert (is_instance(None, Union[None, type(None), int, float, bytes, str]))
-    assert (is_instance(1, Union[None, type(None), int, float, bytes, str]))
-    assert (is_instance(1.1, Union[None, type(None), int, float, bytes, str]))
-    assert (is_instance(bytes("ciccio", "utf-8"), Union[None, type(None), int, float, bytes, str]))
-    assert (is_instance('ciccio', Union[None, type(None), int, float, bytes, str]))
+    assert (is_instance(None, Union[None, NoneType, int, float, bytes, str]))
+    assert (is_instance(1, Union[None, NoneType, int, float, bytes, str]))
+    assert (is_instance(1.1, Union[None, NoneType, int, float, bytes, str]))
+    assert (is_instance(bytes("ciccio", "utf-8"), Union[None, NoneType, int, float, bytes, str]))
+    assert (is_instance('ciccio', Union[None, NoneType, int, float, bytes, str]))
 
 
 def test_class():
@@ -314,3 +316,33 @@ def test_is_protocol():
 
     assert (is_instance(F(), P))
 
+# ------------------------------------------------------------
+
+try:
+    import numpy as np
+
+
+    def test_numpy_array():
+        arry = np.zeros((1,2,3), dtype=float)
+        assert is_instance(arry, np.ndarray[[1,2,3], float])
+
+        assert is_instance(arry, np.ndarray)
+        assert is_instance(arry, np.ndarray[Any])
+        assert is_instance(arry, np.ndarray[[1,2,3]])
+        assert is_instance(arry, np.ndarray[tuple[int,int,int]])
+        assert is_instance(arry, np.ndarray[Any, Any])
+        assert is_instance(arry, np.ndarray[Any, np.dtype[float]])
+        assert is_instance(arry, np.ndarray[[1,2,3], np.dtype[float]])
+        assert is_instance(arry, np.ndarray[tuple[int,int,int], np.dtype[float]])
+        assert is_instance(arry, np.ndarray[Any, float])
+
+    def test_numpy_array_not():
+        arry = np.zeros((1, 2, 3), dtype=float)
+
+        assert not is_instance(arry, np.ndarray[tuple[int]])
+        assert not is_instance(arry, np.ndarray[Any, np.float16])
+        assert not is_instance(arry, np.ndarray[Any, np.dtype[np.float16]])
+
+
+except:
+    pass

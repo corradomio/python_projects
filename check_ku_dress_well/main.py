@@ -3,8 +3,20 @@ ROOT_DIR = Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring_data\tmp_resul
 
 def main():
 
+    total = 0
+    dress = 0
     for cam_track in ROOT_DIR.glob("*_DONE"):
+        total += 1
+        dress_well = cam_track / "dress_well"
+        not_dress_well = cam_track / "not_dress_well"
+
+        if dress_well.exists() or not_dress_well.exists():
+            continue
+
+        dress += 1
         print(cam_track)
+
+    print("total:", total, "dress:", dress)
 
 
 

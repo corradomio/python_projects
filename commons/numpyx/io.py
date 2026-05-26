@@ -2,7 +2,7 @@ from typing import Optional
 
 from numpy import asarray
 
-import csvx
+import stdlib.csvx as csvx
 
 
 # ---------------------------------------------------------------------------

@@ -1,18 +1,18 @@
 from math import sqrt
 
-from huggingface_hub.utils import endpoint_helpers
-
 from stdlib import csvx
 from stdlib.dictx import *
-from stdlib import jsonx
+
 
 LIBRARIES = ["darts","nf", "skl", "skt", "stf"]
 NOISES = [0,5,10,15,20,25]
 N_REPEATS = 20
 
+
 def ns_of(model: str):
     p = model.find('.')
     return model[:p]
+
 
 def name_of(model: str):
     p = model.find('.')
@@ -41,6 +41,7 @@ STDV_BAD = 0.1
 MSE_GOOD = 0.0001
 MSE_REASONABLE = 0.001
 MSE_BAD = 0.3
+
 
 def main():
     stats = {}
@@ -103,7 +104,10 @@ def main():
                     csv_data.append([
                         N, L, name, cat, mse_mean, mse_stdv, quality, stability
                     ])
-    # end
+                # end for cat
+            # end for name
+        # end for L
+    # end for N
     # jsonx.dump(stats, "scores/models_statistics.json")
     csvx.dump(csv_data,  "models_statistics.csv", header=["noise", "lib", "name", "ds", "mean", "stdv", "quality", "stability"])
     pass

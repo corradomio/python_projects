@@ -1,5 +1,5 @@
-from random import randrange
 import typing
+
 import numpy as np
 import pandas as pd
 
@@ -81,10 +81,14 @@ class IsSeries(IsPandas):
         if not issubclass(ser_dtype, np.object_):
             return False
 
-        n = len(ser)
-        for _ in range(10):
-            i = randrange(n)
-            val = ser.iloc[i]
+        # n = len(ser)
+        # for _ in range(10):
+        #     i = randrange(n)
+        #     val = ser.iloc[i]
+        #     if not is_instance(val, base_type):
+        #         return False
+        if len(ser) > 0:
+            val = ser.iloc[0]
             if not is_instance(val, base_type):
                 return False
         return True

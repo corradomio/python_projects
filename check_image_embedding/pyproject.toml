@@ -1,0 +1,29 @@
+[project]
+name = "check-image-embedding"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "pillow",
+    "opencv-python",
+    "opencv-contrib-python",
+    "torch",
+    "torchvision",
+    "facenet-pytorch",
+    "sixdrepnet",
+    "ultralytics",
+
+]
+
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
+]

@@ -4,7 +4,7 @@ import zipfile
 import gzip
 from typing import Optional
 
-from path import Path
+from pathlib import Path
 from datetime import datetime, time
 from stdlib.bag import bag
 from stdlib import tobool

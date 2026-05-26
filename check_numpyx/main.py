@@ -1,23 +1,24 @@
+from typing import Any
+from pprint import pprint
+
 import numpy as np
-import numpyx as npx
+
+
+# def ndarray_class_getitem_(cls, item: Any, /):
+#     pass
+#
+# np.ndarray.__dict__["__class_getitem__"] = ndarray_class_getitem_
 
 
 def main():
-    X = np.array([[r*10+c for c in range(1, 5)] for r in range(1, 10)])
-    y = np.array([100+i for i in range(1, 10)]).reshape((-1, 1))
+    # pprint(list.__class_getitem__)
+    # pprint(list.__dict__)
+    pprint(np.__version__)
 
-    Xp = np.array([[-(r*10+c) for c in range(1, 5)] for r in range(1, 10)])
-    yp = np.array([-(100+i) for i in range(1, 10)]).reshape((-1, 1))
+    # pprint(np.ndarray.__dict__)
+    pprint(np.ndarray[Any, np.dtype[np.float64]])
+    pprint(np.ndarray[tuple[int], np.dtype[np.int64]])
 
-    Xt, yt = npx.reshape(X, y, xlags=[0], ylags=[], tlags=[0, 1])
-
-    lf = npx.LagFuture(xlags=[0], ylags=[1], tlags=[0, 1])
-    yt = lf.fit(X, y).transform(Xp, 10)
-
-    for i in range(10):
-        Xt = lf.step(i)
-
-    pass
 # end
 
 
