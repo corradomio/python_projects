@@ -30,7 +30,6 @@ check_openai_
 .mvn
 .venv
 .env
-.onnx
 
 Hands*
 __modules

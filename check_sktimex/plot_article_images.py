@@ -8,14 +8,12 @@ import matplotlib.ticker as ticker
 from synth import create_synthetic_data
 
 
-MODELS = [
+WAVEFORMS = [
     # "pos",
     "saw", "sin", "sinabs", "sq", "tri", "was"
 ]
 
-SEASONALITIES = [
-    3, 6, 12, 24, 36, 48
-]
+SEASONALITIES = [3, 6, 12, 24, 36, 48]
 
 
 def plot_timeseries(df: pd.DataFrame, trend=False):
@@ -25,10 +23,10 @@ def plot_timeseries(df: pd.DataFrame, trend=False):
     dfdict = pdx.groups_split(df, groups=["cat"])
 
     if trend:
-        models = [f"{m}24-t" for m in MODELS]
+        waveform = [f"{m}24-t" for m in WAVEFORMS]
     else:
-        models = [f"{m}24" for m in MODELS]
-    for i, m in enumerate(models):
+        waveform = [f"{m}24" for m in WAVEFORMS]
+    for i, m in enumerate(waveform):
         data = dfdict[(m,)]
         plt.subplot(231+i)
         plt.plot(data["y"])
