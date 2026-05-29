@@ -8,32 +8,7 @@
 #   2) nome
 #   3) trend
 
-from stdlib import csvx
-
-MODEL_CLASSES = ["stat", "reg", "lin", "rnn", "cnn", "tran","misc"]
-
-LIBRARIES = ["darts","nf", "skl", "skt", "stf"]
-
-NOISES = [0,5,10,15,20,25]
-
-WAVEFORMS = ["saw", "sin", "sinabs", "sq", "tri", "was"]
-# "pos": special case
-
-SEASONALITIES = [3, 6, 12, 24, 48]
-
-TRENDS = [False, True]
-
-QUALITY_MAP = {
-    "good": 0,
-    "reasonable": 1,
-    "bad": 2,
-    "horrible": 3,
-    "undefined": 4,
-}
-
-MSE_GOOD = 0.0001
-MSE_REASONABLE = 0.01
-MSE_BAD = 0.3
+from common import *
 
 
 def extract_bad_models_plain():

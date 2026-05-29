@@ -7,9 +7,6 @@ import warnings
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from filelock import FileLock
-from sklearn.metrics import r2_score
-from sktime.performance_metrics.forecasting import MeanAbsoluteError, MeanSquaredError
 
 import pandasx as pdx
 import sktimex as sktx
@@ -17,7 +14,6 @@ import sktimex.utils
 from joblibx import Parallel, delayed
 from sktimex.forecasting import create_forecaster
 from stdlib import jsonx
-from stdlib.qname import ns_of
 from stdlib.tprint import tprint
 from synth import create_synthetic_data
 
@@ -249,45 +245,6 @@ def check_model(
         log.exception(f"ERROR[{name}]:", e)
         traceback.print_exception(*sys.exc_info())
 # end
-
-
-# def check_models(
-#         df: pd.DataFrame,
-#         jmodels: dict[str, dict],
-# ):
-#     log = logging.getLogger("main")
-#     dfdict = pdx.groups_split(df, groups=["cat"])
-#     cats = list(map(lambda k:k[0], dfdict.keys()))
-#
-#     if MODE == "sequential":
-#         # -- sequential
-#         for name in jmodels:
-#             for cat in cats:
-#                 # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-#                 #         and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-#                 #         and (name, cat) not in SPECIAL_EXCLUSIONS
-#                 # ):
-#                 if (name, cat) not in SPECIAL_EXCLUSIONS:
-#                     dfg = dfdict[(cat,)]
-#                     check_model(name, cat, dfg, jmodels[name],)
-#                 else:
-#                     log.info(f"--- {name}/{cat}: skipped ---")
-#
-#     else:
-#         # -- parallel
-#         Parallel(n_jobs=N_JOBS)(
-#             delayed(check_model_par)(name, cat, dfdict[(cat,)], jmodels[name])
-#             for cat in cats
-#             for name in jmodels
-#             if (name, cat) not in SPECIAL_EXCLUSIONS
-#             # if (included(name, MODELS_INCLUDED, MODELS_EXCLUDED)
-#             #     and included(cat, CATS_INCLUDED, CATS_EXCLUDED)
-#             #     and (name, cat) not in SPECIAL_EXCLUSIONS
-#             # )
-#         )
-#
-#     pass
-# # end
 
 
 def check_models(

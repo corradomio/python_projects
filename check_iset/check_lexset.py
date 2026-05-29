@@ -1,18 +1,17 @@
 from stdlib.iset import *
 from stdlib.tprint import tprint
 
-N = 5
+print(comb(10,5))
+
+N = 3
 M = 1 << N
 
 tprint(f"Start {M} ...", force=True)
 print("  n     S      L      T")
 print("--------------------------")
 #         0:    0 ->   0 ->   0
-for S in range(0, M):
-    n = ihighbit(S)+1
-    L = ilexidx(S, N)
+for L in range(0, M):
     T = ilexset(L, N)
-    print(f"{n:3}:  {S:3} -> {L:3} -> {T:3}")
-    assert S == T
+    print(f"{L:3} -> {ilist(T)} : {ilexidx(T, N)}")
 # end
 tprint("Done", force=True)

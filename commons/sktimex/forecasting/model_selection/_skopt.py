@@ -144,10 +144,11 @@ class ForecastingSkoptSearchCV(Sktime_ForecastingSkoptSearchCV, ModelSelection):
         super().set_params(**params)
         return self
 
-    def _evaluate_step(self, y, X, optimizer, n_points, mapping=None):
-        try:
-            return super()._evaluate_step(y, X, optimizer, n_points, mapping)
-        except Exception as e:
+    # def _evaluate_step(self, y, X, optimizer, n_points, mapping=None):
+    #     try:
+    #         return super()._evaluate_step(y, X, optimizer, n_points, mapping)
+    #     except Exception as e:
+
 
 
 

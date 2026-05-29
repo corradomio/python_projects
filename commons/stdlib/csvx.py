@@ -118,7 +118,7 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
     :param tuple na: (<simbol used for 'na'>, <replacement>)
     :return: tuple(<list_of_records>, <dictionary_of_categories>)
     """
-    print("Loading {} ...".format(fname))
+    # print("Loading {} ...".format(fname))
 
     dtype = dtype[:] if dtype is not None else None
     CATEGORIES = dict()
@@ -327,7 +327,7 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
                 break
         # end
     # end
-    print("... loaded {} records".format(line))
+    # print("... loaded {} records".format(line))
 
     return INVERSECAT
 # end
@@ -697,6 +697,120 @@ def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> 
         import json
         json.dump(jdata, fp)
     return jdata
+# end
+
+
+#
+# \begin{tabular}{ l|r|r|r|r|r|r|r }
+#     class & n.datasets & good & reasonable & bad & horrible & g+r & b+h \\
+#     \hline
+#     \texttt{stat} & 1989 & 543 &  68 &  868 & 510 &  611 & 1378 \\
+#     \texttt{reg}  & 2426 & 722 & 374 & 1018 & 312 & 1096 & 1330 \\
+#     \texttt{lin}  & 1337 & 129 & 554 &  484 & 170 &  683 &  654 \\
+#     \texttt{rnn}  &  634 &  96 & 299 &  177 &  62 &  395 &  239 \\
+#     \texttt{cnn}  &  421 &  37 & 219 &  123 &  42 &  256 &  165 \\
+#     \texttt{tran} &  788 &  16 & 275 &  409 &  88 &  291 &  497 \\
+#     \texttt{misc} &  334 &  32 & 138 &   99 &  65 &  170 &  164 \\
+#     \hline
+#     % \bottomrule
+# \end{tabular}
+
+def dump_latex(data, header, fmt=".3",
+               tt_header=False,
+               tt_column=False,
+               bottom_line=False):
+    # str           -> left
+    # int, float    -> right
+    n = len(data)
+    nh = len(header)
+
+    def _align(i):
+        if isinstance(data[0][i], str):
+            return "l"
+        elif isinstance(data[0][i], int|float):
+            return "r"
+        else:
+            return "l"
+
+    def _alignment():
+        a = "{ " + _align(0)
+        for i in range(1, nh):
+            a += " | " + _align(i)
+        a += " }"
+        return a
+
+    def _begin_line():
+        begin = r"\begin{tabular}" + _alignment()
+        return begin
+
+    def _end_line():
+        return r"\end{tabular}"
+
+    # format header label
+    def _fmth(h):
+        h = h.replace("_", "\\_")
+        if tt_header:
+            return f"\\texttt{{{h}}}"
+        else:
+            return h
+
+    # compose table header
+    def _header():
+        h = _fmth(header[0])
+        for i in range(1, nh):
+            h += " & " + _fmth(header[i])
+        h += " \\\\"
+        return h
+
+    # format value
+    def _fmtv(v):
+        if isinstance(v, float) and fmt is not None:
+            return ("{:" + fmt + "}").format(v)
+        if isinstance(v, str):
+            v = v.replace("_", "\\_")
+        else:
+            v = str(v)
+        return v
+
+    # format first column
+    def _fmt1(c):
+        if tt_column:
+            return f"\\texttt{{{c}}}"
+        else:
+            return c
+
+    # compose record
+    def _record(i):
+        rec = data[i]
+
+        c = _fmtv(rec[0])
+        r = _fmt1(c)
+
+        for i in range(1, nh):
+            r += " & " + _fmtv(rec[i])
+        r += " \\\\\n"
+        return r
+
+    # compose table body
+    def _body():
+        body = ""
+        for i in range(n):
+            body += _record(i)
+
+        # remove last "\n"
+        body = body[:-1]
+        return body
+
+    def _bottom_line():
+        return r"\hline"
+
+    print(_begin_line())
+    print(_header())
+    print("\\hline")
+    print(_body())
+    if bottom_line: print(_bottom_line())
+    print(_end_line())
+    pass
 # end
 
 

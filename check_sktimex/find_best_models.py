@@ -27,17 +27,16 @@ warnings.simplefilter("ignore", UserWarning)
 warnings.simplefilter("ignore", FutureWarning)
 
 TARGET = "y"
-N_JOBS = 6
-# MODE = "sequential"
-# MODE = "parallel"
 
 
 SPECIAL_EXCLUSIONS = [
     ("darts.CatBoostModel", "pos"),     # unsupported data
     ("skl.CatBoostRegressor", "pos"),   # unsupported data
-    ("stf.AutoCES", "pos")
+    ("stf.AutoCES", "pos"),
+    ("skt.AutoREG", "sq48-t")
 ]
 
+SEASONALITIES = [3, 6, 12, 24, 48]
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -162,6 +161,15 @@ def is_already_plotted(name: str, cat: str) -> bool:
     return os.path.exists(fname)
 
 
+def has_seasonality(name: str, cat: str) -> bool:
+    if len(SEASONALITIES) == 0:
+        return True
+    for s in SEASONALITIES:
+        if str(s) in cat:
+            return True
+    return False
+
+
 def handle_category(name, cat, jmodels):
     # if (name, cat) in SPECIAL_EXCLUSIONS:
     #     return False
@@ -197,10 +205,20 @@ def check_model(
 ):
     log = logging.getLogger("main")
 
+    # -----------------------------------------------------------------------
+    # Skip not necessary models
+
     if is_excluded(name, cat):
         return
+
     if is_already_plotted(name, cat):
         return
+
+    if not has_seasonality(name, cat):
+        return
+
+    # end
+    # -----------------------------------------------------------------------
 
     jmodel = {}|jmodel
     jmodel["forecaster"] = {}|jmodel["forecaster"]
@@ -269,6 +287,9 @@ def check_model(
 # ---------------------------------------------------------------------------
 
 N_JOBS = 6
+# N_JOBS = 6
+# MODE = "sequential"
+# MODE = "parallel"
 
 def check_models(cats: list[str], jmodels: dict[str, dict]):
     log = logging.getLogger("main")
@@ -298,8 +319,8 @@ def main():
     df = create_synthetic_data(48 * 4, 0.0, 1, 0.33)
     cats = df["cat"].unique().tolist()
 
-    config_dir = "config_auto"
-    # config_dir = "config_auto_upd"
+    # config_dir = "config_auto"
+    config_dir = "config_auto_upd"
 
     for config in [
         "auto_darts_models",

@@ -1,13 +1,12 @@
 from typing import Optional, Union
 
-from neuralforecast.tsdataset import TimeSeriesDataset
-from sktime.forecasting.base import ForecastingHorizon
-import neuralforecast.models as nfm
-import neuralforecastx.models as nfxm
 import neuralforecast.common._base_model as nfc
 import pandas as pd
-import pandasx as pdx
+from neuralforecast.tsdataset import TimeSeriesDataset
+from sktime.forecasting.base import ForecastingHorizon
 
+import neuralforecastx.models as nfxm
+import pandasx as pdx
 from pandasx import xy_split
 from stdlib import qname
 
