@@ -7,17 +7,15 @@
 #   1) stagionalita
 #   2) nome
 #   3) trend
+import _markupbase
 
+import _bisect
 import matplotlib.pyplot as plt
 import numpy as np
 
-from stdlib.dictx import dict_set, dict_get
+from stdlib.dictx import *
 from common import *
 
-# COLORMAP = colors.ListedColormap(['green', 'yellow', 'red', 'brown', 'black'])
-# COLORMAP = 'plasma'
-COLORMAP = "viridis"
-# COLORMAP = None
 
 def _compose_models_stats(data, models_class):
     models_stats = {}
@@ -26,23 +24,20 @@ def _compose_models_stats(data, models_class):
     index = -1
     for rec in data:
         index += 1
-        lib, name = "unk", "unk"
         try:
             lib, name, cat, mean, quality = rec
-            clazz = models_class[(lib, name)]
+            model_class = models_class[(lib, name)]
             waveform, seasonality, trend = split_waveform_seasonality(cat)
             iquality = QUALITY_MAP[quality]
 
-            dict_set(models_stats, [clazz, f"{lib}.{name}", seasonality, waveform, trend], iquality)
-        except KeyError:
-            print(f"ERROR: missing {lib},{name}")
+            dict_set(models_stats, [model_class, f"{lib}.{name}", seasonality, waveform, trend], iquality)
         except ValueError:
             print(f"ERROR: invalid {rec}:{index}")
         pass
     return models_stats
 
 
-def prepare_stats_matrix(models_stats, models_class):
+def _prepare_stats_matrix(models_stats):
     def list_models():
         rows = []
         for model_class in MODEL_CLASSES:
@@ -69,10 +64,10 @@ def prepare_stats_matrix(models_stats, models_class):
     def stat_get(model, dataset):
         # model: (class, lib.name)
         # dataset: (seasonality, waveform, trend)
-        clazz, lib_name = model
+        model_class, lib_name = model
         seasonality, waveform, trend = dataset
 
-        stat = dict_get(models_stats, [clazz, lib_name, seasonality, waveform, trend], 4)
+        stat = dict_get(models_stats, [model_class, lib_name, seasonality, waveform, trend], 4)
         return stat
 
     models = list_models()
@@ -88,7 +83,7 @@ def prepare_stats_matrix(models_stats, models_class):
     return mat.T
 
 
-def plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
+def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
     plt.clf()
     plt.figure(figsize = (6, 3.2))
     ax = plt.gca()
@@ -134,11 +129,11 @@ def plot_models_statistics(tuned):
 
     models_stats = _compose_models_stats(data, models_class)
 
-    mat = prepare_stats_matrix(models_stats, models_class)
+    mat = _prepare_stats_matrix(models_stats)
 
     fname = "stats/models_tuned_statistics.png" if tuned else "stats/models_plain_statistics.png"
     title = "Tuned models" if tuned else "Plain models"
-    plots_models_stats(fname, title, models_stats, mat)
+    _plots_models_stats(fname, title, models_stats, mat)
 
 
 def main():
@@ -150,3 +145,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

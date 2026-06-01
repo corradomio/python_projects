@@ -8,7 +8,6 @@ Models
     LittleFaceNet
 
 
-
 Loss functions
     AdaFace
     ArcFace
@@ -21,3 +20,7 @@ Loss functions
 Feature extraction
     ResNet50
     InceptionV3
+
+
+Why "FastReID" is commented?
+    https://github.com/jdai-cv/fast-Reid

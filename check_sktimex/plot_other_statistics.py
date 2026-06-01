@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import matplotlib.pyplot as plt
 import numpy as np
 from pprint import pprint
@@ -15,8 +17,23 @@ def _compose_seasonal_statistics(tuned, with_trend):
     # lib, name, cat, mean, quality
     data = load_models_statistics(tuned)
 
-    data_stats = {}
-    check_stats = {}
+    data_stats = defaultdict(lambda: {
+                "models": set(),
+                "datasets": 0,
+                "good": 0,
+                "reasonable": 0,
+                "bad": 0,
+                "horrible": 0
+            })
+
+    check_stats = defaultdict(lambda: {
+                "models": set(),
+                "datasets": 0,
+                "good": 0,
+                "reasonable": 0,
+                "bad": 0,
+                "horrible": 0
+            })
 
     for rec in data:
         lib, name, cat, mean, quality = rec
@@ -26,15 +43,16 @@ def _compose_seasonal_statistics(tuned, with_trend):
         t = 1 if with_trend and trend else 0
 
         key = (model_class, seasonality, t)
-        if key not in data_stats:
-            data_stats[key] = {
-                "models": set(),
-                "datasets": 0,
-                "good": 0,
-                "reasonable": 0,
-                "bad": 0,
-                "horrible": 0
-            }
+
+        # if key not in data_stats:
+        #     data_stats[key] = {
+        #         "models": set(),
+        #         "datasets": 0,
+        #         "good": 0,
+        #         "reasonable": 0,
+        #         "bad": 0,
+        #         "horrible": 0
+        #     }
 
         s_stat = data_stats[key]
         s_stat["models"].add(f"{lib}.{name}")
@@ -45,15 +63,15 @@ def _compose_seasonal_statistics(tuned, with_trend):
         # Check consistency!
         # Non sembra i numeri corrispondano!
 
-        if model_class not in check_stats:
-            check_stats[model_class] = {
-                "models": set(),
-                "datasets": 0,
-                "good": 0,
-                "reasonable": 0,
-                "bad": 0,
-                "horrible": 0
-            }
+        # if model_class not in check_stats:
+        #     check_stats[model_class] = {
+        #         "models": set(),
+        #         "datasets": 0,
+        #         "good": 0,
+        #         "reasonable": 0,
+        #         "bad": 0,
+        #         "horrible": 0
+        #     }
 
         c_stat = check_stats[model_class]
         c_stat["models"].add(f"{lib}.{name}")

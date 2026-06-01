@@ -5,8 +5,8 @@
 # sorted(iterable, /, *, key=None, reverse=False
 #
 
-def sort_by_key(iterable, key):
-    return sorted(iterable, key=key)
+def sort_by_key(iterable, key, reverse: bool=False):
+    return sorted(iterable, key=key, reverse=reverse)
 
 
 def sort_by_comparator(iterable, comparator):

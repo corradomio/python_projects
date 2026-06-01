@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from stdlib import jsonx
 from common import *
 
@@ -9,7 +11,7 @@ from common import *
 def main():
     data = csvx.load("stats/models_plain_statistics.csv", skiprows=1)
     n = len(data)
-    auto_models = {}
+    auto_models = defaultdict(lambda: {})
 
     for rec in data:
         lib, name, cat, mean, quality = rec
@@ -20,8 +22,8 @@ def main():
         if mean < MSE_BAD:
             continue
 
-        if lib not in auto_models:
-            auto_models[lib] = {}
+        # if lib not in auto_models:
+        #     auto_models[lib] = {}
 
         lib_auto_models = auto_models[lib]
 

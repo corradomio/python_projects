@@ -90,7 +90,7 @@ def do_train(cfg,
             logger.info("Epoch {} done. Time per batch: {:.3f}[s] Speed: {:.1f}[samples/s]"
                     .format(epoch, time_per_batch, train_loader.batch_size / time_per_batch))
 
-        if epoch % checkpoint_period == 0:
+        if (epoch % checkpoint_period == 0) or (epoch == epochs):
             if cfg.MODEL.DIST_TRAIN:
                 if dist.get_rank() == 0:
                     torch.save(model.state_dict(),

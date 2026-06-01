@@ -3,32 +3,37 @@ name = "check-face-embedding"
 version = "0.1.0"
 requires-python = ">=3.12"
 dependencies = [
-    "torch",
-    "torchvision",
-    "pytorch_lightning",
-    "facenet-pytorch",
-    "insightface",
-#    "fastreid",
     "opencv-python",
     "gdown",
-    "tensorboard",
-    "path",
-    "deepface",
-
-    "tf-keras",
-
-    "insightface",
-    "onnxruntime",
     "typing-extensions",
     "pydantic",
 
+    "torch",
+    "torchvision",
+    "pytorch_lightning",
+
+    "tf-keras",
+    "onnxruntime",
+
+    "tensorboard",
+    "path",
+
+    "facenet-pytorch",
+    "insightface",
+    "deepface",
     "mediapipe",
     "ultralytics<9.0.0",
 
+    # "fastreid" requires Python 3.14 AND torch 1.13.1
+    # NO: it seems fatreid-1.4.0 has removed the check on Torch version
+    # Dependencies:
+    #   the library requires "faiss" but in Windows it is available ONLY the CPU version
+    "faiss-cpu",
+    "scikit-learn",
+    "yacs",
+
     "scipy-stubs~=1.17.1",
 ]
-
-
 
 
 

@@ -1,6 +1,11 @@
 from math import sqrt
 from stdlib import csvx
 
+# COLORMAP = colors.ListedColormap(['green', 'yellow', 'red', 'brown', 'black'])
+# COLORMAP = 'plasma'
+COLORMAP = "viridis"
+# COLORMAP = None
+
 
 LIBRARIES = ["darts","nf", "skl", "skt", "stf"]
 NOISES = [0,5,10,15,20,25]
@@ -35,6 +40,15 @@ QUALITY_MAP = {
     "bad": 2,
     "horrible": 3,
     "undefined": 4,
+}
+
+STABILITY_MAP = {
+    "stable": 0,
+    "good": 1,
+    "reasonable": 2,
+    "bad": 3,
+    "horrible": 4,
+    "undefined": 5,
 }
 
 
@@ -78,12 +92,30 @@ def load_models_class() -> dict[tuple[str, str], str]:
     models_class: dict[tuple[str, str], str] = {}
     for rec in data:
         # library,model,class
-        lib, name, clazz = rec
-        models_class[(lib, name)] = clazz
+        lib, name, model_class = rec
+        models_class[(lib, name)] = model_class
 
     # dict[(lib, name)] -> class
     return models_class
 
+
+def load_models_variability(as_stats=False, with_noise=-1):
+    # noise,lib,name,cat,mean,stdv,quality,stability
+    data_plain = csvx.load("stats/models_variability_statistics.csv", skiprows=1, dtype=[int, str, str, str, float, float, str, str])
+
+    data_noise = []
+    for rec in data_plain:
+        noise, lib, name, cat, mean, stdv, quality, stability = rec
+        if with_noise != -1 and noise != with_noise: continue
+        if "." in name: continue
+        if "36" in cat: continue
+
+        # lib,name,cat,mean,quality
+        if as_stats:
+            data_noise.append((lib, name, cat, mean, quality))
+        else:
+            data_noise.append(rec)
+    return data_noise
 
 # ---------------------------------------------------------------------------
 
@@ -122,27 +154,10 @@ def _load_tuned_statistics():
     data = [rec for rec in data if "36" not in rec[2]]
     return data
 
-def _load_noise_statistics(with_noise=0):
-    # noise,lib,name,cat,mean,stdv,quality,stability
-    data_plain = csvx.load("stats/models_variability_statistics.csv", skiprows=1, dtype=[int, str, str, str, float, float, str, str])
-
-    # lib,name,cat,mean,quality
-    data_noise = []
-    for rec in data_plain:
-        noise, lib, name, cat, mean, stdv, quality, stability = rec
-        if noise != with_noise: continue
-        if "." in name: continue
-        if "36" in cat: continue
-
-        # lib,name,cat,mean,quality
-        data_noise.append((lib, name, cat, mean, quality))
-    return data_noise
-
 
 def load_models_statistics(tuned=False):
     if tuned:
         return _load_tuned_statistics()
-        # return _load_noise_statistics()
     else:
         return _load_plain_statistics()
 # end
