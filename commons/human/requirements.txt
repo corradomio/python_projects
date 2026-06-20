@@ -1,0 +1,55 @@
+# -- utilities --
+opencv-python
+gdown
+pydantic
+path
+
+# forward compatibility of typing package
+# for previus versions of Python
+# WHO does use it ???
+typing-extensions
+
+# -- torch --
+torch
+torchvision
+pytorch_lightning
+
+# -- yolo --
+ultralytics<9.0.0
+
+
+# -- other nn models --
+tf-keras
+onnxruntime
+tensorboard
+
+
+# -- face detection --
+face-detection
+facenet-pytorch
+facetorch
+insightface
+deepface
+mediapipe
+
+
+# -- transreid --
+timm
+yacs
+opencv-python
+
+
+# -- fastreid --
+faiss-cpu
+scikit-learn
+yacs
+
+
+# -- clipreid --
+ftfy
+regex
+
+
+# -- face direction --
+sixdrepnet
+sixdrepnet360

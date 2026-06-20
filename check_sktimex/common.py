@@ -100,6 +100,8 @@ def load_models_class() -> dict[tuple[str, str], str]:
 
 
 def load_models_variability(as_stats=False, with_noise=-1):
+    models_class = load_models_class()
+
     # noise,lib,name,cat,mean,stdv,quality,stability
     data_plain = csvx.load("stats/models_variability_statistics.csv", skiprows=1, dtype=[int, str, str, str, float, float, str, str])
 
@@ -110,11 +112,13 @@ def load_models_variability(as_stats=False, with_noise=-1):
         if "." in name: continue
         if "36" in cat: continue
 
+        model_class = models_class[(lib, name)]
+
         # lib,name,cat,mean,quality
         if as_stats:
-            data_noise.append((lib, name, cat, mean, quality))
+            data_noise.append((model_class, lib, name, cat, mean, quality))
         else:
-            data_noise.append(rec)
+            data_noise.append([model_class] + rec)
     return data_noise
 
 # ---------------------------------------------------------------------------

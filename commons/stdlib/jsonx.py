@@ -44,12 +44,17 @@ from __future__ import annotations
 import json
 import os
 
-import numpy as np
-import numpy.dtypes as npdt
 import datetime as dt
 
+from pathlib import Path
 from typing import Optional, Union, cast, Any
 from datetime import datetime
+
+try:
+    import numpy as np
+    import numpy.dtypes as npdt
+except:
+    print("jsonx - Numpy library is not installed.")
 
 try:
     import pandas as pd
@@ -70,49 +75,58 @@ TIMESTAMP_FORMAT = '%Y-%m-%d %H:%M:%S'
 # Pandas support
 # ---------------------------------------------------------------------------
 
-def _pandas_to_jsonx(
-        data: Union[pd.Series, pd.DataFrame],
-        path: Optional[str] = None,
-        date_format=None,
-        **kwargs) -> dict:
+try:
+    PD_TYPES = [
+        pd.Series, pd.DataFrame
+    ]
 
-    if date_format not in [None, 'iso', 'epoch']:
-        data = data.copy()
-        if isinstance(data, pd.DataFrame):
-            for c in data.columns:
-                s = data[c]
-                if pd.DatetimeTZDtype.is_dtype(s.dtype):
-                    data[c] = s.dt.strftime(date_format)
-                elif pd.PeriodDtype.is_dtype(s.dtype):
-                    data[c] = s.dt.strftime(date_format)
-                elif s.dtype.name == 'datetime64[ns]':
-                    data[c] = s.dt.strftime(date_format)
+    def _pandas_to_jsonx(
+            data: Union[pd.Series, pd.DataFrame],
+            path: Optional[str] = None,
+            date_format=None,
+            **kwargs) -> dict:
+
+        if date_format not in [None, 'iso', 'epoch']:
+            data = data.copy()
+            if isinstance(data, pd.DataFrame):
+                for c in data.columns:
+                    s = data[c]
+                    if pd.DatetimeTZDtype.is_dtype(s.dtype):
+                        data[c] = s.dt.strftime(date_format)
+                    elif pd.PeriodDtype.is_dtype(s.dtype):
+                        data[c] = s.dt.strftime(date_format)
+                    elif s.dtype.name == 'datetime64[ns]':
+                        data[c] = s.dt.strftime(date_format)
+                    pass
                 pass
             pass
-        pass
+        # end
+
+        assert isinstance(data, (pd.DataFrame, pd.Series))
+        if path is None:
+            dtnow = datetime.now()
+            timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
+            json_file = f"tmp-{timestamp}.json"
+        else:
+            json_file = path
+
+        with open(json_file, mode="w") as fp:
+            data.to_json(fp, **kwargs)
+
+        if path is None:
+            with open(json_file, mode='r') as t:
+                jdata = json.load(t)
+            os.remove(json_file)
+        else:
+            jdata = {}
+
+        return jdata
     # end
+except:
+    PD_TYPES = []
 
-    assert isinstance(data, (pd.DataFrame, pd.Series))
-    if path is None:
-        dtnow = datetime.now()
-        timestamp = dtnow.strftime("%Y%m%d_%H%M%S_%f")
-        json_file = f"tmp-{timestamp}.json"
-    else:
-        json_file = path
-
-    with open(json_file, mode="w") as fp:
-        data.to_json(fp, **kwargs)
-
-    if path is None:
-        with open(json_file, mode='r') as t:
-            jdata = json.load(t)
-        os.remove(json_file)
-    else:
-        jdata = {}
-
-    return jdata
-# end
-
+    def _pandas_to_jsonx(*args, **kwargs):
+        pass
 
 # ---------------------------------------------------------------------------
 # Numpy support
@@ -120,55 +134,62 @@ def _pandas_to_jsonx(
 # JSON format supports ONLY Python types.
 # The numpy types must be converted into the correspondent Python type
 
-NP_FLOAT_TYPES = (
-    npdt.Float16DType,
-    npdt.Float32DType,
-    npdt.Float64DType,
-    npdt.LongDoubleDType
-)
+try:
+    NP_FLOAT_TYPES = (
+        npdt.Float16DType,
+        npdt.Float32DType,
+        npdt.Float64DType,
+        npdt.LongDoubleDType
+    )
 
-NP_INT_TYPES = (
-    npdt.Int8DType,
-    npdt.Int16DType,
-    npdt.Int32DType,
-    npdt.Int64DType,
+    NP_INT_TYPES = (
+        npdt.Int8DType,
+        npdt.Int16DType,
+        npdt.Int32DType,
+        npdt.Int64DType,
 
-    npdt.UInt8DType,
-    npdt.UInt16DType,
-    npdt.UInt32DType,
-    npdt.UInt64DType,
+        npdt.UInt8DType,
+        npdt.UInt16DType,
+        npdt.UInt32DType,
+        npdt.UInt64DType,
 
-    npdt.ByteDType,
-    npdt.ShortDType,
-    npdt.IntDType,
-    npdt.LongDType,
-    npdt.LongLongDType,
+        npdt.ByteDType,
+        npdt.ShortDType,
+        npdt.IntDType,
+        npdt.LongDType,
+        npdt.LongLongDType,
 
-    npdt.UByteDType,
-    npdt.UShortDType,
-    npdt.UIntDType,
-    npdt.ULongDType,
-    npdt.ULongLongDType,
-)
+        npdt.UByteDType,
+        npdt.UShortDType,
+        npdt.UIntDType,
+        npdt.ULongDType,
+        npdt.ULongLongDType,
+    )
 
-NP_TIME_TYPES = (
-    npdt.DateTime64DType,
-    npdt.TimeDelta64DType
-)
+    NP_TIME_TYPES = (
+        npdt.DateTime64DType,
+        npdt.TimeDelta64DType
+    )
 
 
-def _ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
-    atype = a.dtype
-    if atype in NP_FLOAT_TYPES:
-        return list(map(float, a))
-    elif atype in NP_INT_TYPES:
-        return list(map(int, a))
-    elif atype in NP_TIME_TYPES:
-        return list(map(lambda t: t.to_datetime().format(TIMESTAMP_FORMAT), a))
-    else:
-        return list(a)
-# end
+    def _ndarray_to_jsonx(a: np.ndarray) -> list[int|float|str]:
+        atype = a.dtype
+        if atype in NP_FLOAT_TYPES:
+            return list(map(float, a))
+        elif atype in NP_INT_TYPES:
+            return list(map(int, a))
+        elif atype in NP_TIME_TYPES:
+            return list(map(lambda t: t.to_datetime().format(TIMESTAMP_FORMAT), a))
+        else:
+            return list(a)
+    # end
+except:
+    NP_FLOAT_TYPES = []
+    NP_INT_TYPES = []
+    NP_TIME_TYPES = []
 
+    def _ndarray_to_jsonx(*args, **kwargs):
+        pass
 
 # ---------------------------------------------------------------------------
 # JSONX encoder
@@ -221,7 +242,7 @@ class JSONxEncoder(json.JSONEncoder):
         # elif isinstance(o, np.inexact):
         #     o = float(o)
 
-        if t in [pd.Series, pd.DataFrame]:
+        if t in PD_TYPES:
             return _pandas_to_jsonx(o, path=None, **self._pandas_kwargs)
 
         q = f'{t.__module__}.{t.__name__}'
@@ -385,7 +406,7 @@ def resolve(
 # jsonx.dump(obj, file)
 # ---------------------------------------------------------------------------
 
-def load(file: str, **kwargs) -> dict:
+def load(file: str|Path, **kwargs) -> dict:
     """
     Load the JSON in the specified file.
     It can replace strings in format:
@@ -412,14 +433,15 @@ def loads(s, **kwargs) -> dict:
 
 # ---------------------------------------------------------------------------
 
-def dump(obj, file: str, **kwargs):
+def dump(obj, file: str|Path, **kwargs):
     if 'indent' not in kwargs:
         kwargs['indent'] = 4
 
     open_kwargs = _dict_select(kwargs, OPEN_KWARGS)
     obj = _normalize(obj)
 
-    if isinstance(file, str):
+    if isinstance(file, (str, Path)):
+        file = str(file)
         with open(file, mode="w", **open_kwargs) as fp:
             json.dump(obj, fp, cls=JSONxEncoder, **kwargs)
     else:
@@ -469,7 +491,7 @@ class JSONConfig:
         self._marker = marker
     # end
 
-    def get(self, *keys, default="raise", params=None):
+    def get(self, keys, default="raise", params=None):
         """
         Navigate inside the configuration file to extract the value from the keys' path
 
@@ -486,14 +508,16 @@ class JSONConfig:
         """
         config = self._get_config()
 
-        if len(keys) == 1 and isinstance(keys[0], list):
-            keys = keys[0]
-        if len(keys) == 1 and isinstance(keys[0], str):
-            keys = keys[0].split(".")
+        # if len(keys) == 1 and isinstance(keys[0], (tuple, list)):
+        #     keys = keys[0]
+        # if len(keys) == 1 and isinstance(keys[0], str):
+        #     keys = keys[0].split(".")
+        if isinstance(keys, str):
+            keys = keys.split(".")
 
         for k in keys[:-1]:
             k = _as_int(k)
-            if isinstance(k, int) and isinstance(config, list):
+            if isinstance(k, int) and isinstance(config, (tuple, list)):
                 config = config[k]
             elif k not in config and default == "raise":
                 raise ValueError(f"Key {keys} not existent")
@@ -501,7 +525,7 @@ class JSONConfig:
                 config = config.get(k, EMPTY_DICT)
 
         k = _as_int(keys[-1])
-        if isinstance(k, int) and isinstance(config, list):
+        if isinstance(k, int) and isinstance(config, (tuple, list)):
             value = config[k]
         elif k not in config and default == "raise":
             raise ValueError(f"Key {keys} not existent")

@@ -17,8 +17,6 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-
-
     if args.config_file != "":
         cfg.merge_from_file(args.config_file)
     cfg.merge_from_list(args.opts)

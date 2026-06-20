@@ -25,11 +25,12 @@ import time
 TIMEDELAY = 3   # seconds
 
 def getLogger(name):
-    return get_logger(name)
-
-
-def get_logger(name):
+    # compatibility with Python 'logging'
     return Logger.getLogger(name)
+
+
+# def get_logger(name):
+#     return Logger.getLogger(name)
 
 # ---------------------------------------------------------------------------
 # Logger

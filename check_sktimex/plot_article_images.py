@@ -10,7 +10,8 @@ from synth import create_synthetic_data
 
 WAVEFORMS = [
     # "pos",
-    "saw", "sin", "sinabs", "sq", "tri", "was"
+    # "saw", "sin", "sinabs", "sq", "tri", "was"
+    "sin", "tri", "saw", "was", "sq", "sinabs"
 ]
 
 SEASONALITIES = [3, 6, 12, 24, 36, 48]
@@ -123,10 +124,10 @@ def main():
     df = create_synthetic_data(12 * 10, 0.0, 1, 0.33)
     print(df["cat"].unique())
 
-    # plot_timeseries(df)
-    # plot_seasonalities(df)
-    # plot_timeseries(df, trend=True)
-    # plot_seasonalities(df, trend=True)
+    plot_timeseries(df)
+    plot_seasonalities(df)
+    plot_timeseries(df, trend=True)
+    plot_seasonalities(df, trend=True)
 
     df00 = df
     df05 = create_synthetic_data(12 * 10, 5/100, 1, 0.33)

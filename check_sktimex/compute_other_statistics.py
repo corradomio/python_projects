@@ -247,10 +247,11 @@ def count_variability_by_class():
 def count_models_quality():
     print("-- count_models_quality --")
 
-    # noise,lib,name,cat,mean,stdv,quality,stability
+    # model_class, noise,lib,name,cat,mean,stdv,quality,stability
     data = load_models_variability()
 
     quality_stats = defaultdict(lambda: {
+        "class": None,
         "datasets": 0,
         "good": 0,
         "reasonable": 0,
@@ -259,15 +260,17 @@ def count_models_quality():
     })
 
     for rec in data:
-        noise, lib, name, cat, mean, stdv, quality, stability = rec
+        model_class, noise, lib, name, cat, mean, stdv, quality, stability = rec
 
         model_stats = quality_stats[(lib, name)]
+        model_stats["class"] = model_class
         model_stats["datasets"] += 1
         model_stats[quality] += 1
     # end
 
     stats = [
         (
+            quality_stats[lib_name]["class"],
             lib_name[0], lib_name[1],
             quality_stats[lib_name]["datasets"],
             quality_stats[lib_name]["good"],
@@ -278,7 +281,7 @@ def count_models_quality():
         for lib_name in quality_stats
     ]
 
-    stats = sort_by_key(stats, key=lambda r: (r[3]+r[4])/r[2], reverse=True)
+    stats = sort_by_key(stats, key=lambda r: (r[4]+r[5])/r[3], reverse=True)
     n = len(stats)
 
     # add the order
@@ -287,7 +290,7 @@ def count_models_quality():
 
 
     fname = "stats/models_quality_table.csv"
-    header = ["order", "lib", "name", "datasets"] + list(QUALITY_MAP.keys())[:-1]
+    header = ["order", "class", "lib", "name", "datasets"] + list(QUALITY_MAP.keys())[:-1]
 
     csvx.dump(stats, fname, header=header)
     csvx.dump_latex(stats, header=header, tt_header=False, tt_column=False, bottom_line=True)
@@ -301,6 +304,7 @@ def count_models_stability():
     data = load_models_variability()
 
     quality_stats = defaultdict(lambda: {
+        "class": None,
         "datasets": 0,
         "stable": 0,
         "good": 0,
@@ -310,17 +314,18 @@ def count_models_stability():
     })
 
     for rec in data:
-        noise, lib, name, cat, mean, stdv, quality, stability = rec
+        model_class, noise, lib, name, cat, mean, stdv, quality, stability = rec
 
         model_stats = quality_stats[(lib, name)]
+        model_stats["class"] = model_class
         model_stats["datasets"] += 1
         model_stats[stability] += 1
     # end
 
     stats = [
         (
-            lib_name[0],
-            lib_name[1],
+            quality_stats[lib_name]["class"],
+            lib_name[0], lib_name[1],
             quality_stats[lib_name]["datasets"],
             quality_stats[lib_name]["stable"],
             quality_stats[lib_name]["good"],
@@ -331,8 +336,8 @@ def count_models_stability():
         for lib_name in quality_stats
     ]
 
-    stats = sort_by_key(stats, key=lambda r: (r[3]+r[4]+r[5])/r[2], reverse=True)
-    stats = sort_by_key(stats, key=lambda r: (r[3],r[4],r[5]), reverse=True)
+    stats = sort_by_key(stats, key=lambda r: (r[4]+r[5]+r[6])/r[3], reverse=True)
+    stats = sort_by_key(stats, key=lambda r: (r[4],r[5],r[6]), reverse=True)
     n = len(stats)
 
     # add the order
@@ -341,7 +346,7 @@ def count_models_stability():
 
 
     fname = "stats/models_stability_table.csv"
-    header = ["order", "lib", "name", "datasets"] + list(STABILITY_MAP.keys())[:-1]
+    header = ["order", "class", "lib", "name", "datasets"] + list(STABILITY_MAP.keys())[:-1]
 
     csvx.dump(stats, fname, header=header)
     csvx.dump_latex(stats, header=header, tt_header=False, tt_column=False, bottom_line=True)

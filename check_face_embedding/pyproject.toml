@@ -7,23 +7,20 @@ dependencies = [
     "gdown",
     "typing-extensions",
     "pydantic",
-
     "torch",
     "torchvision",
     "pytorch_lightning",
-
     "tf-keras",
     "onnxruntime",
-
     "tensorboard",
     "path",
-
+    "face-detection",
     "facenet-pytorch",
+    "facetorch",
     "insightface",
     "deepface",
     "mediapipe",
     "ultralytics<9.0.0",
-
     # "fastreid" requires Python 3.14 AND torch 1.13.1
     # NO: it seems fatreid-1.4.0 has removed the check on Torch version
     # Dependencies:
@@ -31,8 +28,13 @@ dependencies = [
     "faiss-cpu",
     "scikit-learn",
     "yacs",
-
+    # transreid" dependencies
+    "timm",
+    # "clipreid" dependencies
+    "ftfy",
+    "regex",
     "scipy-stubs~=1.17.1",
+    "pandas-stubs~=3.0.3",
 ]
 
 

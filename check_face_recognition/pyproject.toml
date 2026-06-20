@@ -17,6 +17,7 @@ dependencies = [
     "ultralytics",
     "face_detection",
     "lap",
+    "gdown",
     # "deepface",
     "scipy-stubs~=1.17.1",
 ]

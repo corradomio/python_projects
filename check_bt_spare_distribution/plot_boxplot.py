@@ -62,12 +62,14 @@ def collect_algos_stats(d: path) -> dict:
 
 def plot_algos_stats_boxplot(all_stats: dict[int, dict]):
 
-    fig, axs = plt.subplots(2, 3, sharex=True, sharey=True, figsize=(6, 3))
+    fig, axs = plt.subplots(2, 3, sharex=False, sharey=False, figsize=(7, 3))
     c = -1
     for nw in NW_LIST:
         c += 1
         ax = axs[c//3, c%3]
-        plt.sca(ax)
+        twinx = ax
+        # twinx = ax.twinx()
+        # plt.sca(ax)
 
         algos_stats = all_stats[nw]
 
@@ -81,7 +83,7 @@ def plot_algos_stats_boxplot(all_stats: dict[int, dict]):
         A_names = ALGO_LABELS[:4]
         A_names = A_names[::-1]
 
-        plt.boxplot(
+        twinx.boxplot(
             D,
             positions=[1,2,3,4],
             showmeans=True, meanline=True,
@@ -90,7 +92,10 @@ def plot_algos_stats_boxplot(all_stats: dict[int, dict]):
             tick_labels=A_names
         )
 
-        plt.text(0.75, 0.9, f"N={nw}",fontsize=8, transform=ax.transAxes)
+        if c%3 > 0:
+            twinx.set_yticklabels([])
+
+        twinx.text(0.75, 0.9, f"N={nw}",fontsize=8, transform=twinx.transAxes)
 
         # plt.gca().set_xticklabels(ALGO_LABELS[:4])
         # plt.ylim(7000, 12000)

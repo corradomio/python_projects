@@ -15,9 +15,12 @@ from typing import Iterator
 import networkx as nx
 import numpy as np
 from .graph import Graph
-from scipy.sparse import csr_array
 from random import randrange
 
+try:
+    from scipy.sparse import csr_array
+except:
+    csr_array = np.array
 
 # ---------------------------------------------------------------------------
 # is_symmetric

@@ -174,7 +174,7 @@ def best_values(jdata: dict) -> np.ndarray:
 #     pass
 
 def plot_qq_all():
-    fig, axs = plt.subplots(4, 6, sharex=True, sharey=True, figsize=(6, 4))
+    fig, axs = plt.subplots(4, 6, sharex=True, sharey=True, figsize=(7, 4))
 
     N_list = [50,60,70,80,90,100]
     A_list = ["rvhc", "rvga", "rvsa", "rkeda"]
@@ -203,10 +203,13 @@ def plot_qq_all():
             # r: ok
             # q
             ax = axs[r,c]
-            sm.qqplot(data, line=ltype, ax=ax, fit=True)
+            fig = sm.qqplot(data, line=ltype, ax=ax, fit=True)
             # ax.set_title(f"{algo.upper()}")
             ax.set_xlabel('')
             ax.set_ylabel('')
+
+            for artist in ax.lines:
+                artist.set_markersize(3)  # adjust the size here
 
             # plt.text(0.75, 0.05, f"N={nw}", fontsize=8, transform=ax.transAxes)
         pass

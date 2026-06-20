@@ -2,6 +2,7 @@ check_causal_inference
 check_pinn_
 check_pinn_torch_
 check_openai_
+check_efhq
 
 *.bin
 *.csv
@@ -30,6 +31,7 @@ check_openai_
 .mvn
 .venv
 .env
+*.onnx
 
 Hands*
 __modules

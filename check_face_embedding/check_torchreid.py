@@ -1,59 +1,39 @@
-import numpy as np
 from pathlib import Path
-import cv2
-import torch
-import torch.nn.functional as F
-from torchvision import transforms
-import torchreid
+
+import numpy as np
 from scipy.spatial.distance import cdist
-from stdlib.is_instance import is_instance
+from torchvision import transforms
+
 from stdlib import csvx
+from stdlib.is_instance import is_instance
 from stdlib.tprint import tprint
+from human.torchreid import TorchReID, TORCHREID_MODEL_NAMES
 
-import numpy
-import pyximport
-pyximport.install(setup_args=dict(
-    include_dirs=[numpy.get_include()]
-))
 
-try:
-    from torchreid.metrics.rank_cylib.rank_cy import evaluate_cy
-except Exception as e:
-    print(e)
-    
+# IMAGE_DIRS = ["random_crop"]
+# SCORE_DIR = "scores_maurizio_randomcrop"
+IMAGE_DIRS = ["face"]
+SCORE_DIR = "scores_maurizio_face"
+
+
+ROOT_TRACKS = (
+    # Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring\.data_and_result\2026-05-20\20260422_112233")
+    # Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring\.data_and_result\2026-05-19")
+    # Path(r".data_and_result\2026-05-19")
+    Path(r".maurizio_dataset")
+)
+
+# ---------------------------------------------------------------------------
 
 IMAGE_TYPE = np.ndarray
 EMBEDDING = np.ndarray # [512]
 
 # EMBEDDING_MODEL_NAMES = list(torchreid.models.__model_factory.keys())
-EMBEDDING_MODEL_NAMES = [
-    'resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'resnext50_32x4d', 'resnext101_32x8d', 'resnet50_fc512',
-    'se_resnet50', 'se_resnet50_fc512', 'se_resnet101', 'se_resnext50_32x4d', 'se_resnext101_32x4d',
-    'densenet121', 'densenet169', 'densenet201', 'densenet161', 'densenet121_fc512',
-    'inceptionresnetv2', 'inceptionv4', 'xception',
-    'resnet50_ibn_a', 'resnet50_ibn_b', 'nasnsetmobile',
-    'mobilenetv2_x1_0', 'mobilenetv2_x1_4', 'shufflenet',
-    'squeezenet1_0', 'squeezenet1_0_fc512', 'squeezenet1_1',
-    'shufflenet_v2_x0_5', 'shufflenet_v2_x1_0', 'shufflenet_v2_x1_5', 'shufflenet_v2_x2_0',
-    'mudeep', 'resnet50mid',
-    # 'hacnn', # (h:160, w:64)
-    'pcb_p6', 'pcb_p4', 'mlfn',
-    'osnet_x1_0', 'osnet_x0_75', 'osnet_x0_5', 'osnet_x0_25',
-    'osnet_ibn_x1_0',
-    'osnet_ain_x1_0', 'osnet_ain_x0_75', 'osnet_ain_x0_5', 'osnet_ain_x0_25'
-]
+EMBEDDING_MODEL_NAMES = TORCHREID_MODEL_NAMES
 
 # EMBEDDING_MODEL_NAME = "osnet_x1_0"
 
-EMBEDDING_DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-# EMBEDDING_MODEL = torchreid.models.build_model(
-#     name=EMBEDDING_MODEL_NAME,
-#     num_classes=1000,
-#     pretrained=True
-# )
-# EMBEDDING_MODEL.eval().to(EMBEDDING_DEVICE)
-EMBEDDING_MODEL = None
+# EMBEDDING_DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 FEATURE_TRANSFORMS = transforms.Compose([
     transforms.ToPILImage(),
@@ -63,46 +43,31 @@ FEATURE_TRANSFORMS = transforms.Compose([
                          std=[0.229, 0.224, 0.225]),
 ])
 
-
-ROOT_TRACKS = (
-    # Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring\.data_and_result\2026-05-20\20260422_112233")
-    # Path(r"D:\Projects.ebtic\project.diwang\lab_monitoring\.data_and_result\2026-05-19")
-    Path(r".data_and_result\2026-05-19")
-)
-
-IMAGE_DIRS = ["face", "random_crop"]
+EMBEDDING_MODEL_NAME: str = ""
 
 EMBEDDING_CACHE = {}
 
 
-def extract_image_feature(img):
-    img = FEATURE_TRANSFORMS(img).unsqueeze(0).to(EMBEDDING_DEVICE)
-    with torch.no_grad():
-        feat = EMBEDDING_MODEL(img)
-    feat = F.normalize(feat, p=2, dim=1)
-    return feat.cpu().numpy()[0]
-
-
-def extract_feature(img_path):
+def extract_feature(img_path: Path):
+    global EMBEDDING_CACHE
+    global EMBEDDING_LENGTH
     if img_path in EMBEDDING_CACHE:
         return EMBEDDING_CACHE[img_path]
 
-    img = cv2.imread(img_path)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    # img = FEATURE_TRANSFORMS(img).unsqueeze(0).to(EMBEDDING_DEVICE)
-    # with torch.no_grad():
-    #     feat = EMBEDDING_MODEL(img)
-    # feat = F.normalize(feat, p=2, dim=1)
-    # return feat.cpu().numpy()[0]
-    feature = extract_image_feature(img)
-    EMBEDDING_CACHE[img_path] = feature
-    return feature
+    feature: np.ndarray = TorchReID.represent(str(img_path), model_name=EMBEDDING_MODEL_NAME)
+    assert is_instance(feature, np.ndarray)
+
+    embedding = feature
+
+    EMBEDDING_CACHE[img_path] = embedding
+    return embedding
 
 
-def load_image_files(dir: str) -> list[Path]:
+def load_image_files(dir: Path) -> list[Path]:
+    assert is_instance(dir, Path)
     img_files = []
     for idir in IMAGE_DIRS:
-        imgs_dir = ROOT_TRACKS / f"{dir}/{idir}"
+        imgs_dir = dir / idir
         if not imgs_dir.exists(): continue
         for img_file in imgs_dir.glob("*.jpg"):
             # [h,w,c] uint8
@@ -128,7 +93,7 @@ def embeddings_similarity(embeddings1: list[EMBEDDING], embeddings2: list[EMBEDD
 
     ##It just uses them with scipy.spatial.distance.cdist and cosine distance for similarity.
     if len(embeddings1) == 0 or len(embeddings2) == 0:
-        return 0
+        return 0.
 
     dist_matrix = cdist(embeddings1, embeddings2, metric="cosine")
     similarity_matrix = 1 - dist_matrix
@@ -137,26 +102,26 @@ def embeddings_similarity(embeddings1: list[EMBEDDING], embeddings2: list[EMBEDD
 # end
 
 
+def list_tracks(root_dir: Path):
+    tracks = []
+    for track,_,_ in root_dir.walk():
+        if track.name.endswith("_DONE"):
+            tracks.append(track)
+    return tracks
+
+
 def main():
-    # global EMBEDDING_MODEL_NAME
-    global EMBEDDING_MODEL
+    global EMBEDDING_MODEL_NAME
     global EMBEDDING_CACHE
-    dirs = [dir.name for dir in ROOT_TRACKS.iterdir() if dir.name.endswith("_DONE")]
+    dirs = list_tracks(ROOT_TRACKS)
     n_dirs = len(dirs)
 
     for embedding_model_name in EMBEDDING_MODEL_NAMES:
         EMBEDDING_MODEL_NAME = embedding_model_name
         EMBEDDING_CACHE = {}
 
-        EMBEDDING_MODEL = torchreid.models.build_model(
-            name=EMBEDDING_MODEL_NAME,
-            num_classes=1000,
-            pretrained=True
-        )
-        EMBEDDING_MODEL.eval().to(EMBEDDING_DEVICE)
-
         scores = []
-        score_file = Path(f"scores/{EMBEDDING_MODEL_NAME}-scores.csv")
+        score_file = Path(f"{SCORE_DIR}/torchreid-{EMBEDDING_MODEL_NAME}-scores.csv")
         if score_file.exists(): continue
 
         tprint(f"-- {EMBEDDING_MODEL_NAME} --", force=True)
@@ -174,10 +139,12 @@ def main():
                 similarity = embeddings_similarity(i_embeddings, j_embeddings)
                 tprint(f"{i_dir} - {j_dir}: {similarity:.4} ({i+1:3}/{n_dirs})", force=False)
 
-                scores.append([i_dir, j_dir, similarity])
+                if similarity > 0:
+                    scores.append([i_dir.name, j_dir.name, similarity])
                 pass
         # end
-        csvx.dump(scores, str(score_file), header=["from", "to", "score"])
+        if len(scores) > 0:
+            csvx.dump(scores, str(score_file), header=["from", "to", "score"])
     # end
 # end
 

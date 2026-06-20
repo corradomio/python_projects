@@ -47,7 +47,8 @@ TEST:
   EVAL: True
   IMS_PER_BATCH: 256
   RE_RANKING: False
-  WEIGHT: 'logs/0321_market_vit_base/transformer_120.pth'
+  # WEIGHT: 'logs/0321_market_vit_base/transformer_120.pth'
+  WEIGHT: "downloaded/model_weights/market/vit_base_market.pth"
   NECK_FEAT: 'before'
   FEAT_NORM: 'yes'
 
