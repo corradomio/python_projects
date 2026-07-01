@@ -97,8 +97,18 @@ class TorchReID:
 
     def embedding(self, image: str | Path | np.ndarray):
         return TorchReID.represent(image, self._model_name)
-# end
 
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+        global TORCHREID_MODELS
+        keys = list(TORCHREID_MODELS.keys())
+        for k in keys:
+            TORCHREID_MODELS[k].to("cpu")
+        TORCHREID_MODELS.clear()
+    # end
+# end
 
 
 # ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ check_pinn_
 check_pinn_torch_
 check_openai_
 check_efhq
+check_llm_*
 
 *.bin
 *.csv

@@ -1,2 +1,7 @@
+.*
 _suspended
+_downloaded
 *.onnx
+*.ckpt
+*-master
+

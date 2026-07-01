@@ -13,8 +13,8 @@
 #    and replaced with "string_classes = (str,)"
 #
 
+from ._fastreid import FASTREID_MODEL_NAMES, FASTREID_WEIGHTS_ROOT
 from ._fastreid import FastReID
-from ._fastreid import FASTREID_MODEL_NAMES
 
 
 __version__ = "1.4.1"

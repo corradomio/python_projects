@@ -4,20 +4,17 @@
 #
 
 import os.path
-import sys
-import traceback
 from pathlib import Path
 from typing import cast
 
+import gdown
 import numpy as np
 import requests
-import gdown
 import torch
 import torchvision.transforms as T
 from PIL import Image
 
 from .model import make_model
-
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -145,6 +142,8 @@ def _download_weights(model_name, weights_path):
     assert model_name in TRANSREID_WEIGHTS_URLS
     url = TRANSREID_WEIGHTS_URLS[model_name]
     print(f"transreid: downloading {model_name} from {url} and saved in {weights_path}")
+
+    weights_path.parent.mkdir(parents=True, exist_ok=True)
     gdown.download(url, weights_path, quiet=True)
     pass
 
@@ -176,12 +175,11 @@ def _get_pretrained_weights_path(cfg_name, cfg) -> str:
 def _get_model_weights_path(cfg_name, cfg) -> str:
     weights_name = _name_of(TRANSREID_MODEL_WEIGHTS_NAMES[cfg_name])
     weights_path = Path(TRANSREID_WEIGHTS_ROOT) / weights_name
-    weights_path.parent.mkdir(parents=True, exist_ok=True)
 
-    if not os.path.exists(weights_path):
+    if not weights_path.exists():
         _download_weights(cfg_name, weights_path)
 
-    assert os.path.exists(weights_path)
+    assert weights_path.exists()
     return str(weights_path)
 
 
@@ -253,6 +251,18 @@ class TransReID:
 
     def embedding(self, image: str|Path|np.ndarray):
         return TransReID.represent(image, self._model_name)
+
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+        global TRANSREID_MODELS
+        keys = list(TRANSREID_MODELS.keys())
+        for k in keys:
+            (cfg, transforms, model, camera_num, view_num) = TRANSREID_MODELS[k]
+            model.to("cpu")
+        TRANSREID_MODELS.clear()
+    # end
 # end
 
 

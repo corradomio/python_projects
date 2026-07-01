@@ -95,7 +95,8 @@ def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
     img = plt.imshow(mat, cmap=COLORMAP)
     cbar = plt.colorbar(img, label=None, shrink=0.5)
     cbar.set_ticks([0,1,2,3,4])
-    cbar.set_ticklabels(["good", "reasonable", "bad", "horrible", "undefined"])
+    # cbar.set_ticklabels(["good", "reasonable", "bad", "horrible", "undefined"])
+    cbar.set_ticklabels(["g4", "g2", "g1", "b1", "undefined"])
 
     at = -1
     xticks = []

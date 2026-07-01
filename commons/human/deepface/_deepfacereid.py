@@ -1,4 +1,4 @@
-from . import DeepFace
+from deepface import DeepFace
 import numpy as np
 from pathlib import Path
 
@@ -36,6 +36,13 @@ class DeepFaceReID:
 
     def embedding(self, image: str | Path | np.ndarray):
         return DeepFaceReID.represent(image, self._model_name)
+
+
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+       pass
 # end
 
 

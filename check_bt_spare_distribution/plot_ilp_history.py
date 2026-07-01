@@ -170,7 +170,7 @@ def main():
 
     GUROBI_HOME=path("7200s")
     for log_file in GUROBI_HOME.files("*.log"):
-        # plot_log(log)
+        plot_log(log_file)
         nw = nw_of(log_file.stem)
         gl = GurobiLog(log_file)
         gl.parse()

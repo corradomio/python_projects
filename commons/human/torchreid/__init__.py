@@ -1,7 +1,9 @@
 from __future__ import print_function, absolute_import
 
-from torchreid import data, optim, utils, engine, losses, models, metrics
-from ._torchreid import TorchReID, TORCHREID_MODEL_NAMES
+from . import data, optim, utils, engine, losses, models, metrics
+
+from ._torchreid import TORCHREID_MODEL_NAMES
+from ._torchreid import TorchReID
 
 
 __version__ = '1.4.0'

@@ -33,6 +33,10 @@ dependencies = [
     # "clipreid" dependencies
     "ftfy",
     "regex",
+    #arcface
+    "arcface",
+    #adaface"
+    # other"
     "scipy-stubs~=1.17.1",
     "pandas-stubs~=3.0.3",
 ]

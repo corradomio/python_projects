@@ -5,6 +5,7 @@ import os
 from typing import cast
 
 import torch
+from torch import nn
 import numpy as np
 import gdown
 import torchvision.transforms as T
@@ -71,7 +72,7 @@ CLIPREID_CLASSES_CAMERAS_VIEWS = {
 
 CLIPREID_WEIGHTS_ROOT = ".clipreid_weights"
 
-CLIPREID_MODELS = {}
+CLIPREID_MODELS: dict[str, tuple] = {}
 
 
 def _model_name(cfg_name: str) -> str:
@@ -200,4 +201,16 @@ class ClipReID:
 
     def embedding(self, image: str | Path | np.ndarray):
         return ClipReID.represent(image, self._model_name)
+
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+        global CLIPREID_MODELS
+        keys = list(CLIPREID_MODELS.keys())
+        for k in keys:
+            (cfg, transforms, model, camera_num, view_num) = CLIPREID_MODELS[k]
+            model.to("cpu")
+        CLIPREID_MODELS.clear()
+    # end
 # end

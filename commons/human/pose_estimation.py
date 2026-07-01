@@ -8,7 +8,7 @@ from ultralytics.engine.results import Results, Keypoints
 
 # List of YOLO models
 # https://docs.ultralytics.com/models
-
+#
 # https://docs.ultralytics.com/tasks/pose#results-output
 # https://github.com/ultralytics/ultralytics/blob/main/ultralytics/cfg/datasets/coco-pose.yaml
 #
@@ -73,7 +73,7 @@ YOLO_WEIGHTS_ROOT = ".yolo_weights"
 # Utilities
 # ---------------------------------------------------------------------------
 
-YOLO_POSE_MODELS = {}
+YOLO_POSE_MODELS: dict[str, YOLO] = {}
 
 YOLO_DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -104,9 +104,8 @@ def _get_model(model_name: str) -> YOLO:
 
 
 # ---------------------------------------------------------------------------
-# HumanPose
+# PoseKeypoints
 # ---------------------------------------------------------------------------
-
 
 class PoseKeypoints:
     def __init__(self, keypoints: Keypoints|None):
@@ -123,8 +122,15 @@ class PoseKeypoints:
 
         self.keypoints = keypoints
 
+    @property
+    def is_valid(self):
+        keypoints = self.keypoints
+        return keypoints is not None and len(keypoints) > 0
+
     def draw(self, image: np.ndarray, threshold:float = 0.5, thickness: int=2):
         assert isinstance(image, np.ndarray)
+        if self.keypoints is None:
+            return image
 
         keypoints_xy = self.keypoints.xy
         keypoints_conf = self.keypoints.conf
@@ -175,34 +181,38 @@ class PoseKeypoints:
         # 15 Left Ankle     caviglia
         # 16 Right Ankle
         keypoints = self.keypoints
-        if len(keypoints) == 0:
+        if keypoints is None or len(keypoints) == 0:
             return {}
 
         kp = {
             "nose": keypoints.data[0, 0].cpu().numpy().tolist(),
-            "left": {
-                "eye":      keypoints.data[0, 1].cpu().numpy().tolist(),
-                "ear":      keypoints.data[0, 3].cpu().numpy().tolist(),
-                "shoulder": keypoints.data[0, 5].cpu().numpy().tolist(),
-                "elbow":    keypoints.data[0, 7].cpu().numpy().tolist(),
-                "wrist":    keypoints.data[0, 9].cpu().numpy().tolist(),
-                "hip":      keypoints.data[0, 11].cpu().numpy().tolist(),
-                "knee":     keypoints.data[0, 13].cpu().numpy().tolist(),
-                "ankle":    keypoints.data[0, 15].cpu().numpy().tolist(),
-            },
-            "right": {
-                "eye":      keypoints.data[0, 2].cpu().numpy().tolist(),
-                "ear":      keypoints.data[0, 4].cpu().numpy().tolist(),
-                "shoulder": keypoints.data[0, 6].cpu().numpy().tolist(),
-                "elbow":    keypoints.data[0, 8].cpu().numpy().tolist(),
-                "wrist":    keypoints.data[0, 10].cpu().numpy().tolist(),
-                "hip":      keypoints.data[0, 12].cpu().numpy().tolist(),
-                "knee":     keypoints.data[0, 14].cpu().numpy().tolist(),
-                "ankle":    keypoints.data[0, 16].cpu().numpy().tolist(),
-            }
+            
+            "left_eye":       keypoints.data[0, 1].cpu().numpy().tolist(),
+            "left_ear":       keypoints.data[0, 3].cpu().numpy().tolist(),
+            "left_shoulder":  keypoints.data[0, 5].cpu().numpy().tolist(),
+            "left_elbow":     keypoints.data[0, 7].cpu().numpy().tolist(),
+            "left_wrist":     keypoints.data[0, 9].cpu().numpy().tolist(),
+            "left_hip":       keypoints.data[0, 11].cpu().numpy().tolist(),
+            "left_knee":      keypoints.data[0, 13].cpu().numpy().tolist(),
+            "left_ankle":     keypoints.data[0, 15].cpu().numpy().tolist(),
+
+            "right_eye":      keypoints.data[0, 2].cpu().numpy().tolist(),
+            "right_ear":      keypoints.data[0, 4].cpu().numpy().tolist(),
+            "right_shoulder": keypoints.data[0, 6].cpu().numpy().tolist(),
+            "right_elbow":    keypoints.data[0, 8].cpu().numpy().tolist(),
+            "right_wrist":    keypoints.data[0, 10].cpu().numpy().tolist(),
+            "right_hip":      keypoints.data[0, 12].cpu().numpy().tolist(),
+            "right_knee":     keypoints.data[0, 14].cpu().numpy().tolist(),
+            "right_ankle":    keypoints.data[0, 16].cpu().numpy().tolist(),
         }
         return kp
 # end
+
+
+# ---------------------------------------------------------------------------
+# HumanPose
+# ---------------------------------------------------------------------------
+
 
 class HumanPose:
 
@@ -223,6 +233,7 @@ class HumanPose:
             raise ValueError(f"Unsupported image {type(image)}")
 
         assert isinstance(image, Image.Image)
+        assert model_name in POSE_MODELS, f"Model {model_name} not existent"
 
         pose_model = _get_model(model_name)
 
@@ -256,6 +267,17 @@ class HumanPose:
 
     def pose_estimation(self, image: str|Path|np.ndarray) -> PoseKeypoints:
         return HumanPose.pose(image, self.model_name, self.params)
+
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+        global YOLO_POSE_MODELS
+        keys = list(YOLO_POSE_MODELS.keys())
+        for k in keys:
+            YOLO_POSE_MODELS[k].to("cpu")
+            del YOLO_POSE_MODELS[k]
+    # end
 # end
 
 

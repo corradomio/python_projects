@@ -2,7 +2,7 @@ import datetime
 import time
 from multiprocessing import Process, Value, Queue, SimpleQueue
 from threading import Thread
-from typing import Union
+from typing import Union, Optional
 
 import cv2
 import numpy as np
@@ -142,15 +142,20 @@ def cam_print_props(cam: cv2.VideoCapture):
 
 
 def cam_get_effective_frame_size(cam_id: Union[int, str], props: dict):
-    cam = cv2.VideoCapture(cam_id)
+    assert isinstance(cam_id, (int, str))
+    assert isinstance(props, dict)
+
+    if isinstance(cam_id, int):
+        cam = cv2.VideoCapture(cam_id)
+    else:
+        cam = cv2.VideoCapture(cam_id)
     h_w_fps = cam_set_props(cam, props)
     cam.release()
     return h_w_fps
 
 
 def cam_set_props(cam: cv2.VideoCapture, props: dict):
-    if props is None:
-        props = {}
+    assert isinstance(props, dict)
 
     if "CAP_PROP_FRAME_SIZE" in props:
         h, w = props["CAP_PROP_FRAME_SIZE"]
@@ -193,8 +198,8 @@ def cam_get_frame_info(cam: cv2.VideoCapture) -> tuple[float, float]:
 
 
 def frame_resize(frame: np.ndarray, props: dict) -> np.ndarray:
-    if props is None:
-        return frame
+    assert isinstance(props, dict)
+
     h, w = 0, 0
     if "CAP_PROP_FRAME_SIZE" in props:
         h, w = props["CAP_PROP_FRAME_SIZE"]
@@ -213,18 +218,27 @@ def frame_resize(frame: np.ndarray, props: dict) -> np.ndarray:
 # ---------------------------------------------------------------------------
 
 class VideoCaptureForeground:
-    def __init__(self, cam_id, props):
-        cam = cv2.VideoCapture(cam_id)
+    def __init__(self, cam_id: int|str, props: Optional[dict]):
+        assert isinstance(cam_id, (int, str))
+        if props is None: props = {}
+        assert isinstance(props, dict)
+
+        if isinstance(cam_id, int):
+            cam: cv2.VideoCapture = cv2.VideoCapture(cam_id)
+        elif isinstance(cam_id, str):
+            cam: cv2.VideoCapture = cv2.VideoCapture(cam_id)
+        else:
+            raise ValueError(f"Unsupported {cam_id}")
         cam_set_props(cam, props)
-        self.cam = cam
-        self.props = props
-        self.frame_id = 0
+        self.cam: cv2.VideoCapture = cam
+        self.props: dict = props
+        self.frame_id: int = 0
 
     def release(self):
         self.cam.release()
     # end
 
-    def read(self):
+    def read(self) -> tuple[np.ndarray, float, int]:
         ret = False
         frame = None
 
@@ -246,19 +260,26 @@ class VideoCaptureForeground:
 # ---------------------------------------------------------------------------
 
 def video_capture_thread(
-    cam_id,
+    cam_id: Union[int, str],
     status: list[int],
     frame_slot: list[np.ndarray],
     frame_dt: list[float],
     frame_id_slot: list[int],
-    props
+    props: dict
 ):
+    assert isinstance(cam_id, (int, str))
+    assert isinstance(props, dict)
+
     print("video_capture_thread started")
+
     # status
     #   0 -> continue
     #   1 -> take a frame
     #   2 -> terminate
-    cam = cv2.VideoCapture(cam_id)
+    if isinstance(cam_id, int):
+        cam = cv2.VideoCapture(cam_id)
+    else:
+        cam = cv2.VideoCapture(cam_id)
     cam_set_props(cam, props)
 
     start_time = time.time()
@@ -293,7 +314,11 @@ def video_capture_thread(
 
 class VideoCaptureThread:
 
-    def __init__(self, cam_id, props=None):
+    def __init__(self, cam_id: Union[int, str], props: Optional[dict]=None):
+        assert isinstance(cam_id, (int, str))
+        if props is None: props = {}
+        assert  isinstance(props, dict)
+
         self.props = props
         self.status = [0]
         self.frame: list[np.ndarray] = [None]
@@ -305,20 +330,21 @@ class VideoCaptureThread:
             kwargs={
                 "cam_id": cam_id,
                 "status": self.status,
-                "frame": self.frame,
+                "frame_slot": self.frame,
                 "frame_dt": self.frame_dt,
-                "frame_id": self.frame_id,
+                "frame_id_slot": self.frame_id,
                 "props": props
             })
         self.thread_video_capture.start()
-
         pass
 
     def release(self):
         self.status[0] = 2
         self.thread_video_capture.join()
 
-    def read(self):
+    def read(self) -> tuple[np.ndarray, float, int]:
+        assert self.thread_video_capture.is_alive()
+
         self.status[0] = 1
         while self.status[0] != 0:
             time.sleep(1)
@@ -338,17 +364,23 @@ class VideoCaptureThread:
 # ---------------------------------------------------------------------------
 
 def video_capture_process(
-        cam_id,
+        cam_id: Union[int, str],
         status: Value,
         queue: Queue,
         props: dict
 ):
+    assert isinstance(cam_id, (int, str))
+    assert isinstance(props, dict)
+
     print("video_capture_process started")
     # status
     #   0 -> continue
     #   1 -> take a frame
     #   2 -> terminate
-    cam = cv2.VideoCapture(cam_id)
+    if isinstance(cam_id, int):
+        cam = cv2.VideoCapture(cam_id)
+    else:
+        cam = cv2.VideoCapture(cam_id)
     cam_set_props(cam, props)
     # cam_print_props(cam)
 
@@ -374,8 +406,11 @@ def video_capture_process(
     print("video_capture_process terminated:", status.value)
 
 
-class VideoCaptureProcess:
-    def __init__(self, cam_id, props=None):
+class VideoCaptureBackground:
+    def __init__(self, cam_id: Union[int, str], props: Optional[dict]=None):
+        assert isinstance(cam_id, (int, str))
+        if props is None: props = {}
+        assert isinstance(props, dict)
 
         h, w, fps = cam_get_effective_frame_size(cam_id, props)
 
@@ -402,7 +437,9 @@ class VideoCaptureProcess:
 
     # end
 
-    def read(self, mode=0):
+    def read(self, mode=0) -> tuple[np.ndarray, float, int]:
+        assert self.process_video_capture.is_alive()
+
         self.status.value = 1
 
         frame, frame_time, frame_id = self.queue.get()

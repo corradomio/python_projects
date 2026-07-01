@@ -219,6 +219,17 @@ class FastReID:
 
     def embedding(self, image: str | Path | np.ndarray):
         return FastReID.represent(image, self._model_name)
+
+    # -----------------------------------------------------------------------
+
+    @staticmethod
+    def dispose():
+        global FASTREID_MODELS
+        keys = list(FASTREID_MODELS.keys())
+        for k in keys:
+            FASTREID_MODELS[k].to("cpu")
+        FASTREID_MODELS.clear()
+    # end
 # end
 
 

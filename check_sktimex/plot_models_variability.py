@@ -24,7 +24,37 @@ def _compose_models_stats(data, models_class):
     return models_stats
 
 
-def _prepare_stats_matrix(variability_stats):
+def _to_dict(variability_list: list) -> dict:
+    variability_stats = {}
+    for vl in variability_list:
+        # ('stat', 'darts', 'ARIMA', 'pos', 0.0, 'good')
+
+        model_class, lib, name, _dataset, noise, mse_class = vl
+        if _dataset.endswith("-t"):
+            _dataset = _dataset[:-2]
+            trend = True
+        else:
+            trend = False
+        lib_name = f"{lib}.{name}"
+        if model_class not in variability_stats:
+            variability_stats[model_class] = {}
+        variability_class = variability_stats[model_class]
+        if lib_name not in variability_class:
+            variability_class[lib_name] = {}
+        variability_model = variability_class[lib_name]
+        if _dataset not in variability_model:
+            variability_model[_dataset] = {}
+        variability_ds = variability_model[_dataset]
+        if noise not in variability_ds:
+            variability_ds[noise] = {}
+        variability_noise = variability_ds[noise]
+        if trend not in variability_noise:
+            variability_noise[trend] = 0
+        variability_noise[trend] = STABILITY_MAP[mse_class]
+    return variability_stats
+
+
+def _prepare_stats_matrix(variability_stats: dict):
     def list_models():
         rows = []
         for model_class in MODEL_CLASSES:
@@ -83,7 +113,8 @@ def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
     img = plt.imshow(mat, cmap=COLORMAP)
     cbar = plt.colorbar(img, label=None, shrink=0.5)
     cbar.set_ticks([0,1,2,3,4,5])
-    cbar.set_ticklabels(["stable", "good", "reasonable", "bad", "horrible", "undefined"])
+    # cbar.set_ticklabels(["stable", "good", "reasonable", "bad", "horrible", "undefined"])
+    cbar.set_ticklabels(["stable", "g4", "g2", "g1", "b1", "undefined"])
 
     at = -1
     xticks = []
@@ -114,6 +145,8 @@ def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
 
 def plot_models_stability():
     variability_stats = load_models_variability(as_stats=True)
+
+    variability_stats = _to_dict(variability_stats)
 
     mat = _prepare_stats_matrix(variability_stats)
 

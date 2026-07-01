@@ -17,37 +17,34 @@ def timestamp():
 #         ]
 #
 
+# cvx.VideoCaptureForeground
+# cvs.VideoCaptureBackground
+# cvx.VideoCaptureThread
+
 def main():
     # Open the default camera
     print("start camera in background")
-    # cam = cvx.VideoCaptureProcess3(
-    #     0,
-    #     # "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
-    #     {
-    #         "CAP_PROP_FRAME_SIZE": (576, 1024),
-    #         "CAP_PROP_FPS": 25
-    #     })
     # cam = cvx.VideoCaptureForeground(
-    #     0,
-    #     # "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
+    #     # 0,
+    #     "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
     #     {
     #         "CAP_PROP_FRAME_SIZE": (576, 1024),
     #         "CAP_PROP_FPS": 25
     #     })
-    # cam = cvx.VideoCaptureThread(
-    #     0,
-    #     # "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
-    #     {
-    #         "CAP_PROP_FRAME_SIZE": (576, 1024),
-    #         "CAP_PROP_FPS": 25
-    #     })
-    cam = cvx.VideoCaptureProcess(
-        0,
-        # "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
+    cam = cvx.VideoCaptureBackground(
+        # 0,
+        "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
         {
             "CAP_PROP_FRAME_SIZE": (576, 1024),
             "CAP_PROP_FPS": 25
         })
+    # cam = cvx.VideoCaptureThread(
+    #     # 0,
+    #     "rtsp://admin:password1234@10.248.37.111/Streaming/Channels/101?tcp",
+    #     {
+    #         "CAP_PROP_FRAME_SIZE": (576, 1024),
+    #         "CAP_PROP_FPS": 25
+    #     })
 
     # Get the default frame width and height
 
@@ -60,7 +57,7 @@ def main():
     while True:
         # time.sleep(1)
 
-        frame, frame_time, frame_id = cam.read(3)
+        frame, frame_time, frame_id = cam.read()
 
         now = time.time()
         if now - log_time > 3:

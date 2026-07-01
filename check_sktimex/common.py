@@ -23,7 +23,7 @@ MSE_REASONABLE = 0.01
 MSE_BAD = 0.3
 
 
-MODEL_CLASSES = ["stat", "reg", "lin", "rnn", "cnn", "tran","misc"]
+MODEL_CLASSES = ["stat", "reg", "lin", "rnn", "cnn", "tran", "misc"]
 
 WAVEFORMS = ["saw", "sin", "sinabs", "sq", "tri", "was"]
 # "pos": special case
@@ -99,7 +99,7 @@ def load_models_class() -> dict[tuple[str, str], str]:
     return models_class
 
 
-def load_models_variability(as_stats=False, with_noise=-1):
+def load_models_variability(as_stats=False, with_noise=-1) -> list[dict]:
     models_class = load_models_class()
 
     # noise,lib,name,cat,mean,stdv,quality,stability

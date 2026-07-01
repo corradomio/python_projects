@@ -1,6 +1,7 @@
 import gdown
 import requests
 import cv2
+from torch import nn
 from pathlib import Path
 import numpy as np
 from sixdrepnet import SixDRepNet
@@ -35,7 +36,7 @@ FACE_DIRECTION_WEIGHT_NAMES = {
 
 FACE_DIRECTION_WEIGHTS_ROOT = ".6drepnet_weights"
 
-FACE_DIRECTION_MODELS = {}
+FACE_DIRECTION_MODELS: dict[str, nn.Module] = {}
 
 
 def _download_weights(model_name: str, weights_path: Path):
@@ -103,5 +104,15 @@ class FaceDirection:
     def detect(self, image: str|Path|np.ndarray):
         return FaceDirection.direction(image, model_name=self.model_name)
 
+    # -----------------------------------------------------------------------
 
+    @staticmethod
+    def dispose():
+        global YOLO_POSE_MODELS
+        keys = list(YOLO_POSE_MODELS.keys())
+        for k in keys:
+            YOLO_POSE_MODELS[k].to("cpu")
+            del YOLO_POSE_MODELS[k]
+    # end
+# end
 
