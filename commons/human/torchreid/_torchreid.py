@@ -1,3 +1,4 @@
+import os
 from typing import cast
 
 import cv2
@@ -77,9 +78,14 @@ class TorchReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, (str, Path)):
-            filename = image
-            image: np.ndarray = cast(np.ndarray, cv2.imread(str(filename)))
+            filename = str(image)
+            assert os.path.exists(filename)
+            image: np.ndarray = cast(np.ndarray, cv2.imread(filename))
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        elif isinstance(image, np.ndarray):
+            # array = cast(np.ndarray, image)
+            # image = Image.fromarray(array, mode="RGB")
+            pass
 
         image = FEATURE_TRANSFORMS(image).unsqueeze(0).to(TORCHREID_DEVICE)
 

@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import cv2
@@ -97,7 +98,7 @@ def _download_weights(model_name, weights_path):
     pass
 
 
-def _get_model_weights_path(model_name: str) -> str:
+def _get_weights(model_name: str) -> str:
     weights_name = ADAFACE_MODEL_WEIGHTS_NAMES[model_name]
     weights_path = Path(ADAFACE_WEIGHTS_ROOT) / weights_name
 
@@ -114,7 +115,7 @@ def _get_model(model_name):
 
     assert model_name in ADAFACE_MODEL_NAMES
 
-    weights_path = _get_model_weights_path(model_name)
+    weights_path = _get_weights(model_name)
 
     statedict = torch.load(weights_path, weights_only=False)['state_dict']
     model_statedict = {key[6:]: val for key, val in statedict.items() if key.startswith('model.')}
@@ -153,6 +154,7 @@ class AdaFace:
 
         if isinstance(image, (str, Path)):
             filename = str(image)
+            assert os.path.exists(filename)
             image = cv2.imread(filename)
 
             # NOT TO CONVERT IN RGB!!!

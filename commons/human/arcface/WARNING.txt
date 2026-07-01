@@ -1,0 +1,5 @@
+A LOT OF ERRORS:
+
+incompatibilities between the pretrained models AND the models structures
+
+UNUSABLE

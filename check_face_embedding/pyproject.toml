@@ -33,9 +33,7 @@ dependencies = [
     # "clipreid" dependencies
     "ftfy",
     "regex",
-    #arcface
-    "arcface",
-    #adaface"
+    #arcface NO, it is based on Tensorflow
     # other"
     "scipy-stubs~=1.17.1",
     "pandas-stubs~=3.0.3",

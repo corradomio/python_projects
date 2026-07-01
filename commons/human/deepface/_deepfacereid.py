@@ -1,3 +1,5 @@
+import os
+
 from deepface import DeepFace
 import numpy as np
 from pathlib import Path
@@ -25,7 +27,13 @@ class DeepFaceReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, Path):
-            image = str(image)
+            filename = str(image)
+            assert os.path.exists(filename)
+            image = filename
+        elif isinstance(image, np.ndarray):
+            # array = cast(np.ndarray, image)
+            # image = Image.fromarray(array, mode="RGB")
+            pass
 
         return DeepFace.represent(image, model_name, detector_backend="skip")
     # end

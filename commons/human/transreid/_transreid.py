@@ -172,7 +172,7 @@ def _get_pretrained_weights_path(cfg_name, cfg) -> str:
     return str(weights_path)
 
 
-def _get_model_weights_path(cfg_name, cfg) -> str:
+def _get_weights(cfg_name, cfg) -> str:
     weights_name = _name_of(TRANSREID_MODEL_WEIGHTS_NAMES[cfg_name])
     weights_path = Path(TRANSREID_WEIGHTS_ROOT) / weights_name
 
@@ -199,7 +199,7 @@ def _get_model(cfg_name: str):
     num_classes, camera_num, view_num = TRANSREID_CLASSES_CAMERAS_VIEWS[_model_name(cfg_name)]
 
     _get_pretrained_weights_path(cfg_name, cfg)
-    model_weights_path = _get_model_weights_path(cfg_name, cfg)
+    model_weights_path = _get_weights(cfg_name, cfg)
 
     model = make_model(cfg, num_class=num_classes, camera_num=camera_num, view_num = view_num)
     model.load_state_dict(torch.load(model_weights_path, weights_only=True))
@@ -221,7 +221,8 @@ class TransReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, (str, Path)):
-            filename = image
+            filename = str(image)
+            assert os.path.exists(filename)
             # image = cv2.imread(filename)
             # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = Image.open(filename).convert("RGB")

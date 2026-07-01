@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import cv2
@@ -6,8 +7,8 @@ import requests
 import torch
 import torch.nn.functional as F
 
-from fastreid.config import get_cfg
-from fastreid.engine import DefaultPredictor
+from .config import get_cfg
+from .engine import DefaultPredictor
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -194,9 +195,14 @@ class FastReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, (str, Path)):
-            filename = image
+            filename = str(image)
+            assert os.path.exists(filename)
             image = cv2.imread(filename)
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        elif isinstance(image, np.ndarray):
+            # array = cast(np.ndarray, image)
+            # image = Image.fromarray(array, mode="RGB")
+            pass
 
         cfg_name = model_name.replace("__", "/")
         cfg, predictor = _get_model(cfg_name)

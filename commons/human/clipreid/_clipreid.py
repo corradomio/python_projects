@@ -115,7 +115,7 @@ def _download_weights(model_name: str, weights_path: Path):
     pass
 
 
-def _get_model_weights_path(cfg_name, cfg) -> str:
+def _get_weights(cfg_name, cfg) -> str:
     weights_name = _name_of(CLIPREID_MODEL_WEIGHTS_NAMES[cfg_name])
     weights_path = Path(CLIPREID_WEIGHTS_ROOT) / weights_name
     weights_path.parent.mkdir(parents=True, exist_ok=True)
@@ -142,7 +142,7 @@ def _get_model(cfg_name: str):
 
     num_classes, camera_num, view_num = CLIPREID_CLASSES_CAMERAS_VIEWS[_model_name(cfg_name)]
 
-    model_weights_path = _get_model_weights_path(cfg_name, cfg)
+    model_weights_path = _get_weights(cfg_name, cfg)
 
     if "cnn_base" in cfg_name:
         from .model.make_model import make_model
@@ -171,7 +171,8 @@ class ClipReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, (str, Path)):
-            filename = image
+            filename = str(image)
+            assert os.path.exists(filename)
             # image = cv2.imread(filename)
             # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             image = Image.open(filename).convert("RGB")

@@ -1,3 +1,5 @@
+import os
+
 import cv2
 from pathlib import Path
 import numpy as np
@@ -69,7 +71,8 @@ class InsightFaceReID:
         assert isinstance(model_name, str)
 
         if isinstance(image, (str, Path)):
-            filename = image
+            filename = str(image)
+            assert os.path.exists(filename)
             image = cv2.imread(filename)
             # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             # image = Image.open(filename).convert("RGB")

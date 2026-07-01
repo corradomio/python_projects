@@ -179,22 +179,6 @@ wheels = [
 ]
 
 [[package]]
-name = "arcface"
-version = "0.0.8"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "numpy" },
-    { name = "opencv-python" },
-    { name = "pyyaml" },
-    { name = "requests" },
-    { name = "tensorflow" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/8b/1f/e7448fa613c8c4a8c3bc9e9271530e7f92aac98d8c9d51ec412a8590e991/arcface-0.0.8.tar.gz", hash = "sha256:36f85b89139b4f3d8693cd83795c250a4f8e3a9962444e640b49da6cae83e668", size = 13668, upload-time = "2021-04-19T13:00:51.73Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/d2/1f1d7b2fde0c90616c5caa836058d3e5e4cfc52d4b95a7dcf5d179eeb6df/arcface-0.0.8-py3-none-any.whl", hash = "sha256:c13208f6446ab72b1a1ba74e8a23bee4cd7aecb203fe8618b462fc7b16e146c4", size = 15162, upload-time = "2021-04-19T13:00:50.341Z" },
-]
-
-[[package]]
 name = "astunparse"
 version = "1.6.3"
 source = { registry = "https://pypi.org/simple" }
@@ -382,7 +366,6 @@ name = "check-face-embedding"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "arcface" },
     { name = "deepface" },
     { name = "face-detection" },
     { name = "facenet-pytorch" },
@@ -415,7 +398,6 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "arcface" },
     { name = "deepface" },
     { name = "face-detection" },
     { name = "facenet-pytorch" },
