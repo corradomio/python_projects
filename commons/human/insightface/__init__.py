@@ -1,2 +1,2 @@
-from ._insightface import INSIGHTFACEREID_MODEL_NAMES, INSIGHTFACEREID_WEIGHTS_ROOT
-from ._insightface import InsightFaceReID
+from ._insightface import INSIGHTFACE_MODEL_NAMES, INSIGHTFACE_WEIGHTS_ROOT
+from ._insightface import InsightFace

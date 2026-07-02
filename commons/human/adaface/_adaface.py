@@ -134,12 +134,12 @@ def _get_model(model_name):
 def to_input(np_img: np.ndarray) -> torch.Tensor:
     assert isinstance(np_img, np.ndarray)
     brg_img = ((np_img[:,:,::-1] / 255.) - 0.5) / 0.5
-    tensor = torch.tensor(brg_img.transpose(2,0,1).reshape((1, -1))).float().to(ADAFACE_DEVICE)
+    tensor = torch.tensor(brg_img.transpose(2,0,1)[None, :]).float().to(ADAFACE_DEVICE)
     return tensor
 
 
 # ---------------------------------------------------------------------------
-# InsightFaceReID
+# AdaFace
 # ---------------------------------------------------------------------------
 # WARNING:
 # Note that our pretrained model takes the input in BGR color channel.
@@ -176,7 +176,7 @@ class AdaFace:
             feature, _ = model(bgr_input)
             feature = feature.detach().cpu().numpy()
 
-        return feature
+        return feature[0]
     # end
 
     def __init__(self, model_name: str):

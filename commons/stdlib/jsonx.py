@@ -421,7 +421,7 @@ def load(file: str|Path, **kwargs) -> dict:
     :return:
     """
     open_kwargs = _dict_select(kwargs, OPEN_KWARGS)
-    with open(file, mode="r", **open_kwargs) as fp:
+    with open(str(file), mode="r", **open_kwargs) as fp:
         jdata = json.load(fp)
     return resolve(jdata, kwargs)
 
@@ -542,6 +542,9 @@ class JSONConfig:
             self._config_timestamp = os.path.getmtime(self._config_file)
         return self._config
     # end
+
+    def __contains__(self, item):
+        return item in self._config
 # end
 
 

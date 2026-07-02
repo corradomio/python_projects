@@ -1,7 +1,8 @@
 import os
+from pathlib import Path
+import logging
 
 import cv2
-from pathlib import Path
 import numpy as np
 import torch
 from insightface.app import FaceAnalysis
@@ -10,20 +11,20 @@ from insightface.app import FaceAnalysis
 # Constants
 # ---------------------------------------------------------------------------
 
-INSIGHTFACEREID_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+INSIGHTFACE_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-INSIGHTFACEREID_WEIGHTS_URLS = {
-
-}
-
-INSIGHTFACEREID_MODEL_WEIGHTS_NAMES = {
+INSIGHTFACE_WEIGHTS_URLS = {
 
 }
 
+INSIGHTFACE_MODEL_WEIGHTS_NAMES = {
 
-INSIGHTFACEREID_MODEL_NAMES = [
+}
+
+
+INSIGHTFACE_MODEL_NAMES = [
     # name.replace("/", "__")
-    # for name in INSIGHTFACEREID_MODEL_WEIGHTS_NAMES.keys()
+    # for name in INSIGHTFACE_MODEL_WEIGHTS_NAMES.keys()
     "antelopev2",
     "buffalo_l",
     "buffalo_m",
@@ -36,34 +37,37 @@ INSIGHTFACEREID_MODEL_NAMES = [
 # Utilities
 # ---------------------------------------------------------------------------
 
-INSIGHTFACEREID_WEIGHTS_ROOT = ".insightface_weights"
+INSIGHTFACE_WEIGHTS_ROOT = ".insightface_weights"
 
-INSIGHTFACEREID_MODELS = {}
+INSIGHTFACE_MODELS = {}
 
 
 def _get_model(model_name):
-    if model_name in INSIGHTFACEREID_MODELS:
-        return INSIGHTFACEREID_MODELS[model_name]
+    if model_name in INSIGHTFACE_MODELS:
+        return INSIGHTFACE_MODELS[model_name]
 
-    assert model_name in INSIGHTFACEREID_MODEL_NAMES
+    assert model_name in INSIGHTFACE_MODEL_NAMES
 
-    providers = ['CUDAExecutionProvider'] if INSIGHTFACEREID_DEVICE == "cuda" else ['CPUExecutionProvider']
+    providers = ['CUDAExecutionProvider'] if INSIGHTFACE_DEVICE == "cuda" else ['CPUExecutionProvider']
 
     model = FaceAnalysis(
-        name=model_name, root=INSIGHTFACEREID_WEIGHTS_ROOT,
+        name=model_name, root=INSIGHTFACE_WEIGHTS_ROOT,
         providers=providers  # Use 'CUDAExecutionProvider' for GPU
     )
 
-    INSIGHTFACEREID_MODELS[model_name] = model
+    INSIGHTFACE_MODELS[model_name] = model
     return model
 # end
 
 
 # ---------------------------------------------------------------------------
-# InsightFaceReID
+# InsightFace
 # ---------------------------------------------------------------------------
 
-class InsightFaceReID:
+EMBEDDING_SIZE = 0
+
+
+class InsightFace:
 
     @staticmethod
     def represent(image: str | Path | np.ndarray, model_name: str) -> np.ndarray:
@@ -83,9 +87,15 @@ class InsightFaceReID:
 
         model = _get_model(model_name)
 
+        global EMBEDDING_SIZE
         faces = model.get(image)
-        assert len(faces) > 0
-        return faces[0].embedding
+        if len(faces) == 0:
+            embedding = np.zeros(EMBEDDING_SIZE, dtype=float)
+        else:
+            embedding = faces[0].embedding
+            EMBEDDING_SIZE = embedding.shape
+        # end
+        return embedding
     # end
 
     def __init__(self, model_name: str):
@@ -93,12 +103,12 @@ class InsightFaceReID:
         self._model_name = model_name
 
     def embedding(self, image: str | Path | np.ndarray):
-        return InsightFaceReID.represent(image, self._model_name)
+        return InsightFace.represent(image, self._model_name)
 
     # -----------------------------------------------------------------------
 
     @staticmethod
     def dispose():
-        INSIGHTFACEREID_MODELS.clear()
+        INSIGHTFACE_MODELS.clear()
         pass
     # end
