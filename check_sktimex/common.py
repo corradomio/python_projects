@@ -26,6 +26,7 @@ MSE_BAD = 0.3
 MODEL_CLASSES = ["stat", "reg", "lin", "rnn", "cnn", "tran", "misc"]
 
 WAVEFORMS = ["saw", "sin", "sinabs", "sq", "tri", "was"]
+WAVEFORMS_TREND = ["saw-t", "sin-t", "sinabs-t", "sq-t", "tri-t", "was-t"]
 # "pos": special case
 
 SEASONALITIES = [3, 6, 12, 24, 48]
@@ -99,7 +100,7 @@ def load_models_class() -> dict[tuple[str, str], str]:
     return models_class
 
 
-def load_models_variability(as_stats=False, with_noise=-1) -> list[dict]:
+def load_models_variability(as_stats=False, with_noise=-1, wfst=False) -> list[dict]:
     models_class = load_models_class()
 
     # noise,lib,name,cat,mean,stdv,quality,stability
@@ -117,6 +118,10 @@ def load_models_variability(as_stats=False, with_noise=-1) -> list[dict]:
         # lib,name,cat,mean,quality
         if as_stats:
             data_noise.append((model_class, lib, name, cat, mean, quality))
+        elif wfst:
+            wf, seasonality, trend = split_waveform_seasonality(cat)
+            # model_class, lib, name, wf, seasonality, trend, mean, stdv, quality, stability
+            data_noise.append((model_class, lib, name) + (wf, seasonality, trend) + (mean, stdv, quality, stability))
         else:
             data_noise.append([model_class] + rec)
     return data_noise

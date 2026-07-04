@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 from common import *
-from stdlib.dictx import *
+from stdlib.dictx import dict_get, dict_set
 
 
 def _compose_models_stats(data, models_class):
@@ -29,28 +29,34 @@ def _to_dict(variability_list: list) -> dict:
     for vl in variability_list:
         # ('stat', 'darts', 'ARIMA', 'pos', 0.0, 'good')
 
-        model_class, lib, name, _dataset, noise, mse_class = vl
-        if _dataset.endswith("-t"):
-            _dataset = _dataset[:-2]
-            trend = True
-        else:
-            trend = False
+        # [model_class, lib_name, noise, waveform, trend]
+
+        model_class, noise, lib, name, _dataset, _, _, mse_class, var_class = vl
+
+        wf, seasonality, trend = split_waveform_seasonality(_dataset)
+
         lib_name = f"{lib}.{name}"
+
         if model_class not in variability_stats:
             variability_stats[model_class] = {}
-        variability_class = variability_stats[model_class]
-        if lib_name not in variability_class:
-            variability_class[lib_name] = {}
-        variability_model = variability_class[lib_name]
-        if _dataset not in variability_model:
-            variability_model[_dataset] = {}
-        variability_ds = variability_model[_dataset]
-        if noise not in variability_ds:
-            variability_ds[noise] = {}
-        variability_noise = variability_ds[noise]
-        if trend not in variability_noise:
-            variability_noise[trend] = 0
-        variability_noise[trend] = STABILITY_MAP[mse_class]
+        d_class = variability_stats[model_class]
+
+        if lib_name not in d_class:
+            d_class[lib_name] = {}
+        d_lib_name = d_class[lib_name]
+
+        if noise not in d_lib_name:
+            d_lib_name[noise] = {}
+        d_noise = d_lib_name[noise]
+
+        if wf not in d_noise:
+            d_noise[wf] = {}
+        d_wf = d_noise[wf]
+
+        if trend not in d_wf:
+            d_wf[trend] = 0
+        d_wf[trend] = STABILITY_MAP[var_class]
+
     return variability_stats
 
 
@@ -144,7 +150,7 @@ def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
 
 
 def plot_models_stability():
-    variability_stats = load_models_variability(as_stats=True)
+    variability_stats = load_models_variability(as_stats=False)
 
     variability_stats = _to_dict(variability_stats)
 

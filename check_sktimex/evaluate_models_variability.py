@@ -242,16 +242,18 @@ def check_model(
         model.fit(y=y_train, X=X_train)
 
         # print("... predict")
-        y_predict = model.predict(fh=fh, X=X_test)
+        y_pred = model.predict(fh=fh, X=X_test)
 
         # save params
         # save_params(name, cat, model)
 
         # save scores
         save_scores(name, cat, r, noise, {
-            "mae": MeanAbsoluteError()(y_test, y_predict),
-            "mse": MeanSquaredError()(y_test, y_predict),
-            "r2": r2_score(y_test.to_numpy(), y_predict.to_numpy()),
+            "y_true": y_test.to_numpy().tolist(),
+            "y_pred": y_pred.to_numpy().tolist(),
+            "mae": MeanAbsoluteError()(y_test, y_pred),
+            "mse": MeanSquaredError()(y_test, y_pred),
+            "r2": r2_score(y_test.to_numpy(), y_pred.to_numpy()),
         })
 
         # save plot

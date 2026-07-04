@@ -166,7 +166,7 @@ def plot_seasonal_statistics_trend(tuned):
     mat = _compose_seasonal_matrix(data_stats, True)
     mat = mat.T
 
-    title = "Bad ratio for tuned models" if tuned else "Bad ratio for plain models"
+    title = "Bad-ratio for tuned models" if tuned else "Bad-ratio for plain models"
     fname = "stats/trend_seasonality_tuned_statistics.png" if tuned else "stats/trend_seasonality_plain_statistics.png"
 
     plt.clf()
