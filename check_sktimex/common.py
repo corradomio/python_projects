@@ -29,6 +29,8 @@ WAVEFORMS = ["saw", "sin", "sinabs", "sq", "tri", "was"]
 WAVEFORMS_TREND = ["saw-t", "sin-t", "sinabs-t", "sq-t", "tri-t", "was-t"]
 # "pos": special case
 
+WAVEFORMS_2 = ["saw", "was", "sq", "tri", "sinabs", "sin"]
+
 SEASONALITIES = [3, 6, 12, 24, 48]
 SEASONALITIES_LABEL = ["3", "6", "12", "24", "48"]
 SEASONALITIES_TREND = ["3", "6", "12", "24", "48", "3-t", "6-t", "12-t", "24-t", "48-t"]
@@ -41,6 +43,11 @@ QUALITY_MAP = {
     "bad": 2,
     "horrible": 3,
     "undefined": 4,
+}
+
+INVERTED_QUALITY_MAP  = {
+    QUALITY_MAP[k]: k
+    for k in QUALITY_MAP.keys()
 }
 
 STABILITY_MAP = {
@@ -164,9 +171,75 @@ def _load_tuned_statistics():
     return data
 
 
-def load_models_statistics(tuned=False):
+def load_models_statistics(tuned=False, details=False):
     if tuned:
-        return _load_tuned_statistics()
+        models_stats = _load_tuned_statistics()
     else:
-        return _load_plain_statistics()
+        models_stats = _load_plain_statistics()
+
+    if details:
+        models_stats = _add_details(models_stats)
+
+    return models_stats
 # end
+
+def count_models_by_class(models_stats: list) -> dict:
+    models_count = {}
+    for ms in models_stats:
+        # model_class, lib, name, ...
+        model_class, lib, name = ms[0], ms[1], ms[2]
+
+        if model_class not in models_count:
+            models_count[model_class] = set()
+        models_count[model_class].add((lib, name))
+    return models_count
+
+def _add_details(models_stats):
+    models_class = load_models_class()
+    detailed_stats = []
+
+    for ms in models_stats:
+        lib, name, cat, mse, quality = ms
+        model_class = models_class[(lib, name)]
+        waveform, seasonality, trend = split_waveform_seasonality(cat)
+        qual = QUALITY_MAP[quality]
+        detailed_stats.append(
+            [model_class, lib, name, waveform, seasonality, trend, mse, qual]
+        )
+        models_stats = detailed_stats
+    return models_stats
+
+# ---------------------------------------------------------------------------
+
+
+def _as_dict_depth(d: dict, i: int, depth: int):
+    if i == depth:
+        for k in d:
+            d[k] = d[k][0]
+    else:
+        for k in d:
+            elist = d[k]
+            edict = {}
+            for erec in elist:
+                ek = erec[0]
+                if ek not in edict:
+                    edict[ek] = []
+                edict[ek].append(erec[1:])
+            _as_dict_depth(edict, i+1, depth)
+            d[k] = edict
+    pass
+
+def as_dict(l: list, depth: int, order:list[int]|None=None):
+    if isinstance(order, list):
+        reordered = [
+            [r[i] for i in order]
+            for r in l
+        ]
+        l = reordered
+    # end
+    d = {
+        "root": l
+    }
+    _as_dict_depth(d, 0, depth)
+    return d["root"]
+

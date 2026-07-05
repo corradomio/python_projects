@@ -89,7 +89,7 @@ def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
     ax = plt.gca()
 
     plt.xlabel("models")
-    plt.ylabel("seasonalities")
+    plt.ylabel("seasonality")
     plt.title(title)
 
     img = plt.imshow(mat, cmap=COLORMAP)

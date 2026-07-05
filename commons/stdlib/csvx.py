@@ -8,6 +8,7 @@ from pathlib import Path
 from datetime import datetime, time
 from stdlib.bag import bag
 from stdlib import tobool
+from stdlib.is_instance import is_instance
 
 #
 # We suppose that:
@@ -716,13 +717,24 @@ def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> 
 # \end{tabular}
 
 def dump_latex(data, header, fmt=".3",
+               row_header=None,
                tt_header=False,
                tt_column=False,
-               bottom_line=False):
+               bottom_line=False,
+               bad=0,good=0):
     # str           -> left
     # int, float    -> right
     n = len(data)
     nh = len(header)
+
+    assert isinstance(data, list)
+
+    if row_header is not None:
+        assert len(row_header) == n
+        for i in range(n):
+            data[i] = [row_header[i]] + data[i]
+        if header is not None and nh < len(data[0]):
+            header = [""] + header
 
     def _align(i):
         if isinstance(data[0][i], str):
@@ -764,9 +776,17 @@ def dump_latex(data, header, fmt=".3",
 
     # format value
     def _fmtv(v):
-        if isinstance(v, float) and fmt is not None:
-            return ("{:" + fmt + "}").format(v)
-        if isinstance(v, str):
+        if isinstance(v, float):
+            if fmt is not None:
+                sv = ("{:" + fmt + "}").format(v)
+            else:
+                sv = str(v)
+            if bad > 0 and v >= bad:
+                sv = f"\\bad{{{sv}}}"
+            if good > 0 and v <= good:
+                sv = f"\\good{{{sv}}}"
+            v = sv
+        elif isinstance(v, str):
             v = v.replace("_", "\\_")
         else:
             v = str(v)

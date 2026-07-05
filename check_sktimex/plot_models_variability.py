@@ -109,7 +109,7 @@ def _prepare_stats_matrix(variability_stats: dict):
 
 def _plots_models_stats(fname, title, models_statistics, mat: np.ndarray):
     plt.clf()
-    plt.figure(figsize = (6, 5))
+    plt.figure(figsize = (6, 4))
     ax = plt.gca()
 
     plt.xlabel("models")
