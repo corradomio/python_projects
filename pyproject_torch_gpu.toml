@@ -7,7 +7,7 @@ dependencies = [
     "torch",
     "opencv-python",
     "opencv-contrib-python",
-    "ultralytics"
+    "mediapipe"
 ]
 
 [[tool.uv.index]]
@@ -22,4 +22,3 @@ torch = [
 torchvision = [
   { index = "pytorch-cu126", marker = "sys_platform == 'linux' or sys_platform == 'win32'" },
 ]
-

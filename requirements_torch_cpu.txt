@@ -163,8 +163,13 @@ bitsandbytes
 # https://github.com/arogozhnikov/einops
 einops
 
+# https://pypi.org/project/jaxtyping/
+# https://github.com/patrick-kidger/jaxtyping
 jaxtyping
 
+# https://pypi.org/project/hf-xet/
+# https://pypi.org/project/hf-xet/#hf_xet-1.1.5-cp37-abi3-win_amd64.whl
+hf_xet
 
 # ---------------------------------------------------------------------------
 # Tokenizers

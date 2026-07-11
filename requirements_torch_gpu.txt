@@ -17,14 +17,14 @@ tqdm
 # html parser
 #beautifulsoup4
 
-PyYAML
+#PyYAML
 
 # ---------------------------------------------------------------------------
 # IPython/Jupiter
 # ---------------------------------------------------------------------------
-ipython
-jupyter
-notebook
+#ipython
+#jupyter
+#notebook
 
 
 # ---------------------------------------------------------------------------
@@ -44,15 +44,15 @@ seaborn
 # ---------------------------------------------------------------------------
 # Image processing
 # ---------------------------------------------------------------------------
-pillow
 
+pillow
 opencv-python
 
 # skimage -> scikit-image
 scikit-image
 imageio
 
-albumentations
+#albumentations
 
 
 # ---------------------------------------------------------------------------
@@ -102,11 +102,11 @@ skorch
 # Pytorch extensions
 # ---------------------------------------------------------------------------
 
-torchmetrics 
-torchinfo
-transformers_stream_generator
-transformer_lens
-pytorch_model_summary
+#torchmetrics 
+#torchinfo
+#transformers_stream_generator
+#transformer_lens
+#pytorch_model_summary
 
 # pytorch-forecasting
 # pytorch-geometric
@@ -122,14 +122,14 @@ pytorch_model_summary
 # Huggingface
 # ---------------------------------------------------------------------------
 
-huggingface_hub
+#huggingface_hub
 diffusers
 transformers
 tokenizers
 
 accelerate
 safetensors
-datasets
+#datasets
 
 bitsandbytes
 # peft
@@ -162,22 +162,22 @@ bitsandbytes
 
 # https://pypi.org/project/einops/
 # https://github.com/arogozhnikov/einops
-einops
+#einops
 
 # https://pypi.org/project/jaxtyping/
 # https://github.com/patrick-kidger/jaxtyping
-jaxtyping
+#jaxtyping
 
 # https://pypi.org/project/hf-xet/
 # https://pypi.org/project/hf-xet/#hf_xet-1.1.5-cp37-abi3-win_amd64.whl
-hf_xet
+#hf_xet
 
 # ---------------------------------------------------------------------------
 # Tokenizers
 # ---------------------------------------------------------------------------
 
 # BPE tokenizer
-tiktoken
+#tiktoken
 
 # Sacremoses tokenizer
 # sacremoses

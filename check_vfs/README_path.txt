@@ -1,0 +1,5 @@
+FileNotFound
+FileExistsError
+PermissionError
+IsADirectoryError
+NotADirectoryError

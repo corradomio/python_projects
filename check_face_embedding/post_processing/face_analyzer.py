@@ -9,7 +9,7 @@ from face_detection.torch_utils import get_device
 from stdlib import loggingx as logging
 from stdlib.is_instance import is_instance
 from stdlib.jsonx import JSONConfiguration
-from .utils import chop, IMAGE_ARRAY, LabMonitoring
+from .utils import chop, IMAGE_ARRAY, LabMonitoring, sort_tracks
 
 LINE_COLOR = (255, 0, 255)
 LINE_THICKNESS = 2
@@ -40,7 +40,6 @@ class FaceDetection:
             clip_boxes=clip_boxes
         )
 
-
     def detect(self, image, shrink=1.0) -> np.ndarray:
         return self._model.detect(image, shrink=shrink)
 
@@ -67,7 +66,6 @@ class FaceDetection:
 #                 # "cleaner_or_security"
 #                 ]
 
-
 class FaceAnalyzer(LabMonitoring):
 
     def __init__(self, CONFIG: JSONConfiguration):
@@ -93,7 +91,7 @@ class FaceAnalyzer(LabMonitoring):
         self._log = logging.getLogger("FaceAnalyzer")
         pass
 
-    def analyze(self, tracks_root: Path):
+    def analyze(self, tracks_root: Path, face_db_suffix=""):
         # Analyze the images in
         #   <root_path>/<folder>/face_recognition
         #   <root_path>/<folder>/random_crop
@@ -105,8 +103,7 @@ class FaceAnalyzer(LabMonitoring):
         # Note, the image name has the structure:
         assert is_instance(tracks_root, Path)
 
-        if not self.enabled:
-            return
+        if not self.enabled: return
 
         log = self._log
 
@@ -117,6 +114,7 @@ class FaceAnalyzer(LabMonitoring):
             for track_dir in tracks_root.iterdir()
             if self._is_track_valid(track_dir)
         ]
+        track_dirs: list[Path] = sort_tracks(track_dirs)
         n = len(track_dirs)
 
         for i, track_dir in enumerate(track_dirs):
@@ -249,5 +247,8 @@ class FaceAnalyzer(LabMonitoring):
 
     def _cleanup(self):
         pass
-
 # end
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------

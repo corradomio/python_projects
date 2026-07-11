@@ -1,7 +1,7 @@
 import re
 from collections import Counter
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Union, Optional
 from datetime import datetime
 
 import numpy as np
@@ -9,6 +9,7 @@ import numpy as np
 from stdlib.is_instance import is_instance
 from stdlib import jsonx
 from stdlib.jsonx import JSONConfiguration
+from stdlib.sortedx import sort_by_key
 
 # ---------------------------------------------------------------------------
 # Type Hints aliases
@@ -28,6 +29,16 @@ FILE_PATH = str
 REMOTE_FILE_PATH = str
 PERSON_NAME = str
 URL = str
+
+DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+VIOLATIONS = [
+    'not_dress_well', 'not_glove_well',
+    'unauthorised_access',
+    'unauthorised_operation_A',
+    'unauthorised_machine_touching_B'
+    #, 'cleaner_or_security'
+]
 
 NOT_ASSIGNED_NAMES = ["face_not_in_DB", "NO_FACES_SAVED", "KU_FACE_RECOGNITION_UNAVAILABLE"]
 
@@ -54,6 +65,19 @@ class LabMonitoring:
         pass
 
 
+class DataServer(LabMonitoring):
+    def __init__(self, CONFIG: JSONConfiguration, component: str):
+        super().__init__(CONFIG, component)
+
+    def save_data(
+        self,
+        tracks_root: Path,
+        meta_records_map: dict[CAM_TRACK_NAME, RECORD],
+        date_in_id: str,
+        to_combine: list[list[CAM_TRACK_NAME]]
+    ) -> dict:
+        ...
+
 # ---------------------------------------------------------------------------
 # TracksCluster
 # ---------------------------------------------------------------------------
@@ -73,6 +97,25 @@ class TracksClusterBase:
         self._min_timestamp: float = 0.
         self._max_timestamp: float = 0.
     # end
+# end
+
+
+class ClusterTracks(LabMonitoring):
+    def __init__(self, CONFIG: JSONConfiguration, component: str):
+        super().__init__(CONFIG, component)
+
+    def track_cluster_map(self) -> dict[CAM_TRACK_NAME, CLUSTER_ID]:
+        ...
+
+    def cluster_tracks_map(self) -> dict[CLUSTER_ID, TracksClusterBase]:
+        ...
+
+    def has_track(self, track_name: str) -> bool:
+        ...
+
+    def analyze(self, tracks_root: Path, tracks_meta_map: dict[CAM_TRACK_NAME, RECORD], save: bool = True) -> bool:
+        ...
+# end
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -100,8 +143,8 @@ def load_track_meta(track_dir: Path) -> dict:
     meta['present_start_datetime'] = start
     meta['present_end_datetime'] = end
     meta['duration'] = (end - start).total_seconds()
-
     return meta
+# end
 
 
 def normalize_path(path: str, end_slash=None) -> str:
@@ -279,4 +322,56 @@ def chop(x, xmax: int):
     elif x > xmax:
         x = xmax
     return int(x)
+
+
+# def sort_tracks(tracks: Union[list[str], list[Path]]) -> Union[list[str],list[Path]]:
+def sort_tracks(tracks: list[Path]) -> list[Path]:
+    assert is_instance(tracks, list[Path])
+
+    def _split(name) -> tuple[int, int]:
+        parts = name.split("_")
+        return int(parts[0]), int(parts[1])
+
+    if len(tracks) == 0:
+        return tracks
+
+    if isinstance(tracks[0], Path):
+        is_path = True
+        track_names = [
+            track_dir.name
+            for track_dir in tracks
+        ]
+    else:
+        is_path = False
+        track_names = tracks
+
+    track_names = sort_by_key(track_names, key=_split)
+    if is_path:
+        tracks_root = tracks[0].parent
+        sorted_tracks = [
+            (tracks_root / track_name)
+            for track_name in track_names
+        ]
+    else:
+        sorted_tracks = track_names
+    return sorted_tracks
+# end
+
+# ---------------------------------------------------------------------------
+
+def info_violation(
+    meta_records_map: dict[CAM_TRACK_NAME, RECORD],
+    this_to_combine: list[CAM_TRACK_NAME],
+    violation: str
+) -> tuple[bool, Optional[str]]:
+    has_violation = any(meta_records_map[track_id].get(violation, False) for track_id in this_to_combine)
+    if not has_violation:
+        return has_violation, None
+
+    img_violation = "img_" + violation
+    imgs_violation = [meta_records_map[track_id].get(img_violation, None) for track_id in this_to_combine if
+                           meta_records_map[track_id].get(img_violation, None) is not None]
+
+    return has_violation, imgs_violation[0] if len(imgs_violation) > 0 else None
+
 

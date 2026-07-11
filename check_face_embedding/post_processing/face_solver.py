@@ -6,14 +6,17 @@ import numpy as np
 from scipy.spatial.distance import cdist
 
 import stdlib.loggingx as logging
-from human.clipreid import ClipReID
 from stdlib.is_instance import is_instance
 from stdlib.jsonx import JSONConfiguration
 from stdlib.qname import create_from
-from .utils import EMBEDDING, LabMonitoring, METRIC_TYPES
+from .utils import EMBEDDING, LabMonitoring, METRIC_TYPES, sort_tracks
 
 TOP_SIMILARITY = 0.9999
 
+
+# ---------------------------------------------------------------------------
+# FaceSolver
+# ---------------------------------------------------------------------------
 
 class FaceSolver(LabMonitoring):
     def __init__(self, CONFIG: JSONConfiguration):
@@ -31,38 +34,40 @@ class FaceSolver(LabMonitoring):
         assert is_instance(self.linkage, Literal["average", "complete", "single", "ward"])
 
         self.embedding = create_from(CONFIG.get("face_solver.embedding"))
-        # self.faces_store.mkdir(parents=True, exist_ok=True)
 
+        self._track_root: Path = None
         self._faces_database: dict[str, list[EMBEDDING]] = {}
         self._means_database: dict[str, list[EMBEDDING]] = {}
 
         self._log = logging.getLogger("FaceSolver")
 
-    def analyze(self, tracks_root: Path, face_db_suffix=""):
+    def analyze(self, tracks_root: Path, db_suffix=""):
         assert is_instance(tracks_root, Path)
-        assert is_instance(face_db_suffix, str)
+        assert is_instance(db_suffix, str)
+
+        if not self.enabled: return
 
         self._log.info(f"Analyzing {tracks_root} ...")
 
         self._track_root = tracks_root
 
         # create the face_db (a directory)
-        if len(face_db_suffix) > 0:
-            self.faces_store = self.faces_store.parent / (self.faces_store.name + f"_{face_db_suffix}")
+        self.faces_store = self.faces_store.parent / (self.faces_store.name + db_suffix)
         self.faces_store.mkdir(parents=True, exist_ok=True)
 
         # preload the faces database
         self._load_faces_database()
 
         # scan the tracks
-        trace_dirs = [
+        track_dirs = [
             track_dir
             for track_dir in tracks_root.iterdir()
             if self._is_track_valid(track_dir)
         ]
-        n = len(trace_dirs)
+        track_dirs: list[Path] = sort_tracks(track_dirs)
+        n = len(track_dirs)
 
-        for i, track_dir in enumerate(trace_dirs):
+        for i, track_dir in enumerate(track_dirs):
             face_dir = track_dir / "face"
             if not face_dir.is_dir(): continue
 
@@ -185,3 +190,7 @@ class FaceSolver(LabMonitoring):
     def _cleanup(self):
         pass
 # end
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
