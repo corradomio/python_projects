@@ -64,12 +64,12 @@ trainer = L.Trainer(
 trainer.fit(model=autoencoder, train_dataloaders=train_loader)
 
 
-autoencoder = LitAutoEncoder(Encoder(), Decoder())
-optimizer = autoencoder.configure_optimizers()
-
-for batch_idx, batch in enumerate(train_loader):
-    loss = autoencoder.training_step(batch, batch_idx)
-
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+# autoencoder = LitAutoEncoder(Encoder(), Decoder())
+# optimizer = autoencoder.configure_optimizers()
+#
+# for batch_idx, batch in enumerate(train_loader):
+#     loss = autoencoder.training_step(batch, batch_idx)
+#
+#     loss.backward()
+#     optimizer.step()
+#     optimizer.zero_grad()

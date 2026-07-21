@@ -1,0 +1,16 @@
+[project]
+name = "check-qdrant"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "llama_index",
+    "langchain",
+    "langchain_text_splitters",
+    "langchain_community",
+    "langchain_openai",
+    "qdrant_client",
+    "fastembed",
+    "PyPDF",
+    "PyMuPDF",
+
+]

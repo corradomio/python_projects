@@ -1,7 +1,7 @@
 from collections import defaultdict
-from stdlib.sortedx import sort_by_key
 
 from common import *
+from stdlib.sortedx import sort_by_key
 
 
 # ---------------------------------------------------------------------------
@@ -353,6 +353,63 @@ def count_models_stability():
     pass
 
 
+def count_classes_stability():
+    print("-- count_models_stability --")
+
+    # model_class,noise,lib,name,wf,seas,trend,mean,stdv,quality,stability
+    data = load_models_variability(nwfst=True)
+
+    stability_stats = defaultdict(lambda: {
+        "names": set(),
+        "models": 0,
+        "datasets": 0,
+        "stable": 0,
+        "good": 0,
+        "reasonable": 0,
+        "bad": 0,
+        "horrible": 0
+    })
+
+    for rec in data:
+        model_class,noise,lib,name,wf,seas,trend,mean,stdv,quality,stability = rec
+
+        mclass_stat = stability_stats[model_class]
+        mclass_stat["names"].add(name)
+        mclass_stat["datasets"] += 1
+        mclass_stat[stability] += 1
+    # end
+
+    for model_class in stability_stats:
+        assert mclass_stat["datasets"] == (mclass_stat["stable"] + mclass_stat["good"] + mclass_stat["reasonable"]+ mclass_stat["bad"] + mclass_stat["horrible"])
+        mclass_stat = stability_stats[model_class]
+        mclass_stat["models"] = len(mclass_stat["names"])
+        mclass_stat["bad_ratio"] = (0. + mclass_stat["bad"] + mclass_stat["horrible"])/mclass_stat["datasets"]
+        del mclass_stat["names"]
+
+    # ["stable", "good", "reasonable", "bad", "horrible", "undefined"]
+    stats = [
+        (
+            model_class,
+            mclass_stat["models"],
+            mclass_stat["datasets"],
+            mclass_stat["stable"],
+            mclass_stat["good"],
+            mclass_stat["reasonable"],
+            mclass_stat["bad"],
+            mclass_stat["horrible"],
+            mclass_stat["bad_ratio"],
+        )
+        for model_class, mclass_stat in stability_stats.items()
+    ]
+
+    fname = "stats/model_classes_stability_table.csv"
+    header = ["class", "models", "datasets","stable", "g4", "g2", "g1", "b1", "bad_ratio"]
+
+    csvx.dump(stats, fname, header=header)
+    csvx.dump_latex(stats, header=header, tt_header=False, tt_column=False, bottom_line=True)
+    pass
+
+
 # ---------------------------------------------------------------------------
 
 def main():
@@ -370,8 +427,10 @@ def main():
 
     # count_variability_by_class()
 
-    count_models_quality()
-    count_models_stability()
+    # count_models_quality()
+    # count_models_stability()
+
+    count_classes_stability()
     pass
 
 

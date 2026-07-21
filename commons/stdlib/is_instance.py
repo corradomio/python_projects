@@ -112,6 +112,7 @@ __all__ = [
     "Literals",         # Literals[[l1, ...]]   as alternative to Literal[l1, ...]
     "Supertype",        # Supertype[T1, ...]
     "Not",              # Not[T]
+    "InRange",          # InRange[L,U]
 
     # support for extensions
     'IS_INSTANCE_OF',   # dictionary
@@ -163,15 +164,18 @@ except:
 
 
 def get_metaclass_members(tp, metaclass=ABCMeta):
-    metaclass_members = set(metaclass.__dict__.keys())
-    tp_members = set(tp.__dict__.keys())
-    unused_members = {
-        '__annotations__', '__init__', '__subclasshook__',                      # Protocol
-        '__abstractmethods__', '__slots__', '__subclasshook__', '_abc_impl',    # ABCMeta
-        '__class_getitem__'
-    }
-    useful_members = tp_members - metaclass_members - unused_members
-    return frozenset(useful_members)
+    try:
+        metaclass_members = set(metaclass.__dict__.keys())
+        tp_members = set(tp.__dict__.keys())
+        unused_members = {
+            '__annotations__', '__init__', '__subclasshook__',                      # Protocol
+            '__abstractmethods__', '__slots__', '__subclasshook__', '_abc_impl',    # ABCMeta
+            '__class_getitem__'
+        }
+        useful_members = tp_members - metaclass_members - unused_members
+        return frozenset(useful_members)
+    except:
+        return frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -459,10 +463,19 @@ def Not(self, parameter):
     Not[T]
     An object is NOT of the specified type
     """
-    msg = "Not[T]: each T must be a type."
+    msg = "Not[T]: T must be a type."
     parameter = _type_check(parameter, msg)
     return _GenericAlias(self, parameter)
 
+
+@_SpecialForm
+def InRange(self, *parameters):
+    """
+    InRange[L,U]
+    L and U must be float or integer
+    """
+    msg = "InRange[L,U]: L and U must be float or integer."
+    return _GenericAlias(self, parameters)
 
 
 # ---------------------------------------------------------------------------
@@ -674,7 +687,9 @@ class IsMapping(IsInstance):
 
         for key in obj:
             value = obj[key]
-            if not is_instance(key, key_type) or not is_instance(value, value_type):
+            if not is_instance(key, key_type):
+                return False
+            if not is_instance(value, value_type):
                 return False
         return True
     
@@ -882,6 +897,17 @@ class IsNot(IsInstance):
     def is_instance(self, obj) -> bool:
         return not is_instance(obj, self.args[0])
 
+
+class IsInRange(IsInstance):
+    def __init__(self, tp):
+        super().__init__(tp)
+        assert self.nargs == 1
+
+    def is_instance(self, obj) -> bool:
+        lower, upper = self.args[0]
+        return isinstance(obj, (int,float)) and (lower <= obj <= upper)
+
+
 # ---------------------------------------------------------------------------
 # is_instance
 # ---------------------------------------------------------------------------
@@ -946,6 +972,7 @@ IS_INSTANCE_OF = {
 
     'typing.LiteralExtended': IsLiteralExtend,
     'typing.Not': IsNot,
+    'typing.InRange': IsInRange,
 }
 
 
@@ -1047,8 +1074,8 @@ def has_methods(obj_or_methods: Union[object, list[str]], methods: list[str] = N
         return HasMethod(methods).validate(obj_or_methods, msg)
 
 
-def cast(obj, a_type) -> object:
-    assert is_instance(obj, a_type)
+def cast(a_type, obj) -> object:
+    assert is_instance(a_type, obj)
     return obj
 
 

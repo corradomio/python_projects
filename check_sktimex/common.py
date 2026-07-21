@@ -83,7 +83,7 @@ def stdv(values, mean):
     return sqrt(var)/len(values)
 
 
-def split_waveform_seasonality(cat: str):
+def split_waveform_seasonality(cat: str) -> tuple[str, int, bool]:
     trend = cat.endswith("-t")
     if trend:
         cat = cat[:-2]
@@ -107,7 +107,7 @@ def load_models_class() -> dict[tuple[str, str], str]:
     return models_class
 
 
-def load_models_variability(as_stats=False, with_noise=-1, wfst=False) -> list[dict]:
+def load_models_variability(as_stats=False, with_noise=-1, nwfst=False, wfst=False) -> list[dict]:
     models_class = load_models_class()
 
     # noise,lib,name,cat,mean,stdv,quality,stability
@@ -125,6 +125,9 @@ def load_models_variability(as_stats=False, with_noise=-1, wfst=False) -> list[d
         # lib,name,cat,mean,quality
         if as_stats:
             data_noise.append((model_class, lib, name, cat, mean, quality))
+        elif nwfst:
+            wf, seasonality, trend = split_waveform_seasonality(cat)
+            data_noise.append((model_class, noise, lib, name) + (wf, seasonality, trend) + (mean, stdv, quality, stability))
         elif wfst:
             wf, seasonality, trend = split_waveform_seasonality(cat)
             # model_class, lib, name, wf, seasonality, trend, mean, stdv, quality, stability
