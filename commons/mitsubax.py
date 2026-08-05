@@ -75,6 +75,11 @@ class SceneLoader:
 
     def _bool(self, x) -> bool:
         x = self._resolve_default(x)
+        if x in [0, "false", "False", "no"]:
+            return False
+        if x in [1, "true", "True", "yes"]:
+            return True
+        assert x in [0, 1, "false", "False", "no", "true", "True", "yes"], f"Boolean value {x} not defined"
         return bool(x)
 
     # ---------------------------------------------------------------------------
@@ -341,7 +346,7 @@ class SceneLoader:
         id = self._resolve_default(id)
         # assert id in REF_ELEMENTS, f"Reference {id} not found"
         # return REF_ELEMENTS[id]
-        data[name] = dict(type="ref", id=id, name=name)
+        data[name] = dict(type="ref", id=id)
         pass
 
     def _parse_transform(self, data: dict, xml: ET.Element):
