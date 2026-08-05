@@ -12,6 +12,27 @@ def list_map(f, l):
     return list(map(f, l))
 
 
+def flatten(l: list) -> list:
+    """
+    remove internal lists
+    :param l:
+    :return:
+    """
+    if isinstance(l, tuple):
+        l = list(l)
+    if not isinstance(l, list):
+        return l
+
+    f = []
+    for e in l:
+        e = flatten(e)
+        if isinstance(e, list):
+            f += e
+        else:
+            f.append(e)
+    return f
+
+
 # ---------------------------------------------------------------------------
 # lrange
 # ---------------------------------------------------------------------------

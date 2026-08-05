@@ -1,0 +1,225 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <graph edgedefault="directed">
+    <node id="se" />
+    <node id="qualcosa" />
+    <node id="puo'" />
+    <node id="andar" />
+    <node id="male," />
+    <node id="lo" />
+    <node id="fara'." />
+    <node id="1." />
+    <node id="niente" />
+    <node id="e'" />
+    <node id="facile" />
+    <node id="come" />
+    <node id="sembra." />
+    <node id="2." />
+    <node id="tutto" />
+    <node id="richiede" />
+    <node id="piu'" />
+    <node id="tempo" />
+    <node id="di" />
+    <node id="quanto" />
+    <node id="si" />
+    <node id="pensi." />
+    <node id="3." />
+    <node id="c'e'" />
+    <node id="una" />
+    <node id="possibilita'" />
+    <node id="che" />
+    <node id="varie" />
+    <node id="cose" />
+    <node id="vadano" />
+    <node id="quella" />
+    <node id="causa" />
+    <node id="il" />
+    <node id="danno" />
+    <node id="maggiore" />
+    <node id="sara'" />
+    <node id="la" />
+    <node id="prima" />
+    <node id="a" />
+    <node id="farlo." />
+    <node id="4." />
+    <node id="prevedono" />
+    <node id="quattro" />
+    <node id="possibili" />
+    <node id="modi" />
+    <node id="in" />
+    <node id="cui" />
+    <node id="andare" />
+    <node id="e" />
+    <node id="prevengono," />
+    <node id="immediatamente" />
+    <node id="ne" />
+    <node id="rivelera'" />
+    <node id="un" />
+    <node id="quinto." />
+    <node id="5." />
+    <node id="lasciate" />
+    <node id="stesse" />
+    <node id="le" />
+    <node id="tendono" />
+    <node id="ad" />
+    <node id="male" />
+    <node id="peggio." />
+    <node id="6." />
+    <node id="non" />
+    <node id="ci" />
+    <node id="mettere" />
+    <node id="far" />
+    <node id="senza" />
+    <node id="qualcos'altro" />
+    <node id="vada" />
+    <node id="fatto" />
+    <node id="prima." />
+    <node id="7." />
+    <node id="ogni" />
+    <node id="soluzione" />
+    <node id="crea" />
+    <node id="sempre" />
+    <node id="dei" />
+    <node id="nuovi" />
+    <node id="problemi." />
+    <node id="8." />
+    <node id="i" />
+    <node id="cretini" />
+    <node id="sono" />
+    <node id="ingegnosi" />
+    <node id="delle" />
+    <node id="precauzioni" />
+    <node id="prendono" />
+    <node id="per" />
+    <node id="impedirgli" />
+    <node id="nuocere." />
+    <node id="9." />
+    <node id="sia" />
+    <node id="nascosta" />
+    <node id="pecca," />
+    <node id="natura" />
+    <node id="riuscira'" />
+    <node id="scovarla." />
+    <edge source="se" target="qualcosa" />
+    <edge source="se" target="c'e'" />
+    <edge source="se" target="si" />
+    <edge source="se" target="ne" />
+    <edge source="se" target="stesse" />
+    <edge source="qualcosa" target="puo'" />
+    <edge source="qualcosa" target="senza" />
+    <edge source="puo'" target="andar" />
+    <edge source="puo'" target="andare" />
+    <edge source="puo'" target="mettere" />
+    <edge source="andar" target="male," />
+    <edge source="male," target="lo" />
+    <edge source="male," target="quella" />
+    <edge source="male," target="e" />
+    <edge source="lo" target="fara'." />
+    <edge source="1." target="niente" />
+    <edge source="niente" target="e'" />
+    <edge source="e'" target="facile" />
+    <edge source="facile" target="come" />
+    <edge source="come" target="sembra." />
+    <edge source="2." target="tutto" />
+    <edge source="tutto" target="richiede" />
+    <edge source="richiede" target="piu'" />
+    <edge source="piu'" target="tempo" />
+    <edge source="piu'" target="ingegnosi" />
+    <edge source="tempo" target="di" />
+    <edge source="di" target="quanto" />
+    <edge source="di" target="male" />
+    <edge source="di" target="nuocere." />
+    <edge source="quanto" target="si" />
+    <edge source="quanto" target="sia" />
+    <edge source="si" target="pensi." />
+    <edge source="si" target="prevedono" />
+    <edge source="si" target="prevengono," />
+    <edge source="si" target="puo'" />
+    <edge source="si" target="prendono" />
+    <edge source="3." target="se" />
+    <edge source="c'e'" target="una" />
+    <edge source="una" target="possibilita'" />
+    <edge source="una" target="pecca," />
+    <edge source="possibilita'" target="che" />
+    <edge source="che" target="varie" />
+    <edge source="che" target="causa" />
+    <edge source="che" target="qualcos'altro" />
+    <edge source="che" target="si" />
+    <edge source="varie" target="cose" />
+    <edge source="cose" target="vadano" />
+    <edge source="cose" target="tendono" />
+    <edge source="vadano" target="male," />
+    <edge source="quella" target="che" />
+    <edge source="causa" target="il" />
+    <edge source="il" target="danno" />
+    <edge source="danno" target="maggiore" />
+    <edge source="maggiore" target="sara'" />
+    <edge source="sara'" target="la" />
+    <edge source="la" target="prima" />
+    <edge source="la" target="natura" />
+    <edge source="prima" target="a" />
+    <edge source="a" target="farlo." />
+    <edge source="a" target="se" />
+    <edge source="a" target="far" />
+    <edge source="a" target="scovarla." />
+    <edge source="4." target="se" />
+    <edge source="prevedono" target="quattro" />
+    <edge source="quattro" target="possibili" />
+    <edge source="possibili" target="modi" />
+    <edge source="modi" target="in" />
+    <edge source="in" target="cui" />
+    <edge source="in" target="peggio." />
+    <edge source="cui" target="qualcosa" />
+    <edge source="andare" target="male," />
+    <edge source="andare" target="di" />
+    <edge source="e" target="si" />
+    <edge source="prevengono," target="immediatamente" />
+    <edge source="immediatamente" target="se" />
+    <edge source="ne" target="rivelera'" />
+    <edge source="rivelera'" target="un" />
+    <edge source="un" target="quinto." />
+    <edge source="5." target="lasciate" />
+    <edge source="lasciate" target="a" />
+    <edge source="stesse" target="le" />
+    <edge source="le" target="cose" />
+    <edge source="tendono" target="ad" />
+    <edge source="ad" target="andare" />
+    <edge source="male" target="in" />
+    <edge source="6." target="non" />
+    <edge source="non" target="ci" />
+    <edge source="non" target="vada" />
+    <edge source="ci" target="si" />
+    <edge source="mettere" target="a" />
+    <edge source="far" target="qualcosa" />
+    <edge source="senza" target="che" />
+    <edge source="qualcos'altro" target="non" />
+    <edge source="vada" target="fatto" />
+    <edge source="fatto" target="prima." />
+    <edge source="7." target="ogni" />
+    <edge source="ogni" target="soluzione" />
+    <edge source="soluzione" target="crea" />
+    <edge source="crea" target="sempre" />
+    <edge source="sempre" target="dei" />
+    <edge source="sempre" target="piu'" />
+    <edge source="sempre" target="a" />
+    <edge source="dei" target="nuovi" />
+    <edge source="nuovi" target="problemi." />
+    <edge source="8." target="i" />
+    <edge source="i" target="cretini" />
+    <edge source="cretini" target="sono" />
+    <edge source="sono" target="sempre" />
+    <edge source="ingegnosi" target="delle" />
+    <edge source="delle" target="precauzioni" />
+    <edge source="precauzioni" target="che" />
+    <edge source="prendono" target="per" />
+    <edge source="per" target="impedirgli" />
+    <edge source="per" target="quanto" />
+    <edge source="impedirgli" target="di" />
+    <edge source="9." target="per" />
+    <edge source="sia" target="nascosta" />
+    <edge source="nascosta" target="una" />
+    <edge source="pecca," target="la" />
+    <edge source="natura" target="riuscira'" />
+    <edge source="riuscira'" target="sempre" />
+  </graph>
+</graphml>

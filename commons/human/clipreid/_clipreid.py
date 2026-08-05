@@ -5,7 +5,6 @@ import os
 from typing import cast
 
 import torch
-from torch import nn
 import numpy as np
 import gdown
 import torchvision.transforms as T
@@ -200,8 +199,10 @@ class ClipReID:
         assert isinstance(model_name, str)
         self._model_name = model_name
 
-    def embedding(self, image: str | Path | np.ndarray):
-        return ClipReID.represent(image, self._model_name)
+    def embedding(self, image: str | Path | np.ndarray) -> np.ndarray:
+        emb = ClipReID.represent(image, self._model_name)
+        assert isinstance(emb, np.ndarray)
+        return emb
 
     # -----------------------------------------------------------------------
 

@@ -17,7 +17,7 @@ def main():
 
     tprint(f"parallel")
 
-    r = Parallel(n_jobs=(10, 2))(delayed(random)(i) for i in range(100000))
+    r = Parallel(n_jobs=(5, 5))(delayed(random)(i) for i in range(100000))
 
     tprint(f"len={len(r)}")
 

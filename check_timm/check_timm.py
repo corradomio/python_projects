@@ -7,8 +7,8 @@ import timm
 
 def main():
     pprint(timm.list_models())
-    # pprint(timm.list_pretrained())
-    # pprint(timm.list_modules())
+    pprint(timm.list_pretrained())
+    pprint(timm.list_modules())
     pass
 
 

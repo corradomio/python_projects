@@ -1,0 +1,117 @@
+<scene>
+    <default name="side" value="0.15"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <sensor type="perspective" id="global-camera">
+        <float name="fov" value="45"/>
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="30 50 30" target="0 0 0" up="0, 0, 1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="512"/>
+            <integer name="height" value="512"/>
+        </film>
+    </sensor>
+
+    <!--<sensor type="perspective" id="top-camera">
+		<string name="fov_axis" value="x"/>
+        <float name="fov" value="170"/>
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="0 0 2.5" target="0 0 0" up="1 0 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="5120"/>
+            <integer name="height" value="370"/>
+        </film>
+    </sensor>-->
+
+    <!--<sensor type="batch">
+        <ref id="top-camera"/>
+    </sensor>-->
+
+    <!-- brdf -->
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <shape type="cube">
+        <transform name="to_world">
+            <scale value="1 28 0.05"/>
+            <translate value="0 0 3"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="1"/>
+        </emitter>
+    </shape>
+
+    <!--<shape type="sphere">
+        <transform name="to_world">
+             <translate value="0 0 5"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="1"/>
+        </emitter>
+    </shape>-->
+
+    <!-- scene -->
+    <shape type="cube" id="cube0">
+        <transform name="to_world">
+            <scale x="$side" y="$side" z="$side"/>
+        </transform>
+        <!--<bsdf type="diffuse">
+            <rgb name="reflectance" value="1, 1, 1"/>
+        </bsdf>-->
+
+        <ref id="white"/>
+    </shape>
+
+    <shape type="rectangle" id="background">
+         <transform name="to_world">
+            <scale x="2" y="28" z="1"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.6 0.4 0.2"/>
+        </bsdf>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale x="3" y="35" z="1"/>
+            <translate value="0 0 -0.5"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.7 0 0"/>
+        </bsdf>
+    </shape>
+
+</scene>

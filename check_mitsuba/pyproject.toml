@@ -1,0 +1,27 @@
+[project]
+name = "check-mitsuba"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Corrado Mio", email = "corrado.mio@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "joblib",
+    "numpy",
+    "scipy",
+    "bezier",
+    "pandas",
+    "matplotlib",
+    "seaborn",
+    "imageio",
+    "mitsuba"
+]
+
+[project.scripts]
+check-mitsuba = "check_mitsuba:main"
+
+[build-system]
+requires = ["uv_build>=0.12.1,<0.13.0"]
+build-backend = "uv_build"

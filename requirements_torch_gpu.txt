@@ -97,6 +97,8 @@ lightning
 # https://github.com/skorch-dev/skorch
 skorch
 
+triton-windows
+
 
 # ---------------------------------------------------------------------------
 # Pytorch extensions

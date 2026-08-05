@@ -4,7 +4,7 @@ from common import *
 
 
 def main():
-    ROOT = Path(r"scores_vm\scores")
+    ROOT = Path(r"scores_vm_2\scores")
     models_class = load_models_class()
 
     data = []
@@ -37,6 +37,7 @@ def main():
                     continue
 
                 lib, name = parts
+                model_class = models_class[(lib, name)]
 
                 wf, seas, trend = split_waveform_seasonality(fields[1])
                 r = int(fields[2])
@@ -46,11 +47,13 @@ def main():
                 r2 = float(fields[-1])
 
                 data.append(
-                    [lib, name, noise, wf, seas, trend, r, mae, mse, r2]
+                    [model_class, lib, name, noise, wf, seas, trend, r, mae, mse, r2]
                 )
 
                 pass
-
+    # end
+    csvx.dump(data)
+    pass
 
 
 if __name__ == "__main__":

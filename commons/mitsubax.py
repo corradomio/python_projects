@@ -1,21 +1,46 @@
+import numpy as np
 import xml.etree.ElementTree as ET
 from io import UnsupportedOperation
-from typing import Union
+from pathlib import Path
+from typing import Union, Callable, Any, cast
 
 import mitsuba as mi
 
+TAG_FUNCTION = Callable[[dict, ET.Element], None]
 
+
+# ---------------------------------------------------------------------------
+# Utilities
+# ---------------------------------------------------------------------------
+
+def _normalize_rgb(rgb: list[float]):
+    return rgb
+
+
+# ---------------------------------------------------------------------------
+# SceneLoader
+# ---------------------------------------------------------------------------
 
 class SceneLoader:
 
     def __init__(self):
         self.TAG_IDS = {}
         self.REF_ELEMENTS = {}
+        self.DEFAULTS = {}
+        self.SCENE_PATH: Path = Path()
+        self.shape_depth = 0
 
-    def load_scene(self, scene_xml: str, **kwargs) -> dict:
+    def load_scene(self, scene_path: str|Path, **kwargs) -> dict:
+        if isinstance(scene_path, str):
+            scene_path = Path(scene_path)
+
+        assert scene_path.name.endswith(".xml")
+
+        self.SCENE_PATH: Path = scene_path
         self.REF_ELEMENTS.update(kwargs)
+        self.shape_depth = 0
 
-        tree = ET.parse(scene_xml)
+        tree = ET.parse(scene_path)
         root = tree.getroot()
 
         scene_dict = dict()
@@ -62,6 +87,18 @@ class SceneLoader:
         self.REF_ELEMENTS[id] = data
 
     def _get_id(self, xml: ET.Element) -> str:
+        if "id" in xml.attrib:
+            return xml.attrib["id"]
+
+        tag = xml.tag
+
+        if tag not in self.TAG_IDS:
+            self.TAG_IDS[tag] = 1
+        id = self.TAG_IDS[tag]
+        self.TAG_IDS[tag] += 1
+        return f"{tag}_{id}"
+
+    def _get_name(self, xml: ET.Element) -> str:
         if "id" in xml.attrib:
             return xml.attrib["id"]
 
@@ -142,12 +179,16 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
+    # def _parse_body(self, data: dict, xml: ET.Element):
+    #     for child in xml:
+    #         self._parse_tag(data, child)
+
     def _parse_tag(self, data: dict, xml: ET.Element):
         assert isinstance(data, dict)
         assert isinstance(xml, ET.Element)
         assert xml.tag in self.TAG_PARSERS.keys(), f"Tag {xml.tag} unsupported"
 
-        parse = self.TAG_PARSERS[xml.tag]
+        parse: TAG_FUNCTION = cast(TAG_FUNCTION, self.TAG_PARSERS[xml.tag])
         parse(self, data, xml)
 
     def _parse_scene(self, data: dict, xml: ET.Element):
@@ -155,6 +196,10 @@ class SceneLoader:
         #   <scene>
         #   </scene>
         data["type"] = "scene"
+        self._parse_children(data, xml)
+
+    def _parse_body(self, data: dict, xml: ET.Element):
+        # just an alias
         self._parse_children(data, xml)
 
     def _parse_children(self, data: dict, xml: ET.Element):
@@ -170,11 +215,14 @@ class SceneLoader:
         #   </shape>
         id = self._get_id(xml)
         type = self._get_type(xml)
+        self.shape_depth += 1
         #
         shape = dict(type=type, id=id)
         self._parse_children(shape, xml)
+        self.shape_depth -= 1
         #
-        self._register_ref(xml, shape)
+        if self.shape_depth == 0:
+            self._register_ref(xml, shape)
         data[id] = shape
         pass
 
@@ -287,12 +335,13 @@ class SceneLoader:
 
     def _parse_ref(self, data: dict, xml: ET.Element):
         assert xml.tag == "ref"
-        # <ref id="..."/>
+        # <ref id="..." name="..." />
         id = xml.attrib["id"]
+        name = xml.attrib["name"]
         id = self._resolve_default(id)
         # assert id in REF_ELEMENTS, f"Reference {id} not found"
         # return REF_ELEMENTS[id]
-        data[id] = dict(type="ref", id=id)
+        data[name] = dict(type="ref", id=id, name=name)
         pass
 
     def _parse_transform(self, data: dict, xml: ET.Element):
@@ -318,7 +367,17 @@ class SceneLoader:
 
     def _parse_texture(self, data: dict, xml: ET.Element):
         assert xml.tag == "texture"
-        raise UnsupportedOperation()
+        # <texture name="" type="...">
+        # </texture>
+        name = xml.attrib["name"]
+        type = xml.attrib["type"]
+
+        texture = dict(type=type)
+        self._parse_children(texture, xml)
+        #
+        data[name] = texture
+        # raise UnsupportedOperation()
+        pass
 
     def _parse_include(self, data: dict, xml: ET.Element):
         assert xml.tag == "include"
@@ -359,6 +418,12 @@ class SceneLoader:
         assert xml.tag == "string"
         name = xml.attrib["name"]
         value = xml.attrib["value"]
+
+        if name == "filename":
+            parent = str(self.SCENE_PATH.parent).replace("\\","/")
+            if len(parent) > 0:
+                value = f"{parent}/{value}"
+
         data[name] = self._str(value)
         pass
 
@@ -387,6 +452,7 @@ class SceneLoader:
         # <rgb name="intensity" value="1"/>
         name = xml.attrib["name"]
         value = self._parse_array(xml)
+        value = _normalize_rgb(value)
 
         data[name] = dict(
             type="rgb",
@@ -402,13 +468,64 @@ class SceneLoader:
 
         if name not in self.REF_ELEMENTS:
             self.REF_ELEMENTS[name] = value
+            self.DEFAULTS[name] = value
         else:
             print(f"Default: {name}={self.REF_ELEMENTS[name]} ({value})")
+
+        # data[name] = dict(type="default", value=value)
         pass
 
     # ---------------------------------------------------------------------------
 
-    TAG_PARSERS = {
+    def _parse_medium(self, data: dict, xml: ET.Element):
+        assert xml.tag == "medium"
+        # <medium type="" id="">
+        #   float|string "int_ior"
+        #   float|string "ext_ior"
+        #   spectrum|texture    "specular_reflectance"
+        #   spectrum|texture    "specular_transmittance"
+        # </medium>
+        id = self._get_id(xml)
+        type = xml.attrib["type"]
+
+        medium = dict(type=type, id=id)
+        self._parse_children(medium, xml)
+        #
+        self._register_ref(xml, medium)
+        data[id] = medium
+        pass
+
+    def _parse_phase(self, data: dict, xml: ET.Element):
+        assert xml.tag == "phase"
+        # <phase type="" id="">
+        # </phase>
+        id = self._get_id(xml)
+        type = xml.attrib["type"]
+
+        phase = dict(type=type, id=id)
+        self._parse_children(phase, xml)
+        #
+        self._register_ref(xml, phase)
+        data[id] = phase
+        pass
+
+    def _parse_volume(self, data: dict, xml: ET.Element):
+        assert xml.tag == "volume"
+        # <volume type="", name="">
+        # </volume>
+        name = xml.attrib["name"]
+        type = xml.attrib["type"]
+
+        volume = dict(type=type)
+        self._parse_children(volume, xml)
+        #
+        data[name] = volume
+        pass
+
+    # ---------------------------------------------------------------------------
+
+
+    TAG_PARSERS: dict[str, Any] = {
         "scene": _parse_scene,
         "shape": _parse_shape,
         "integrator": _parse_integrator,
@@ -439,7 +556,11 @@ class SceneLoader:
         "ref": _parse_ref,
         "include": _parse_include,
         "alias": _parse_alias,
-        "path": _parse_path
+        "path": _parse_path,
+
+        "medium": _parse_medium,
+        "phase": _parse_phase,
+        "volume": _parse_volume
     }
 
     # ---------------------------------------------------------------------------
@@ -514,7 +635,8 @@ class SceneLoader:
 # load_scene_dict
 # ---------------------------------------------------------------------------
 
-def load_scene_dict(scene_xml: str, **kwargs) -> dict:
+def load_scene_dict(scene_xml: str|Path, **kwargs) -> dict:
+    assert isinstance(scene_xml, (str, Path))
     # global TAG_IDS, REF_ELEMENTS
     sl = SceneLoader()
     scene_dict = sl.load_scene(scene_xml, **kwargs)
@@ -522,11 +644,110 @@ def load_scene_dict(scene_xml: str, **kwargs) -> dict:
 # end
 
 
-def load_scene(scene_xml: str, **kwargs):
+def load_scene(scene_xml: str|Path, **kwargs) -> "mitsuba.Scene":
+    assert isinstance(scene_xml, (str, Path))
     scene_dict = load_scene_dict(scene_xml, **kwargs)
     return mi.load_dict(scene_dict)
 # end
 
+def load_dict(scene_dict: dict):
+    assert isinstance(scene_dict, dict)
+    return mi.load_dict(scene_dict)
+# end
+
+# ---------------------------------------------------------------------------
+#
+# --------------------------------------------------------------------------
+
+class ToWorld:
+
+    def __init__(self):
+        self.t = mi.ScalarTransform4f()
+
+    def translate(self, x=0,y=0,z=0,value=None):
+        if value is not None:
+            x,y,z = value
+
+        t = self.t
+        tt = mi.ScalarTransform4f().translate([x,y,z])
+        self.t = tt @ t
+        return self
+
+    def scale(self, x=1, y=1, z=1, value=None):
+        if value is not None:
+            x,y,z = value
+
+        t = self.t
+        ts = mi.ScalarTransform4f().scale([x,y,z])
+        self.t = ts @ t
+        return self
+
+    def rotate(self, x=0, y=0, z=0, value=None, angle=0):
+        if value is not None:
+            x,y,z = value
+
+        t = self.t
+        tr = mi.ScalarTransform4f().rotate([x,y,z], angle)
+        self.t = tr @ t
+        return self
+
+    def look_at(self, origin=(0,0,1), target=(0,0,0), up=(0,0,1)):
+
+        t = self.t
+        tl = mi.ScalarTransform4f().look_at(origin=origin, target=target, up=up)
+        self.t = tl @ t
+        return self
+
+    def matrix(self, data: list[float]):
+        assert len(data) in [9, 16], "Matrix must be [a11, a12, ...]"
+        if len(data) == 9:
+            m = [
+                data[0:3],
+                data[3:6],
+                data[6:]
+            ]
+        else:
+            m = [
+                data[0:4],
+                data[4:8],
+                data[8:12],
+                data[12:]
+            ]
+
+        t = self.t
+        tm = mi.ScalarTransform4f(m)
+        self.t = tm @ t
+        return self
+
+    def get(self):
+        return self.t
+# end
+
+
+def render(scene: object,
+           gamma=2.2,
+           params: Any = None,
+           sensor: int = 0,
+           integrator = None,
+           seed = 0,
+           seed_grad: int = 0,
+           spp: int = 0,
+           spp_grad: int = 0) -> np.ndarray:
+    rimage = mi.render(
+        scene=scene,
+        params=params,
+        sensor=sensor,
+        integrator=integrator,
+        seed=seed,
+        seed_grad=seed_grad,
+        spp=spp,
+        spp_grad=spp_grad,
+    )
+
+    image: np.ndarray = np.array(rimage)
+    image = (image ** (1. / gamma)).clip(0, 1)
+
+    return image
 
 # ---------------------------------------------------------------------------
 # End

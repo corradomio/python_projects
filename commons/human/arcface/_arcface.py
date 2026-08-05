@@ -1,12 +1,16 @@
+#
+# https://github.com/yakhyo/face-reidentification
+#
 import os
-import cv2
 from pathlib import Path
-import numpy as np
-import torch
-import requests
-from torch.nn import DataParallel
+from typing import cast
 
-from . import resnet
+import requests
+import torch
+import numpy as np
+import cv2
+from .arcface import YakhyoArcFace
+from .scrfd import YakhyoSCRFD
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -15,39 +19,35 @@ from . import resnet
 ARCFACE_DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 ARCFACE_WEIGHTS_URLS = {
-    'resnet_face18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet18': 'https://download.pytorch.org/models/resnet18-5c106cde.pth',
-    'resnet34': 'https://download.pytorch.org/models/resnet34-333f7ec4.pth',
-    'resnet50': 'https://download.pytorch.org/models/resnet50-19c8e357.pth',
-    'resnet101': 'https://download.pytorch.org/models/resnet101-5d3b4d8f.pth',
-    'resnet152': 'https://download.pytorch.org/models/resnet152-b121ed2d.pth',
+    # detector
+    "det_500m.onnx": "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_500m.onnx",
+    "det_2.5g.onnx": "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_2.5g.onnx",
+    "det_10g.onnx": "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/det_10g.onnx",
+
+    # recognizer
+    "w600k_mbf.onnx": "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_mbf.onnx",
+    "w600k_r50.onnx": "https://github.com/yakhyo/face-reidentification/releases/download/v0.0.1/w600k_r50.onnx",
 }
+
 
 ARCFACE_MODEL_WEIGHTS_NAMES = {
-    'resnet_face18': 'resnet18-5c106cde.pth',
-    'resnet18': 'resnet18-5c106cde.pth',
-    'resnet34': 'resnet34-333f7ec4.pth',
-    'resnet50': 'models/resnet50-19c8e357.pth',
-    'resnet101': 'resnet101-5d3b4d8f.pth',
-    'resnet152': 'resnet152-b121ed2d.pth',
+    # detector, recognizer
+    "det_500m-w600k_mbf": ["det_500m.onnx", "w600k_mbf.onnx"],
+    "det_500m-w600k_r50": ["det_500m.onnx", "w600k_r50.onnx"],
+    
+    "det_2.5g-w600k_mbf": ["det_2.5g.onnx", "w600k_mbf.onnx"],
+    "det_2.5g-w600k_r50": ["det_2.5g.onnx", "w600k_r50.onnx"],
+    
+    "det_10g-w600k_mbf": ["det_10g.onnx", "w600k_mbf.onnx"],
+    "det_10g-w600k_r50": ["det_10g.onnx", "w600k_r50.onnx"],
 }
-
-ARCFACE_MODEL_CLASSES = {
-    'resnet_face18': resnet.resnet_face18,
-    'resnet18': resnet.resnet18,
-    'resnet34': resnet.resnet34,
-    'resnet50': resnet.resnet50,
-    'resnet101': resnet.resnet101,
-    'resnet152': resnet.resnet152,
-    # 'resnet_face18': resnet.resnet_face18,
-}
-
 
 
 ARCFACE_MODEL_NAMES = [
-    name.replace("/", "__")
+    name
     for name in ARCFACE_MODEL_WEIGHTS_NAMES.keys()
 ]
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -55,66 +55,61 @@ ARCFACE_MODEL_NAMES = [
 
 ARCFACE_WEIGHTS_ROOT = ".arcface_weights"
 
-ARCFACE_MODELS = {}
+ARCFACE_MODELS: dict[str, tuple[YakhyoArcFace, YakhyoSCRFD]] = {}
 
 
-def _load_model(model, model_path):
-    model_dict = model.state_dict()
-    pretrained_dict = torch.load(model_path, weights_only=False)
-    pretrained_dict = {k: v for k, v in pretrained_dict.items() if k in model_dict}
-    model_dict.update(pretrained_dict)
-    model.load_state_dict(model_dict)
-    return model
-
-
-def _download_weights(model_name, weights_path):
-    url = ARCFACE_WEIGHTS_URLS[model_name]
-    print(f"arcface: downloading {model_name} from {url} and saved in {weights_path}")
-
-    weights_path.parent.mkdir(parents=True, exist_ok=True)
+def _download_weights(weights_name, weights_path):
+    assert weights_name in ARCFACE_WEIGHTS_URLS
+    url = ARCFACE_WEIGHTS_URLS[weights_name]
+    print(f"arcface: downloading {weights_name} from {url} and saved in {weights_path}")
     response = requests.get(url)
     response.raise_for_status()
-    with open(weights_path, "wb") as file:
+    with open(str(weights_path), "wb") as file:
         file.write(response.content)
     pass
 
 
-def _get_weights(model_name: str) -> str:
-    weights_name = ARCFACE_MODEL_WEIGHTS_NAMES[model_name]
-    weights_path = Path(ARCFACE_WEIGHTS_ROOT) / weights_name
-
-    if not weights_path.exists():
-        _download_weights(model_name, weights_path)
-
-    assert weights_path.exists()
-    return str(weights_path)
-
-
-def _get_model(model_name):
-    if model_name in ARCFACE_MODELS:
-        return ARCFACE_MODELS[model_name]
-
+def _get_weights(model_name):
     assert model_name in ARCFACE_MODEL_NAMES
 
-    if model_name == "resnet_face18":
-        model = ARCFACE_MODEL_CLASSES[model_name](False)
-    else:
-        model = ARCFACE_MODEL_CLASSES[model_name](True)
+    # detector, recognizer
+    scrfd_weights, af_weights = ARCFACE_MODEL_WEIGHTS_NAMES[model_name]
 
-    weights_path = _get_weights(model_name)
+    weights_root = Path(ARCFACE_WEIGHTS_ROOT)
+    weights_root.mkdir(parents=True, exist_ok=True)
 
-    model = _load_model(model, weights_path)
+    af_weights_path = weights_root / af_weights
+    scrfd_weights_path = weights_root / scrfd_weights
 
-    # model.load_state_dict(torch.load(weights_path, weights_only=False))
-    # model.eval().to(ARCFACE_DEVICE)
+    if not af_weights_path.exists():
+        _download_weights(af_weights, af_weights_path)
+    if not scrfd_weights_path.exists():
+        _download_weights(scrfd_weights, scrfd_weights_path)
+    
+    assert af_weights_path.exists()
+    assert scrfd_weights_path.exists()
+    
+    return af_weights_path, scrfd_weights_path
+# end
 
-    ARCFACE_MODELS[model_name] = model
-    return model
+
+def _get_model(model_name: str):
+    global ARCFACE_MODELS
+    if model_name in ARCFACE_MODELS:
+        return ARCFACE_MODELS[model_name]
+    
+    af_weights_path, scrfd_weights_path = _get_weights(model_name)
+    
+    yarcface = YakhyoArcFace(str(af_weights_path))
+    yscrfd = YakhyoSCRFD(str(scrfd_weights_path), input_size=(640,640))
+
+    ARCFACE_MODELS[model_name] = (yarcface, yscrfd)
+    return (yarcface, yscrfd)
 # end
 
 
 # ---------------------------------------------------------------------------
-# InsightFaceReID
+# ArcFace
 # ---------------------------------------------------------------------------
 
 class ArcFace:
@@ -127,46 +122,48 @@ class ArcFace:
         if isinstance(image, (str, Path)):
             filename = str(image)
             assert os.path.exists(filename)
-            image = cv2.imread(filename, 0)
-            # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            # image = Image.open(filename).convert("RGB")
+            image: np.ndarray = cast(np.ndarray, cv2.imread(filename))
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         elif isinstance(image, np.ndarray):
             # array = cast(np.ndarray, image)
             # image = Image.fromarray(array, mode="RGB")
             pass
 
-        image = np.dstack((image, np.fliplr(image)))
-        image = image.transpose((2, 0, 1))
-        image = image[:, np.newaxis, :, :]
-        image = image.astype(np.float32, copy=False)
-        image -= 127.5
-        image /= 127.5
+        recognizer, detector = _get_model(model_name)
+        # YakhyoArcFace, YakhyoSCRFD
 
-        model = _get_model(model_name)
+        bboxes, kpss = detector.detect(image, max_num=1)
+        if len(kpss) == 0: return None
 
-        data = torch.from_numpy(image.reshape((1, -1))).to(ARCFACE_DEVICE)
-        output = model(data)
-        output = output.data.cpu().numpy()
+        assert len(kpss) == 1
+        embedding = recognizer.get_embedding(image, kpss[0])
 
-        fe_1 = output[::2]
-        fe_2 = output[1::2]
-        feature = np.hstack((fe_1, fe_2))
-
-        return feature
-    # end
+        return embedding
 
     def __init__(self, model_name: str):
         assert isinstance(model_name, str)
         self._model_name = model_name
 
-    def embedding(self, image: str | Path | np.ndarray):
-        return ArcFace.represent(image, self._model_name)
+    def embedding(self, image: str | Path | np.ndarray) -> np.ndarray:
+        emb = ArcFace.represent(image, self._model_name)
+        assert isinstance(emb, np.ndarray)
+        return emb
 
     # -----------------------------------------------------------------------
 
     @staticmethod
     def dispose():
+        global ARCFACE_MODELS
         ARCFACE_MODELS.clear()
-        pass
     # end
 # end
+
+
+# ---------------------------------------------------------------------------
+# End
+# ---------------------------------------------------------------------------
+
+
+
+
+

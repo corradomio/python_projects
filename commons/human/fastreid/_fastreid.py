@@ -223,8 +223,10 @@ class FastReID:
         assert isinstance(model_name, str)
         self._model_name = model_name
 
-    def embedding(self, image: str | Path | np.ndarray):
-        return FastReID.represent(image, self._model_name)
+    def embedding(self, image: str | Path | np.ndarray) -> np.ndarray:
+        emb = FastReID.represent(image, self._model_name)
+        assert isinstance(emb, np.ndarray)
+        return emb
 
     # -----------------------------------------------------------------------
 

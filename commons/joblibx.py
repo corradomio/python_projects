@@ -154,10 +154,10 @@ class Parallel:
     #   pre_dispatch: {'all', integer, or expression, as in '3*n_jobs'}
     #   batch_size: int or 'auto', default: 'auto'
     
-    def __init__(self, n_jobs: Union[None, int, Tuple[int, int]] = None, **kwargs):
+    def __init__(self, n_jobs: Union[int, Tuple[int, int]] = 1, **kwargs):
         """
         :param int n_jobs: n of parallel processes to use.
-            Can be None, 0, 1, or a integer greater than 1
+            Can be None, 0, 1, or an integer greater than 1
             For None, 0, 1, it is used a "sequential" approach.
             It can be a tuple of 2 values:
 
@@ -166,21 +166,18 @@ class Parallel:
             in this case, the list is subdivided in n_jobs*n_splits parts
             and submitted to 'n_job' jobs
         """
-        n_splits = 1
-        if isinstance(n_jobs, (list, tuple)):
-            if len(n_jobs) >= 2:
-                n_splits = n_jobs[1]
-                n_jobs = n_jobs[0]
-            elif len(n_jobs) == 1:
-                n_jobs = n_jobs[0]
-            else:
-                n_jobs = 1
-        # end
-        assert n_jobs is None or isinstance(n_jobs, int) and n_jobs >= 0
-        assert n_splits is None or isinstance(n_splits, int) and n_splits > 0
+        assert isinstance(n_jobs, int) or isinstance(n_jobs, (list, tuple)) and len(n_jobs) == 2
 
-        self.n_jobs = 1 if n_jobs is None or n_jobs == 0 else n_jobs
-        self.n_splits = 1 if n_splits is None else n_splits
+        if isinstance(n_jobs, (list, tuple)):
+            n_jobs, n_splits = n_jobs
+        else:
+            n_splits = 1
+
+        assert isinstance(n_jobs, int) and n_jobs >= 0
+        assert isinstance(n_splits, int) and n_splits >= 0
+
+        self.n_jobs = n_jobs
+        self.n_splits = n_splits
         self.kwargs = kwargs
         pass
     # end
@@ -189,7 +186,7 @@ class Parallel:
         if self.n_jobs < 2:
             # call the sequential implementation
             return _call_sequential(iterable)
-        elif self.n_splits == 0:
+        elif self.n_splits < 2:
             # call the original implementation
             return _call_joblib(self.n_jobs, iterable, self.kwargs)
         else:
@@ -199,12 +196,12 @@ class Parallel:
 # end
 
 
-def _call_sequential(iterable: Iterable) -> Iterable:
-    return [f(*args, **kwargs) for f, args, kwargs in iterable]
-
-
 def _call(f, args, kwargs):
     return f(*args, **kwargs)
+
+
+def _call_sequential(iterable: Iterable) -> Iterable:
+    return [_call(f, args, kwargs) for f, args, kwargs in iterable]
 
 
 def _call_joblib(n_jobs: int, iterable: Iterable, kwargs) -> Iterable:
@@ -217,7 +214,7 @@ def _call_parallel(n_jobs: int, n_splits: int, iterable: Iterable) -> Iterable:
     #                                 each element of the list is the tuple (function, *args, **kwargs)
     nc = len(calls)                 # n of calls
     ns = n_jobs*n_splits            # n of splits
-    sz = (nc + ns - 1)//ns                     # split size
+    sz = (nc + ns - 1)//ns          # split size
     if sz == 0: sz = 1
 
     indices = list(range(nc))       # indices

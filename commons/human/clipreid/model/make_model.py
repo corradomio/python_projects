@@ -1,9 +1,13 @@
+import logging
+
 import torch
 import torch.nn as nn
 import numpy as np
 from .clip.simple_tokenizer import SimpleTokenizer as _Tokenizer
 _tokenizer = _Tokenizer()
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
+
+LOG = logging.getLogger("ClipReID")
 
 def weights_init_kaiming(m):
     classname = m.__class__.__name__
@@ -68,15 +72,15 @@ class build_transformer(nn.Module):
         if cfg.MODEL.SIE_CAMERA and cfg.MODEL.SIE_VIEW:
             self.cv_embed = nn.Parameter(torch.zeros(camera_num * view_num, self.in_planes))
             trunc_normal_(self.cv_embed, std=.02)
-            print('camera number is : {}'.format(camera_num))
+            LOG.info('camera number is : {}'.format(camera_num))
         elif cfg.MODEL.SIE_CAMERA:
             self.cv_embed = nn.Parameter(torch.zeros(camera_num, self.in_planes))
             trunc_normal_(self.cv_embed, std=.02)
-            print('camera number is : {}'.format(camera_num))
+            LOG.info('camera number is : {}'.format(camera_num))
         elif cfg.MODEL.SIE_VIEW:
             self.cv_embed = nn.Parameter(torch.zeros(view_num, self.in_planes))
             trunc_normal_(self.cv_embed, std=.02)
-            print('camera number is : {}'.format(view_num))
+            LOG.info('camera number is : {}'.format(view_num))
 
     def forward(self, x, label=None, cam_label= None, view_label=None):
         if self.model_name == 'RN50':
@@ -119,13 +123,13 @@ class build_transformer(nn.Module):
         param_dict = torch.load(trained_path)
         for i in param_dict:
             self.state_dict()[i.replace('module.', '')].copy_(param_dict[i])
-        print('Loading pretrained model from {}'.format(trained_path))
+        LOG.info('Loading pretrained model from {}'.format(trained_path))
 
     def load_param_finetune(self, model_path):
         param_dict = torch.load(model_path)
         for i in param_dict:
             self.state_dict()[i].copy_(param_dict[i])
-        print('Loading pretrained model for finetuning from {}'.format(model_path))
+        LOG.info('Loading pretrained model for finetuning from {}'.format(model_path))
 
 
 def make_model(cfg, num_class, camera_num, view_num):
