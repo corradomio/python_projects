@@ -95,24 +95,15 @@
     </shape>
 
 
-    <shape type="shapegroup" id="cube0">
-        <shape type="cube">
-            <transform name="to_world">
-                <scale value=".5 .5 .5"/>
-                <scale x="$side" y="$side" z="$side"/>
-                <translate value="0 0 0"/>
-            </transform>
-
-            <ref id="white" name="bsdf"/>
-        </shape>s
-    </shape>
-
-    <shape type="instance" id="c@0">
-        <ref id="cube0" name="shape"/>
+    <shape type="cube" id="cube0">
         <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$side" y="$side" z="$side"/>
             <translate value="0 0 0"/>
         </transform>
-    </shape>
+
+        <ref id="white" name="bsdf"/>
+    </shape>s
 
     <shape type="rectangle" id="background">
          <transform name="to_world">

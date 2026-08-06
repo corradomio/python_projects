@@ -475,7 +475,7 @@ class SceneLoader:
             self.REF_ELEMENTS[name] = value
             self.DEFAULTS[name] = value
         else:
-            print(f"Default: {name}={self.REF_ELEMENTS[name]} ({value})")
+            print(f"Default: {name}={value} ({self.REF_ELEMENTS[name]})")
 
         # data[name] = dict(type="default", value=value)
         pass
@@ -666,8 +666,14 @@ def load_dict(scene_dict: dict):
 
 class ToWorld:
 
-    def __init__(self):
-        self.t = mi.ScalarTransform4f()
+    def __init__(self, t=None):
+        assert t is None or isinstance(t, mi.ScalarTransform4f)
+        self.t = mi.ScalarTransform4f() if t is None else t
+
+    def add(self, ta):
+        assert isinstance(ta, mi.ScalarTransform4f)
+        self.t = ta @ self.t
+        return self
 
     def translate(self, x=0,y=0,z=0,value=None):
         if value is not None:
@@ -734,6 +740,10 @@ class ToWorld:
         return self.t
 # end
 
+# ---------------------------------------------------------------------------
+#
+# --------------------------------------------------------------------------
+
 
 def render(scene: object,
            gamma=2.2,
@@ -761,17 +771,43 @@ def render(scene: object,
     return image
 # end
 
+# ---------------------------------------------------------------------------
+# Note tu use 'instance' of a 'shapegroup' it seems slower that to clone the shape
 
-def instance(id: Optional[str], ref: str, to_world: "mitsuba.ScalarTransform4f") -> dict:
+def instance(scene_dict: dict, ref: str, to_world, in_scene=True) -> dict:
+    assert isinstance(id, str)
+    assert isinstance(ref, str)
+    assert isinstance(to_world, mi.ScalarTransform4f)
+
     instance = {
+        "id": id,
         "type":"instance",
         "shape": {"type": "ref", "id": ref},
         "to_world": to_world
     }
 
-    if id is not None:
-        instance["id"] = id
+    if in_scene:
+        scene_dict[id] = instance
+
     return instance
+# end
+
+
+def clone(scene_dict: dict, id: str, ref: str, to_world, in_scene=True) -> dict:
+    assert isinstance(id, str)
+    assert isinstance(ref, str)
+    assert isinstance(to_world, mi.ScalarTransform4f)
+
+    shape = scene_dict[ref]
+    clone = {} | shape
+
+    clone["id"] = id
+    clone["to_world"] = ToWorld(clone["to_world"]).add(to_world).get()
+
+    if in_scene:
+        scene_dict[id] = clone
+
+    return clone
 # end
 
 # ---------------------------------------------------------------------------

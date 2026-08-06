@@ -19,13 +19,13 @@ def add_random_cubes(scene_dict: dict, n: int, side: float):
 
         x = uniform(-1.8,1.8)
         y = uniform(-27.8, 27.8)
+        angle = uniform(-180,180)
 
         # t = mix.ToWorld().scale(value=[0.5,0.5,0.5]).scale(value=[side,side,side]).translate(value=[x,y,0]).get()
-        t = mix.ToWorld().translate(value=[x,y,0]).get()
+        t = mix.ToWorld().rotate(z=1, angle=angle).translate(value=[x,y,0]).get()
 
-        cubei = mix.instance(cid, ref="cube0", to_world=t)
+        cubei = mix.clone(scene_dict, cid, ref="cube0", to_world=t)
 
-        scene_dict[cid] = cubei
         pass
 
     return scene_dict
@@ -38,7 +38,7 @@ def main():
     # scene_name="examples/scenes/simple"
     # scene_name="examples/scenes/cbox"
     # scene_name="examples/banner_01/scene"
-    scene_name="simple"
+    scene_name="simple1"
 
     params = {
         "side": 0.10
