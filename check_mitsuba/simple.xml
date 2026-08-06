@@ -9,11 +9,11 @@
 
     <!-- sensor -->
 
-    <sensor type="perspective" id="global-camera">
+    <!--<sensor type="perspective" id="global-camera">
         <float name="fov" value="45"/>
         <transform name="to_world">
-            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
-                and the direction (0, 0, 1) points "up" in the output image -->
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
             <lookat origin="30 50 30" target="0 0 0" up="0, 0, 1"/>
         </transform>
 
@@ -23,17 +23,17 @@
 
         <film type="hdrfilm">
             <string name="pixel_format" value="rgba"/>
-            <integer name="width" value="512"/>
-            <integer name="height" value="512"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
         </film>
-    </sensor>
+    </sensor>-->
 
-    <!--<sensor type="perspective" id="top-camera">
+    <sensor type="perspective" id="top-camera">
 		<string name="fov_axis" value="x"/>
         <float name="fov" value="170"/>
         <transform name="to_world">
-            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
-                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
             <lookat origin="0 0 2.5" target="0 0 0" up="1 0 0"/>
         </transform>
 
@@ -46,7 +46,7 @@
             <integer name="width" value="5120"/>
             <integer name="height" value="370"/>
         </film>
-    </sensor>-->
+    </sensor>
 
     <!--<sensor type="batch">
         <ref id="top-camera"/>
@@ -60,11 +60,11 @@
 
     <!-- emitters -->
 
-    <emitter type="constant">
+    <emitter type="constant" id="light-diffuse">
         <rgb name="radiance" value="0.03"/>
     </emitter>
 
-    <shape type="cube">
+    <shape type="cube" id="light-hangar">
         <transform name="to_world">
             <scale value="1 28 0.05"/>
             <translate value="0 0 3"/>
@@ -84,15 +84,34 @@
     </shape>-->
 
     <!-- scene -->
-    <shape type="cube" id="cube0">
+    <shape type="cube" id="x">
         <transform name="to_world">
-            <scale x="$side" y="$side" z="$side"/>
+            <scale value="2 0.05 0.05"/>
+            <translate value="2 0 -0.06"/>
         </transform>
-        <!--<bsdf type="diffuse">
-            <rgb name="reflectance" value="1, 1, 1"/>
-        </bsdf>-->
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 1 0"/>
+        </bsdf>
+    </shape>
 
-        <ref id="white"/>
+
+    <shape type="shapegroup" id="cube0">
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$side" y="$side" z="$side"/>
+                <translate value="0 0 $side"/>
+            </transform>
+
+            <ref id="white" name="bsdf"/>
+        </shape>s
+    </shape>
+
+    <shape type="instance" id="c@0">
+        <ref id="cube0" name="shape"/>
+        <transform name="to_world">
+            <translate value="0 0 0"/>
+        </transform>
     </shape>
 
     <shape type="rectangle" id="background">
@@ -106,8 +125,8 @@
 
     <shape type="rectangle" id="reference">
         <transform name="to_world">
-            <scale x="3" y="35" z="1"/>
-            <translate value="0 0 -0.5"/>
+            <scale x="3" y="31" z="1"/>
+            <translate value="0 0 -0.2"/>
         </transform>
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0.7 0 0"/>

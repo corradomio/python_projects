@@ -1,5 +1,4 @@
-WARNING:
-    mistuba 3.6.4
+WARNING: 
     mistuba 3.7.1 supporta Compute Capability 6.1
     mistuna 3.8.0 ??? non testato
     mistuba 3.9.0 richiede Compute Capability 7.5

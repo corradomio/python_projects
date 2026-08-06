@@ -2,7 +2,7 @@ import numpy as np
 import xml.etree.ElementTree as ET
 from io import UnsupportedOperation
 from pathlib import Path
-from typing import Union, Callable, Any, cast
+from typing import Union, Callable, Any, cast, Optional
 
 import mitsuba as mi
 
@@ -679,6 +679,9 @@ class ToWorld:
         return self
 
     def scale(self, x=1, y=1, z=1, value=None):
+        if isinstance(value, (int, float)):
+            v = value
+            value = [v,v,v]
         if value is not None:
             x,y,z = value
 
@@ -688,6 +691,9 @@ class ToWorld:
         return self
 
     def rotate(self, x=0, y=0, z=0, value=None, angle=0):
+        if isinstance(value, (int, float)):
+            v = value
+            value = [v,v,v]
         if value is not None:
             x,y,z = value
 
@@ -753,6 +759,20 @@ def render(scene: object,
     image = (image ** (1. / gamma)).clip(0, 1)
 
     return image
+# end
+
+
+def instance(id: Optional[str], ref: str, to_world: "mitsuba.ScalarTransform4f") -> dict:
+    instance = {
+        "type":"instance",
+        "shape": {"type": "ref", "id": ref},
+        "to_world": to_world
+    }
+
+    if id is not None:
+        instance["id"] = id
+    return instance
+# end
 
 # ---------------------------------------------------------------------------
 # End
