@@ -1,0 +1,138 @@
+<scene>
+    <default name="side" value="0.15"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <!--<sensor type="perspective" id="camera">
+		<string name="fov_axis" value="x"/>
+        <float name="fov" value="90"/>
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="10 10 5" target="0 0 0" up="0 0 1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
+        </film>
+    </sensor>-->
+
+    <!--<sensor type="wideangle" id="camera">
+        <float name="fov" value="180"/>
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="7 7 5" target="0 0 0" up="0 0 -1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
+        </film>
+    </sensor>-->
+
+
+    <sensor type="wideangle" id="camera">
+        <float name="fov" value="120"/>
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="0 0 4" target="0 0 0" up="1 0 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
+        </film>
+    </sensor>
+
+
+    <!-- brdf -->
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <shape type="cube" id="light-hangar">
+        <transform name="to_world">
+            <scale value="5 5 0.1"/>
+            <translate value="0 0 6"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="1"/>
+        </emitter>
+    </shape>
+
+
+    <!-- scene -->
+    <shape type="cube" id="x">
+        <transform name="to_world">
+            <scale value="10 0.05 0.05"/>
+            <translate value="2 0 -0.06"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0 1 0"/>
+        </bsdf>
+    </shape>
+
+
+    <shape type="cube" id="cube0">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale value=".3 .3 .3"/>
+            <translate value="0 0 .3"/>
+        </transform>
+
+        <ref id="white" name="bsdf"/>
+    </shape>s
+
+    <shape type="rectangle" id="background">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="10" y="10" z="1"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.6 0.4 0.2"/>
+        </bsdf>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="11" y="11" z="1"/>
+            <translate value="0 0 -0.2"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.7 0 0"/>
+        </bsdf>
+    </shape>
+
+</scene>

@@ -49,7 +49,6 @@ def main():
     scene_dict = add_random_cubes(scene_dict, 1000, **params)
 
     scene = mix.load_dict(scene_dict)
-
     image = mix.render(scene)
 
     plt.imsave(f"{scene_name}.png", image)
