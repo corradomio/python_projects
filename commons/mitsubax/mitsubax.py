@@ -1,5 +1,6 @@
 import numpy as np
 import xml.etree.ElementTree as ET
+from math import sqrt, asin, acos, atan, pi
 from io import UnsupportedOperation
 from pathlib import Path
 from typing import Union, Callable, Any, cast, Optional
@@ -13,8 +14,121 @@ TAG_FUNCTION = Callable[[dict, ET.Element], None]
 # Utilities
 # ---------------------------------------------------------------------------
 
+def sq(x): return x*x
+
+def deg(x): return x*180/pi
+
+
 def _normalize_rgb(rgb: list[float]):
     return rgb
+
+
+CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_"
+
+def _find_end(s: str, b: int) -> int:
+    n = len(s)
+    e = b + 1
+    while e < n and s[e] in CHARS:
+        e += 1
+    return e
+
+
+def _find_element_name(e: ET.Element, name: str) -> Optional[ET.Element]:
+    for child in e:
+        try:
+            if child.attrib["name"] == name:
+                return child
+        except:
+            pass
+    return None
+
+
+def _find_element_tag(e: ET.Element, tag: str) -> Optional[ET.Element]:
+    for child in e:
+        if child.tag == tag:
+            return child
+    return None
+
+
+def _sensor_fov(sensor: ET.Element, xyz: list[float]):
+    x, y, z = xyz
+
+    assert z > 0
+    assert x > 0 or y > 0
+
+    if y == 0:
+        # -- x & z     fov & fov_axis="x"
+        x = x / 2
+        l = sqrt(sq(x) + sq(z))
+        fov = 2 * deg(asin(x / l))
+
+        efov = ET.Element("float", name="fov", value=fov)
+        efov_axis = ET.Element("string", name="fov_axis", value="x")
+
+        sensor.append(efov)
+        sensor.append(efov_axis)
+    elif x == 0:
+        # -- y & z     fov & fov_axis="y"
+        y = y / 2
+        l = sqrt(sq(y) + sq(z))
+        fov = 2 * deg(asin(y / l))
+
+        efov = ET.Element("float", name="fov", value=str(fov))
+        efov_axis = ET.Element("string", name="fov_axis", value="y")
+
+        sensor.append(efov)
+        sensor.append(efov_axis)
+    elif x == y:
+        # -- x==y & z     fov
+        x = x / 2
+        l = sqrt(sq(x) + sq(z))
+        fov = 2 * deg(asin(x / l))
+
+        efov = ET.Element("float", name="fov", value=str(fov))
+
+        sensor.append(efov)
+    else:
+        # -- x!=y & z     fov & fov_axis="diagonal"
+        x = x / 2
+        y = y / 2
+        d = sqrt(sq(x) + sq(y))
+        l = sqrt(sq(d) + sq(z))
+        fov = 2 * deg(asin(d / l))
+
+        efov = ET.Element("float", name="fov", value=str(fov))
+        efov_axis = ET.Element("string", name="fov_axis", value="diagonal")
+
+        sensor.append(efov)
+        sensor.append(efov_axis)
+    pass
+# end
+
+
+def _film_size(sensor: ET.Element, xyz: list[float]):
+    x, y, z = xyz
+    if x == 0 or y == 0:
+        return
+
+    film = _find_element_tag(sensor, "film")
+    assert film is not None
+
+    ewidth  = _find_element_name(film, "width")
+    eheight = _find_element_name(film, "height")
+    if ewidth is not None and eheight is not None:
+        return
+
+    if eheight is None:
+        width = int(ewidth.attrib["value"])
+        height = int(width*y/x)
+        eheight = ET.Element("integer", name="height", value=str(height))
+        film.append(eheight)
+    elif ewidth is None:
+        height = int(eheight.attrib["value"])
+        width = int(height*x/y)
+        ewidth = ET.Element("integer", name="width", value=str(width))
+        film.append(ewidth)
+    pass
+# end
 
 
 # ---------------------------------------------------------------------------
@@ -43,31 +157,84 @@ class SceneLoader:
         tree = ET.parse(scene_path)
         root = tree.getroot()
 
+        # root = self._resolve_perspective_sensor(root)
+
         scene_dict = dict()
         self._parse_tag(scene_dict, root)
         return scene_dict
 
+    # def _resolve_default(self, value: str) -> str:
+    #     if not value.startswith("$"):
+    #         return value
+    #
+    #     name = value[1:]
+    #     # handle "$var1 $var2 ..."
+    #     if "$" in name:
+    #         return value
+    #     # if name not in REF_ELEMENTS:
+    #     #     return value
+    #
+    #     assert name in self.REF_ELEMENTS, f"default value {value} not defined"
+    #     return self.REF_ELEMENTS[name]
+
+    # def _resolve_perspective_sensor_root(self, root: ET.Element):
+    #     for sensor in root.findall("sensor"):
+    #         self._resolve_perspective_sensor(sensor)
+
+    def _resolve_perspective_sensor(self, sensor: ET.Element):
+        # instead than fov, to use:
+        #
+        #   <vector value=""/>
+        #   <vector x="" y="" z=""/>
+        #
+        # possible configurations
+        #
+        #   x & z       fov & fov_axis="x"
+        #   y & z       fov & fov_axis="y"
+        #   x,y,z       fov & fov_axis="diagonal"
+        #   x==y & z    fov (only)
+        #
+        #   to force "diagonal" it is enough to have y = (x+eps)
+        #
+        # if it is specified x & y, it is possible to
+        if sensor.get("type") != "perspective":
+            return
+
+        vector = _find_element_tag(sensor, "vector")
+        if vector is None:
+            return
+
+        xyz = self._parse_array(vector)
+
+        sensor.remove(vector)
+
+        _sensor_fov(sensor, xyz)
+        _film_size(sensor, xyz)
+        pass
+    # end
+
     def _resolve_default(self, value: str) -> str:
-        if not value.startswith("$"):
-            return value
+        if not isinstance(value, str):
+            return str(value)
 
-        name = value[1:]
-        # handle "$var1 $var2 ..."
-        if "$" in name:
-            return value
-        # if name not in REF_ELEMENTS:
+        # if "$" not in value:
         #     return value
+        while "$" in value:
+            b = value.find("$")
+            e = _find_end(value, b)
+            name = value[b+1:e]
+            assert name in self.REF_ELEMENTS, f"default value {value} not defined"
+            value = value.replace("$" + name, str(self.REF_ELEMENTS[name]))
+        return value
 
-        assert name in self.REF_ELEMENTS, f"default value {value} not defined"
-        return self.REF_ELEMENTS[name]
 
     def _float(self, x):
         x = self._resolve_default(x)
-        return float(x)
+        return float(eval(x))
 
     def _int(self, x) -> int:
         x = self._resolve_default(x)
-        return int(x)
+        return int(eval(x))
 
     def _str(self, x) -> str:
         x = self._resolve_default(x)
@@ -80,7 +247,7 @@ class SceneLoader:
         if x in [1, "true", "True", "yes"]:
             return True
         assert x in [0, 1, "false", "False", "no", "true", "True", "yes"], f"Boolean value {x} not defined"
-        return bool(x)
+        return bool(eval(x))
 
     # ---------------------------------------------------------------------------
 
@@ -122,7 +289,7 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
-    def _parse_array(self, xml: ET.Element) -> Union[float, list[float]]:
+    def _parse_array(self, xml: ET.Element) -> list[float]:
         assert isinstance(xml, ET.Element)
         # <tag value="v"/>
         # <tag value="v1, v2, v3"/>
@@ -135,18 +302,21 @@ class SceneLoader:
             return self._parse_array_value(xml.attrib["value"])
 
     def _parse_array_xyz(self, xml: ET.Element) -> list[float]:
-        xvalue = 0
-        yvalue = 0
-        zvalue = 0
+        x = 0
+        y = 0
+        z = 0
         if "x" in xml.attrib:
-            xvalue = self._float(xml.attrib["x"])
+            xvalue = xml.attrib["x"]
+            x = self._float(xvalue)
         if "y" in xml.attrib:
-            yvalue = self._float(xml.attrib["y"])
+            yvalue = xml.attrib["y"]
+            y = self._float(yvalue)
         if "z" in xml.attrib:
-            zvalue = self._float(xml.attrib["z"])
-        return [xvalue, yvalue, zvalue]
+            zvalue = xml.attrib["z"]
+            z = self._float(zvalue)
+        return [x, y, z]
 
-    def _parse_array_value(self, value: str | float | list[float]) -> Union[float, list[float]]:
+    def _parse_array_value(self, value: str | float | list[float]) -> list[float]:
         value = self._resolve_default(value)
         if isinstance(value, (float, list)):
             return value
@@ -162,7 +332,8 @@ class SceneLoader:
             values = list(map(lambda s: self._float(s.strip()), parts))
             return values
         else:
-            return self._float(value.strip())
+            value = self._float(value.strip())
+            return [value, value, value]
 
     def _parse_matrix_value(self, value: str) -> list[list[float]]:
         data = self._parse_array_value(value)
@@ -257,6 +428,8 @@ class SceneLoader:
         type = self._get_type(xml)
         #
         sensor = dict(type=type, id=id)
+
+        self._resolve_perspective_sensor(xml)
         self._parse_children(sensor, xml)
         #
         self._register_ref(xml, sensor)
@@ -660,11 +833,26 @@ def load_dict(scene_dict: dict):
     return mi.load_dict(scene_dict)
 # end
 
+
 # ---------------------------------------------------------------------------
 #
 # --------------------------------------------------------------------------
 
 class ToWorld:
+    """
+    World transformation
+    It permits composition a transformation one element at time.
+    Primitive transformations:
+    - translation
+    - scale
+    - rotation
+    - look_at
+    - matrix
+    - another transformation
+    The composed transformation is applied at the left  (newt @ oldt)
+    The result is a matrix that can be used to transform points and vectors
+    and it is obtained with 'get()'
+    """
 
     def __init__(self, t=None):
         assert t is None or isinstance(t, mi.ScalarTransform4f)
@@ -754,6 +942,19 @@ def render(scene: object,
            seed_grad: int = 0,
            spp: int = 0,
            spp_grad: int = 0) -> np.ndarray:
+    """
+    Call the Mitsuba renderer and apply the Gamma correction
+    :param scene:
+    :param gamma: Gamma correction factor
+    :param params:
+    :param sensor:
+    :param integrator:
+    :param seed:
+    :param seed_grad:
+    :param spp:
+    :param spp_grad:
+    :return:
+    """
     rimage = mi.render(
         scene=scene,
         params=params,
@@ -772,11 +973,20 @@ def render(scene: object,
 # end
 
 # ---------------------------------------------------------------------------
-# Note tu use 'instance' of a 'shapegroup' it seems slower that to clone the shape
+# Note: 'instance' of a 'shapegroup' it slower to clone the object
 
-def instance(scene_dict: dict, ref: str, to_world, in_scene=True) -> dict:
-    assert isinstance(id, str)
-    assert isinstance(ref, str)
+def instance(scene_dict: dict, *, id: str, ref: str, to_world, in_scene=True) -> dict:
+    """
+    Create an instance of a shapegroup in the scene
+    :param scene_dict: scene
+    :param id: id of the instance. It must be not None and unique
+    :param ref: object of type 'shapegroup' to instantiate
+    :param to_world: to world transformation
+    :param in_scene: if to insert the object in the scene
+    :return: instance object
+    """
+    assert isinstance(id, str) and id not in scene_dict, f"Object id {id} already used"
+    assert isinstance(ref, str) and ref in scene_dict, f"Referenced object {ref} not in scene"
     assert isinstance(to_world, mi.ScalarTransform4f)
 
     instance = {
@@ -794,8 +1004,17 @@ def instance(scene_dict: dict, ref: str, to_world, in_scene=True) -> dict:
 
 
 def clone(scene_dict: dict, id: str, ref: str, to_world, in_scene=True) -> dict:
-    assert isinstance(id, str)
-    assert isinstance(ref, str)
+    """
+    Clone an object in the scene
+    :param scene_dict: scene
+    :param id: id of the instance. It must be not None and unique
+    :param ref: object to clone
+    :param to_world: world transformation
+    :param in_scene: if to insert the object in the scene
+    :return: cloned object
+    """
+    assert isinstance(id, str) and id not in scene_dict, f"Object id {id} already used"
+    assert isinstance(ref, str) and ref in scene_dict, f"Referenced object {ref} not in scene"
     assert isinstance(to_world, mi.ScalarTransform4f)
 
     shape = scene_dict[ref]

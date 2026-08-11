@@ -1,0 +1,107 @@
+<scene>
+    <default name="s" value="0.15"/>
+    <default name="w" value="28"/>
+    <default name="h" value="3"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <!--<sensor type="perspective" id="top-camera">
+		<vector x="$w+1.5" y="$h+1.5" z="4"/>
+
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="0 0 4" target="0 0 0" up="0 1 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="2560"/>
+        </film>
+    </sensor>-->
+
+    <sensor type="wideangle" id="top-camera">
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="0 0 4" target="0 0 0" up="0 1 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="2560"/>
+            <integer name="height" value="1536"/>
+        </film>
+    </sensor>
+
+    <!-- brdf -->
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <shape type="cube" id="light-hangar">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale value="$w $h 0.05"/>
+            <translate value="0 0 5"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="1"/>
+        </emitter>
+    </shape>
+
+    <!-- scene -->
+
+    <shape type="cube" id="cube0">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$s" y="$s" z="$s"/>
+            <translate value="0 0 $s"/>
+        </transform>
+
+        <ref id="white" name="bsdf"/>
+    </shape>s
+
+    <shape type="rectangle" id="background">
+         <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.6 0.4 0.2"/>
+        </bsdf>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w+1.5" y="$h+1" z="1"/>
+            <translate value="0 0 -0.2"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.7 0 0"/>
+        </bsdf>
+    </shape>
+
+</scene>

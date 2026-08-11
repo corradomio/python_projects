@@ -12,18 +12,18 @@ print(mi.variants())
 mi.set_variant("cuda_ad_rgb")
 
 
-def add_random_cubes(scene_dict: dict, n: int, side: float):
+def add_random_cubes(scene_dict: dict, n: int):
 
     for i in range(n):
         cid = f"c@{i+1}"
 
-        x = uniform(-1.8,1.8)
-        y = uniform(-27.8, 27.8)
+        x = uniform(-6,6)
+        y = uniform(-40, 40)
 
         # t = mix.ToWorld().scale(value=[0.5,0.5,0.5]).scale(value=[side,side,side]).translate(value=[x,y,0]).get()
         t = mix.ToWorld().translate(value=[x,y,0]).get()
 
-        cubei = mix.instance(scene_dict, id=cid, ref="cube0", to_world=t)
+        mix.clone(scene_dict, id=cid, ref="cube0", to_world=t)
 
         pass
 
@@ -37,15 +37,13 @@ def main():
     # scene_name="examples/scenes/simple"
     # scene_name="examples/scenes/cbox"
     # scene_name="examples/banner_01/scene"
-    scene_name="simple"
+    scene_name="simple_3x28m"
 
-    params = {
-        "side": 0.10
-    }
+    side=0.15
 
     # scene = mix.load_scene(f"{scene_name}.xml", **params)
-    scene_dict = mix.load_scene_dict(f"{scene_name}.xml", **params)
-    scene_dict = add_random_cubes(scene_dict, 1000, **params)
+    scene_dict = mix.load_scene_dict(f"{scene_name}.xml", side=side)
+    scene_dict = add_random_cubes(scene_dict, 20000)
 
     scene = mix.load_dict(scene_dict)
     image = mix.render(scene)

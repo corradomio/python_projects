@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>GLM-OCR &mdash; PDF/Image to Markdown</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked@13.0.3/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>GLM-OCR &rarr; Markdown</h1>
+  <p class="subtitle">Convert a PDF or image into a single Markdown document using the local GLM-OCR model.</p>
+</header>
+
+<main>
+  <section id="upload-area" class="dropzone">
+    <input type="file" id="file-input" accept=".pdf,.png,.jpg,.jpeg,.webp" hidden>
+    <p><strong>Drop a PDF or image here</strong> or click to choose a file</p>
+    <p class="hint">Supported: PDF, PNG, JPG, JPEG, WEBP</p>
+  </section>
+
+  <section id="status-area" class="hidden">
+    <div class="progress-row">
+      <progress id="progress-bar" value="0" max="1"></progress>
+      <span id="status-text">Starting...</span>
+    </div>
+    <button id="download-btn" class="hidden">Download .md</button>
+    <button id="reset-btn" class="hidden">Convert another file</button>
+  </section>
+
+  <section id="preview-area" class="hidden">
+    <div class="pane">
+      <h2>Markdown source</h2>
+      <textarea id="markdown-source" spellcheck="false"></textarea>
+    </div>
+    <div class="pane">
+      <h2>Preview</h2>
+      <div id="markdown-preview"></div>
+    </div>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

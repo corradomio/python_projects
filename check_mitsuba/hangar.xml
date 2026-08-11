@@ -1,5 +1,7 @@
 <scene>
     <default name="side" value="0.15"/>
+    <default name="width" value="12.0"/>
+    <default name="length" value="80.0"/>
 
     <!-- integrator -->
 
@@ -9,12 +11,13 @@
 
     <!-- sensor -->
 
-    <sensor type="perspective" id="global-camera">
-        <float name="fov" value="45"/>
+    <sensor type="perspective" id="global-camera-wh">
+        <vector x="20" z="4"/>
+
         <transform name="to_world">
             <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
                 and the direction (0, 0, 1) points "up" in the output image -->
-            <lookat origin="30 50 30" target="0 0 0" up="0, 0, 1"/>
+            <lookat origin="30 50 10" target="-15 0 0" up="0, 0, 1"/>
         </transform>
 
         <sampler type="stratified">
@@ -27,6 +30,26 @@
             <integer name="height" value="1024"/>
         </film>
     </sensor>
+
+
+    <!--<sensor type="perspective" id="global-camera">
+        <float name="fov" value="60"/>
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="30 50 10" target="-15 0 0" up="0, 0, 1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="512"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
+        </film>
+    </sensor>-->
 
     <!--<sensor type="perspective" id="top-camera">
 		<string name="fov_axis" value="x"/>
@@ -66,8 +89,9 @@
 
     <shape type="cube" id="light-hangar">
         <transform name="to_world">
-            <scale value="1 28 0.05"/>
-            <translate value="0 0 3"/>
+            <scale value=".5 .5 .5"/>
+            <scale x="$width" y="$length" z="0.05"/>
+            <translate value="0 0 8"/>
         </transform>
         <emitter type="area">
             <rgb name="radiance" value="1"/>
@@ -84,7 +108,7 @@
     </shape>-->
 
     <!-- scene -->
-    <shape type="cube" id="x">
+    <!--<shape type="cube" id="x">
         <transform name="to_world">
             <scale value="2 0.05 0.05"/>
             <translate value="2 0 -0.06"/>
@@ -92,7 +116,7 @@
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0 1 0"/>
         </bsdf>
-    </shape>
+    </shape>-->
 
 
     <shape type="shapegroup" id="cube0">
@@ -115,8 +139,9 @@
     </shape>
 
     <shape type="rectangle" id="background">
-         <transform name="to_world">
-            <scale x="2" y="28" z="1"/>
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$width" y="$length" z=".1"/>
         </transform>
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0.6 0.4 0.2"/>
@@ -125,8 +150,9 @@
 
     <shape type="rectangle" id="reference">
         <transform name="to_world">
-            <scale x="3" y="31" z="1"/>
-            <translate value="0 0 -0.2"/>
+            <scale value=".5 .5 .5"/>
+            <scale x="$width+2" y="$length+2" z=".1"/>
+            <translate value="0 0 -0.1"/>
         </transform>
         <bsdf type="diffuse">
             <rgb name="reflectance" value="0.7 0 0"/>
