@@ -1,0 +1,195 @@
+<scene>
+    <default name="sbody" value="0.20"/>
+    <!--<default name="shead"  value="$sbody*0.50"/>-->
+
+    <default name="rot" value="0"/>
+    <default name="hrot"  value="0"/>     <!-- head horizontal rotate -->
+    <default name="vrot"  value="0"/>     <!-- head vertical   rotate -->
+
+    <default name="w" value="5"/>
+    <default name="h" value="5"/>
+    <default name="z" value="4"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- camera -->
+
+    <sensor type="perspective" id="top-camera">
+        <!--
+            this is an alternative of 'fov':
+            x & y : width and length of the area to observe
+                z : height of the camera
+        -->
+		<vector x="$w+0.1" y="$h+0.1" z="$z"/>
+        <!--<float name="fov" value="90"/>-->
+
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="0 0 $z" target="0 0 0" up="0 1 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="1024"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width"  value="1280"/>
+        </film>
+    </sensor>
+
+    <!--<sensor type="perspective" id="left-camera">
+        &lt;!&ndash;
+            this is an alternative of 'fov':
+            x & y : width and length of the area to observe
+                z : height of the camera
+        &ndash;&gt;
+		&lt;!&ndash;<vector x="$w+0.1" y="$h+0.1" z="$z"/>&ndash;&gt;
+        <float name="fov" value="90"/>
+
+        <transform name="to_world">
+            &lt;!&ndash; Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image &ndash;&gt;
+            <lookat origin="-$z 0 1" target="0 0 0" up="0 0 1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="1024"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width"  value="1280"/>
+        </film>
+    </sensor>-->
+
+    <!-- brdf -->
+
+    <bsdf type="diffuse" id="bkg-color">
+        <rgb name="reflectance" value="@135, @131, @95"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-ref">
+        <rgb name="reflectance" value="0.7 0 0"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="yellow">
+        <rgb name="reflectance" value="@157, @160, @11"/>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <shape type="cube" id="light-hangar-1">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale value="$w $h 0.05"/>
+            <translate value="0 0 $z+1"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="4"/>
+        </emitter>
+    </shape>
+
+    <!-- background -->
+
+    <shape type="rectangle" id="background">
+         <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+            <translate x="0" y="0" z="0"/>
+        </transform>
+        <!--<bsdf type="roughplastic">
+            <float name="alpha" value="0.2"/>
+            <string name="distribution" value="ggx"/>
+            <rgb name="reflectance" value="0.6 0.4 0.2"/>
+        </bsdf>-->
+        <ref id="bkg-color" name="bsdf"/>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w+1" y="$h+1" z="1"/>
+            <translate value="0 0 -0.01"/>
+        </transform>
+        <!--<bsdf type="diffuse">
+            <rgb name="reflectance" value="0.7 0 0"/>
+        </bsdf>-->
+        <ref id="bkg-ref" name="bsdf"/>
+    </shape>
+
+    <!-- chicken -->
+
+    <shape type="shapegroup" id="chicken">
+
+        <shape type="obj" name="body">
+            <string name="filename" value="objs/ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$sbody*0.67" y="$sbody" z="$sbody*0.67"/>
+                <translate x="0" y="0" z="$sbody*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="head">
+            <string name="filename" value="objs/ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$sbody*0.5*0.67" y="$sbody*0.5" z="$sbody*0.5*0.67"/>
+
+                <translate x="0" y="$sbody*0.5*0.67*0.5" z="0"/>
+                <rotate x="1" angle="$vrot"/>
+                <rotate z="1" angle="$hrot"/>
+                <translate x="0" y="$sbody*0.4" z="$sbody*0.33"/>
+            </transform>
+            <ref id="yellow" name="bsdf"/>
+        </shape>
+
+        <shape type="rectangle" name="bkg_chick">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$sbody*0.67" y="$sbody" z="$sbody*0.67"/>
+                <translate x="0" y="0" z="$sbody*0.67*0.5"/>
+            </transform>
+            <ref id="bkg-ref" name="bsdf"/>
+        </shape>
+        <shape type="rectangle" name="head_bkg">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$sbody*0.67" y="$sbody" z="$sbody*0.67"/>
+                <translate x="0" y="$sbody*0.3675" z="$sbody*0.67*0.5"/>
+            </transform>
+            <ref id="bkg-ref" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <shape type="instance" name="c@0">
+        <ref id="chicken" name="shape"/>
+
+        <transform name="to_world">
+            <rotate z="1" angle="0"/>
+        </transform>
+    </shape>
+
+    <!--<shape type="obj" name="reference">
+        <string name="filename" value="objs/ellipsoid-20x15.obj"/>
+        <transform name="to_world">
+        </transform>
+        <ref id="yellow" name="bsdf"/>
+    </shape>-->
+
+</scene>

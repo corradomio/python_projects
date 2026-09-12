@@ -81,6 +81,7 @@ class WideAngleCamera(mi.Sensor):
         # This sensor only needs a 2D film sample (no aperture / lens
         # sample), same as the pinhole `perspective` plugin.
         self.m_needs_sample_3 = False
+        self.m_inverse_world_transform = None
 
     # ------------------------------------------------------------------
     # Helper: map a normalized, aspect-corrected film-space position in
@@ -106,30 +107,16 @@ class WideAngleCamera(mi.Sensor):
         return d, valid
 
     def _film_to_ndc(self, position_sample: mi.Point2f):
-        """Map a [0,1]^2 film sample to normalized coordinates such that
-        the *frame corners* -- not an inscribed circle -- touch the
-        r = 1 boundary (i.e. the configured FOV edge).
-
-        This guarantees every pixel of the rendered image is a valid,
-        in-FOV ray: the whole rectangular film is inscribed inside the
-        fisheye's circular field of view, regardless of the film's pixel
-        resolution or aspect ratio, so there are no wasted/invalid
-        (black) pixels anywhere in the frame. The trade-off is that the
-        full configured FOV is only actually reached at the four
-        corners; the midpoints of the shorter edges fall slightly short
-        of theta_max.
-
-        (This differs from a classic "circular fisheye" crop, where the
-        image circle is inscribed *inside* the frame and pixels outside
-        the circle are invalid -- see the normalization used by
-        `perspective`'s fov_axis for a similar but inverted idea.)
-        """
+        """Map a [0,1]^2 film sample to an aspect-corrected [-1,1]^2 square,
+        so the fisheye circle stays circular regardless of film aspect
+        ratio (mirrors how `perspective` handles fov_axis)."""
         film_size = mi.Vector2f(self.film().size())
-        diag = dr.norm(film_size)  # sqrt(W^2 + H^2), in pixel units
+        aspect = film_size.x / film_size.y
 
-        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1] per axis
-        p.x = p.x * film_size.x / diag
-        p.y = p.y * film_size.y / diag
+        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1]
+        if_wide = aspect > 1.0
+        p.x = dr.select(if_wide, p.x * aspect, p.x)
+        p.y = dr.select(if_wide, p.y, p.y / aspect)
         return p
 
     # ------------------------------------------------------------------
@@ -194,6 +181,120 @@ class WideAngleCamera(mi.Sensor):
                 f"  near_clip = {self.m_near_clip}\n"
                 f"  far_clip = {self.m_far_clip}\n"
                 f"]")
+
+    # ------------------------------------------------------------------
+    # Extensions: forward projection (world/scene space -> sensor space)
+    #
+    # These are the exact inverse of the `sample_ray` chain:
+    #
+    #   position_sample --_film_to_ndc--> ndc --_local_direction--> d_local
+    #                                    <--_ndc_to_film--        <--_direction_to_ndc--
+    #
+    # so `project_point(...)` and `sample_ray(...)` round-trip to within
+    # floating point error.
+    # ------------------------------------------------------------------
+    def _direction_to_ndc(self, d_local: mi.Vector3f):
+        """Inverse of `_local_direction`.
+
+        Maps a (not necessarily normalized) camera-space direction to the
+        aspect-corrected film position in [-1, 1]^2, together with a mask
+        telling whether the direction lies inside the configured FOV cone
+        (theta <= theta_max, i.e. r <= 1).
+        """
+        rho = dr.sqrt(dr.square(d_local.x) + dr.square(d_local.y))
+
+        # atan2 (rather than acos(z)) so the result is stable near the
+        # optical axis and independent of the direction's length.
+        theta = dr.atan2(rho, d_local.z)          # [0, pi]
+        r = theta / self.m_theta_max              # equidistant: r = theta / theta_max
+
+        # Unit radial direction (cos phi, sin phi); degenerate exactly on
+        # the optical axis, where any phi is fine -- pick phi = 0.
+        inv_rho = dr.select(rho > 0.0, dr.rcp(dr.maximum(rho, 1e-30)), 0.0)
+        p = mi.Point2f(d_local.x * inv_rho * r,
+                       d_local.y * inv_rho * r)
+
+        in_fov = theta <= self.m_theta_max
+        return p, in_fov
+
+    def _ndc_to_film(self, p: mi.Point2f):
+        """Inverse of `_film_to_ndc`: [-1, 1]^2 (aspect corrected, corners
+        on the r = 1 circle) -> film sample in [0, 1]^2."""
+        film_size = mi.Vector2f(self.film().size())
+        diag = dr.norm(film_size)
+
+        s = mi.Point2f(p.x * diag / film_size.x,
+                       p.y * diag / film_size.y)
+        return (s + 1.0) * 0.5
+
+    def project_point(self, p_world, active=True):
+        """Project a 3D point in scene (world) space onto the sensor.
+
+        Parameters
+        ----------
+        p_world : mi.Point3f
+            Point in world space. Dr.Jit arrays are supported, so this
+            may hold a whole batch of points in the vectorized variants.
+        active : mi.Mask
+            Optional execution mask.
+
+        Returns
+        -------
+        pixel : mi.Point2f
+            Continuous pixel coordinates on the film, in the same
+            convention `sample_ray` uses for `position_sample`, scaled by
+            the film resolution: x in [0, width], y in [0, height], with
+            the origin at the corner of the first pixel. The center of
+            pixel (i, j) is therefore at (i + 0.5, j + 0.5).
+        depth : mi.Float
+            Distance from the camera center to the point (the fisheye has
+            no meaningful "z depth"; radial distance is the natural
+            analogue, and it is what `ray.maxt` is measured in).
+        valid : mi.Mask
+            True when the point is really visible by this sensor, i.e.
+            it is not at the camera center, it lies inside the FOV cone,
+            its projection falls inside the film rectangle, and its
+            distance lies within [near_clip, far_clip]. Note that this is
+            a *geometric* test only -- occlusion is not considered.
+        """
+        if self.m_inverse_world_transform is None:
+            self.m_inverse_world_transform = self.world_transform().inverse()
+
+        p_world = mi.Point3f(p_world)
+
+        # World -> camera space.
+        p_local = self.m_inverse_world_transform @ p_world
+
+        depth = dr.norm(p_local)
+        nonzero = depth > 0.0
+        inv_depth = dr.select(nonzero, dr.rcp(dr.maximum(depth, 1e-30)), 0.0)
+        d_local = mi.Vector3f(p_local.x * inv_depth,
+                              p_local.y * inv_depth,
+                              p_local.z * inv_depth)
+
+        ndc, in_fov = self._direction_to_ndc(d_local)
+        sample = self._ndc_to_film(ndc)
+
+        film_size = mi.Vector2f(self.film().size())
+        pixel = mi.Point2f(sample.x * film_size.x,
+                           sample.y * film_size.y)
+
+        in_frame = (sample.x >= 0.0) & (sample.x <= 1.0) & \
+                   (sample.y >= 0.0) & (sample.y <= 1.0)
+        in_range = (depth >= self.m_near_clip) & (depth <= self.m_far_clip)
+
+        valid = mi.Mask(active) & nonzero & in_fov & in_frame & in_range
+        # return pixel, depth, valid
+        return pixel, valid
+
+    def project_point_to_sample(self, p_world, active=True):
+        """Same as `project_point`, but returns the resolution independent
+        film sample in [0, 1]^2 -- the value that, fed to `sample_ray` as
+        `position_sample`, generates the ray through `p_world`."""
+        pixel, depth, valid = self.project_point(p_world, active)
+        film_size = mi.Vector2f(self.film().size())
+        sample = mi.Point2f(pixel.x / film_size.x, pixel.y / film_size.y)
+        return sample, depth, valid
 
 
 mi.register_sensor('wideangle', lambda props: WideAngleCamera(props))

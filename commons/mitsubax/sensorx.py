@@ -1,0 +1,3 @@
+class ForwardSensor:
+    def project_point(self, p_world, active=True):
+        ...

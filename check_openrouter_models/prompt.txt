@@ -1,0 +1,7 @@
+create a Python function that:
+1) download the list of models from openrouter API web site, using the key OPENROUTER_KEY,
+2) save the response in a JSON file with name "openrouter_models.json"
+3) scan the list of models and print on the console the model's name
+
+
+NB: unsloth NON FUNZIONA: non genera il file python!

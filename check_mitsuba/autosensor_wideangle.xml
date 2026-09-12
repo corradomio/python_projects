@@ -1,7 +1,7 @@
 <scene>
     <default name="s" value="0.15"/>
     <default name="w" value="28"/>
-    <default name="h" value="3"/>
+    <default name="h" value="12"/>
 
     <!-- integrator -->
 
@@ -31,6 +31,8 @@
     </sensor>-->
 
     <sensor type="wideangle" id="top-camera">
+        <float name="fov" value="144"/>
+
         <transform name="to_world">
             <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
                 and the direction (0, 0, 1) points "up" in the output image -->
@@ -38,13 +40,13 @@
         </transform>
 
         <sampler type="stratified">
-            <integer name="sample_count" value="512"/>
+            <integer name="sample_count" value="256"/>
         </sampler>
 
         <film type="hdrfilm">
             <string name="pixel_format" value="rgba"/>
-            <integer name="width" value="2560"/>
-            <integer name="height" value="1536"/>
+            <integer name="width" value="1920"/>
+            <integer name="height" value="1080"/>
         </film>
     </sensor>
 
@@ -72,12 +74,16 @@
     </shape>
 
     <!-- scene -->
+    <!--
+        cube:  [[-1,-1,-1],[+1,+1,+1]]
+      -->
 
     <shape type="cube" id="cube0">
         <transform name="to_world">
             <scale value=".5 .5 .5"/>
             <scale x="$s" y="$s" z="$s"/>
-            <translate value="0 0 $s"/>
+            <!--<translate value="0 0 $s"/>-->
+            <translate x="0" y="0" z="$s/2"/>
         </transform>
 
         <ref id="white" name="bsdf"/>

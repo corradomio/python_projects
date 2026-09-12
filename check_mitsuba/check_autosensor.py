@@ -7,7 +7,7 @@ import mitsubax as mix
 
 print(mi.variants())
 mi.set_variant("cuda_ad_rgb")
-import mitsubax.plain.wideangle_sensor
+import mitsubax.sensors.circular.wideangle_sensor
 
 
 def add_random_cubes(scene_dict: dict, n: int, w:float, h: float):
@@ -64,11 +64,11 @@ def main():
     # gen_scene(20,12, 4, 0.3)
     # gen_scene(10, 6, 4, 0.3)
 
-    gen_scene(28, 2, 3, 0.3)
-    gen_scene(28, 3, 3, 0.3)
-    gen_scene(28,12, 3, 0.3)
-    gen_scene(20,12, 3, 0.3)
-    gen_scene(10, 6, 3, 0.3)
+    gen_scene(28, 2, 3, 0.1)
+    gen_scene(28, 3, 3, 0.1)
+    gen_scene(28,12, 3, 0.1)
+    gen_scene(20,12, 3, 0.1)
+    gen_scene(10, 6, 3, 0.1)
 
     pass
 

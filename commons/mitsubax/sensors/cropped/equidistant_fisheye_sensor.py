@@ -197,34 +197,34 @@ class EquidistantFisheyeCamera(mi.Sensor):
                 f"]")
 
 
-def register():
-    """Call once, after `mi.set_variant(...)`, to make 'equidistant_fisheye'
-    available as a sensor `type` string in load_dict / XML scenes."""
-    mi.register_sensor('equidistant_fisheye', lambda props: EquidistantFisheyeCamera(props))
-
-
-if __name__ == '__main__':
-    # Minimal smoke test.
-    register()
-
-    scene = mi.load_dict({
-        'type': 'scene',
-        'integrator': {'type': 'path'},
-        'light': {'type': 'constant', 'radiance': 1.0},
-        'sphere': {'type': 'sphere'},
-        'sensor': {
-            'type': 'equidistant_fisheye',
-            'fov': 170.0,
-            'to_world': mi.ScalarTransform4f().look_at(
-                origin=[0, 0, 3], target=[0, 0, 0], up=[0, 1, 0]),
-            'film': {
-                'type': 'hdrfilm', 'width': 256, 'height': 256,
-                'rfilter': {'type': 'gaussian'},
-            },
-            'sampler': {'type': 'independent', 'sample_count': 16},
-        },
-    })
-
-    img = mi.render(scene)
-    mi.util.write_bitmap('equidistant_fisheye_test.png', img)
-    print('Rendered equidistant_fisheye_test.png')
+# def register():
+#     """Call once, after `mi.set_variant(...)`, to make 'equidistant_fisheye'
+#     available as a sensor `type` string in load_dict / XML scenes."""
+#     mi.register_sensor('equidistant_fisheye', lambda props: EquidistantFisheyeCamera(props))
+#
+#
+# if __name__ == '__main__':
+#     # Minimal smoke test.
+#     register()
+#
+#     scene = mi.load_dict({
+#         'type': 'scene',
+#         'integrator': {'type': 'path'},
+#         'light': {'type': 'constant', 'radiance': 1.0},
+#         'sphere': {'type': 'sphere'},
+#         'sensor': {
+#             'type': 'equidistant_fisheye',
+#             'fov': 170.0,
+#             'to_world': mi.ScalarTransform4f().look_at(
+#                 origin=[0, 0, 3], target=[0, 0, 0], up=[0, 1, 0]),
+#             'film': {
+#                 'type': 'hdrfilm', 'width': 256, 'height': 256,
+#                 'rfilter': {'type': 'gaussian'},
+#             },
+#             'sampler': {'type': 'independent', 'sample_count': 16},
+#         },
+#     })
+#
+#     img = mi.render(scene)
+#     mi.util.write_bitmap('equidistant_fisheye_test.png', img)
+#     print('Rendered equidistant_fisheye_test.png')

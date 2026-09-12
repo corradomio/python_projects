@@ -1,58 +1,49 @@
 """
-orthographic_fisheye_sensor.py
--------------------------------
-An orthographic ("sine-law") wide-angle / fisheye camera plugin for
-Mitsuba 3.
-
-NOTE on naming: Mitsuba 3 already ships a built-in sensor called
-`orthographic`, but that is a *parallel-projection* camera (no
-perspective at all -- rays are parallel, and it has no field of view).
-That is unrelated to what's implemented here. This file implements the
-*orthographic fisheye* projection, one of the four classic circular
-fisheye lens mappings (the others being equidistant, stereographic, and
-equisolid-angle), named "orthographic" because it's the projection you'd
-get by orthographically projecting the hemisphere of incoming directions
-straight down onto the image plane. To avoid confusion with the built-in
-`orthographic` plugin, this is registered under the type string
-`'orthographic_fisheye'`.
+equisolid_angle_sensor.py
+---------------------------
+An equisolid-angle wide-angle / fisheye camera plugin for Mitsuba 3.
 
 Mitsuba 3 does not ship a fisheye sensor out of the box, so this
 implements one as a Python plugin, following the same subclassing
 mechanism Mitsuba uses for custom BSDFs / emitters / integrators
 (mi.Sensor -> override sample_ray / sample_ray_differential).
 
-Projection model: orthographic (sine-law) fisheye.
-    r = f * sin(theta)
+Projection model: equisolid-angle ("equal-area") fisheye.
+    r = 2f * sin(theta / 2)
 where `theta` is the angle from the optical axis (+Z in camera space)
 and `r` is the radial distance from the image center, normalized so that
 r = 1 at the edge of the configured field of view.
 
-Important limitation: sin(theta) is only monotonic (and therefore
-invertible) for theta in [0, 90 degrees]. This means the orthographic
-fisheye mapping is only well-defined for FOV <= 180 degrees (a full
-hemisphere). This is a property of the projection itself, not an
-implementation shortcut -- past 90 degrees off-axis, a single radius on
-the sensor would correspond to two different incoming angles, so the
-image would fold back on itself. This is also why the orthographic
-fisheye characteristically compresses the periphery much more strongly
-than equidistant or stereographic fisheyes: equal steps in theta near
-theta=90 degrees map to ever-smaller steps in r.
+This is the projection used by most real consumer/wildlife circular
+fisheye lenses (e.g. Nikon, Sigma, Canon fisheye lenses are almost all
+equisolid-angle designs), because it has the property that equal areas
+on the sensor correspond to equal solid angles in the scene -- a patch
+of sky covering some solid angle projects to a sensor patch of constant
+area regardless of where in the frame it falls. That makes it the
+natural choice when the fisheye image will be used for lighting capture
+/ environment map generation (e.g. photographing a mirrored sphere or
+building a fisheye-based HDRI), since uniform sampling of sensor pixels
+then corresponds to (nearly) uniform sampling of solid angle.
+
+Like the equidistant and stereographic mappings (and unlike the
+orthographic/sine-law one), sin(theta/2) stays monotonic all the way out
+to theta = 180 degrees, so this projection supports FOV up to (but
+excluding) 360 degrees without folding back on itself.
 
 Usage
 -----
     import mitsuba as mi
     mi.set_variant('llvm_ad_rgb')  # or scalar_rgb, cuda_ad_rgb, ...
 
-    from orthographic_fisheye_sensor import OrthographicFisheyeCamera
-    mi.register_sensor('orthographic_fisheye',
-                        lambda props: OrthographicFisheyeCamera(props))
+    from equisolid_angle_sensor import EquisolidAngleCamera
+    mi.register_sensor('equisolid_angle', lambda props: EquisolidAngleCamera(props))
 
     scene = mi.load_dict({
         'type': 'scene',
         'integrator': {'type': 'path'},
         'sensor': {
-            'type': 'orthographic_fisheye',
-            'fov': 180.0,  # degrees, full field of view, must be <= 180
+            'type': 'equisolid_angle',
+            'fov': 180.0,  # degrees, full field of view
             'to_world': mi.ScalarTransform4f().look_at(
                 origin=[0, 0, 4], target=[0, 0, 0], up=[0, 1, 0]),
             'film': {
@@ -77,32 +68,28 @@ import drjit as dr
 # if mi.variant() is None:
 #     mi.set_variant('scalar_rgb')
 
-assert mi.variant() is not None, "Variant must be set before importing mitsubax.orthographic_fisheye_sensor"
+assert mi.variant() is not None, "Variant must be set before importing mitsubax.equisolid_angle_sensor"
 
 
-class OrthographicFisheyeCamera(mi.Sensor):
-    """Orthographic (sine-law) fisheye sensor. FOV must be <= 180 degrees."""
+class EquisolidAngleCamera(mi.Sensor):
+    """Equisolid-angle (equal-area) fisheye sensor."""
 
     def __init__(self, props: mi.Properties):
         mi.Sensor.__init__(self, props)
 
-        # Full field of view, in degrees. Capped at 180 (hemisphere)
-        # because sin(theta) folds back on itself beyond that -- see
-        # module docstring.
+        # Full field of view, in degrees (e.g. 180 = hemispherical fisheye).
+        # sin(theta/2) remains monotonic all the way to theta = 180 deg,
+        # so anything up to ~359.9 is legal.
         fov = props.get('fov', 180.0)
-        if fov <= 0.0 or fov > 180.0:
-            raise RuntimeError(
-                "'fov' must lie in (0, 180] degrees for the orthographic "
-                "fisheye projection (sin(theta) is not invertible beyond "
-                "a hemisphere). Use the equidistant or stereographic "
-                "fisheye sensor for FOV > 180 degrees.")
+        if fov <= 0.0 or fov >= 360.0:
+            raise RuntimeError("'fov' must lie in (0, 360) degrees.")
         theta_max = dr.deg2rad(fov * 0.5)
 
         # Precompute the normalization constant so that theta_max maps to
         # normalized radius r = 1 exactly:
-        #   r_norm(theta) = sin(theta) / sin(theta_max)
+        #   r_norm(theta) = sin(theta / 2) / sin(theta_max / 2)
         self.m_theta_max = theta_max
-        self.m_sin_theta_max = dr.sin(theta_max)
+        self.m_sin_half_theta_max = dr.sin(theta_max * 0.5)
 
         # Near/far clipping planes, consistent with the built-in sensors.
         self.m_near_clip = props.get('near_clip', 1e-2)
@@ -123,9 +110,9 @@ class OrthographicFisheyeCamera(mi.Sensor):
         r = dr.norm(film_p)
         r_clamped = dr.minimum(r, 1.0)
 
-        # Inverse orthographic (sine-law) mapping: recover theta from the
-        # normalized radius, theta = asin(r * sin(theta_max)).
-        theta = dr.asin(r_clamped * self.m_sin_theta_max)
+        # Inverse equisolid-angle mapping: recover theta from the
+        # normalized radius, theta = 2 * asin(r * sin(theta_max / 2)).
+        theta = 2.0 * dr.asin(r_clamped * self.m_sin_half_theta_max)
         phi = dr.atan2(film_p.y, film_p.x)
 
         sin_theta, cos_theta = dr.sin(theta), dr.cos(theta)
@@ -139,30 +126,16 @@ class OrthographicFisheyeCamera(mi.Sensor):
         return d, valid
 
     def _film_to_ndc(self, position_sample: mi.Point2f):
-        """Map a [0,1]^2 film sample to normalized coordinates such that
-        the *frame corners* -- not an inscribed circle -- touch the
-        r = 1 boundary (i.e. the configured FOV edge).
-
-        This guarantees every pixel of the rendered image is a valid,
-        in-FOV ray: the whole rectangular film is inscribed inside the
-        fisheye's circular field of view, regardless of the film's pixel
-        resolution or aspect ratio, so there are no wasted/invalid
-        (black) pixels anywhere in the frame. The trade-off is that the
-        full configured FOV is only actually reached at the four
-        corners; the midpoints of the shorter edges fall slightly short
-        of theta_max.
-
-        (This differs from a classic "circular fisheye" crop, where the
-        image circle is inscribed *inside* the frame and pixels outside
-        the circle are invalid -- see the normalization used by
-        `perspective`'s fov_axis for a similar but inverted idea.)
-        """
+        """Map a [0,1]^2 film sample to an aspect-corrected [-1,1]^2 square,
+        so the fisheye circle stays circular regardless of film aspect
+        ratio (mirrors how `perspective` handles fov_axis)."""
         film_size = mi.Vector2f(self.film().size())
-        diag = dr.norm(film_size)  # sqrt(W^2 + H^2), in pixel units
+        aspect = film_size.x / film_size.y
 
-        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1] per axis
-        p.x = p.x * film_size.x / diag
-        p.y = p.y * film_size.y / diag
+        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1]
+        if_wide = aspect > 1.0
+        p.x = dr.select(if_wide, p.x * aspect, p.x)
+        p.y = dr.select(if_wide, p.y, p.y / aspect)
         return p
 
     # ------------------------------------------------------------------
@@ -216,25 +189,23 @@ class OrthographicFisheyeCamera(mi.Sensor):
         return ray_diff, weight
 
     def to_string(self):
-        return (f"OrthographicFisheyeCamera[\n"
+        return (f"EquisolidAngleCamera[\n"
                 f"  fov = {dr.rad2deg(self.m_theta_max) * 2}\n"
                 f"  near_clip = {self.m_near_clip}\n"
                 f"  far_clip = {self.m_far_clip}\n"
                 f"]")
 
 
-mi.register_sensor('orthographic_fisheye',
-                        lambda props: OrthographicFisheyeCamera(props))
+mi.register_sensor('equisolid_angle', lambda props: EquisolidAngleCamera(props))
 
 
 # def register():
-#     """Call once, after `mi.set_variant(...)`, to make
-#     'orthographic_fisheye' available as a sensor `type` string in
-#     load_dict / XML scenes."""
-#     mi.register_sensor('orthographic_fisheye',
-#                         lambda props: OrthographicFisheyeCamera(props))
-#
-#
+#     """Call once, after `mi.set_variant(...)`, to make 'equisolid_angle'
+#     available as a sensor `type` string in load_dict / XML scenes."""
+#     mi.register_sensor('equisolid_angle',
+#                         lambda props: EquisolidAngleCamera(props))
+
+
 # if __name__ == '__main__':
 #     # Minimal smoke test.
 #     register()
@@ -245,7 +216,7 @@ mi.register_sensor('orthographic_fisheye',
 #         'light': {'type': 'constant', 'radiance': 1.0},
 #         'sphere': {'type': 'sphere'},
 #         'sensor': {
-#             'type': 'orthographic_fisheye',
+#             'type': 'equisolid_angle',
 #             'fov': 180.0,
 #             'to_world': mi.ScalarTransform4f().look_at(
 #                 origin=[0, 0, 3], target=[0, 0, 0], up=[0, 1, 0]),
@@ -258,5 +229,5 @@ mi.register_sensor('orthographic_fisheye',
 #     })
 #
 #     img = mi.render(scene)
-#     mi.util.write_bitmap('orthographic_fisheye_test.png', img)
-#     print('Rendered orthographic_fisheye_test.png')
+#     mi.util.write_bitmap('equisolid_angle_test.png', img)
+#     print('Rendered equisolid_angle_test.png')

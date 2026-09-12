@@ -139,16 +139,30 @@ class OrthographicFisheyeCamera(mi.Sensor):
         return d, valid
 
     def _film_to_ndc(self, position_sample: mi.Point2f):
-        """Map a [0,1]^2 film sample to an aspect-corrected [-1,1]^2 square,
-        so the fisheye circle stays circular regardless of film aspect
-        ratio (mirrors how `perspective` handles fov_axis)."""
-        film_size = mi.Vector2f(self.film().size())
-        aspect = film_size.x / film_size.y
+        """Map a [0,1]^2 film sample to normalized coordinates such that
+        the *frame corners* -- not an inscribed circle -- touch the
+        r = 1 boundary (i.e. the configured FOV edge).
 
-        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1]
-        if_wide = aspect > 1.0
-        p.x = dr.select(if_wide, p.x * aspect, p.x)
-        p.y = dr.select(if_wide, p.y, p.y / aspect)
+        This guarantees every pixel of the rendered image is a valid,
+        in-FOV ray: the whole rectangular film is inscribed inside the
+        fisheye's circular field of view, regardless of the film's pixel
+        resolution or aspect ratio, so there are no wasted/invalid
+        (black) pixels anywhere in the frame. The trade-off is that the
+        full configured FOV is only actually reached at the four
+        corners; the midpoints of the shorter edges fall slightly short
+        of theta_max.
+
+        (This differs from a classic "circular fisheye" crop, where the
+        image circle is inscribed *inside* the frame and pixels outside
+        the circle are invalid -- see the normalization used by
+        `perspective`'s fov_axis for a similar but inverted idea.)
+        """
+        film_size = mi.Vector2f(self.film().size())
+        diag = dr.norm(film_size)  # sqrt(W^2 + H^2), in pixel units
+
+        p = mi.Point2f(position_sample) * 2.0 - 1.0  # -> [-1, 1] per axis
+        p.x = p.x * film_size.x / diag
+        p.y = p.y * film_size.y / diag
         return p
 
     # ------------------------------------------------------------------
@@ -208,7 +222,9 @@ class OrthographicFisheyeCamera(mi.Sensor):
                 f"  far_clip = {self.m_far_clip}\n"
                 f"]")
 
+
 mi.register_sensor('orthographic_fisheye', lambda props: OrthographicFisheyeCamera(props))
+
 
 # def register():
 #     """Call once, after `mi.set_variant(...)`, to make
@@ -216,8 +232,8 @@ mi.register_sensor('orthographic_fisheye', lambda props: OrthographicFisheyeCame
 #     load_dict / XML scenes."""
 #     mi.register_sensor('orthographic_fisheye',
 #                         lambda props: OrthographicFisheyeCamera(props))
-
-
+#
+#
 # if __name__ == '__main__':
 #     # Minimal smoke test.
 #     register()
