@@ -1,0 +1,31 @@
+WARNING: the order of the trasnformations are specified in THIS example:
+
+    https://mitsuba.readthedocs.io/en/stable/src/generated/plugins_shapes.html
+    Shape group (shapegroup)
+
+    <!-- Create instance of the shape group, but rotated, scaled, and translated -->
+    <shape type="instance">
+        <ref id="my_shape_group"/>
+        <transform name="to_world">
+            <translate z="10"/>                     <!-- (3) -->
+            <scale value="1.5"/>                    <!-- (2) -->
+            <rotate x="1" angle="45"/>              <!-- (1) -->
+        </transform>
+    </shape>
+
+
+
+WHILE, the current implementation uses THE OPPOSITE DIRECTION:
+
+    translate, scale, rotate
+
+    <!-- Create instance of the shape group, but rotated, scaled, and translated -->
+    <shape type="instance">
+        <ref id="my_shape_group"/>
+        <transform name="to_world">
+            <translate z="10"/>                     <!-- (1) -->
+            <scale value="1.5"/>                    <!-- (2) -->
+            <rotate x="1" angle="45"/>              <!-- (3) -->
+        </transform>
+    </shape>
+

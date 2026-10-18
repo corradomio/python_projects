@@ -3,6 +3,7 @@
 #
 import math
 from random import uniform, gauss
+import numpy as np
 
 
 def clip(x, a, b):
@@ -54,8 +55,15 @@ class Uniform2D:
             t += 1
         self._used.add((x, y))
 
-        x = s*x + s/2
-        y = s*y + s/2
+        # x = s*x + s/2
+        # y = s*y + s/2
+
+        sx = uniform(0.1*s, 0.9*s)
+        sy = uniform(0.1*s, 0.9*s)
+
+        x = s*x + sx
+        y = s*y + sy
+
         return x, y
 
     def sample(self) -> tuple[float, float]:
@@ -138,6 +146,8 @@ class Gauss2D:
     # end
 
     def sample(self) -> tuple[float, float]:
+        w = self.w
+        h = self.h
         n = self.n
         weights = self.weights
         s = self.s
@@ -162,3 +172,71 @@ class Gauss2D:
         return x, y
     # end
 # end
+
+# ---------------------------------------------------------------------------
+
+class GaussianMixture2D:
+    def __init__(self, pesi, covarianze):
+        """
+        pesi: lista di k pesi reali non negativi
+        covarianze: lista di k matrici 2x2, una per componente
+
+        Le medie delle componenti sono fissate automaticamente su punti
+        equidistanti lungo l'asse x: (0, 0), (1, 0), ..., (k-1, 0).
+        """
+        self.pesi = np.asarray(pesi, dtype=float)
+        self.covarianze = np.asarray(covarianze, dtype=float)
+
+        k = len(self.pesi)
+
+        if k == 0:
+            raise ValueError("La lista dei pesi non può essere vuota.")
+        if self.covarianze.shape != (k, 2, 2):
+            raise ValueError("Servono k matrici di covarianza di dimensione 2x2.")
+        if np.any(self.pesi < 0) or self.pesi.sum() <= 0:
+            raise ValueError("I pesi devono essere non negativi e con somma positiva.")
+
+        # Normalizza i pesi per ottenere probabilità.
+        self.pesi /= self.pesi.sum()
+
+        # Medie 2D delle componenti.
+        self.medie = np.column_stack((np.arange(k), np.zeros(k)))
+
+    def sample(self):
+        """Restituisce un campione casuale 2D dalla Gaussian Mixture."""
+        componente = np.random.choice(len(self.pesi), p=self.pesi)
+
+        return np.random.multivariate_normal(
+            mean=self.medie[componente],
+            cov=self.covarianze[componente]
+        )
+
+# ---------------------------------------------------------------------------
+
+def sample_gaussian_mixture_2d(weights, means, covariances, n_points, seed=None):
+    weights = np.asarray(weights, dtype=float)
+    means = np.asarray(means, dtype=float)
+    covariances = np.asarray(covariances, dtype=float)
+
+    k = len(weights)
+    if means.shape != (k, 2):
+        raise ValueError(f"means must have shape ({k}, 2), got {means.shape}")
+    if covariances.shape != (k, 2, 2):
+        raise ValueError(f"covariances must have shape ({k}, 2, 2), got {covariances.shape}")
+    if np.any(weights < 0) or weights.sum() <= 0:
+        raise ValueError("weights must be non-negative and not all zero")
+
+    weights = weights / weights.sum()
+    rng = np.random.default_rng(seed)
+
+    # 1. pick a component for each point according to the weights
+    components = rng.choice(k, size=n_points, p=weights)
+
+    # 2. sample each point from its component's Gaussian
+    points = np.empty((n_points, 2))
+    for i in range(k):
+        idx = np.where(components == i)[0]
+        if idx.size:
+            points[idx] = rng.multivariate_normal(means[i], covariances[i], size=idx.size)
+
+    return [tuple(p) for p in points.tolist()]

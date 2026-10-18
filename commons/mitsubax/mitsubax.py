@@ -9,10 +9,53 @@ import drjit as dr
 import mitsuba as mi
 import numpy as np
 
-from .sensorx import ForwardSensor
-
-TAG_FUNCTION = Callable[[dict, ET.Element], None]
+TAG_FUNCTION = Callable[[dict, ET.Element, str], None]
 NoneType = type(None)
+
+VECTOR = tuple[float, float, float] | list[float]
+POINT  = tuple[float, float, float] | list[float]
+RGB    = tuple[float, float, float] | list[float]
+AXIS   = str | VECTOR
+
+ROTATION = tuple[AXIS, float]
+TRANSLATION = VECTOR
+SCALING = VECTOR
+
+TRANSFORM = object
+SHAPE  = dict
+
+# ---------------------------------------------------------------------------
+# Registry of procedural shapes
+# ---------------------------------------------------------------------------
+
+SHAPE_TYPES = {
+    "cube", "sphere", "rectangle", "disk", "cylinder",
+    "ellipsoids", "ellipsoidsmesh",
+    "bsplinecurve", "linearcurve", "sdfgrid",
+    "obj", "ply", "serialized",
+    "shapegroup", "instance",
+}
+
+
+SHAPE_PARAM_TYPES= [
+    "boolean", "integer", "string", "float",
+    "point", "vector",
+    "rgb", "transform"
+]
+
+
+SHAPES_REGISTRY: dict[str, Callable] = {
+    # "cube": None,
+}
+
+
+def register_procedural_shape(name: str, generator: Callable):
+    global SHAPES_REGISTRY
+    assert name not in SHAPE_TYPES, f"Procedural shape '{name}' must not override a predefined shape"
+    assert name not in SHAPES_REGISTRY, f"Procedural shape '{name}' already defined"
+    SHAPES_REGISTRY[name] = generator
+# end
+
 
 # ---------------------------------------------------------------------------
 # Utilities
@@ -112,7 +155,7 @@ def _sensor_fov(sensor: ET.Element, xyz: list[float]):
         sensor.append(efov)
         sensor.append(efov_axis)
     pass
-# end
+
 
 def _is_absolute_path(path:str) -> bool:
     path = path.replace("\\", "/")
@@ -123,6 +166,40 @@ def _is_absolute_path(path:str) -> bool:
     if len(path) > 2 and path[1] == ":":
         return True
     return False
+
+
+def _cid(pid: str, sid: str) -> str:
+    if len(pid) == 0 and len(sid) == 0:
+        return pid
+    if len(sid) == 0:
+        return pid
+    if len(pid) == 0:
+        return sid
+    return f"{pid}_{sid}"
+
+
+def _normalize_params_name(params: dict) -> dict:
+    # " " -> "_"
+    # "-" -> "_"
+    nparams = {}
+    for name in params:
+        nname = name.replace(" ", "_").replace("-", "_")
+        nparams[nname] = params[name]
+    return nparams
+
+
+def _normalize_to_world(t):
+    if t is None:
+        pass
+    elif isinstance(t, ToWorld):
+        t = cast(ToWorld, t).get()
+    elif isinstance(t, dict):
+        for k in t:
+            t[k] = _normalize_to_world(t[k])
+    else:
+        pass
+    return t
+
 
 # ---------------------------------------------------------------------------
 # SceneLoader
@@ -145,13 +222,11 @@ def _int_eval(s: str) -> int:
     except SyntaxError:
         raise SyntaxError(f"syntax error evaluating '{s}' for int")
 
-
 def _bool_eval(s: str) -> bool:
     try:
         return bool(eval(s))
     except SyntaxError:
         raise SyntaxError(f"syntax error evaluating '{s}' for bool")
-
 
 def _film_size(sensor: ET.Element, xyz: list[float]):
     x, y, z = xyz
@@ -207,7 +282,7 @@ class SceneLoader:
 
         return self.DEFAULTS[name]
 
-    def get_shape(self, id: str) -> dict:
+    def get_shape(self, id: str) -> SHAPE:
         assert isinstance(id, str)
         assert self.parsed, "Scene not parsed"
         assert id in self.scene_dict
@@ -362,19 +437,21 @@ class SceneLoader:
         id = xml.attrib["id"]
         self.REF_ELEMENTS[id] = data
 
-    def _get_id(self, xml: ET.Element) -> str:
+    def _get_id(self, xml: ET.Element, pid: str="") -> str:
         if "id" in xml.attrib:
-            return xml.attrib["id"]
-        if "name" in xml.attrib:
-            return xml.attrib["name"]
+            sid: str = xml.attrib["id"]
+        elif "name" in xml.attrib:
+            sid: str = xml.attrib["name"]
+        else:
+            tag = xml.tag
 
-        tag = xml.tag
-
-        if tag not in self.TAG_IDS:
-            self.TAG_IDS[tag] = 1
-        id = self.TAG_IDS[tag]
-        self.TAG_IDS[tag] += 1
-        return f"{tag}@{id}"
+            if tag not in self.TAG_IDS:
+                self.TAG_IDS[tag] = 1
+            id = self.TAG_IDS[tag]
+            self.TAG_IDS[tag] += 1
+            sid: str = f"{tag}@{id}"
+        # end
+        return _cid(pid, sid)
 
     def _get_name(self, xml: ET.Element) -> str:
         if "name" in xml.attrib:
@@ -492,58 +569,81 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
-    # def _parse_body(self, data: dict, xml: ET.Element):
-    #     for child in xml:
-    #         self._parse_tag(data, child)
-
-    def _parse_tag(self, data: dict, xml: ET.Element):
+    def _parse_tag(self, data: dict, xml: ET.Element, pid: str=""):
         assert isinstance(data, dict)
         assert isinstance(xml, ET.Element)
-        assert xml.tag in self.TAG_PARSERS.keys(), f"Tag {xml.tag} unsupported"
+        assert xml.tag in self.TAG_PARSERS, f"Tag {xml.tag} unsupported"
 
         parse: TAG_FUNCTION = cast(TAG_FUNCTION, self.TAG_PARSERS[xml.tag])
-        parse(self, data, xml)
+        parse(self, data, xml, pid)
 
-    def _parse_scene(self, data: dict, xml: ET.Element):
+    def _parse_scene(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "scene"
         #   <scene>
         #   </scene>
         data["type"] = "scene"
         self._parse_children(data, xml)
 
-    def _parse_body(self, data: dict, xml: ET.Element):
+    def _parse_body(self, data: dict, xml: ET.Element, pid: str=""):
         # just an alias
         self._parse_children(data, xml)
 
-    def _parse_children(self, data: dict, xml: ET.Element):
+    def _parse_children(self, data: dict, xml: ET.Element, pid: str=""):
         nelts = len(xml)
         for i in range(nelts):
             child = xml[i]
-            self._parse_tag(data, child)
+            self._parse_tag(data, child, pid)
 
-    def _parse_shape(self, data: dict, xml: ET.Element):
+    def _parse_shape(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "shape"
         #   <shape type="">
         #       ...
         #   </shape>
-        id = self._get_id(xml)
+        id = self._get_id(xml, pid)
         type = self._get_type(xml)
         self.shape_depth += 1
 
         if type in ["obj", "ply"]:
             self._resolve_filename(data, xml)
 
+        if type in SHAPE_TYPES:
+            shape = dict(type=type, id=id)
+            # self._parse_children(shape, xml, pid=id)
+            self._parse_children(shape, xml)
+        elif type in SHAPES_REGISTRY:
+            procedural_shape = SHAPES_REGISTRY[type]
+            params = self._parse_params(data, xml)
+            shape = procedural_shape(**params)
+        else:
+            raise ValueError(f"Unsupported shape type {type}")
         #
-        shape = dict(type=type, id=id)
-        self._parse_children(shape, xml)
         self.shape_depth -= 1
+        shape["id"] = id
+        data[id] = shape
         #
         if self.shape_depth == 0:
             self._register_ref(xml, shape)
-        data[id] = shape
         pass
 
-    def _parse_integrator(self, data: dict, xml: ET.Element):
+    def _parse_params(self,  data: dict, xml: ET.Element) -> dict[str, object]:
+        # <transform name="to_world"/> is NOT considered
+        params = {}
+        nelts = len(xml)
+        for i in range(nelts):
+            child = xml[i]
+            tag = child.tag
+            name = child.attrib["name"]
+
+            if tag not in SHAPE_PARAM_TYPES: continue
+            if tag == "transform" and name == "to_world": continue
+
+            self._parse_tag(params, child)
+        pass
+        params = _normalize_params_name(params)
+        return params
+    # end
+
+    def _parse_integrator(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "integrator"
         #   <integrator type="">
         #       <integer name="max_depth" value="5"/>
@@ -558,7 +658,7 @@ class SceneLoader:
         data[id] = integrator
         pass
 
-    def _parse_sensor(self, data: dict, xml: ET.Element):
+    def _parse_sensor(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "sensor"
         #   <sensor type="">
         #       ...
@@ -577,7 +677,7 @@ class SceneLoader:
         data[id] = sensor
         pass
 
-    def _parse_sampler(self, data: dict, xml: ET.Element):
+    def _parse_sampler(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "sampler"
         #   <sampler type="">
         #       ...
@@ -592,7 +692,7 @@ class SceneLoader:
         data[id] = sampler
         pass
 
-    def _parse_film(self, data: dict, xml: ET.Element):
+    def _parse_film(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "film"
         #   <film type="">
         #       ...
@@ -607,7 +707,7 @@ class SceneLoader:
         data[id] = film
         pass
 
-    def _parse_emitter(self, data: dict, xml: ET.Element):
+    def _parse_emitter(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "emitter"
         #   <emitter type="">
         #       ...
@@ -622,7 +722,7 @@ class SceneLoader:
         data[id] = emitter
         pass
 
-    def _parse_bsdf(self, data: dict, xml: ET.Element):
+    def _parse_bsdf(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "bsdf"
         #   <bsdf type="">
         #       ...
@@ -637,7 +737,7 @@ class SceneLoader:
         data[id] = bsdf
         pass
 
-    def _parse_rfilter(self, data: dict, xml: ET.Element):
+    def _parse_rfilter(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "rfilter"
         #   <rfilter type="">
         #       ...
@@ -652,10 +752,11 @@ class SceneLoader:
         data[id] = rfilter
         pass
 
-    def _parse_ref(self, data: dict, xml: ET.Element):
+    def _parse_ref(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "ref"
         # <ref id="..." name="..." />
-        id = xml.attrib["id"]
+        ref_id = xml.attrib["id"]
+        id = self._str(ref_id)
         name = xml.attrib["name"]
         id = self._resolve_default(id)
         # assert id in REF_ELEMENTS, f"Reference {id} not found"
@@ -663,7 +764,7 @@ class SceneLoader:
         data[name] = dict(type="ref", id=id)
         pass
 
-    def _parse_transform(self, data: dict, xml: ET.Element):
+    def _parse_transform(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "transform"
         #   <transform name="">
         #
@@ -680,11 +781,11 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
-    def _parse_spectrum(self, data: dict, xml: ET.Element):
+    def _parse_spectrum(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "spectrum"
         raise UnsupportedOperation()
 
-    def _parse_texture(self, data: dict, xml: ET.Element):
+    def _parse_texture(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "texture"
         # <texture name="" type="...">
         # </texture>
@@ -698,11 +799,11 @@ class SceneLoader:
         # raise UnsupportedOperation()
         pass
 
-    def _parse_include(self, data: dict, xml: ET.Element):
+    def _parse_include(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "include"
         raise UnsupportedOperation()
 
-    def _parse_alias(self, data: dict, xml: ET.Element):
+    def _parse_alias(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "alias"
         # <alias id="top-camera" as="default-camera"/>
         # oid = xml.attrib["id"]
@@ -713,34 +814,34 @@ class SceneLoader:
         # raise UnsupportedOperation()
         pass
 
-    def _parse_path(self, data: dict, xml: ET.Element):
+    def _parse_path(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "path"
         raise UnsupportedOperation()
 
     # ---------------------------------------------------------------------------
 
-    def _parse_boolean(self, data: dict, xml: ET.Element):
+    def _parse_boolean(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "boolean"
         name = xml.attrib["name"]
         value = xml.attrib["value"]
         data[name] = self._bool(value)
         pass
 
-    def _parse_integer(self, data: dict, xml: ET.Element):
+    def _parse_integer(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "integer"
         name = xml.attrib["name"]
         value = xml.attrib["value"]
         data[name] = self._int(value)
         pass
 
-    def _parse_float(self, data: dict, xml: ET.Element):
+    def _parse_float(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "float"
         name = xml.attrib["name"]
         value = xml.attrib["value"]
         data[name] = self._float(value)
         pass
 
-    def _parse_string(self, data: dict, xml: ET.Element):
+    def _parse_string(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "string"
         name = xml.attrib["name"]
         value = xml.attrib["value"]
@@ -753,7 +854,7 @@ class SceneLoader:
         data[name] = self._str(value)
         pass
 
-    def _parse_vector(self, data: dict, xml: ET.Element):
+    def _parse_vector(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "vector"
         # <vector name="" value=""/>
         # <vector name="" x="", y="", z=""/>
@@ -764,7 +865,7 @@ class SceneLoader:
         data[name] = point
         pass
 
-    def _parse_point(self, data: dict, xml: ET.Element):
+    def _parse_point(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "point"
         # <point name="" value=""/>
         # <point name="" x="", y="", z=""/>
@@ -774,7 +875,7 @@ class SceneLoader:
         data[name] = point
         pass
 
-    def _parse_rgb(self, data: dict, xml: ET.Element):
+    def _parse_rgb(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "rgb"
         # <rgb name="intensity" value="1"/>
         name = xml.attrib["name"]
@@ -786,7 +887,7 @@ class SceneLoader:
         )
         pass
 
-    def _parse_default(self, data: dict, xml: ET.Element):
+    def _parse_default(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "default"
         # <default name="" value=""/>
         name = xml.attrib["name"]
@@ -808,7 +909,7 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
-    def _parse_medium(self, data: dict, xml: ET.Element):
+    def _parse_medium(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "medium"
         # <medium type="" id="">
         #   float|string "int_ior"
@@ -826,7 +927,7 @@ class SceneLoader:
         data[id] = medium
         pass
 
-    def _parse_phase(self, data: dict, xml: ET.Element):
+    def _parse_phase(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "phase"
         # <phase type="" id="">
         # </phase>
@@ -840,7 +941,7 @@ class SceneLoader:
         data[id] = phase
         pass
 
-    def _parse_volume(self, data: dict, xml: ET.Element):
+    def _parse_volume(self, data: dict, xml: ET.Element, pid: str=""):
         assert xml.tag == "volume"
         # <volume type="", name="">
         # </volume>
@@ -855,7 +956,7 @@ class SceneLoader:
 
     # ---------------------------------------------------------------------------
 
-    def _resolve_filename(self, data: dict, xml: ET.Element):
+    def _resolve_filename(self, data: dict, xml: ET.Element, pid: str=""):
         type =  xml.attrib["type"]
         xfn = _find_element_name(xml, "filename")
         filename = xfn.attrib["value"]
@@ -1030,29 +1131,77 @@ def load_dict(scene_dict: dict) -> "mi.Scene":
 #
 # --------------------------------------------------------------------------
 
-def get_by_id(scene: "mi.Scene", obj_id: str) -> mi.Object:
+def _scene_get_by_id(scene: "mi.Scene", objid: str) -> mi.Object:
     """
     Retrieve the object with the specified id in Scene object
 
     :param scene:
-    :param obj_id:
+    :param objid:
     :return:
     """
-    assert isinstance(scene, mi.Scene)
-
     for obj in cast(list[mi.Sensor], scene.sensors()):
-        if obj.id() == obj_id:
+        if obj.id() == objid:
             return obj
 
     for obj in cast(list[mi.Shape], scene.shapes()):
-        if obj.id() == obj_id:
+        if obj.id() == objid:
             return obj
 
     for obj in cast(list[mi.Emitter], scene.emitters()):
-        if obj.id() == obj_id:
+        if obj.id() == objid:
             return obj
 
     return None
+# end
+
+
+def _dict_get_by_id(scene_dict: dict, objid: str) -> dict:
+    if objid in scene_dict:
+        return scene_dict[objid]
+
+    obj = {}
+    prefix = f"{objid}_"
+    lp = len(prefix)
+    for key in scene_dict.keys():
+        if key.startswith(prefix):
+            name = key[lp:]
+            obj[name] = scene_dict[key]
+    obj["id"] = objid
+    obj["type"] = "shapegroup"
+    return obj
+# end
+
+
+def get_by_id(scene, objid: str) -> Union[mi.Object, dict]:
+    assert isinstance(scene, (dict, mi.Scene)), "Scene must be a 'mitsuba.Scene' or a dict"
+    assert isinstance(objid, str), "Object id must be a string"
+
+    if isinstance(scene, mi.Scene):
+        return _scene_get_by_id(scene, objid)
+    else:
+        return _dict_get_by_id(scene, objid)
+# end
+
+
+# ---------------------------------------------------------------------------
+# Symbolic axis to vector
+# ---------------------------------------------------------------------------
+
+AXES = {
+    "x": [1,0,0],
+    "y": [0,1,0],
+    "z": [0,0,1],
+    "-x": [-1,0,0],
+    "-y": [0,-1,0],
+    "-z": [0,0,-1]
+}
+
+def to_axis(axis: AXIS) -> VECTOR:
+    if isinstance(axis, (list, tuple)):
+        return axis
+    assert isinstance(axis, str) and axis in AXES, f"Invalid axis {axis}"
+    return AXES[axis]
+
 
 # ---------------------------------------------------------------------------
 #
@@ -1079,6 +1228,7 @@ class ToWorld:
         self.t = mi.ScalarTransform4f() if t is None else t
 
     def add(self, ta):
+        if ta is None: return self
         assert isinstance(ta, mi.ScalarTransform4f)
         self.t = ta @ self.t
         return self
@@ -1105,15 +1255,41 @@ class ToWorld:
         return self
 
     def rotate(self, x=0, y=0, z=0, value=None, angle=0):
-        if isinstance(value, (int, float)):
+        # 'value' can be:
+        #    v -> [v,v,v]
+        #   'a' -> AXES[a]
+        #   (axes, angle)
+        if isinstance(value, (list, tuple)) and len(value) == 2:
+            dir_angle = value
+            axis, angle = dir_angle
+            value = to_axis(axis)
+        elif isinstance(value, (int, float)):
             v = value
             value = [v,v,v]
+        elif isinstance(value, str):
+            axis = value
+            value = to_axis(axis)
+
         if value is not None:
             x,y,z = value
+
+        # if angle == 0:
+        #     return self.t
 
         t = self.t
         tr = mi.ScalarTransform4f().rotate([x,y,z], angle)
         self.t = tr @ t
+        return self
+
+    def rotate_around(self, center=(0,0,0), axis=(0,0,1), angle=0):
+        cx, cy, cz = center
+        rx, ry, rz = axis
+
+        t = self.t
+        t0 = mi.ScalarTransform4f().translate([-cx,-cy,-cz])
+        tr = mi.ScalarTransform4f().rotate([rx, ry, rz], angle)
+        tt = mi.ScalarTransform4f().translate([+cx,+cy,+cz])
+        self.t = tt @ tr @ t0 @ t
         return self
 
     def look_at(self, origin=(0,0,1), target=(0,0,0), up=(0,0,1)):
@@ -1153,15 +1329,30 @@ class ToWorld:
 # render
 # --------------------------------------------------------------------------
 
-def render(scene: object,
-           gamma=2.2,
-           params: Any = None,
-           sensor: int = 0,
-           integrator = None,
-           seed = 0,
-           seed_grad: int = 0,
-           spp: int = 0,
-           spp_grad: int = 0) -> np.ndarray:
+def _normalize_image(image: np.ndarray, gamma: float=2.2, autoscale: bool=False) -> np.ndarray:
+    image = (image ** (1. / gamma))
+
+    if not autoscale:
+        image = image.clip(0, 1)
+
+    cmax = image.max()
+    if cmax > 1:
+        image = image/cmax
+    return image
+
+
+def render(
+    scene: object,
+    gamma=2.2,
+    params: Any = None,
+    sensor: int = 0,
+    integrator = None,
+    seed = 0,
+    seed_grad: int = 0,
+    spp: int = 0,
+    spp_grad: int = 0,
+    autoscale: bool = False
+) -> np.ndarray:
     """
     Call the Mitsuba renderer and apply the Gamma correction
     :param scene:
@@ -1173,6 +1364,7 @@ def render(scene: object,
     :param seed_grad:
     :param spp:
     :param spp_grad:
+    :param autoscale:
     :return:
     """
     rimage = mi.render(
@@ -1187,10 +1379,11 @@ def render(scene: object,
     )
 
     image: np.ndarray = np.array(rimage)
-    image = (image ** (1. / gamma)).clip(0, 1)
-
+    image = _normalize_image(image, gamma, autoscale)
+    del rimage
     return image
 # end
+
 
 # ---------------------------------------------------------------------------
 # instance
@@ -1207,8 +1400,7 @@ def instance(scene_dict: dict, *, id: str, ref: str, to_world, in_scene=True, **
     :param in_scene: if to insert the object in the scene
     :return: instance object
     """
-    if isinstance(to_world, ToWorld):
-        to_world = to_world.get()
+    to_world = _normalize_to_world(to_world)
 
     assert isinstance(scene_dict, dict), f"Scene must be a dict"
     assert isinstance(id, str) and id not in scene_dict, f"Object id {id} already used"
@@ -1290,8 +1482,8 @@ def clone(scene_dict: dict, id: str, ref: str, to_world, in_scene=True,
     :param sgt: shapegroup transform: dictionary "id_path": mi.Transform4f
     :return: cloned object
     """
-    if isinstance(to_world, ToWorld):
-        to_world = to_world.get()
+    to_world = _normalize_to_world(to_world)
+    sgt = _normalize_to_world(sgt)
 
     assert isinstance(scene_dict, dict), f"Scene must be a dict"
     assert isinstance(id, str) and id not in scene_dict, f"Object id {id} already used"
@@ -1301,10 +1493,6 @@ def clone(scene_dict: dict, id: str, ref: str, to_world, in_scene=True,
     shape = scene_dict[ref]
     clone: list[dict] = _clone_shape(scene_dict, id, shape, to_world, in_scene, sgt)
 
-    # if shape["type"] == "shapegroup":
-    #     clone = _clone_shapegroup(scene_dict, id, shape, to_world, in_scene, sgt)
-    # else:
-    #     clone = _clone_primitive(scene_dict, id, shape, to_world, in_scene)
     if template:
         for c in clone:
             c["template"] = ref
@@ -1317,15 +1505,6 @@ def clone(scene_dict: dict, id: str, ref: str, to_world, in_scene=True,
 # bounding_box
 # ---------------------------------------------------------------------------
 # Compute the bounding_box of a shape
-
-SHAPE_TYPES = {
-    "obj", "ply", "serialized",
-    "cube", "sphere", "rectangle", "disk", "cylinder",
-    "bsplinecurve", "linearcurve", "sdfgrid",
-    "shapegroup", "instance",
-    "ellipsoids", "ellipsoidsmesh",
-
-}
 
 def _load_ply_points(filename: str) -> "mi.Point3f":
     raise NotImplementedError()
@@ -1650,7 +1829,11 @@ def bounding_cube(bbox: "mi.BoundingBox3f", z: Union[None, bool, int, float]=Non
     return mi.Point3f(np.array(coords).T)
 
 
-FORMAT_TYPE = Literal["xxyy", "xyxy", "xywh", "cxcywh", "yolo", "voc"]
+FORMAT_TYPE = Literal[
+    "xxyy", "xyxy", "xywh", "cxcywh",
+    "xxyyn", "xyxyn", "xywhn", "cxcywhn",
+    "yolo", "voc"
+]
 
 def sensor_bbox(sensor: "mi.Sensor", scene_dict: dict, id: str, format: FORMAT_TYPE="xywh") \
     -> tuple[int,int,int,int]:
@@ -1669,7 +1852,13 @@ def sensor_bbox(sensor: "mi.Sensor", scene_dict: dict, id: str, format: FORMAT_T
     assert isinstance(scene_dict, dict)
     assert isinstance(id, str)
     # assert isinstance(format, FORMAT_TYPE)
-    assert format in ["xxyy", "xyxy", "xywh", "cxcywh", "yolo", "voc"]
+    assert format in [
+        "xxyy", "xyxy", "xywh", "cxcywh",
+        "xxyyn", "xyxyn", "xywhn", "cxcywhn",
+        "yolo", "voc"
+    ]
+    if format == "yolo":
+        format = "cxcywhn"
 
     w, h = sensor.film().size()
 
@@ -1694,16 +1883,26 @@ def sensor_bbox(sensor: "mi.Sensor", scene_dict: dict, id: str, format: FORMAT_T
     # if dy > 100:
     #     print("y", dy, ymin, ymax)
 
-    if format in ["xxyy"]:
-        return (xmin), (xmax), (ymin), (ymax)
-    elif format in ["xyxy", "voc"]:        # VOC, torchvision
-        return (xmin), (ymin), (xmax), (ymax)
-    elif format in ["xywh"]:
-        return (xmin), (ymin), (xmax-xmin), (ymax-ymin)
-    elif format in ["cxcywh", "yolo"]:    # YOLO
-        return ((xmin+xmax)/2), ((ymin+ymax)/2), (xmax-xmin), (ymax-ymin)
+    if format.startswith("xxyy"):
+        coords = (xmin), (xmax), (ymin), (ymax)
+    elif format.startswith("xyxy"):        # VOC, torchvision
+        coords = (xmin), (ymin), (xmax), (ymax)
+    elif format.startswith("xywh"):
+        coords = (xmin), (ymin), (xmax-xmin), (ymax-ymin)
+    elif format.startswith("cxcywh"):    # YOLO
+        coords = ((xmin+xmax)/2), ((ymin+ymax)/2), (xmax-xmin), (ymax-ymin)
     else:
         raise ValueError(f"Unknown format '{format}'")
+
+    if format.endswith("n"):
+        if format == "xxyyn":
+            a,b,c,d = coords
+            return a / w, b / w, c / h, d / h
+        else:
+            a,b,c,d = coords
+            return a / w, b / h, c / w, d / h
+    else:
+        return coords
 # end
 
 

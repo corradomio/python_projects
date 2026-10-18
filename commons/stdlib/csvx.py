@@ -10,6 +10,7 @@ from stdlib.bag import bag
 from stdlib import tobool
 from stdlib.is_instance import is_instance
 
+
 #
 # We suppose that:
 #
@@ -35,6 +36,22 @@ from stdlib.is_instance import is_instance
 # scan_csv
 # save_csv
 # save_arff
+
+
+def _count_comments(fname: str, comment: str) -> int:
+    # count the empty lines and linest starting with comment character at the begin
+    # of the file
+    ncomments = 0
+    with open(fname, mode="r") as f:
+        for line in f.readlines():
+            line = line.strip()
+            if len(line) == 0:
+                ncomments += 1
+            elif line.startswith(comment):
+                ncomments += 1
+            else:
+                break
+    return ncomments
 
 
 def _load_arff(fname, na=None):
@@ -88,10 +105,15 @@ def _load_arff(fname, na=None):
     dtype, skiprows = arff_to_csv(fname)
     data, cat = _load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
     return data, cat, dtype
-# end
 
 
-def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
+def scan_csv(
+    fname, callback,
+    dtype=None, skiprows=0,
+    comment: str="#",
+    na=None, limit=-1,
+    **kwargs
+):
     """
     Scan a CSV file, convert each row specified in the dtype list, and call
     the callback.
@@ -152,7 +174,6 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
                 C[s] = c
                 INVERSECAT[i].append(s)
             return C[s]
-    # end
 
     class _toicat:
         def __init__(self, i):
@@ -170,7 +191,6 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
                 C[s] = len(C)
                 INVERSECAT[i].append(s)
             return C[s]
-    # end
 
     def _tofloat(x):
         try:
@@ -223,19 +243,18 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
         except:
             pass
         try:
-            if x in ['f','F','false', 'False', 'FALSE', 'off', 'OFF', 'no','NO']:
+            if x in ['f', 'F', 'false', 'False', 'FALSE', 'off', 'OFF', 'no', 'NO']:
                 return False
-            if x in ['t','T','true','True','TRUE','on','ON','yes','YES']:
+            if x in ['t', 'T', 'true', 'True', 'TRUE', 'on', 'ON', 'yes', 'YES']:
                 return True
         except:
             pass
         try:
-            if x in ['none','None','null','Null','NULL']:
+            if x in ['none', 'None', 'null', 'Null', 'NULL']:
                 return None
         except:
             pass
         return x
-    # end
 
     def _dtype():
         for i in range(len(dtype)):
@@ -292,7 +311,6 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
             return gzip.open(fname, mode=mode)
         else:
             return open(fname, mode=mode)
-    # end
 
     if dtype is None:
         cvtrow = lambda r: r
@@ -303,17 +321,19 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
 
     nr = 0
     line = 0
+    ncomments = _count_comments(fname, comment)
+    ntoskip = skiprows + ncomments
     with openfile(fname, mode="r") as csv_file:
         rdr = csv.reader(csv_file, **kwargs)
 
-        for _ in range(skiprows):
+        for _ in range(ntoskip):
             next(rdr)
 
         for row in rdr:
             line += 1
             n = len(row)
             if nr == 0 and dtype is None:
-                dtype = ["auto"]*n
+                dtype = ["auto"] * n
                 cvtrow = lambda r: [_toauto(r[i]) for i in range(n)]
 
             try:
@@ -331,33 +351,37 @@ def scan_csv(fname, callback, dtype=None, skiprows=0, na=None, limit=-1, **kwarg
     # print("... loaded {} records".format(line))
 
     return INVERSECAT
-# end
 
 
-def _load_csv(fname, dtype=None, skiprows=0, na=None, limit=-1, **kwargs):
+def _load_csv(fname, *, dtype=None, na=None, limit=-1,
+              skiprows=0, comment:str="#",
+              **kwargs):
     """
     Load a CSV file and convert the values based on the specified 'dtype' values
     :param fname: file to load
     :param dtype: list of data types to use
-    :param skiprows: number of rows to skip
     :param na: value used as 'missing value' ('not available')
     :param limit: maximum number of rows to read
+    :param skiprows: number of rows to skip
+    :param comment: character used to start a comments (automatically skipped)
     :param kwargs: extra parameters passed to
     :return: a tuple composed by
         data: a list of records where a record is a list of values
         inversecat: dictionary with inverse category mapping (int -> string)
     """
-    data=[]
-    
+    data = []
+
     def _append(rec):
         data.append(rec)
-    
-    INVERSECAT = scan_csv(fname, _append, dtype=dtype, skiprows=skiprows, na=na, limit=limit, **kwargs)
+
+    INVERSECAT = scan_csv(fname, _append,
+                          dtype=dtype, na=na, limit=limit,
+                          skiprows=skiprows, comment=comment,
+                          **kwargs)
     if len(INVERSECAT) == 0:
         return data
     else:
         return data, INVERSECAT
-# end
 
 
 def _load_csv_column_names(fname, skiprows=0, **kwargs):
@@ -366,17 +390,16 @@ def _load_csv_column_names(fname, skiprows=0, **kwargs):
         header = next(rdr)
         if skiprows == 0:
             n = len(header)
-            header = ["c{}".format(i) for i in range(1, n+1)]
+            header = ["c{}".format(i) for i in range(1, n + 1)]
 
     def normalize(s):
-        return s\
-            .replace(" ", "_")\
-            .replace("-", "_")\
-            .replace("(", "_")\
+        return s \
+            .replace(" ", "_") \
+            .replace("-", "_") \
+            .replace("(", "_") \
             .replace(")", "_")
 
     return list(map(normalize, header))
-# end
 
 
 def _guess_value_type(s: str) -> str:
@@ -410,19 +433,23 @@ def _guess_value_type(s: str) -> str:
         return 'bool'
     except:
         pass
-    
+
     return 'str'
-# end
 
 # ---------------------------------------------------------------------------
 
 
-def _save_csv(fname: str, data: list, header: list=None, fmt: list=None, **kwargs):
+def _save_csv(
+    fname: str, data: list,
+    header: list = None, fmt: list = None,
+    delimiter=',', lineterminator='\n',
+    **kwargs
+):
     n = len(data[0])
 
-    def _fmt(s:str):
+    def _fmt(s: str):
         p = s.find(":")
-        return s[p+1:]
+        return s[p + 1:]
 
     def _fmttime(x, fmttime):
         return x.strftime(fmttime)
@@ -430,7 +457,7 @@ def _save_csv(fname: str, data: list, header: list=None, fmt: list=None, **kwarg
     fmt = fmt[:] if fmt is not None else None
 
     if fmt is None:
-        fmt = lambda r : r
+        fmt = lambda r: r
         fmtdata = lambda r: r
     elif n != len(fmt):
         raise "Invalid fmt list respecte the number of columns"
@@ -457,7 +484,6 @@ def _save_csv(fname: str, data: list, header: list=None, fmt: list=None, **kwarg
             # end
         # end
         fmtdata = lambda r: [fmt[i](r[i]) for i in range(n)]
-    # end
 
     def openfile(fname, mode, **kwargs):
         if fname.endswith(".zip"):
@@ -469,25 +495,23 @@ def _save_csv(fname: str, data: list, header: list=None, fmt: list=None, **kwarg
             return gzip.open(fname, mode=mode)
         else:
             return open(fname, mode=mode, **kwargs)
-    # end
 
     with openfile(fname, mode="w", **kwargs) as csv_file:
-        wrt = csv.writer(csv_file, delimiter=',', lineterminator='\n')
+        wrt = csv.writer(csv_file, delimiter=delimiter, lineterminator=lineterminator)
         if header:
             wrt.writerow(header)
         for row in data:
             wrt.writerow(fmtdata(row))
-    # end
-# end
 
 
-def _save_arff(fname:str, data:list, relation:str=None, attributes:list=None, categories:dict=None, dtype:list=None):
+def _save_arff(fname: str, data: list, relation: str = None, attributes: list = None, categories: dict = None,
+               dtype: list = None):
     n = len(dtype)
 
     if relation is None:
         relation = "relation"
     if attributes is None:
-        attributes = ["att{}".format(i) for i in range(1, n+1)]
+        attributes = ["att{}".format(i) for i in range(1, n + 1)]
 
     assert len(attributes) == len(dtype)
 
@@ -542,7 +566,6 @@ def _save_arff(fname:str, data:list, relation:str=None, attributes:list=None, ca
                 row[i] = icategory[i][row[i]]
             fout.write("{}\n".format(",".join(map(str, row))))
     pass
-# end
 
 
 def _convert_to_arff(fname, arff=None, dtype=None, skiprows=0, na=None):
@@ -556,7 +579,6 @@ def _convert_to_arff(fname, arff=None, dtype=None, skiprows=0, na=None):
     data, categories = _load_csv(fname, dtype=dtype, skiprows=skiprows, na=na)
 
     _save_arff(arff, data, attributes=header, categories=categories, relation=name, dtype=dtype)
-# end
 
 
 def _guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -> list[dict]:
@@ -569,6 +591,7 @@ def _guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -
     :param nrows: n of rows to analyze. With 0, all rows will be analyzed
     :param kwargs: parameters passsed to 'csv.reader()'
     """
+
     def to_enum(s: set) -> str:
         return f"enum[{','.join(sorted(s))}]"
 
@@ -633,7 +656,6 @@ def _guess_csv_column_types(fname, comment='#', nunique=16, nrows=0, **kwargs) -
             col_types.append({'name': h, 'type': to_union(t)})
     # end
     return col_types
-# end
 
 
 # ---------------------------------------------------------------------------
@@ -652,27 +674,28 @@ def load(fname: str, **kwargs):
 def _nameof(fname: str) -> str:
     fname = fname.replace('\\', '/')
     p = fname.rfind('/')
-    if p != -1: fname = fname[p+1:]
+    if p != -1: fname = fname[p + 1:]
     p = fname.find('.')
     if p != -1: fname = fname[:p]
     return fname
 
 
-def dump(obj, fname: str, header: Optional[list[str]] = None, fmt: Optional[str] = None,  categories=None, **kwargs):
-    if fname.endswith('.csv'):
-        _save_csv(fname, data=obj, header=header, fmt=fmt, **kwargs)
+def dump(obj, fname: str, header: Optional[list[str]] = None, fmt: Optional[str] = None, categories=None,
+         delimiter=',', lineterminator='\n', **kwargs):
+    if fname.endswith('.csv') or fname.endswith('.txt'):
+        _save_csv(fname, data=obj, header=header, fmt=fmt, delimiter=delimiter, lineterminator=lineterminator,
+                  **kwargs)
     elif fname.endswith('.arff'):
         _save_arff(fname, data=obj, attributes=header, categories=categories, relation=_nameof(fname), **kwargs)
     else:
         raise ValueError(f"Unsupported file {fname}")
 
 
-
 # ---------------------------------------------------------------------------
 # csv_to_json
 # ---------------------------------------------------------------------------
 
-def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> dict:
+def csv_to_json(fname: str, tojson: Optional[str] = None, skiprows=1, **kwargs) -> dict:
     if tojson is None:
         p = fname.rfind('.')
         tojson = (fname[:p] + ".json") if p != -1 else (fname + ".json")
@@ -683,7 +706,7 @@ def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> 
     jdata = {
         "columns": header,
         "index": [],
-        "data":[]
+        "data": []
     }
 
     def _append(rec):
@@ -698,7 +721,6 @@ def csv_to_json(fname: str, tojson:Optional[str]=None, skiprows=1, **kwargs) -> 
         import json
         json.dump(jdata, fp)
     return jdata
-# end
 
 
 #
@@ -721,7 +743,7 @@ def dump_latex(data, header, fmt=".3",
                tt_header=False,
                tt_column=False,
                bottom_line=False,
-               bad=0,good=0):
+               bad=0, good=0):
     # str           -> left
     # int, float    -> right
     n = len(data)
@@ -739,7 +761,7 @@ def dump_latex(data, header, fmt=".3",
     def _align(i):
         if isinstance(data[0][i], str):
             return "l"
-        elif isinstance(data[0][i], int|float):
+        elif isinstance(data[0][i], int | float):
             return "r"
         else:
             return "l"

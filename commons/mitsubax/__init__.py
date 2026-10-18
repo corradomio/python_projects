@@ -1,3 +1,4 @@
+from .mitsubax import VECTOR, POINT, RGB, TRANSFORM
 from .mitsubax import ToWorld, get_by_id
 from .mitsubax import load_scene_dict, save_scene_dict
 from .mitsubax import load_dict, load_scene
@@ -6,5 +7,6 @@ from .mitsubax import bounding_box, bounding_cube, scene_points, points_concat, 
 from .mitsubax import sensor_bbox
 from .sensorx import ForwardSensor
 from .distrib2d import Uniform2D, Gauss2D
+from .primitives import cube, sphere, rectangle, disk, cylinder, shapegroup
 
 

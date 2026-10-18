@@ -1,0 +1,213 @@
+<scene>
+    <default name="s" value="0.3"/>
+    <default name="w" value="28"/>
+    <default name="h" value="12"/>
+    <default name="z" value="3"/>
+    <default name="fov" value="144"/>
+
+    <default name="head_color" value="yellow"/>
+    <default name="wing_color" value="white"/>
+    <default name="body_color" value="skin"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="4"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <sensor type="wideangle" id="top-camera">
+        <float name="fov" value="$fov"/>
+
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="0 0 $z" target="0 0 0" up="0 1 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="64"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgb"/>
+            <integer name="width" value="1920"/>
+            <integer name="height" value="1080"/>
+        </film>
+    </sensor>
+
+    <!-- brdf -->
+    <!-- background colors -->
+
+    <bsdf type="diffuse" id="bkg_color">
+        <rgb name="reflectance" value="@102  @93  @85"/>
+        <!--<rgb name="reflectance" value="0.6 0.4 0.2"/>-->
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-ref">
+        <rgb name="reflectance" value="0.7 0 0"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-gray">
+        <rgb name="reflectance" value="0.2 0.2 0.2"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-brown1">
+        <rgb name="reflectance" value="@98 @81 @58"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-brown2">
+        <rgb name="reflectance" value="@120 @103 @82"/>
+    </bsdf>
+
+    <!-- Mix a rough dielectric with a diffuse grey base to capture real gravel aggregate -->
+    <bsdf type="blendbsdf" id="fine_gravel_bsdf">
+        <!-- Blend ratio between specular dielectric facets and diffuse rock core -->
+        <float name="weight" value="0.3"/>
+
+        <!-- Component 1: Surface Micro-roughness & Refraction (Dielectric coating) -->
+        <bsdf type="roughdielectric">
+            <string name="distribution" value="ggx"/>
+            <float name="alpha" value="0.45"/>
+            <float name="int_ior" value="1.54"/>
+            <string name="ext_ior" value="air"/>
+
+            <!-- Neutralizes specular tint to pure white/grey -->
+            <rgb name="specular_reflectance" value="0.8, 0.8, 0.8"/>
+        </bsdf>
+
+        <!-- Component 2: Neutral Grey Body Color of Rock Aggregate -->
+        <bsdf type="diffuse">
+            <!-- Equal R, G, B values produce a neutral middle-grey color -->
+            <rgb name="reflectance" value="0.25, 0.25, 0.25"/>
+        </bsdf>
+    </bsdf>
+
+    <!-- chicken colors -->
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="yellow">
+        <!--<rgb name="reflectance" value="@157, @160, @11"/>-->
+        <rgb name="reflectance" value="@255, @240, @120"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="skin">
+        <rgb name="reflectance" value="@244, @208, @170"/>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <!--<emitter type="spot">
+        <transform name="to_world">
+            &lt;!&ndash; Orient the light so that points from (1, 1, 1) towards (1, 2, 1) &ndash;&gt;
+            <lookat origin="0,0,5" target="0,0,0" up="0,1,0"/>
+        </transform>
+        <rgb name="intensity" value="90"/>
+        <float name="beam_width" value="4"/>
+        <float name="cutoff_angle" value="20"/>
+    </emitter>-->
+
+    <shape type="cube" id="light-hangar">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <!--<scale value="$w $h 0.05"/>-->
+            <scale value="3 3 0.05"/>
+            <translate value="0 0 5"/>
+        </transform>
+        <emitter type="area">
+            <!-- initial radiance: 4 -->
+            <rgb name="radiance" value="8"/>
+        </emitter>
+    </shape>
+
+    <!-- scene -->
+
+    <!-- chickens -->
+    <!--
+
+      -->
+
+    <shape type="shapegroup" id="chicken">
+
+        <shape type="obj" name="body">
+            <string name="filename" value="rough-ellipsoid-10x6-1.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67" y="$s" z="$s*0.67"/>
+                <translate x="0" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="$body_color" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="left_wing">
+            <string name="filename" value="rough-ellipsoid-10x6-2.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="-$s*0.67*0.5" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="$wing_color" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="right_wing">
+            <string name="filename" value="rough-ellipsoid-10x6-3.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="+$s*0.67*0.5" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="$wing_color" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="head">
+            <string name="filename" value="rough-ellipsoid-10x6-4.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.5*0.67" y="$s*0.5" z="$s*0.5*0.67"/>
+
+                <translate x="0" y="$s*0.5*0.67*0.5" z="0"/>
+                <translate x="0" y="$s*0.4" z="$s*0.33"/>
+            </transform>
+            <ref id="$head_color" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <!-- background -->
+
+    <shape type="rectangle" id="background">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+        </transform>
+        <ref id="bkg_color" name="bsdf"/>
+        <!--<ref id="fine_gravel_bsdf" name="bsdf"/>-->
+        <!--<ref id="bkg-brown2" name="bsdf"/>-->
+    </shape>
+
+    <shape type="rectangle" id="background-gray">
+         <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+             <translate value="0 0 -0.01"/>
+        </transform>
+        <ref id="bkg_color" name="bsdf"/>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w+1.5" y="$h+1" z="1"/>
+            <translate value="0 0 -0.02"/>
+        </transform>
+        <ref id="bkg-ref" name="bsdf"/>
+    </shape>
+
+</scene>

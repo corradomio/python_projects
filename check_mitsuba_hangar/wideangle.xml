@@ -1,0 +1,292 @@
+<scene>
+    <default name="s" value="0.3"/>
+    <default name="w" value="28"/>
+    <default name="h" value="12"/>
+    <default name="z" value="3"/>
+    <default name="fov" value="144"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <sensor type="wideangle" id="top-camera">
+        <float name="fov" value="$fov"/>
+
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="0 0 $z" target="0 0 0" up="0 1 0"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="1024"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgb"/>
+            <integer name="width" value="1920"/>
+            <integer name="height" value="1080"/>
+        </film>
+    </sensor>
+
+    <!-- brdf -->
+    <!--
+        145 141 138
+        162 143 133
+      -->
+
+    <bsdf type="diffuse" id="bkg-color">
+        <rgb name="reflectance" value="@102  @93  @85"/>
+        <!--<rgb name="reflectance" value="0.6 0.4 0.2"/>-->
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-ref">
+        <rgb name="reflectance" value="0.7 0 0"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-gray">
+        <rgb name="reflectance" value="0.2 0.2 0.2"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-brown1">
+        <rgb name="reflectance" value="@98 @81 @58"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="bkg-brown2">
+        <rgb name="reflectance" value="@120 @103 @82"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="white">
+        <rgb name="reflectance" value="1, 1, 1"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="yellow">
+        <!--<rgb name="reflectance" value="@157, @160, @11"/>-->
+        <rgb name="reflectance" value="@255, @240, @120"/>
+    </bsdf>
+
+    <bsdf type="diffuse" id="white-skin">
+        <rgb name="reflectance" value="@244, @208, @170"/>
+    </bsdf>
+
+    <!-- <bsdf type="roughdielectric" id="fine_gravel_bsdf">
+        &lt;!&ndash; GGX distribution works best for rough, multi-faceted mineral surfaces &ndash;&gt;
+        <string name="distribution" value="ggx"/>
+
+        &lt;!&ndash; High alpha represents the heavy surface roughness of fine gravel &ndash;&gt;
+        <float name="alpha" value="0.45"/>
+
+        &lt;!&ndash; Index of Refraction for Quartz / Silica mineral aggregate &ndash;&gt;
+        <float name="int_ior" value="1.54"/>
+        <string name="ext_ior" value="air"/>
+    </bsdf>-->
+
+    <!-- Mix a rough dielectric with a diffuse grey base to capture real gravel aggregate -->
+    <bsdf type="blendbsdf" id="fine_gravel_bsdf">
+        <!-- Blend ratio between specular dielectric facets and diffuse rock core -->
+        <float name="weight" value="0.3"/>
+
+        <!-- Component 1: Surface Micro-roughness & Refraction (Dielectric coating) -->
+        <bsdf type="roughdielectric">
+            <string name="distribution" value="ggx"/>
+            <float name="alpha" value="0.45"/>
+            <float name="int_ior" value="1.54"/>
+            <string name="ext_ior" value="air"/>
+
+            <!-- Neutralizes specular tint to pure white/grey -->
+            <rgb name="specular_reflectance" value="0.8, 0.8, 0.8"/>
+        </bsdf>
+
+        <!-- Component 2: Neutral Grey Body Color of Rock Aggregate -->
+        <bsdf type="diffuse">
+            <!-- Equal R, G, B values produce a neutral middle-grey color -->
+            <rgb name="reflectance" value="0.25, 0.25, 0.25"/>
+        </bsdf>
+    </bsdf>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <!--<emitter type="spot">
+        <transform name="to_world">
+            &lt;!&ndash; Orient the light so that points from (1, 1, 1) towards (1, 2, 1) &ndash;&gt;
+            <lookat origin="0,0,5" target="0,0,0" up="0,1,0"/>
+        </transform>
+        <rgb name="intensity" value="90"/>
+        <float name="beam_width" value="4"/>
+        <float name="cutoff_angle" value="20"/>
+    </emitter>-->
+
+    <shape type="cube" id="light-hangar">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <!--<scale value="$w $h 0.05"/>-->
+            <scale value="3 3 0.05"/>
+            <translate value="0 0 5"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="4"/>
+        </emitter>
+    </shape>
+
+    <!-- scene -->
+    <!--
+        cube:  [[-1,-1,-1],[+1,+1,+1]]
+      -->
+
+    <!-- chickens -->
+
+    <shape type="shapegroup"  id="chicken-sphere">
+        <shape type="sphere">
+            <transform name="to_world">
+                <scale value=".5"/>
+                <scale value="$s"/>
+                <translate value="0 0 $s/2"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <shape type="shapegroup" id="chicken-cube">
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5"/>
+                <scale value="$s"/>
+                <translate value="0 0 $s/2"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <shape type="shapegroup" id="young-chicken">
+
+        <shape type="obj" name="body">
+            <!--<string name="filename" value="objs/ellipsoid-20x15.obj"/>-->
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67" y="$s" z="$s*0.67"/>
+                <translate x="0" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white-skin" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="left_wing">
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="-$s*0.67*0.5" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="right_wing">
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="+$s*0.67*0.5" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="head">
+            <!--<string name="filename" value="objs/ellipsoid-20x15.obj"/>-->
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.5*0.67" y="$s*0.5" z="$s*0.5*0.67"/>
+
+                <translate x="0" y="$s*0.5*0.67*0.5" z="0"/>
+                <translate x="0" y="$s*0.4" z="$s*0.33"/>
+            </transform>
+            <ref id="yellow" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <shape type="shapegroup" id="adult-chicken">
+
+        <shape type="obj" name="body">
+            <!--<string name="filename" value="objs/ellipsoid-20x15.obj"/>-->
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67" y="$s" z="$s*0.67"/>
+                <translate x="0" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="left_wing">
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="-$s*0.67*0.3" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="right_wing">
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.67*0.5" y="$s*0.5" z="$s*0.67*0.5"/>
+                <translate x="+$s*0.67*0.3" y="0" z="$s*0.67*0.5"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+
+        <shape type="obj" name="head">
+            <!--<string name="filename" value="objs/ellipsoid-20x15.obj"/>-->
+            <string name="filename" value="ellipsoid-20x15.obj"/>
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="$s*0.5*0.67" y="$s*0.5" z="$s*0.5*0.67"/>
+
+                <translate x="0" y="$s*0.5*0.67*0.5" z="0"/>
+                <translate x="0" y="$s*0.4" z="$s*0.33"/>
+            </transform>
+            <ref id="white" name="bsdf"/>
+        </shape>
+    </shape>
+
+    <!-- background -->
+
+    <shape type="rectangle" id="background">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+        </transform>
+        <!--<ref id="bkg-color" name="bsdf"/>-->
+        <!--<ref id="fine_gravel_bsdf" name="bsdf"/>-->
+        <ref id="bkg-brown2" name="bsdf"/>
+    </shape>
+
+    <shape type="rectangle" id="background-gray">
+         <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w" y="$h" z="1"/>
+             <translate value="0 0 -0.01"/>
+        </transform>
+        <ref id="bkg-color" name="bsdf"/>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$w+1.5" y="$h+1" z="1"/>
+            <translate value="0 0 -0.02"/>
+        </transform>
+        <ref id="bkg-ref" name="bsdf"/>
+    </shape>
+
+</scene>

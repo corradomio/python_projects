@@ -1,0 +1,234 @@
+<scene>>
+    <default name="W" value="1.5"/>
+    <default name="H" value="1.5"/>
+
+    <default name="cw" value="0.6"/>
+    <default name="cd" value="0.6"/>
+    <default name="ch" value="0.6"/>
+
+    <!-- integrator -->
+
+    <integrator type="volpath">
+        <integer name="max_depth" value="8"/>
+    </integrator>
+
+    <!-- sensor -->
+
+    <sensor type="perspective" id="global-camera-wh">
+        <float name="fov" value="60"/>
+
+        <transform name="to_world">
+            <!-- Move and rotate the camera so that looks from (1, 1, 1) to (1, 2, 1)
+                and the direction (0, 0, 1) points "up" in the output image -->
+            <lookat origin="3 3 1" target="$cw/2 $cd/2 1" up="0, 0, 1"/>
+        </transform>
+
+        <sampler type="stratified">
+            <integer name="sample_count" value="256"/>
+        </sampler>
+
+        <film type="hdrfilm">
+            <string name="pixel_format" value="rgba"/>
+            <integer name="width" value="1024"/>
+            <integer name="height" value="1024"/>
+        </film>
+    </sensor>
+
+    <!-- emitters -->
+
+    <emitter type="constant" id="light-diffuse">
+        <rgb name="radiance" value="0.03"/>
+    </emitter>
+
+    <shape type="cube" id="light-hangar">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$W" y="$H" z="0.05"/>
+            <translate value="0 0 2"/>
+        </transform>
+        <emitter type="area">
+            <rgb name="radiance" value="2"/>
+        </emitter>
+    </shape>
+
+    <!-- scene -->
+
+    <shape type="rectangle" id="background">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$W" y="$H" z=".01"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.6 0.4 0.2"/>
+        </bsdf>
+    </shape>
+
+    <shape type="rectangle" id="reference">
+        <transform name="to_world">
+            <scale value=".5 .5 .5"/>
+            <scale x="$W+0.5" y="$H+0.5" z=".1"/>
+            <translate value="0 0 -0.02"/>
+        </transform>
+        <bsdf type="diffuse">
+            <rgb name="reflectance" value="0.7 0 0"/>
+        </bsdf>
+    </shape>
+
+    <shape type="shapegroup" id="external-cage">
+        <!-- bottom -->
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.6" y=".02" z=".02"/>
+                <translate value="0 0.30 0.01"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x=".6" y=".02" z=".02"/>
+                <translate value="0 -0.30 0.01"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".6" z=".02"/>
+                <translate value="0.30 0 0.01"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".6" z=".02"/>
+                <translate value="-0.30 0 0.01"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+        <!-- top -->
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.6" y=".02" z=".02"/>
+                <translate value="0 0.30 0.41"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x=".6" y=".02" z=".02"/>
+                <translate value="0 -0.30 0.41"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".6" z=".02"/>
+                <translate value="0.30 0 0.41"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".6" z=".02"/>
+                <translate value="-0.30 0 0.41"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+        <!-- vertical -->
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".02" z=".4"/>
+                <translate value="0 0 0.2"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".02" z=".4"/>
+                <translate value="-0.3 -0.3 0.2"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".02" z=".4"/>
+                <translate value="0.3 -0.3 0.2"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".02" z=".4"/>
+                <translate value="0.3 0.3 0.2"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+        <shape type="cube">
+            <transform name="to_world">
+                <scale value=".5 .5 .5"/>
+                <scale x="0.02" y=".02" z=".4"/>
+                <translate value="-0.3 0.3 0.2"/>
+            </transform>
+            <bsdf type="diffuse">
+                <rgb name="reflectance" value="0.6 0.6 0.6"/>
+            </bsdf>
+        </shape>
+
+    </shape>
+
+    <shape type="instance">
+        <ref id="external-cage" name="cage"/>
+    </shape>
+
+    <shape type="cage">
+        <vector name="size" value=".6 .6 .4"/>
+        <integer name="hbars" value="3"/>
+        <integer name="vbars" value="3"/>
+        <string name="hbars-sides" value="blrfk"/>
+        <transform name="to_world">
+            <translate value="0 0 0"/>
+        </transform>
+    </shape>
+
+
+</scene>

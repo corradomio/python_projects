@@ -13,10 +13,10 @@ dependencies = [
     "joblib",
     "numpy",
     "scipy",
-    "bezier",
-    "pandas",
+#    "bezier",
+#    "pandas",
     "matplotlib",
-    "seaborn",
+#    "seaborn",
     "imageio",
     "mitsuba"
 ]
